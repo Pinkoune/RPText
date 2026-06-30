@@ -33,6 +33,14 @@ export function migratePlayer(p: PlayerState): PlayerState {
     p.farmXp = Object.values(p.gatherXp ?? {}).reduce((s, v) => s + (v || 0), 0);
   }
   if (!p.dungeonClears) p.dungeonClears = {};
+  if (!p.statistics) {
+    p.statistics = {
+      goldEarned: p.gold,
+      gamblesPlayed: 0,
+      gamblesWon: 0,
+      mobsKilled: {},
+    };
+  }
   if (p.title == null) p.title = 'Aventurier';
   if (!p.talents) {
     p.talents = {};
@@ -84,6 +92,12 @@ export function createPlayer(
     kills: 0,
     deaths: 0,
     gambleNet: 0,
+    statistics: {
+      goldEarned: 50,
+      gamblesPlayed: 0,
+      gamblesWon: 0,
+      mobsKilled: {},
+    },
     quests: freshQuestState(now),
     settledDuels: [],
     bossClaims: [],

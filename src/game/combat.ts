@@ -177,6 +177,10 @@ export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRe
   const xp = Math.round(monster.xp * mod.xp);
   const gold = Math.round(roll(monster.gold[0], monster.gold[1]) * mod.gold);
   p.gold += gold;
+  if (p.statistics) {
+    p.statistics.goldEarned += gold;
+    p.statistics.mobsKilled[monster.id] = (p.statistics.mobsKilled[monster.id] ?? 0) + 1;
+  }
   p.kills += 1;
   addQuestMetric(p, 'kills', 1);
   addQuestMetric(p, 'goldEarned', gold);

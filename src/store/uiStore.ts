@@ -21,6 +21,7 @@ export type WindowKind =
   | 'boss'
   | 'chat'
   | 'leaderboard'
+  | 'stats'
   | 'help';
 
 export interface GameWindow {

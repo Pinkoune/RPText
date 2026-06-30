@@ -71,6 +71,13 @@ export interface PlayerState {
   deaths: number;
   /** Bilan net du gambling (peut être négatif). */
   gambleNet: number;
+  /** Statistiques globales du joueur. */
+  statistics: {
+    goldEarned: number;
+    gamblesPlayed: number;
+    gamblesWon: number;
+    mobsKilled: Record<string, number>;
+  };
   /** Progression des quêtes (journalières/hebdomadaires). */
   quests: QuestState;
   /** Duels PvP déjà encaissés (anti double-crédit). */

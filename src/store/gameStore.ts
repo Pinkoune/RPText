@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import type { PlayerState, ClassId } from '../game/types';
 import { createPlayer, migratePlayer } from '../game/player';
-import { signInWithGoogle, signOut, watchAuth, type AppUser } from '../firebase/auth';
+import { signInWithProvider, signOut, watchAuth, type AppUser, type AuthProviderType } from '../firebase/auth';
 import { loadPlayer, savePlayer } from '../firebase/playerService';
+import { isFirebaseConfigured } from '../firebase/config';
 
 export type Status = 'loading' | 'login' | 'create' | 'ready';
 
@@ -21,7 +22,7 @@ interface GameState {
   levelCelebration: number;
   celebrateLevelUp: () => void;
   initAuth: () => void;
-  signIn: () => Promise<void>;
+  signIn: (provider: AuthProviderType) => Promise<void>;
   logout: () => Promise<void>;
   chooseClass: (cls: ClassId, name?: string) => Promise<void>;
   /** Mute le joueur via un brouillon puis sauvegarde (debounce). */
@@ -49,25 +50,33 @@ export const useGame = create<GameState>((set, get) => ({
         return;
       }
       set({ user, status: 'loading' });
-      const existing = await loadPlayer(user.uid);
-      if (existing) {
-        migratePlayer(existing);
-        // Resync identité Google (avatar/nom peuvent changer).
-        existing.name = existing.name || user.name;
-        existing.photoURL = user.photoURL;
-        set({ player: existing, status: 'ready' });
-      } else {
-        set({ status: 'create' });
+      try {
+        const existing = await loadPlayer(user.uid);
+        if (existing) {
+          migratePlayer(existing);
+          // Resync identité Google (avatar/nom peuvent changer).
+          existing.name = existing.name || user.name;
+          existing.photoURL = user.photoURL;
+          set({ player: existing, status: 'ready' });
+        } else {
+          set({ status: 'create' });
+        }
+      } catch (err) {
+        console.error("Erreur de chargement Firebase:", err);
+        set({ status: 'login' });
+        get().toast("Erreur de base de données. As-tu bien activé Firestore ?", "bad");
       }
     });
   },
 
-  signIn: async () => {
+  signIn: async (provider: AuthProviderType) => {
     set({ status: 'loading' });
     try {
-      await signInWithGoogle();
+      await signInWithProvider(provider);
       // En mode local, watchAuth ne se redéclenche pas : on relit.
-      get().initAuth();
+      if (!isFirebaseConfigured) {
+        get().initAuth();
+      }
     } catch (e) {
       set({ status: 'login' });
       get().toast('Connexion annulée.', 'bad');
