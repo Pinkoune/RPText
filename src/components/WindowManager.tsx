@@ -21,6 +21,7 @@ import CardJitsuCard from './cards/CardJitsuCard';
 import BossCard from './cards/BossCard';
 import ChatCard from './cards/ChatCard';
 import LeaderboardCard from './cards/LeaderboardCard';
+import StatsCard from './cards/StatsCard';
 import HelpCard from './cards/HelpCard';
 import type { HuntEncounter } from '../game/combat';
 
@@ -45,6 +46,7 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   boss: { title: '🐲 Boss mondial', accent: '#ff6b6b' },
   chat: { title: '💬 Chat mondial', accent: '#7bd8d0' },
   leaderboard: { title: '🏆 Classement', accent: '#ffd45a' },
+  stats: { title: '📊 Statistiques', accent: '#9fd0ff' },
   help: { title: '❔ Commandes', accent: '#b8c0cf' },
 };
 
@@ -78,6 +80,7 @@ export default function WindowManager() {
               {w.kind === 'boss' && <BossCard />}
               {w.kind === 'chat' && <ChatCard />}
               {w.kind === 'leaderboard' && <LeaderboardCard />}
+              {w.kind === 'stats' && <StatsCard />}
               {w.kind === 'help' && <HelpCard />}
             </Window>
           );

@@ -1,5 +1,6 @@
 import {
   GoogleAuthProvider,
+  GithubAuthProvider,
   signInWithPopup,
   signOut as fbSignOut,
   onAuthStateChanged,
@@ -23,8 +24,10 @@ function toAppUser(u: User): AppUser {
   };
 }
 
-/** Connexion Google (ou utilisateur local simulé si Firebase non configuré). */
-export async function signInWithGoogle(): Promise<AppUser> {
+export type AuthProviderType = 'google' | 'github';
+
+/** Connexion (ou utilisateur local simulé si Firebase non configuré). */
+export async function signInWithProvider(type: AuthProviderType): Promise<AppUser> {
   if (!isFirebaseConfigured || !auth) {
     const local: AppUser = {
       uid: 'local-' + Math.random().toString(36).slice(2, 10),
@@ -34,7 +37,11 @@ export async function signInWithGoogle(): Promise<AppUser> {
     localStorage.setItem(LOCAL_KEY, JSON.stringify(local));
     return local;
   }
-  const provider = new GoogleAuthProvider();
+  
+  let provider;
+  if (type === 'google') provider = new GoogleAuthProvider();
+  else provider = new GithubAuthProvider();
+
   const res = await signInWithPopup(auth, provider);
   return toAppUser(res.user);
 }

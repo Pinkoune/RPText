@@ -25,6 +25,11 @@ function canBet(p: PlayerState, cur: Currency, bet: number): boolean {
 
 function settle(p: PlayerState, cur: Currency, delta: number) {
   p[cur] += delta;
+  if (p.statistics) {
+    p.statistics.gamblesPlayed += 1;
+    if (delta > 0) p.statistics.gamblesWon += 1;
+    if (cur === 'gold' && delta > 0) p.statistics.goldEarned += delta;
+  }
   if (cur === 'gold') p.gambleNet += delta;
   if (delta > 0) addQuestMetric(p, 'gambleWins', 1);
 }
@@ -32,7 +37,8 @@ function settle(p: PlayerState, cur: Currency, delta: number) {
 /** Pile ou face : x2 sur victoire. */
 export function coinflip(p: PlayerState, cur: Currency, bet: number, pick: 'heads' | 'tails'): GambleResult {
   if (!canBet(p, cur, bet)) return { win: false, delta: 0, detail: 'Mise invalide.' };
-  const flip = Math.random() < 0.5 + luck(p) ? pick : pick === 'heads' ? 'tails' : 'heads';
+  // Le casino a l'avantage (45% de base)
+  const flip = Math.random() < 0.45 + luck(p) ? pick : pick === 'heads' ? 'tails' : 'heads';
   const win = flip === pick;
   const delta = win ? bet : -bet;
   settle(p, cur, delta);
@@ -84,25 +90,26 @@ export function canGamble(p: PlayerState, bet: number): boolean {
 }
 
 const SLOT_SYMBOLS = ['🍒', '🔔', '⭐', '💎', '7️⃣'];
-const SLOT_PAYOUT: Record<string, number> = { '🍒': 3, '🔔': 5, '⭐': 8, '💎': 15, '7️⃣': 40 };
+const SLOT_PAYOUT: Record<string, number> = { '🍒': 2, '🔔': 4, '⭐': 7, '💎': 12, '7️⃣': 30 };
 
-/** Machine à sous : 3 rouleaux. 3 identiques = jackpot, 2 identiques = x1.5. */
+/** Machine à sous : 3 rouleaux. 3 identiques = jackpot, 2 identiques = remboursement partiel. */
 export function slots(p: PlayerState, cur: Currency, bet: number): GambleResult {
   if (!canBet(p, cur, bet)) return { win: false, delta: 0, detail: 'Mise invalide.' };
   const l = luck(p);
   const pick = () => SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
   let reels = [pick(), pick(), pick()];
-  // La chance offre une seconde chance : si rien ne s'aligne, on relance une fois.
+  // La chance offre une seconde chance rare
   const aligned = (r: string[]) => r[0] === r[1] || r[1] === r[2] || r[0] === r[2];
-  if (!aligned(reels) && Math.random() < l * 6) reels = [pick(), pick(), pick()];
+  if (!aligned(reels) && Math.random() < l * 4) reels = [pick(), pick(), pick()];
   let delta = -bet;
   let detail = 'Perdu...';
   if (reels[0] === reels[1] && reels[1] === reels[2]) {
     delta = bet * SLOT_PAYOUT[reels[0]];
-    detail = `JACKPOT ! x${SLOT_PAYOUT[reels[0]]}`;
+    detail = `JACKPOT ! Gains x${SLOT_PAYOUT[reels[0]] + 1}`;
   } else if (reels[0] === reels[1] || reels[1] === reels[2] || reels[0] === reels[2]) {
-    delta = Math.floor(bet * 0.5);
-    detail = 'Deux symboles : mise partiellement remboursée.';
+    // 2 symboles = on perd la moitié de la mise (EV négatif)
+    delta = -Math.ceil(bet * 0.5);
+    detail = 'Deux symboles : mise partiellement perdue.';
   }
   settle(p, cur, delta);
   return { win: delta > 0, delta, detail, symbols: reels };
@@ -116,7 +123,8 @@ export function wheel(p: PlayerState, bet: number): GambleResult {
   if (!canBet(p, 'fateCoins', bet)) return { win: false, delta: 0, detail: 'Pas assez de Fate Coins.' };
   const night = currentPhase() === 'night';
   // Segments : multiplicateur de la mise (0 = perte totale).
-  const segments = night ? [0, 0, 0, 2, 3, 10] : [0, 0, 1, 2, 3, 5];
+  // La roue est truquée (EV négatif).
+  const segments = night ? [0, 0, 0, 0, 0, 5, 10] : [0, 0, 0, 0, 1, 2, 3];
   const seg = segments[Math.floor(Math.random() * segments.length)];
   const delta = seg === 0 ? -bet : bet * seg - bet;
   settle(p, 'fateCoins', delta);
