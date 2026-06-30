@@ -1,0 +1,76 @@
+import { AnimatePresence } from 'framer-motion';
+import { useUi, type WindowKind } from '../store/uiStore';
+import Window from './Window';
+import ProfileCard from './cards/ProfileCard';
+import HuntCard from './cards/HuntCard';
+import MapCard from './cards/MapCard';
+import InventoryCard from './cards/InventoryCard';
+import CasinoCard from './cards/CasinoCard';
+import ShopCard from './cards/ShopCard';
+import CraftCard from './cards/CraftCard';
+import GatherCard from './cards/GatherCard';
+import MarketCard from './cards/MarketCard';
+import DungeonCard from './cards/DungeonCard';
+import TalentCard from './cards/TalentCard';
+import QuestsCard from './cards/QuestsCard';
+import DuelCard from './cards/DuelCard';
+import BossCard from './cards/BossCard';
+import ChatCard from './cards/ChatCard';
+import LeaderboardCard from './cards/LeaderboardCard';
+import HelpCard from './cards/HelpCard';
+import type { CombatLog } from '../game/combat';
+
+const META: Record<WindowKind, { title: string; accent: string }> = {
+  profile: { title: '👤 Profil', accent: '#9fd0ff' },
+  hunt: { title: '⚔️ Chasse', accent: '#ff8a8a' },
+  map: { title: '🗺️ Carte du monde', accent: '#7bd88f' },
+  inventory: { title: '🎒 Inventaire', accent: '#e6d27a' },
+  casino: { title: '🎰 Casino du Destin', accent: '#c46bff' },
+  shop: { title: '🛒 Boutique', accent: '#f0b46a' },
+  craft: { title: '🔨 Forge', accent: '#d8a26a' },
+  gather: { title: '🌿 Récolte', accent: '#8fd88f' },
+  market: { title: '🏪 Marché', accent: '#ffce6a' },
+  dungeon: { title: '🏰 Donjons', accent: '#c46bff' },
+  talents: { title: '🌟 Talents', accent: '#9fd0ff' },
+  quests: { title: '📜 Quêtes', accent: '#9be37b' },
+  duel: { title: '⚔️ Duels PvP', accent: '#ff7bd0' },
+  boss: { title: '🐲 Boss mondial', accent: '#ff6b6b' },
+  chat: { title: '💬 Chat mondial', accent: '#7bd8d0' },
+  leaderboard: { title: '🏆 Classement', accent: '#ffd45a' },
+  help: { title: '❔ Commandes', accent: '#b8c0cf' },
+};
+
+export default function WindowManager() {
+  const windows = useUi((s) => s.windows);
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-10">
+      <AnimatePresence>
+        {windows.map((w, i) => {
+          const meta = META[w.kind];
+          return (
+            <Window key={w.id} win={w} index={i} title={meta.title} accent={meta.accent}>
+              {w.kind === 'profile' && <ProfileCard />}
+              {w.kind === 'hunt' && <HuntCard log={w.payload as CombatLog} />}
+              {w.kind === 'map' && <MapCard />}
+              {w.kind === 'inventory' && <InventoryCard />}
+              {w.kind === 'casino' && <CasinoCard />}
+              {w.kind === 'shop' && <ShopCard />}
+              {w.kind === 'craft' && <CraftCard />}
+              {w.kind === 'gather' && <GatherCard />}
+              {w.kind === 'market' && <MarketCard />}
+              {w.kind === 'dungeon' && <DungeonCard />}
+              {w.kind === 'talents' && <TalentCard />}
+              {w.kind === 'quests' && <QuestsCard />}
+              {w.kind === 'duel' && <DuelCard />}
+              {w.kind === 'boss' && <BossCard />}
+              {w.kind === 'chat' && <ChatCard />}
+              {w.kind === 'leaderboard' && <LeaderboardCard />}
+              {w.kind === 'help' && <HelpCard />}
+            </Window>
+          );
+        })}
+      </AnimatePresence>
+    </div>
+  );
+}

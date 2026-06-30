@@ -1,0 +1,164 @@
+import type { PlayerState, BiomeId } from './types';
+import { addItem, cooldownLeft } from './player';
+import { addQuestMetric } from './quests';
+
+export const GATHER_COOLDOWN = 120_000; // 2 min par métier de récolte
+
+export type GatherSkillId = 'chop' | 'mine' | 'fish' | 'forage';
+
+interface Drop {
+  id: string;
+  weight: number;
+  min: number;
+  max: number;
+  /** Niveau de métier minimum pour récolter cette ressource. */
+  minLvl?: number;
+}
+
+/** XP de métier nécessaire pour passer au niveau suivant. */
+export function gatherXpToNext(level: number): number {
+  return Math.floor(50 * Math.pow(level, 1.4)) + 50;
+}
+
+export function gatherProgress(xp: number): { level: number; into: number; need: number } {
+  let level = 1;
+  let acc = xp;
+  let need = gatherXpToNext(level);
+  while (acc >= need) {
+    acc -= need;
+    level += 1;
+    need = gatherXpToNext(level);
+  }
+  return { level, into: acc, need };
+}
+
+export function skillLevel(p: PlayerState, skillId: GatherSkillId): number {
+  return gatherProgress(p.gatherXp?.[skillId] ?? 0).level;
+}
+
+export interface GatherSkill {
+  id: GatherSkillId;
+  name: string;
+  verb: string;
+  emoji: string;
+  /** Tables de butin par biome (absent = métier indisponible ici). */
+  byBiome: Partial<Record<BiomeId, Drop[]>>;
+}
+
+export const GATHER_SKILLS: Record<GatherSkillId, GatherSkill> = {
+  chop: {
+    id: 'chop',
+    name: 'Bûcheronnage',
+    verb: 'chop',
+    emoji: '🪓',
+    byBiome: {
+      forest: [
+        { id: 'wood', weight: 70, min: 1, max: 3 },
+        { id: 'hardwood', weight: 22, min: 1, max: 1, minLvl: 3 },
+        { id: 'herb', weight: 8, min: 1, max: 2 },
+      ],
+      plains: [{ id: 'wood', weight: 90, min: 1, max: 2 }, { id: 'hardwood', weight: 10, min: 1, max: 1, minLvl: 3 }],
+      swamp: [{ id: 'wood', weight: 65, min: 1, max: 2 }, { id: 'hardwood', weight: 20, min: 1, max: 1, minLvl: 3 }, { id: 'herb', weight: 15, min: 1, max: 2 }],
+    },
+  },
+  mine: {
+    id: 'mine',
+    name: 'Minage',
+    verb: 'mine',
+    emoji: '⛏️',
+    byBiome: {
+      mountains: [
+        { id: 'stone', weight: 60, min: 1, max: 3 },
+        { id: 'iron_ore', weight: 32, min: 1, max: 2 },
+        { id: 'mithril_ore', weight: 8, min: 1, max: 1, minLvl: 5 },
+      ],
+      desert: [{ id: 'stone', weight: 70, min: 1, max: 3 }, { id: 'iron_ore', weight: 30, min: 1, max: 2 }],
+      frozen: [
+        { id: 'stone', weight: 45, min: 1, max: 2 },
+        { id: 'mithril_ore', weight: 35, min: 1, max: 2, minLvl: 5 },
+        { id: 'crystal', weight: 20, min: 1, max: 1, minLvl: 6 },
+      ],
+    },
+  },
+  fish: {
+    id: 'fish',
+    name: 'Pêche',
+    verb: 'fish',
+    emoji: '🎣',
+    byBiome: {
+      forest: [{ id: 'fish', weight: 100, min: 1, max: 2 }],
+      plains: [{ id: 'fish', weight: 78, min: 1, max: 2 }, { id: 'big_fish', weight: 22, min: 1, max: 1, minLvl: 3 }],
+      swamp: [{ id: 'fish', weight: 70, min: 1, max: 3 }, { id: 'big_fish', weight: 30, min: 1, max: 1, minLvl: 3 }],
+    },
+  },
+  forage: {
+    id: 'forage',
+    name: 'Cueillette',
+    verb: 'forage',
+    emoji: '🌿',
+    byBiome: {
+      forest: [{ id: 'herb', weight: 85, min: 1, max: 3 }, { id: 'wood', weight: 15, min: 1, max: 1 }],
+      plains: [{ id: 'herb', weight: 100, min: 1, max: 2 }],
+      swamp: [{ id: 'herb', weight: 90, min: 2, max: 4 }],
+      desert: [{ id: 'herb', weight: 100, min: 1, max: 1 }],
+    },
+  },
+};
+
+export const GATHER_LIST = Object.values(GATHER_SKILLS);
+
+function pickDrop(drops: Drop[]): Drop {
+  const total = drops.reduce((s, d) => s + d.weight, 0);
+  let r = Math.random() * total;
+  for (const d of drops) {
+    r -= d.weight;
+    if (r <= 0) return d;
+  }
+  return drops[drops.length - 1];
+}
+
+/** Métiers disponibles dans le biome courant. */
+export function skillsForBiome(biome: BiomeId): GatherSkill[] {
+  return GATHER_LIST.filter((s) => s.byBiome[biome]);
+}
+
+export function gatherCooldownLeft(p: PlayerState, skill: GatherSkillId): number {
+  return cooldownLeft(p, `gather:${skill}`, GATHER_COOLDOWN);
+}
+
+export interface GatherResult {
+  ok: boolean;
+  reason?: string;
+  itemId?: string;
+  qty?: number;
+  leveledUp?: boolean;
+  level?: number;
+}
+
+/** Effectue une récolte. Mute le joueur (inventaire + cooldown + XP de métier). */
+export function gather(p: PlayerState, skillId: GatherSkillId): GatherResult {
+  const skill = GATHER_SKILLS[skillId];
+  const drops = skill.byBiome[p.biome];
+  if (!drops) return { ok: false, reason: `${skill.name} indisponible dans ce biome.` };
+  if (gatherCooldownLeft(p, skillId) > 0) return { ok: false, reason: 'Métier en récupération.' };
+
+  if (!p.gatherXp) p.gatherXp = {};
+  const lvlBefore = gatherProgress(p.gatherXp[skillId] ?? 0).level;
+
+  // On ne récolte que ce que le niveau de métier autorise.
+  const pool = drops.filter((d) => !d.minLvl || lvlBefore >= d.minLvl);
+  const d = pickDrop(pool.length ? pool : drops.filter((x) => !x.minLvl));
+
+  const bonus = Math.floor(lvlBefore / 5); // +1 quantité tous les 5 niveaux
+  const qty = d.min + Math.floor(Math.random() * (d.max - d.min + 1)) + bonus;
+  addItem(p, d.id, qty);
+  p.cooldowns[`gather:${skillId}`] = Date.now();
+  addQuestMetric(p, 'gathers', 1);
+
+  // XP de métier : plus la ressource est exigeante, plus elle rapporte.
+  const xpGain = 8 + qty * 2 + (d.minLvl ?? 0) * 5;
+  p.gatherXp[skillId] = (p.gatherXp[skillId] ?? 0) + xpGain;
+  const after = gatherProgress(p.gatherXp[skillId]);
+
+  return { ok: true, itemId: d.id, qty, leveledUp: after.level > lvlBefore, level: after.level };
+}

@@ -1,0 +1,121 @@
+// ─── Types de base du jeu ────────────────────────────────────────────────
+
+export type ClassId = 'warrior' | 'mage' | 'archer' | 'healer';
+
+export type BiomeId =
+  | 'forest'
+  | 'plains'
+  | 'mountains'
+  | 'desert'
+  | 'swamp'
+  | 'frozen';
+
+export type Phase = 'dawn' | 'day' | 'dusk' | 'night';
+
+export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+export type ItemSlot = 'weapon' | 'armor' | 'trinket' | 'consumable' | 'material';
+
+export interface ItemDef {
+  id: string;
+  name: string;
+  icon: string;
+  rarity: ItemRarity;
+  slot: ItemSlot;
+  atk?: number;
+  def?: number;
+  hp?: number;
+  /** Valeur de revente en or. */
+  value: number;
+  desc: string;
+}
+
+export interface Stats {
+  hp: number;
+  maxHp: number;
+  atk: number;
+  def: number;
+}
+
+export interface EquippedGear {
+  weapon: string | null;
+  armor: string | null;
+  trinket: string | null;
+}
+
+export interface PlayerState {
+  uid: string;
+  name: string;
+  photoURL: string | null;
+  classId: ClassId;
+  level: number;
+  xp: number;
+  gold: number;
+  /** Monnaie de gambling premium. */
+  fateCoins: number;
+  gems: number;
+  hp: number;
+  /** id de l'objet -> quantité */
+  inventory: Record<string, number>;
+  equipped: EquippedGear;
+  biome: BiomeId;
+  /** Biomes débloqués. */
+  unlockedBiomes: BiomeId[];
+  /** Timestamps (ms) des derniers usages, pour les cooldowns. */
+  cooldowns: Record<string, number>;
+  /** Statistiques de jeu. */
+  kills: number;
+  deaths: number;
+  /** Bilan net du gambling (peut être négatif). */
+  gambleNet: number;
+  /** Progression des quêtes (journalières/hebdomadaires). */
+  quests: QuestState;
+  /** Duels PvP déjà encaissés (anti double-crédit). */
+  settledDuels: string[];
+  /** Récompenses de boss mondiaux déjà réclamées. */
+  bossClaims: string[];
+  /** Ventes au marché déjà encaissées (anti double-crédit). */
+  settledSales: string[];
+  /** XP par métier de récolte (chop/mine/fish/forage). */
+  gatherXp: Record<string, number>;
+  /** Nombre de clears par donjon. */
+  dungeonClears: Record<string, number>;
+  /** Points de talent non dépensés. */
+  talentPoints: number;
+  /** Rang investi par talent (id -> rang). */
+  talents: Record<string, number>;
+  createdAt: number;
+  lastSeen: number;
+}
+
+export interface QuestPeriodState {
+  /** Début de la période courante (ms). */
+  start: number;
+  /** Compteurs de métriques accumulés sur la période. */
+  counters: Record<string, number>;
+  /** Ids des quêtes dont la récompense a été réclamée. */
+  claimed: string[];
+}
+
+export interface QuestState {
+  daily: QuestPeriodState;
+  weekly: QuestPeriodState;
+}
+
+/** Métriques suivies par les quêtes. */
+export type QuestMetric = 'kills' | 'hunts' | 'gambleWins' | 'goldEarned' | 'bossHits' | 'crafts' | 'gathers';
+
+export interface MonsterDef {
+  id: string;
+  name: string;
+  hp: number;
+  atk: number;
+  def: number;
+  xp: number;
+  gold: [number, number];
+  biomes: BiomeId[];
+  /** Apparait seulement à ces phases (vide = toutes). */
+  phases?: Phase[];
+  /** Table de butin : id objet -> probabilité 0..1 */
+  loot: Record<string, number>;
+  emoji: string;
+}

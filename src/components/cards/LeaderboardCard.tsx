@@ -1,0 +1,71 @@
+import { useEffect, useState } from 'react';
+import { useGame } from '../../store/gameStore';
+import { fetchLeaderboard, trackPresence, type LeaderRow, type OnlinePlayer } from '../../firebase/socialService';
+import { isFirebaseConfigured } from '../../firebase/config';
+import { CLASSES } from '../../game/classes';
+
+export default function LeaderboardCard() {
+  const p = useGame((s) => s.player);
+  const [rows, setRows] = useState<LeaderRow[]>([]);
+  const [online, setOnline] = useState<OnlinePlayer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let unsub = () => {};
+    (async () => {
+      setRows(await fetchLeaderboard(15));
+      setLoading(false);
+    })();
+    if (p) {
+      unsub = trackPresence({ uid: p.uid, name: p.name, level: p.level }, setOnline);
+    }
+    return () => unsub();
+  }, [p?.uid]);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          En ligne · {online.length}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {online.length === 0 && <span className="text-xs text-slate-500">Personne pour l'instant.</span>}
+          {online.map((o) => (
+            <span key={o.uid} className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs">
+              🟢 {o.name} <span className="text-slate-400">Nv.{o.level}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Top aventuriers</div>
+        {loading ? (
+          <div className="animate-pulse text-sm text-slate-500">Chargement…</div>
+        ) : rows.length === 0 ? (
+          <p className="text-xs text-slate-500">
+            {isFirebaseConfigured
+              ? 'Aucun joueur classé pour le moment.'
+              : 'Classement indisponible en mode local. Configure Firebase pour le multijoueur.'}
+          </p>
+        ) : (
+          <ol className="space-y-1">
+            {rows.map((r, i) => (
+              <li
+                key={r.uid}
+                className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${
+                  r.uid === p?.uid ? 'bg-sky-500/20' : 'bg-black/20'
+                }`}
+              >
+                <span className="w-6 shrink-0 text-center font-bold text-slate-400">{i + 1}</span>
+                <span className="shrink-0">{CLASSES[r.classId]?.emoji ?? '🧑'}</span>
+                <span className="min-w-0 flex-1 truncate">{r.name}</span>
+                <span className="shrink-0 text-xs text-slate-400">Nv.{r.level} · {r.kills}☠</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </div>
+  );
+}

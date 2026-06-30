@@ -1,0 +1,21 @@
+{
+  "rules": {
+    "presence": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "chat": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$msg": {
+        ".validate": "newData.hasChildren(['uid', 'name', 'text', 'ts']) && newData.child('text').isString() && newData.child('text').val().length <= 240"
+      }
+    },
+    "world": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}

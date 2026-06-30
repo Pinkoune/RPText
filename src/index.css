@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: #0b1020;
+  color: #e8ecf5;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Carte de jeu — verre dépoli */
+.glass {
+  background: rgba(12, 16, 32, 0.86);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+}
+
+/* Scrollbars discrètes */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.text-glow {
+  text-shadow: 0 0 12px rgba(140, 180, 255, 0.45);
+}
+
+/* ─── Particules d'ambiance ─────────────────────────────────────────── */
+.particle {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 9999px;
+  will-change: transform, opacity;
+}
+
+@keyframes fall {
+  0% { transform: translate(0, -10vh); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translate(var(--drift, 6vw), 110vh); opacity: 0.9; }
+}
+@keyframes riseUp {
+  0% { transform: translate(0, 110vh) scale(0.6); opacity: 0; }
+  15% { opacity: 0.8; }
+  100% { transform: translate(var(--drift, -4vw), -10vh) scale(1); opacity: 0; }
+}
+@keyframes drift {
+  0% { transform: translate(-12vw, 0); opacity: 0; }
+  12%, 88% { opacity: 0.8; }
+  100% { transform: translate(112vw, var(--rise, -6vh)); opacity: 0; }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+@keyframes confetti {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(var(--dx, 0), var(--dy, 60vh)) rotate(var(--rot, 360deg)); opacity: 0; }
+}
+@keyframes lvlPop {
+  0% { transform: scale(0.5); opacity: 0; }
+  25% { transform: scale(1.1); opacity: 1; }
+  75% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0; }
+}

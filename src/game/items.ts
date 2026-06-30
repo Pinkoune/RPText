@@ -1,0 +1,64 @@
+import type { ItemDef } from './types';
+
+export const ITEMS: Record<string, ItemDef> = {
+  // ── Matériaux (loot) ──
+  wolf_pelt: { id: 'wolf_pelt', name: 'Peau de loup', icon: '🐾', rarity: 'common', slot: 'material', value: 4, desc: 'Fourrure rêche.' },
+  slime_gel: { id: 'slime_gel', name: 'Gel de slime', icon: '🟢', rarity: 'common', slot: 'material', value: 3, desc: 'Visqueux et tiède.' },
+  boar_tusk: { id: 'boar_tusk', name: 'Défense de sanglier', icon: '🦴', rarity: 'uncommon', slot: 'material', value: 9, desc: 'Solide et pointue.' },
+  frost_shard: { id: 'frost_shard', name: 'Éclat de givre', icon: '🧊', rarity: 'rare', slot: 'material', value: 25, desc: 'Froid qui ne fond jamais.' },
+  ember_core: { id: 'ember_core', name: 'Cœur de braise', icon: '🔥', rarity: 'rare', slot: 'material', value: 30, desc: 'Pulse d\'une chaleur ardente.' },
+  void_dust: { id: 'void_dust', name: 'Poussière du vide', icon: '🌌', rarity: 'epic', slot: 'material', value: 80, desc: 'Aspire la lumière alentour.' },
+
+  // ── Consommables ──
+  potion: { id: 'potion', name: 'Potion de soin', icon: '🧪', rarity: 'common', slot: 'consumable', hp: 60, value: 15, desc: 'Rend 60 PV.' },
+  hi_potion: { id: 'hi_potion', name: 'Hi-Potion', icon: '⚗️', rarity: 'uncommon', slot: 'consumable', hp: 180, value: 45, desc: 'Rend 180 PV.' },
+
+  // ── Armes ──
+  rusty_sword: { id: 'rusty_sword', name: 'Épée rouillée', icon: '🗡️', rarity: 'common', slot: 'weapon', atk: 4, value: 10, desc: 'Mieux que rien.' },
+  iron_blade: { id: 'iron_blade', name: 'Lame de fer', icon: '⚔️', rarity: 'uncommon', slot: 'weapon', atk: 10, value: 60, desc: 'Tranchant fiable.' },
+  frost_glaive: { id: 'frost_glaive', name: 'Glaive de givre', icon: '❄️', rarity: 'rare', slot: 'weapon', atk: 22, value: 220, desc: 'Gèle les ennemis touchés.' },
+  ember_axe: { id: 'ember_axe', name: 'Hache ardente', icon: '🪓', rarity: 'epic', slot: 'weapon', atk: 34, value: 500, desc: 'Brûle tout sur son passage.' },
+  void_reaver: { id: 'void_reaver', name: 'Faucheuse du vide', icon: '💀', rarity: 'legendary', slot: 'weapon', atk: 55, value: 1500, desc: 'Murmure des promesses interdites.' },
+
+  // ── Armures ──
+  cloth_robe: { id: 'cloth_robe', name: 'Robe de tissu', icon: '🧥', rarity: 'common', slot: 'armor', def: 3, hp: 10, value: 12, desc: 'Légère et confortable.' },
+  iron_mail: { id: 'iron_mail', name: 'Cotte de fer', icon: '🛡️', rarity: 'uncommon', slot: 'armor', def: 9, hp: 30, value: 70, desc: 'Protection solide.' },
+  frost_plate: { id: 'frost_plate', name: 'Plastron de givre', icon: '🥶', rarity: 'rare', slot: 'armor', def: 18, hp: 80, value: 260, desc: 'Repousse le froid mortel.' },
+
+  // ── Trinkets ──
+  lucky_coin: { id: 'lucky_coin', name: 'Pièce porte-bonheur', icon: '🍀', rarity: 'rare', slot: 'trinket', value: 150, desc: 'Améliore légèrement la chance au casino.' },
+  gambler_ring: { id: 'gambler_ring', name: 'Anneau du parieur', icon: '💍', rarity: 'epic', slot: 'trinket', atk: 6, value: 400, desc: 'Le destin sourit aux audacieux.' },
+
+  // ── Ressources de récolte ──
+  wood: { id: 'wood', name: 'Bois', icon: '🪵', rarity: 'common', slot: 'material', value: 3, desc: 'Bûche tendre. Récoltée au bûcheronnage.' },
+  hardwood: { id: 'hardwood', name: 'Bois dur', icon: '🪵', rarity: 'uncommon', slot: 'material', value: 14, desc: 'Bois noble, dense et résistant.' },
+  stone: { id: 'stone', name: 'Pierre', icon: '🪨', rarity: 'common', slot: 'material', value: 3, desc: 'Roche brute extraite à la mine.' },
+  iron_ore: { id: 'iron_ore', name: 'Minerai de fer', icon: '⛏️', rarity: 'uncommon', slot: 'material', value: 11, desc: 'À fondre pour forger.' },
+  mithril_ore: { id: 'mithril_ore', name: 'Minerai de mithril', icon: '🪙', rarity: 'rare', slot: 'material', value: 55, desc: 'Métal légendaire des hauteurs gelées.' },
+  fish: { id: 'fish', name: 'Poisson', icon: '🐟', rarity: 'common', slot: 'material', value: 6, desc: 'Pêché dans les eaux du biome.' },
+  big_fish: { id: 'big_fish', name: 'Gros poisson', icon: '🐠', rarity: 'uncommon', slot: 'material', value: 22, desc: 'Une belle prise.' },
+  herb: { id: 'herb', name: 'Herbe médicinale', icon: '🌿', rarity: 'common', slot: 'material', value: 5, desc: 'Cueillie au sol. Base des remèdes.' },
+  crystal: { id: 'crystal', name: 'Cristal', icon: '🔮', rarity: 'rare', slot: 'material', value: 38, desc: 'Concentré d\'énergie pure.' },
+
+  // ── Nourriture (craft) ──
+  grilled_fish: { id: 'grilled_fish', name: 'Poisson grillé', icon: '🍢', rarity: 'common', slot: 'consumable', hp: 240, value: 30, desc: 'Rend 240 PV. Cuisiné.' },
+  hearty_stew: { id: 'hearty_stew', name: 'Ragoût copieux', icon: '🍲', rarity: 'uncommon', slot: 'consumable', hp: 500, value: 70, desc: 'Rend 500 PV. Un vrai festin.' },
+
+  // ── Équipement craftable (ressources) ──
+  iron_spear: { id: 'iron_spear', name: 'Lance de fer', icon: '🔱', rarity: 'uncommon', slot: 'weapon', atk: 16, value: 140, desc: 'Allonge et puissance.' },
+  steel_plate: { id: 'steel_plate', name: 'Harnois d\'acier', icon: '🛡️', rarity: 'rare', slot: 'armor', def: 16, hp: 70, value: 280, desc: 'Forgé à partir de minerai.' },
+  mithril_blade: { id: 'mithril_blade', name: 'Lame de mithril', icon: '⚔️', rarity: 'epic', slot: 'weapon', atk: 40, value: 800, desc: 'Tranchant qui ne s\'émousse jamais.' },
+  crystal_charm: { id: 'crystal_charm', name: 'Charme de cristal', icon: '🔮', rarity: 'epic', slot: 'trinket', def: 8, hp: 40, value: 600, desc: 'Vibre d\'une énergie protectrice.' },
+};
+
+export const RARITY_COLOR: Record<ItemDef['rarity'], string> = {
+  common: '#b8c0cf',
+  uncommon: '#62d67a',
+  rare: '#5aa6ff',
+  epic: '#c46bff',
+  legendary: '#ffae42',
+};
+
+export function item(id: string): ItemDef | undefined {
+  return ITEMS[id];
+}
