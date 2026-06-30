@@ -44,15 +44,43 @@ export function coinflip(p: PlayerState, cur: Currency, bet: number, pick: 'head
   };
 }
 
-/** Dés : devine plus haut/plus bas que 3.5 (2d6 simplifié à 1d6). */
-export function dice(p: PlayerState, cur: Currency, bet: number, pick: 'high' | 'low'): GambleResult {
-  if (!canBet(p, cur, bet)) return { win: false, delta: 0, detail: 'Mise invalide.' };
-  const r = 1 + Math.floor(Math.random() * 6);
-  const isHigh = r >= 4;
-  const win = (pick === 'high' && isHigh) || (pick === 'low' && !isHigh);
-  const delta = win ? bet : -bet;
-  settle(p, cur, delta);
-  return { win, delta, detail: `Le dé affiche ${r}.`, rollValue: r };
+// ─── Blackjack ──────────────────────────────────────────────────────────────
+export interface Card {
+  label: string;
+  value: number;
+}
+
+const RANKS: Card[] = [
+  { label: 'A', value: 11 },
+  { label: '2', value: 2 }, { label: '3', value: 3 }, { label: '4', value: 4 },
+  { label: '5', value: 5 }, { label: '6', value: 6 }, { label: '7', value: 7 },
+  { label: '8', value: 8 }, { label: '9', value: 9 }, { label: '10', value: 10 },
+  { label: 'J', value: 10 }, { label: 'Q', value: 10 }, { label: 'K', value: 10 },
+];
+
+export function drawCard(): Card {
+  return RANKS[Math.floor(Math.random() * RANKS.length)];
+}
+
+/** Valeur d'une main (les As comptent 1 si nécessaire). */
+export function handValue(cards: Card[]): number {
+  let v = cards.reduce((s, c) => s + c.value, 0);
+  let aces = cards.filter((c) => c.value === 11).length;
+  while (v > 21 && aces > 0) { v -= 10; aces -= 1; }
+  return v;
+}
+
+export function isBlackjack(cards: Card[]): boolean {
+  return cards.length === 2 && handValue(cards) === 21;
+}
+
+/** Applique un gain/perte d'or de gambling (or + bilan + métrique quête). */
+export function applyGamble(p: PlayerState, delta: number): void {
+  settle(p, 'gold', delta);
+}
+
+export function canGamble(p: PlayerState, bet: number): boolean {
+  return canBet(p, 'gold', bet);
 }
 
 const SLOT_SYMBOLS = ['🍒', '🔔', '⭐', '💎', '7️⃣'];

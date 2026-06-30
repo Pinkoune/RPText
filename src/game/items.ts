@@ -13,12 +13,18 @@ export const ITEMS: Record<string, ItemDef> = {
   potion: { id: 'potion', name: 'Potion de soin', icon: '🧪', rarity: 'common', slot: 'consumable', hp: 60, value: 15, desc: 'Rend 60 PV.' },
   hi_potion: { id: 'hi_potion', name: 'Hi-Potion', icon: '⚗️', rarity: 'uncommon', slot: 'consumable', hp: 180, value: 45, desc: 'Rend 180 PV.' },
 
-  // ── Armes ──
-  rusty_sword: { id: 'rusty_sword', name: 'Épée rouillée', icon: '🗡️', rarity: 'common', slot: 'weapon', atk: 4, value: 10, desc: 'Mieux que rien.' },
-  iron_blade: { id: 'iron_blade', name: 'Lame de fer', icon: '⚔️', rarity: 'uncommon', slot: 'weapon', atk: 10, value: 60, desc: 'Tranchant fiable.' },
-  frost_glaive: { id: 'frost_glaive', name: 'Glaive de givre', icon: '❄️', rarity: 'rare', slot: 'weapon', atk: 22, value: 220, desc: 'Gèle les ennemis touchés.' },
-  ember_axe: { id: 'ember_axe', name: 'Hache ardente', icon: '🪓', rarity: 'epic', slot: 'weapon', atk: 34, value: 500, desc: 'Brûle tout sur son passage.' },
-  void_reaver: { id: 'void_reaver', name: 'Faucheuse du vide', icon: '💀', rarity: 'legendary', slot: 'weapon', atk: 55, value: 1500, desc: 'Murmure des promesses interdites.' },
+  // ── Armes de mêlée (Guerrier / Archer) ──
+  rusty_sword: { id: 'rusty_sword', name: 'Épée rouillée', icon: '🗡️', rarity: 'common', slot: 'weapon', atk: 4, classes: ['warrior', 'archer'], value: 10, desc: 'Mieux que rien.' },
+  iron_blade: { id: 'iron_blade', name: 'Lame de fer', icon: '⚔️', rarity: 'uncommon', slot: 'weapon', atk: 10, classes: ['warrior', 'archer'], value: 60, desc: 'Tranchant fiable.' },
+  frost_glaive: { id: 'frost_glaive', name: 'Glaive de givre', icon: '❄️', rarity: 'rare', slot: 'weapon', atk: 22, classes: ['warrior', 'archer'], value: 220, desc: 'Gèle les ennemis touchés.' },
+  ember_axe: { id: 'ember_axe', name: 'Hache ardente', icon: '🪓', rarity: 'epic', slot: 'weapon', atk: 34, classes: ['warrior'], value: 500, desc: 'Brûle tout sur son passage.' },
+  void_reaver: { id: 'void_reaver', name: 'Faucheuse du vide', icon: '💀', rarity: 'legendary', slot: 'weapon', atk: 55, classes: ['warrior'], value: 1500, desc: 'Murmure des promesses interdites.' },
+
+  // ── Bâtons & sceptres (Mage / Soigneur) ──
+  apprentice_wand: { id: 'apprentice_wand', name: 'Baguette d\'apprenti', icon: '🪄', rarity: 'common', slot: 'weapon', atk: 4, classes: ['mage', 'healer'], value: 10, desc: 'Crépite d\'une faible magie.' },
+  arcane_staff: { id: 'arcane_staff', name: 'Bâton arcanique', icon: '🪈', rarity: 'uncommon', slot: 'weapon', atk: 12, classes: ['mage', 'healer'], value: 70, desc: 'Canalise les flux magiques.' },
+  frost_scepter: { id: 'frost_scepter', name: 'Sceptre de givre', icon: '🔱', rarity: 'rare', slot: 'weapon', atk: 24, classes: ['mage', 'healer'], value: 230, desc: 'Le froid obéit à son porteur.' },
+  crystal_staff: { id: 'crystal_staff', name: 'Bâton de cristal', icon: '🔮', rarity: 'epic', slot: 'weapon', atk: 40, classes: ['mage', 'healer'], value: 820, desc: 'Vibre d\'une puissance pure.' },
 
   // ── Armures ──
   cloth_robe: { id: 'cloth_robe', name: 'Robe de tissu', icon: '🧥', rarity: 'common', slot: 'armor', def: 3, hp: 10, value: 12, desc: 'Légère et confortable.' },
@@ -45,9 +51,9 @@ export const ITEMS: Record<string, ItemDef> = {
   hearty_stew: { id: 'hearty_stew', name: 'Ragoût copieux', icon: '🍲', rarity: 'uncommon', slot: 'consumable', hp: 500, value: 70, desc: 'Rend 500 PV. Un vrai festin.' },
 
   // ── Équipement craftable (ressources) ──
-  iron_spear: { id: 'iron_spear', name: 'Lance de fer', icon: '🔱', rarity: 'uncommon', slot: 'weapon', atk: 16, value: 140, desc: 'Allonge et puissance.' },
+  iron_spear: { id: 'iron_spear', name: 'Lance de fer', icon: '🔱', rarity: 'uncommon', slot: 'weapon', atk: 16, classes: ['warrior', 'archer'], value: 140, desc: 'Allonge et puissance.' },
   steel_plate: { id: 'steel_plate', name: 'Harnois d\'acier', icon: '🛡️', rarity: 'rare', slot: 'armor', def: 16, hp: 70, value: 280, desc: 'Forgé à partir de minerai.' },
-  mithril_blade: { id: 'mithril_blade', name: 'Lame de mithril', icon: '⚔️', rarity: 'epic', slot: 'weapon', atk: 40, value: 800, desc: 'Tranchant qui ne s\'émousse jamais.' },
+  mithril_blade: { id: 'mithril_blade', name: 'Lame de mithril', icon: '⚔️', rarity: 'epic', slot: 'weapon', atk: 40, classes: ['warrior', 'archer'], value: 800, desc: 'Tranchant qui ne s\'émousse jamais.' },
   crystal_charm: { id: 'crystal_charm', name: 'Charme de cristal', icon: '🔮', rarity: 'epic', slot: 'trinket', def: 8, hp: 40, value: 600, desc: 'Vibre d\'une énergie protectrice.' },
 };
 

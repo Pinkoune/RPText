@@ -2,7 +2,7 @@ import type { PlayerState, BiomeId } from './types';
 import { addItem, cooldownLeft } from './player';
 import { addQuestMetric } from './quests';
 
-export const GATHER_COOLDOWN = 120_000; // 2 min par métier de récolte
+export const GATHER_COOLDOWN = 90_000; // 90s, cooldown UNIQUE partagé (une récolte à la fois)
 
 export type GatherSkillId = 'chop' | 'mine' | 'fish' | 'forage';
 
@@ -32,8 +32,12 @@ export function gatherProgress(xp: number): { level: number; into: number; need:
   return { level, into: acc, need };
 }
 
-export function skillLevel(p: PlayerState, skillId: GatherSkillId): number {
-  return gatherProgress(p.gatherXp?.[skillId] ?? 0).level;
+/** Niveau de farm global (XP de récolte unique, façon EPIC RPG). */
+export function farmProgress(p: PlayerState): { level: number; into: number; need: number } {
+  return gatherProgress(p.farmXp ?? 0);
+}
+export function farmLevel(p: PlayerState): number {
+  return gatherProgress(p.farmXp ?? 0).level;
 }
 
 export interface GatherSkill {
@@ -122,8 +126,9 @@ export function skillsForBiome(biome: BiomeId): GatherSkill[] {
   return GATHER_LIST.filter((s) => s.byBiome[biome]);
 }
 
-export function gatherCooldownLeft(p: PlayerState, skill: GatherSkillId): number {
-  return cooldownLeft(p, `gather:${skill}`, GATHER_COOLDOWN);
+/** Cooldown UNIQUE de récolte (toutes les récoltes le partagent). */
+export function gatherCooldownLeft(p: PlayerState): number {
+  return cooldownLeft(p, 'gather', GATHER_COOLDOWN);
 }
 
 export interface GatherResult {
@@ -131,34 +136,34 @@ export interface GatherResult {
   reason?: string;
   itemId?: string;
   qty?: number;
+  xpGain?: number;
   leveledUp?: boolean;
   level?: number;
 }
 
-/** Effectue une récolte. Mute le joueur (inventaire + cooldown + XP de métier). */
+/** Effectue une récolte. Mute le joueur (inventaire + cooldown unique + XP de farm). */
 export function gather(p: PlayerState, skillId: GatherSkillId): GatherResult {
   const skill = GATHER_SKILLS[skillId];
   const drops = skill.byBiome[p.biome];
   if (!drops) return { ok: false, reason: `${skill.name} indisponible dans ce biome.` };
-  if (gatherCooldownLeft(p, skillId) > 0) return { ok: false, reason: 'Métier en récupération.' };
+  if (gatherCooldownLeft(p) > 0) return { ok: false, reason: 'Tu récupères encore de ta dernière récolte.' };
 
-  if (!p.gatherXp) p.gatherXp = {};
-  const lvlBefore = gatherProgress(p.gatherXp[skillId] ?? 0).level;
+  const lvlBefore = gatherProgress(p.farmXp ?? 0).level;
 
-  // On ne récolte que ce que le niveau de métier autorise.
+  // On ne récolte que ce que le niveau de farm autorise.
   const pool = drops.filter((d) => !d.minLvl || lvlBefore >= d.minLvl);
   const d = pickDrop(pool.length ? pool : drops.filter((x) => !x.minLvl));
 
-  const bonus = Math.floor(lvlBefore / 5); // +1 quantité tous les 5 niveaux
+  const bonus = Math.floor(lvlBefore / 5); // +1 quantité tous les 5 niveaux de farm
   const qty = d.min + Math.floor(Math.random() * (d.max - d.min + 1)) + bonus;
   addItem(p, d.id, qty);
-  p.cooldowns[`gather:${skillId}`] = Date.now();
+  p.cooldowns['gather'] = Date.now(); // cooldown UNIQUE partagé
   addQuestMetric(p, 'gathers', 1);
 
-  // XP de métier : plus la ressource est exigeante, plus elle rapporte.
+  // XP de farm global : plus la ressource est exigeante, plus elle rapporte.
   const xpGain = 8 + qty * 2 + (d.minLvl ?? 0) * 5;
-  p.gatherXp[skillId] = (p.gatherXp[skillId] ?? 0) + xpGain;
-  const after = gatherProgress(p.gatherXp[skillId]);
+  p.farmXp = (p.farmXp ?? 0) + xpGain;
+  const after = gatherProgress(p.farmXp);
 
-  return { ok: true, itemId: d.id, qty, leveledUp: after.level > lvlBefore, level: after.level };
+  return { ok: true, itemId: d.id, qty, xpGain, leveledUp: after.level > lvlBefore, level: after.level };
 }

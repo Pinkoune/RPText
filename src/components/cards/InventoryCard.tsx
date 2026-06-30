@@ -1,6 +1,6 @@
 import { useGame } from '../../store/gameStore';
 import { ITEMS, RARITY_COLOR } from '../../game/items';
-import { deriveStats, removeItem } from '../../game/player';
+import { deriveStats, removeItem, equipItem, canEquip } from '../../game/player';
 
 export default function InventoryCard() {
   const p = useGame((s) => s.player);
@@ -12,13 +12,11 @@ export default function InventoryCard() {
 
   function equip(id: string) {
     const it = ITEMS[id];
-    const slot = it.slot as 'weapon' | 'armor' | 'trinket';
-    mutate((d) => {
-      const prev = d.equipped[slot];
-      d.equipped[slot] = id;
-      removeItem(d, id);
-      if (prev) d.inventory[prev] = (d.inventory[prev] ?? 0) + 1;
-    });
+    if (!canEquip(p!, it)) {
+      toast(`Ta classe ne peut pas équiper ${it.name}.`, 'bad');
+      return;
+    }
+    mutate((d) => { equipItem(d, id); });
     toast(`${it.name} équipé.`, 'good');
   }
 
@@ -49,6 +47,7 @@ export default function InventoryCard() {
       {entries.map(([id, qty]) => {
         const it = ITEMS[id];
         const equippable = it.slot === 'weapon' || it.slot === 'armor' || it.slot === 'trinket';
+        const wrongClass = equippable && !canEquip(p, it);
         const isEquipped = Object.values(p.equipped).includes(id);
         return (
           <div key={id} className="flex items-center gap-2 rounded-lg border-l-2 bg-black/25 p-2" style={{ borderColor: RARITY_COLOR[it.rarity] }}>
@@ -69,10 +68,13 @@ export default function InventoryCard() {
                   Utiliser
                 </button>
               )}
-              {equippable && !isEquipped && (
+              {equippable && !isEquipped && !wrongClass && (
                 <button onClick={() => equip(id)} className="rounded bg-sky-500/30 px-2 py-1 text-xs hover:bg-sky-500/50">
                   Équiper
                 </button>
+              )}
+              {wrongClass && (
+                <span className="rounded bg-black/30 px-2 py-1 text-[10px] text-slate-500">🔒 autre classe</span>
               )}
               <button onClick={() => sell(id)} className="rounded bg-amber-500/25 px-2 py-1 text-xs hover:bg-amber-500/45">
                 Vendre

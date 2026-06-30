@@ -1,11 +1,11 @@
 import type { PlayerState } from './types';
 import type { WindowKind } from '../store/uiStore';
-import { fight } from './combat';
 import { pickMonster } from './monsters';
 import { cooldownLeft } from './player';
 import { ITEMS } from './items';
 import { deriveStats, removeItem } from './player';
 import { currentPhase } from './daynight';
+import { addQuestMetric } from './quests';
 import { gather, GATHER_SKILLS, type GatherSkillId } from './gathering';
 
 export interface CommandCtx {
@@ -28,19 +28,23 @@ export const COMMANDS: CommandDef[] = [
   { name: 'dungeon', aliases: ['donjon', 'dj'], desc: 'Donjons à étapes (combats enchaînés, gros butin).', category: 'Combat' },
   { name: 'talents', aliases: ['talent', 'skills', 'competences', 'compétences'], desc: 'Arbre de talents de ta classe (points par niveau).', category: 'Combat' },
   { name: 'map', aliases: ['carte', 'm'], desc: 'Ouvre la carte des biomes.', category: 'Jeu' },
-  { name: 'inventory', aliases: ['inv', 'sac', 'i'], desc: 'Ouvre ton inventaire et ton équipement.', category: 'Jeu' },
+  { name: 'inventory', aliases: ['inv', 'sac', 'i'], desc: 'Ouvre ton inventaire.', category: 'Jeu' },
+  { name: 'equipment', aliases: ['equip', 'équip', 'stuff', 'gear'], desc: 'Gère ton équipement (arme, armure, bijou).', category: 'Jeu' },
+  { name: 'cooldown', aliases: ['cd', 'cooldowns', 'recup'], desc: 'Affiche les récupérations en cours.', category: 'Jeu' },
+  { name: 'experience', aliases: ['xp', 'exp', 'niveau', 'level'], desc: 'Expérience d\'aventure et de farm.', category: 'Jeu' },
   { name: 'craft', aliases: ['forge', 'fabriquer'], desc: 'Forge de l\'équipement avec tes matériaux.', category: 'Jeu' },
   { name: 'gather', aliases: ['farm', 'recolte', 'récolte'], desc: 'Récolte les ressources du biome (vue d\'ensemble).', category: 'Récolte' },
   { name: 'chop', aliases: ['bois', 'woodcut'], desc: 'Bûcheronnage : récolte du bois.', category: 'Récolte' },
   { name: 'mine', aliases: ['miner', 'minage'], desc: 'Minage : pierre, fer, mithril, cristal.', category: 'Récolte' },
   { name: 'fish', aliases: ['peche', 'pêche'], desc: 'Pêche : poissons.', category: 'Récolte' },
   { name: 'forage', aliases: ['cueillette', 'cueillir'], desc: 'Cueillette : herbes médicinales.', category: 'Récolte' },
-  { name: 'casino', aliases: ['gamble', 'pari', 'g'], desc: 'Entre au casino (coinflip, dés, slots, roue).', category: 'Casino' },
+  { name: 'casino', aliases: ['gamble', 'pari', 'g'], desc: 'Entre au casino (pile/face, blackjack, machine, roue).', category: 'Casino' },
   { name: 'shop', aliases: ['boutique', 'store'], desc: 'Achète potions et équipement.', category: 'Jeu' },
   { name: 'market', aliases: ['marche', 'marché', 'hv', 'vente'], desc: 'Marché entre joueurs : vendre et acheter.', category: 'Multijoueur' },
   { name: 'heal', aliases: ['soin', 'potion'], desc: 'Bois une potion pour récupérer des PV.', category: 'Combat' },
   { name: 'quests', aliases: ['quetes', 'quêtes', 'q', 'daily', 'quotidien'], desc: 'Quêtes journalières et hebdomadaires.', category: 'Jeu' },
   { name: 'duel', aliases: ['pvp', 'defi'], desc: 'Défie un autre joueur au pile/face (mise en or).', category: 'Multijoueur' },
+  { name: 'cardjitsu', aliases: ['cj', 'cards', 'ninja', 'cartes'], desc: 'Duel de cartes Card-Jitsu (feu/eau/neige).', category: 'Multijoueur' },
   { name: 'boss', aliases: ['raid', 'worldboss'], desc: 'Attaque le boss mondial avec les autres joueurs.', category: 'Multijoueur' },
   { name: 'chat', aliases: ['tchat', 'say'], desc: 'Chat mondial avec les joueurs connectés.', category: 'Multijoueur' },
   { name: 'leaderboard', aliases: ['classement', 'top', 'lb'], desc: 'Affiche le classement et les joueurs en ligne.', category: 'Multijoueur' },
@@ -84,6 +88,18 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.open('inventory', undefined, { singleton: true });
       break;
 
+    case 'equipment':
+      ctx.open('equipment', undefined, { singleton: true });
+      break;
+
+    case 'cooldown':
+      ctx.open('cooldown', undefined, { singleton: true });
+      break;
+
+    case 'experience':
+      ctx.open('experience', undefined, { singleton: true });
+      break;
+
     case 'casino':
       ctx.open('casino', undefined, { singleton: true });
       break;
@@ -121,8 +137,8 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.mutate((d) => { holder.res = gather(d, skill); });
       const r = holder.res;
       if (r && r.ok && r.itemId) {
-        ctx.toast(`${GATHER_SKILLS[skill].emoji} +${r.qty} ${ITEMS[r.itemId].name}`, 'good');
-        if (r.leveledUp) ctx.toast(`⬆️ ${GATHER_SKILLS[skill].name} niveau ${r.level} !`, 'gold');
+        ctx.toast(`${GATHER_SKILLS[skill].emoji} +${r.qty} ${ITEMS[r.itemId].name} (+${r.xpGain} XP farm)`, 'good');
+        if (r.leveledUp) ctx.toast(`⬆️ Niveau de farm ${r.level} !`, 'gold');
       } else {
         ctx.toast(r?.reason ?? 'Échec.', 'bad');
       }
@@ -135,6 +151,10 @@ export function runCommand(input: string, ctx: CommandCtx): void {
 
     case 'duel':
       ctx.open('duel', undefined, { singleton: true });
+      break;
+
+    case 'cardjitsu':
+      ctx.open('cardjitsu', undefined, { singleton: true });
       break;
 
     case 'boss':
@@ -184,14 +204,12 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         break;
       }
       const monster = pickMonster(p!.biome, currentPhase());
-      // On calcule le combat sur le brouillon muté pour persistance.
-      let result: ReturnType<typeof fight> | null = null;
       ctx.mutate((d) => {
         d.cooldowns.hunt = Date.now();
-        result = fight(d, monster);
+        addQuestMetric(d, 'hunts', 1);
       });
-      // Fenêtre unique : relance le combat dans la fenêtre de chasse déjà ouverte.
-      if (result) ctx.open('hunt', result, { singleton: true });
+      // Ouvre une rencontre interactive (fenêtre unique).
+      ctx.open('hunt', { monster, id: Date.now() }, { singleton: true });
       break;
     }
   }

@@ -68,9 +68,21 @@ export function emptyMods(): CombatMods {
   return { crit: 0, flatDmg: 0, dmgReduction: 0, dodge: 0, doubleHit: 0, regen: 0, berserkBonus: 0 };
 }
 
-/** Agrège les effets des talents investis (uniquement ceux de la classe). */
+/** Traits innés de classe (actifs même sans talent investi). */
+export const CLASS_BASE_MODS: Record<ClassId, Partial<CombatMods>> = {
+  warrior: { dmgReduction: 0.1 }, // encaisseur
+  mage: { crit: 0.06 }, // sorts critiques
+  archer: { doubleHit: 0.06 }, // tirs rapides
+  healer: { regen: 5 }, // régénération constante
+};
+
+/** Agrège traits innés de classe + talents investis. */
 export function talentMods(p: PlayerState): CombatMods {
   const mods = emptyMods();
+  // Trait inné de la classe
+  for (const [key, val] of Object.entries(CLASS_BASE_MODS[p.classId] ?? {})) {
+    mods[key as keyof CombatMods] += val as number;
+  }
   if (!p.talents) return mods;
   for (const def of talentsForClass(p.classId)) {
     const rank = p.talents[def.id] ?? 0;

@@ -24,6 +24,8 @@ export interface ItemDef {
   atk?: number;
   def?: number;
   hp?: number;
+  /** Classes autorisées à équiper (armes). Absent = toutes. */
+  classes?: ClassId[];
   /** Valeur de revente en or. */
   value: number;
   desc: string;
@@ -45,6 +47,8 @@ export interface EquippedGear {
 export interface PlayerState {
   uid: string;
   name: string;
+  /** Titre/devise personnalisable affiché sous le nom. */
+  title: string;
   photoURL: string | null;
   classId: ClassId;
   level: number;
@@ -75,8 +79,10 @@ export interface PlayerState {
   bossClaims: string[];
   /** Ventes au marché déjà encaissées (anti double-crédit). */
   settledSales: string[];
-  /** XP par métier de récolte (chop/mine/fish/forage). */
+  /** XP par métier de récolte (legacy, fusionné dans farmXp). */
   gatherXp: Record<string, number>;
+  /** XP de farm global (niveau de récolte unique). */
+  farmXp: number;
   /** Nombre de clears par donjon. */
   dungeonClears: Record<string, number>;
   /** Points de talent non dépensés. */

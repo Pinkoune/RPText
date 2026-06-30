@@ -27,8 +27,13 @@ export const RECIPES: Recipe[] = [
   { output: 'frost_plate', qty: 1, materials: { frost_shard: 4, stone: 6 }, gold: 120 },
   { output: 'ember_axe', qty: 1, materials: { ember_core: 3, frost_shard: 1, hardwood: 4 }, gold: 220 },
 
+  // ── Bâtons & sceptres (magie) ──
+  { output: 'arcane_staff', qty: 1, materials: { hardwood: 4, crystal: 1, herb: 3 }, gold: 50 },
+  { output: 'frost_scepter', qty: 1, materials: { frost_shard: 3, crystal: 2, hardwood: 2 }, gold: 90 },
+
   // ── Maîtrise (mithril / cristal) ──
   { output: 'mithril_blade', qty: 1, materials: { mithril_ore: 8, hardwood: 4, crystal: 2 }, gold: 500 },
+  { output: 'crystal_staff', qty: 1, materials: { crystal: 6, mithril_ore: 4, hardwood: 4 }, gold: 500 },
   { output: 'crystal_charm', qty: 1, materials: { crystal: 5, mithril_ore: 2 }, gold: 300 },
 
   // ── Bijoux & légendaire ──

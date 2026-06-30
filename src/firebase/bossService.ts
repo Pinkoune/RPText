@@ -1,6 +1,9 @@
 import { ref, onValue, runTransaction } from 'firebase/database';
 import { rtdb, isFirebaseConfigured } from './config';
 
+/** Un joueur ne peut frapper le boss qu'une fois toutes les 2 heures. */
+export const BOSS_ATTACK_CD = 2 * 60 * 60 * 1000;
+
 export interface BossContributor {
   name: string;
   dmg: number;

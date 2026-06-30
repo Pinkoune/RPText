@@ -1,14 +1,16 @@
 import { useGame } from '../../store/gameStore';
 import { ITEMS, RARITY_COLOR } from '../../game/items';
-import { addItem } from '../../game/player';
+import { addItem, canEquip } from '../../game/player';
 
 // Stock de la boutique : id -> prix d'achat (≈ 2.2× la valeur de revente).
 const STOCK: Record<string, number> = {
   potion: 30,
   hi_potion: 100,
-  iron_blade: 130,
+  iron_blade: 130, // mêlée
+  arcane_staff: 150, // magie
+  frost_glaive: 480, // mêlée
+  frost_scepter: 500, // magie
   iron_mail: 150,
-  frost_glaive: 480,
   frost_plate: 560,
   lucky_coin: 320,
 };
@@ -34,7 +36,7 @@ export default function ShopCard() {
   return (
     <div className="space-y-2">
       <p className="text-xs text-slate-400">Or disponible : <b>{p.gold} 🪙</b></p>
-      {Object.entries(STOCK).map(([id, price]) => {
+      {Object.entries(STOCK).filter(([id]) => ITEMS[id].slot !== 'weapon' || canEquip(p, ITEMS[id])).map(([id, price]) => {
         const it = ITEMS[id];
         return (
           <div key={id} className="flex items-center gap-2 rounded-lg border-l-2 bg-black/25 p-2" style={{ borderColor: RARITY_COLOR[it.rarity] }}>
