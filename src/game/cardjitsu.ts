@@ -44,17 +44,4 @@ export function cjBankWin(bank: CJCard[]): boolean {
   return c.fire >= 1 && c.water >= 1 && c.snow >= 1;
 }
 
-/** IA : vise à compléter sa banque (atteindre 3 d'un élément ou diversifier). */
-export function aiPickCard(hand: CJCard[], bank: CJCard[]): number {
-  const c = cjCounts(bank);
-  let target: CJElement | null = null;
-  for (const e of CJ_ELEMENTS) if (c[e] === 2) target = e; // proche d'un trio
-  if (!target) {
-    const miss = CJ_ELEMENTS.find((e) => c[e] === 0 && hand.some((h) => h.element === e));
-    if (miss) target = miss; // complète "une de chaque"
-  }
-  let pool = target ? hand.map((h, i) => ({ h, i })).filter((x) => x.h.element === target) : [];
-  if (pool.length === 0) pool = hand.map((h, i) => ({ h, i }));
-  pool.sort((a, b) => b.h.value - a.h.value);
-  return pool[0].i;
-}
+

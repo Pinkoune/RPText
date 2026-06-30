@@ -64,7 +64,7 @@ export function resolveCommand(input: string): string | null {
   return ALIAS_MAP[word] ?? null;
 }
 
-export const HUNT_COOLDOWN = 90_000; // 90s — progression volontairement lente
+export const HUNT_COOLDOWN = 20_000; // 20s (Façon EPIC RPG)
 export const DAILY_COOLDOWN = 20 * 60 * 60 * 1000; // 20h
 
 export function runCommand(input: string, ctx: CommandCtx): void {

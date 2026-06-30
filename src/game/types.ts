@@ -86,6 +86,8 @@ export interface PlayerState {
   bossClaims: string[];
   /** Ventes au marché déjà encaissées (anti double-crédit). */
   settledSales: string[];
+  /** Duels Card-Jitsu déjà encaissés. */
+  settledCJDuels: string[];
   /** XP par métier de récolte (legacy, fusionné dans farmXp). */
   gatherXp: Record<string, number>;
   /** XP de farm global (niveau de récolte unique). */

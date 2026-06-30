@@ -27,6 +27,7 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (!p.settledDuels) p.settledDuels = [];
   if (!p.bossClaims) p.bossClaims = [];
   if (!p.settledSales) p.settledSales = [];
+  if (!p.settledCJDuels) p.settledCJDuels = [];
   if (!p.gatherXp) p.gatherXp = { chop: 0, mine: 0, fish: 0, forage: 0 };
   if (p.farmXp == null) {
     // Récupère l'XP de récolte des anciennes sauvegardes (somme des métiers).
@@ -100,6 +101,7 @@ export function createPlayer(
     },
     quests: freshQuestState(now),
     settledDuels: [],
+    settledCJDuels: [],
     bossClaims: [],
     settledSales: [],
     gatherXp: { chop: 0, mine: 0, fish: 0, forage: 0 },
