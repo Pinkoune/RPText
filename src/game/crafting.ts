@@ -75,13 +75,17 @@ export function canCraft(p: PlayerState, r: Recipe): boolean {
 }
 
 /** Calcule le niveau d'artisanat selon l'XP. (Courbe très simple : 100 * lvl^1.5) */
-export function getCraftLevel(xp: number): number {
+export function getCraftLevel(xp: number): { level: number; into: number; need: number } {
   let lvl = 1;
-  while (xp >= 100 * Math.pow(lvl, 1.5)) {
-    xp -= 100 * Math.pow(lvl, 1.5);
-    lvl++;
+  while (true) {
+    const need = 100 * Math.pow(lvl, 1.5);
+    if (xp >= need) {
+      xp -= need;
+      lvl++;
+    } else {
+      return { level: lvl, into: xp, need: need };
+    }
   }
-  return lvl;
 }
 
 /** Consomme les matériaux au début du craft. */

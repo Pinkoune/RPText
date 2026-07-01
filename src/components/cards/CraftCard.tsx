@@ -16,7 +16,8 @@ export default function CraftCard() {
 
   if (!p) return null;
 
-  const craftLvl = getCraftLevel(p.craftXp);
+  const craftLvlData = getCraftLevel(p.craftXp);
+  const craftLvl = craftLvlData.level;
   const maxCp = 50 + craftLvl * 10;
   const progGain = Math.floor(10 + craftLvl * 1.5);
   const qualGain = Math.floor(15 + craftLvl * 2);

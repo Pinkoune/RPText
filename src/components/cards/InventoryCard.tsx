@@ -52,13 +52,13 @@ export default function InventoryCard() {
         return (
           <div key={id} className="flex items-center gap-2 rounded-lg border-l-2 bg-black/25 p-2" style={{ borderColor: RARITY_COLOR[it.rarity] }}>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="truncate font-medium" style={{ color: RARITY_COLOR[it.rarity] }}>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium" style={{ color: RARITY_COLOR[it.rarity] }}>
                   {it.icon} {it.name}
                 </span>
-                <span className="text-xs text-slate-500">×{qty}</span>
+                <span className="text-xs font-bold text-slate-400">×{qty}</span>
               </div>
-              <div className="truncate text-[11px] text-slate-400">
+              <div className="text-[11px] text-slate-400">
                 {it.atk ? `ATK+${it.atk} ` : ''}{it.def ? `DEF+${it.def} ` : ''}{it.hp ? `PV+${it.hp} ` : ''}· {it.value}🪙
               </div>
             </div>

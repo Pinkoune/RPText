@@ -26,12 +26,10 @@ export default function ExperienceCard() {
   const farm = farmProgress(p);
   
   // Logic for craft xp
-  const cLevel = getCraftLevel(p.craftXp);
-  const basePrev = 100 * Math.pow(cLevel - 1, 1.5);
-  const baseNext = 100 * Math.pow(cLevel, 1.5);
-  
-  const cInto = Math.floor(p.craftXp - basePrev);
-  const cNeed = Math.floor(baseNext - basePrev);
+  const craftLvlData = getCraftLevel(p.craftXp);
+  const cLevel = craftLvlData.level;
+  const cInto = Math.floor(craftLvlData.into);
+  const cNeed = Math.floor(craftLvlData.need);
 
   return (
     <div className="space-y-3">
