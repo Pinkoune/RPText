@@ -18,6 +18,21 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'chat-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '💬 Système de Chat Avancé',
+        items: [
+          'Nouveaux canaux de discussion : Global, Équipe, Guilde et Privé.',
+          'Les messages privés et de guilde ont des couleurs de fond distinctes.',
+          'Cliquez sur le nom d\'un joueur dans le chat pour lui envoyer un message privé (/w Nom).',
+          'Notifications intégrées : recevez une petite alerte en jeu quand on vous parle sur un autre canal !',
+        ],
+      }
+    ]
+  },
+  {
     version: 'qol-v1',
     date: '2026-07-02',
     sections: [

@@ -22,6 +22,7 @@ export const ITEMS: Record<string, ItemDef> = {
   wooden_club: { id: 'wooden_club', name: 'Gourdin en bois', icon: '🏏', rarity: 'common', slot: 'weapon', atk: 2, classes: ['warrior', 'archer'], value: 5, desc: 'Une simple branche épaisse.' },
   stone_axe: { id: 'stone_axe', name: 'Hache en pierre', icon: '🪓', rarity: 'common', slot: 'weapon', atk: 5, classes: ['warrior', 'archer'], value: 12, desc: 'Tranchant brut mais efficace.' },
   rusty_sword: { id: 'rusty_sword', name: 'Épée rouillée', icon: '🗡️', rarity: 'common', slot: 'weapon', atk: 4, classes: ['warrior', 'archer'], value: 10, desc: 'Mieux que rien.' },
+  hunter_bow: { id: 'hunter_bow', name: 'Arc de chasseur', icon: '🏹', rarity: 'uncommon', slot: 'weapon', atk: 6, classes: ['archer'], value: 20, desc: 'Idéal pour chasser le petit gibier.' },
   iron_blade: { id: 'iron_blade', name: 'Lame de fer', icon: '⚔️', rarity: 'uncommon', slot: 'weapon', atk: 10, classes: ['warrior', 'archer'], value: 60, desc: 'Tranchant fiable.' },
   frost_glaive: { id: 'frost_glaive', name: 'Glaive de givre', icon: '❄️', rarity: 'rare', slot: 'weapon', atk: 22, classes: ['warrior', 'archer'], value: 220, desc: 'Gèle les ennemis touchés.' },
   ember_axe: { id: 'ember_axe', name: 'Hache ardente', icon: '🪓', rarity: 'epic', slot: 'weapon', atk: 34, classes: ['warrior'], value: 500, desc: 'Brûle tout sur son passage.' },
@@ -35,9 +36,15 @@ export const ITEMS: Record<string, ItemDef> = {
 
   // ── Armures (Guerrier / Archer / Mage) ──
   woven_shirt: { id: 'woven_shirt', name: 'Chemise tissée', icon: '👕', rarity: 'common', slot: 'armor', def: 2, hp: 5, value: 8, desc: 'Tissée avec de la fibre végétale.' },
+  leather_boots: { id: 'leather_boots', name: 'Bottes en cuir', icon: '🥾', rarity: 'common', slot: 'armor', def: 3, hp: 10, value: 15, desc: 'Protège les pieds des ronces.' },
+  mage_hat: { id: 'mage_hat', name: 'Chapeau pointu', icon: '🧙', rarity: 'uncommon', slot: 'armor', def: 1, hp: 15, value: 25, desc: 'Le couvre-chef classique des mages.' },
   cloth_robe: { id: 'cloth_robe', name: 'Robe de tissu', icon: '🧥', rarity: 'common', slot: 'armor', def: 3, hp: 10, value: 12, desc: 'Légère et confortable.' },
   iron_mail: { id: 'iron_mail', name: 'Cotte de fer', icon: '🛡️', rarity: 'uncommon', slot: 'armor', def: 9, hp: 30, value: 70, desc: 'Protection solide.' },
   frost_plate: { id: 'frost_plate', name: 'Plastron de givre', icon: '🥶', rarity: 'rare', slot: 'armor', def: 18, hp: 80, value: 260, desc: 'Repousse le froid mortel.' },
+
+  // ── Trinkets ──
+  bone_necklace: { id: 'bone_necklace', name: 'Collier d\'os', icon: '🦴', rarity: 'uncommon', slot: 'trinket', atk: 2, hp: 10, value: 35, desc: 'Trophée de chasse.' },
+  slime_ring: { id: 'slime_ring', name: 'Anneau gluant', icon: '🟢', rarity: 'common', slot: 'trinket', hp: 25, value: 20, desc: 'Toujours humide.' },
 
   // ── Trinkets ──
   lucky_coin: { id: 'lucky_coin', name: 'Pièce porte-bonheur', icon: '🍀', rarity: 'rare', slot: 'trinket', value: 150, desc: 'Améliore légèrement la chance au casino.' },

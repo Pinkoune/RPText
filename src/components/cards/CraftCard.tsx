@@ -27,7 +27,14 @@ export default function CraftCard() {
 
   const byGroup = useMemo(() => {
     const map: Record<string, Recipe[]> = { all: [] };
-    for (const r of RECIPES) {
+    
+    // Trier par niveau requis, puis par difficulté
+    const sortedRecipes = [...RECIPES].sort((a, b) => {
+      if (a.levelReq !== b.levelReq) return a.levelReq - b.levelReq;
+      return a.difficulty - b.difficulty;
+    });
+
+    for (const r of sortedRecipes) {
       const slot = item(r.output)?.slot ?? 'material';
       (map[slot] ??= []).push(r);
       map.all.push(r);

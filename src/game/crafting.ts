@@ -44,7 +44,12 @@ export const RECIPES: Recipe[] = [
   // ── Équipement Basique (Débutant) ──
   { output: 'wooden_club', qty: 1, materials: { wood: 12 }, gold: 10, levelReq: 1, difficulty: 20, maxQuality: 50, durability: 30 },
   { output: 'stone_axe', qty: 1, materials: { wood: 6, stone: 10 }, gold: 20, levelReq: 1, difficulty: 30, maxQuality: 80, durability: 30 },
+  { output: 'hunter_bow', qty: 1, materials: { wood: 8, wolf_pelt: 2 }, gold: 25, levelReq: 2, difficulty: 35, maxQuality: 90, durability: 35 },
   { output: 'woven_shirt', qty: 1, materials: { herb: 15 }, gold: 15, levelReq: 1, difficulty: 25, maxQuality: 70, durability: 30 },
+  { output: 'leather_boots', qty: 1, materials: { wolf_pelt: 4, herb: 2 }, gold: 20, levelReq: 1, difficulty: 25, maxQuality: 75, durability: 30 },
+  { output: 'mage_hat', qty: 1, materials: { herb: 10, slime_gel: 2 }, gold: 25, levelReq: 2, difficulty: 30, maxQuality: 80, durability: 30 },
+  { output: 'bone_necklace', qty: 1, materials: { boar_tusk: 2, wolf_pelt: 1 }, gold: 30, levelReq: 2, difficulty: 30, maxQuality: 80, durability: 40 },
+  { output: 'slime_ring', qty: 1, materials: { slime_gel: 6, herb: 2 }, gold: 30, levelReq: 2, difficulty: 25, maxQuality: 70, durability: 40 },
 
   // ── Forge (Équipements Avancés) ──
   { output: 'iron_blade', qty: 1, materials: { iron_ingot: 4, sturdy_leather: 2 }, gold: 400, levelReq: 3, difficulty: 40, maxQuality: 200, durability: 50 },

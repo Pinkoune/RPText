@@ -1,11 +1,15 @@
-import { ref, push, onValue, query, limitToLast } from 'firebase/database';
+import { ref, push, onValue, query, limitToLast, Unsubscribe } from 'firebase/database';
 import { rtdb, isFirebaseConfigured } from './config';
+
+export type ChatChannel = 'global' | 'team' | 'guild' | 'private';
 
 export interface ChatMessage {
   uid: string;
   name: string;
   text: string;
   ts: number;
+  channel?: ChatChannel;
+  targetId?: string; // guildId, teamId, or recipient name
 }
 
 export const chatOnline = isFirebaseConfigured && !!rtdb;
@@ -21,28 +25,90 @@ function loadLocal(): ChatMessage[] {
   return localMsgs;
 }
 
-export function sendChat(me: { uid: string; name: string }, text: string): void {
+export function sendChat(me: { uid: string; name: string }, text: string, channel: ChatChannel = 'global', targetId?: string): void {
   const clean = text.trim().slice(0, 240);
   if (!clean) return;
-  const msg: ChatMessage = { uid: me.uid, name: me.name, text: clean, ts: Date.now() };
+  const msg: ChatMessage = { uid: me.uid, name: me.name, text: clean, ts: Date.now(), channel, targetId };
   if (!rtdb) {
     localMsgs = [...loadLocal(), msg].slice(-50);
     localStorage.setItem(LOCAL_KEY, JSON.stringify(localMsgs));
     localListeners.forEach((cb) => cb(localMsgs));
     return;
   }
-  void push(ref(rtdb, 'chat'), msg);
+  
+  if (channel === 'team' && targetId) {
+    void push(ref(rtdb, `chat/team/${targetId}`), msg);
+  } else if (channel === 'guild' && targetId) {
+    void push(ref(rtdb, `chat/guild/${targetId}`), msg);
+  } else if (channel === 'private' && targetId) {
+    // Send to recipient's inbox
+    void push(ref(rtdb, `chat/inbox/${targetId}`), msg);
+    // Send to my own inbox so I see what I sent
+    if (targetId !== me.name) {
+      void push(ref(rtdb, `chat/inbox/${me.name}`), { ...msg, targetId });
+    }
+  } else {
+    void push(ref(rtdb, 'chat/global'), msg);
+  }
 }
 
-export function watchChat(cb: (msgs: ChatMessage[]) => void): () => void {
+export function watchChat(channel: ChatChannel, targetId: string | null | undefined, cb: (msgs: ChatMessage[]) => void): () => void {
   if (!rtdb) {
     cb(loadLocal());
     localListeners.add(cb);
     return () => localListeners.delete(cb);
   }
-  const q = query(ref(rtdb, 'chat'), limitToLast(50));
+  
+  let path = 'chat/global';
+  if (channel === 'team' && targetId) path = `chat/team/${targetId}`;
+  else if (channel === 'guild' && targetId) path = `chat/guild/${targetId}`;
+  else if (channel === 'private' && targetId) path = `chat/inbox/${targetId}`; // For private, targetId is our own name
+
+  const q = query(ref(rtdb, path), limitToLast(50));
   return onValue(q, (snap) => {
     const val = (snap.val() ?? {}) as Record<string, ChatMessage>;
     cb(Object.values(val).sort((a, b) => a.ts - b.ts));
   });
+}
+
+/** 
+ * A background watcher to get notifications for new messages across all relevant channels
+ */
+export function watchNotifications(
+  myName: string,
+  teamId: string | null | undefined,
+  guildId: string | null | undefined,
+  onNewMessage: (msg: ChatMessage) => void
+): () => void {
+  if (!rtdb) return () => {};
+
+  const unsubs: Unsubscribe[] = [];
+  let initialized = false;
+
+  const bind = (path: string) => {
+    const q = query(ref(rtdb!, path), limitToLast(1));
+    let isFirst = true;
+    const unsub = onValue(q, (snap) => {
+      const val = snap.val() as Record<string, ChatMessage> | null;
+      if (!val) return;
+      const msgs = Object.values(val);
+      if (msgs.length > 0) {
+        const m = msgs[0];
+        if (!isFirst && initialized && m.name !== myName) {
+          onNewMessage(m);
+        }
+      }
+      isFirst = false;
+    });
+    unsubs.push(unsub);
+  };
+
+  bind('chat/global');
+  bind(`chat/inbox/${myName}`);
+  if (teamId) bind(`chat/team/${teamId}`);
+  if (guildId) bind(`chat/guild/${guildId}`);
+
+  setTimeout(() => { initialized = true; }, 2000);
+
+  return () => unsubs.forEach(u => u());
 }

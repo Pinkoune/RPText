@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useGame } from './store/gameStore';
 import { useClock } from './hooks/useClock';
+import { watchNotifications } from './firebase/chatService';
 import Background from './components/Background';
 import Login from './components/Login';
 import ClassSelect from './components/ClassSelect';
@@ -31,6 +32,25 @@ export default function App() {
   }, [status, phase, player?.biome]);
 
   useEffect(() => () => stopAmbientMusic(), []);
+
+  // Notifications de chat multi-canaux
+  useEffect(() => {
+    if (status !== 'ready' || !player) return;
+    const unsub = watchNotifications(
+      player.name,
+      player.teamId,
+      player.guildId,
+      (msg) => {
+        let prefix = 'Global';
+        if (msg.channel === 'guild') prefix = 'Guilde';
+        else if (msg.channel === 'team') prefix = 'Équipe';
+        else if (msg.channel === 'private') prefix = 'Privé';
+        
+        useGame.getState().toast(`[${prefix}] ${msg.name}: ${msg.text.slice(0, 30)}${msg.text.length > 30 ? '...' : ''}`, 'info');
+      }
+    );
+    return unsub;
+  }, [status, player?.name, player?.teamId, player?.guildId]);
 
   if (status === 'loading') {
     return (

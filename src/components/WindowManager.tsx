@@ -51,7 +51,7 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   guild: { title: '🏰 Guilde', accent: '#ffd45a' },
   familiar: { title: '🐾 Familiers', accent: '#ff9a4a' },
   boss: { title: '🐲 Boss mondial', accent: '#ff6b6b' },
-  chat: { title: '💬 Chat mondial', accent: '#7bd8d0' },
+  chat: { title: '💬 Chat', accent: '#7bd8d0' },
   leaderboard: { title: '🏆 Classement', accent: '#ffd45a' },
   stats: { title: '📊 Statistiques', accent: '#9fd0ff' },
   news: { title: '📰 Nouveautés', accent: '#7bd8d0' },

@@ -7,10 +7,39 @@
       }
     },
     "chat": {
-      ".read": "auth != null",
-      ".write": "auth != null",
-      "$msg": {
-        ".validate": "newData.hasChildren(['uid', 'name', 'text', 'ts']) && newData.child('text').isString() && newData.child('text').val().length <= 240"
+      "global": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "$msg": {
+          ".validate": "newData.hasChildren(['uid', 'name', 'text', 'ts']) && newData.child('text').isString() && newData.child('text').val().length <= 240"
+        }
+      },
+      "team": {
+        "$teamId": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "$msg": {
+            ".validate": "newData.hasChildren(['uid', 'name', 'text', 'ts']) && newData.child('text').isString() && newData.child('text').val().length <= 240"
+          }
+        }
+      },
+      "guild": {
+        "$guildId": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "$msg": {
+            ".validate": "newData.hasChildren(['uid', 'name', 'text', 'ts']) && newData.child('text').isString() && newData.child('text').val().length <= 240"
+          }
+        }
+      },
+      "inbox": {
+        "$recipientName": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "$msg": {
+            ".validate": "newData.hasChildren(['uid', 'name', 'text', 'ts']) && newData.child('text').isString() && newData.child('text').val().length <= 240"
+          }
+        }
       }
     },
     "world": {
