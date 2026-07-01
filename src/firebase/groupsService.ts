@@ -197,3 +197,20 @@ export function getTeamBonus(teamId: string | null): number {
   // +5% par membre
   return 1.0 + (size * 0.05);
 }
+
+export async function transferTeamHost(teamId: string, currentHostUid: string, newHostUid: string): Promise<void> {
+  if (!db) return;
+  const ref = doc(db, 'teams', teamId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const data = snap.data() as Omit<Team, 'id'>;
+    // Only transfer if the host hasn't changed
+    if (data.hostUid === currentHostUid) {
+      // Clean up offline members to avoid multiple members trying to claim
+      const members = { ...data.members };
+      delete members[currentHostUid];
+      tx.update(ref, { hostUid: newHostUid, members });
+    }
+  });
+}
