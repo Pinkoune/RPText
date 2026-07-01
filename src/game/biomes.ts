@@ -22,8 +22,8 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     desc: 'Bois denses et clairières. Idéal pour débuter.',
     accent: '#7bd88f',
     bg: {
-      dawn: ['#2e4a3a', '#3d6b4f', '#a8c79a'],
-      day: ['#1f4d2e', '#2f7a45', '#7fc98c'],
+      dawn: ['#3e5c76', '#7293a0', '#a8c79a'],
+      day: ['#4287f5', '#9bc0f5', '#a2e0ae'],
       dusk: ['#1d3326', '#5a4a2e', '#caa15a'],
       night: ['#0a1710', '#10241a', '#1c3a28'],
     },
