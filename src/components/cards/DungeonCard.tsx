@@ -49,6 +49,14 @@ export default function DungeonCard() {
         return;
       }
       setSession(ds);
+
+      if (ds.state === 'combat' && ds.startedAt) {
+        const cdKey = `dungeon:${ds.dungeonId}`;
+        const currentCd = useGame.getState().player?.cooldowns[cdKey] || 0;
+        if (ds.startedAt > currentCd) {
+          mutate(d => { d.cooldowns[cdKey] = ds.startedAt; });
+        }
+      }
     });
   }, [p?.dungeonSessionId]);
 
@@ -61,7 +69,14 @@ export default function DungeonCard() {
         let totalXp = 0;
         for (const m of def.stages) totalXp += m.xp;
         
-        const baseReward = { xp: totalXp, gold: def.reward.gold };
+        const numPlayers = Object.keys(session.players).length;
+        const xpMult = Math.pow(numPlayers, 1.2);
+        const goldMult = Math.pow(numPlayers, 1.2);
+        
+        const baseReward = { 
+          xp: Math.floor(totalXp * xpMult), 
+          gold: Math.floor(def.reward.gold * goldMult) 
+        };
         const { xp, gold } = applyBonuses(p, baseReward);
 
         mutate(d => {
@@ -104,7 +119,7 @@ export default function DungeonCard() {
     const mods = talentMods(p!);
     try {
       const id = await createDungeonLobby(p!.uid, p!.name, p!.classId, def.id, stats, mods);
-      mutate(d => { d.dungeonSessionId = id; d.cooldowns[`dungeon:${def.id}`] = Date.now(); });
+      mutate(d => { d.dungeonSessionId = id; });
       if (myTeam) await setTeamDungeon(myTeam.id, id);
     } catch (e: any) {
       toast(e.message, 'bad');

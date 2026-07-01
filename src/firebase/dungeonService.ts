@@ -110,10 +110,20 @@ export async function leaveDungeon(id: string, uid: string): Promise<void> {
   });
 }
 
-function initMonster(def: DungeonDef, idx: number): DungeonMonster {
+function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1): DungeonMonster {
   const m = def.stages[idx];
+  
+  // Scaling exponentiel de la difficulté en fonction du nombre de joueurs
+  const hpMult = Math.pow(numPlayers, 1.4); // 1->1, 2->2.6, 3->4.6, 4->6.9
+  const atkMult = Math.pow(numPlayers, 1.25); // 1->1, 2->2.3, 3->3.9, 4->5.6
+  const defMult = Math.pow(numPlayers, 1.15); // 1->1, 2->2.2, 3->3.5, 4->4.9
+
+  const hp = Math.floor(m.hp * hpMult);
+  const atk = Math.floor(m.atk * atkMult);
+  const defense = Math.floor(m.def * defMult);
+
   return {
-    idx, hp: m.hp, maxHp: m.hp, def: m.def, atk: m.atk,
+    idx, hp, maxHp: hp, def: defense, atk,
     name: m.name, emoji: m.emoji, provokedBy: null
   };
 }
@@ -130,14 +140,15 @@ export async function startDungeon(id: string): Promise<void> {
 
     cur.state = 'combat';
     cur.startedAt = Date.now();
-    cur.monster = initMonster(def, 0);
+    const numPlayers = Object.keys(cur.players).length;
+    cur.monster = initMonster(def, 0, numPlayers);
     
     // Create turn order: randomly shuffle players, then add monster
     const uids = Object.keys(cur.players).sort(() => Math.random() - 0.5);
     cur.turnOrder = [...uids, 'monster'];
     cur.turnIdx = 0;
     cur.turnStartAt = Date.now();
-    cur.log = [{ text: `Le donjon commence ! ${cur.monster.name} apparaît.`, side: 'info' }];
+    cur.log = [{ text: `Le donjon commence ! ${cur.monster.name} (x${numPlayers} joueurs) apparaît.`, side: 'info' }];
 
     return cur;
   });
@@ -278,7 +289,8 @@ export async function submitDungeonAction(id: string, uid: string, action: 'atta
       const def = DUNGEONS.find(d => d.id === cur.dungeonId);
       if (def && m.idx + 1 < def.stages.length) {
         // Next stage
-        cur.monster = initMonster(def, m.idx + 1);
+        const numPlayers = Object.keys(cur.players).length;
+        cur.monster = initMonster(def, m.idx + 1, numPlayers);
         cur.log.push({ text: `Un nouvel ennemi approche : ${cur.monster.name} !`, side: 'info' });
         // Reset turn index to player 1
         cur.turnIdx = 0; 
