@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useGame } from '../../store/gameStore';
-import { fetchLeaderboard, trackPresence, type LeaderRow, type OnlinePlayer } from '../../firebase/socialService';
+import { watchLeaderboard, trackPresence, type LeaderRow, type OnlinePlayer } from '../../firebase/socialService';
 import { isFirebaseConfigured } from '../../firebase/config';
 import { CLASSES } from '../../game/classes';
 
@@ -11,16 +11,23 @@ export default function LeaderboardCard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let unsub = () => {};
-    (async () => {
-      setRows(await fetchLeaderboard(15));
+    let unsubLeader = () => {};
+    let unsubOnline = () => {};
+    
+    unsubLeader = watchLeaderboard(15, (data) => {
+      setRows(data);
       setLoading(false);
-    })();
+    });
+
     if (p) {
-      unsub = trackPresence({ uid: p.uid, name: p.name, level: p.level }, setOnline);
+      unsubOnline = trackPresence({ uid: p.uid, name: p.name, level: p.level }, setOnline);
     }
-    return () => unsub();
-  }, [p?.uid]);
+    
+    return () => {
+      unsubLeader();
+      unsubOnline();
+    };
+  }, [p?.uid, p?.level]);
 
   return (
     <div className="space-y-3">

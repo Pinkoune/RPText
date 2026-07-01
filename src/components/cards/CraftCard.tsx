@@ -158,10 +158,15 @@ export default function CraftCard() {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-slate-400 flex items-center justify-between">
+      <div className="text-xs text-slate-400 flex items-center justify-between">
         <span>Niveau d'artisanat : <b>{craftLvl}</b> ({Math.floor(p.craftXp)} XP)</span>
-        <span>Or : <b>{p.gold} 🪙</b></span>
-      </p>
+        <div className="flex items-center gap-2">
+          <span>Or : <b>{p.gold} 🪙</b></span>
+          <button onClick={() => toast("TUTO : Complétez l'avancement avant que la solidité tombe à zéro. Synthèse: Avancement (sans Qualité). Minutieux: Monte la Qualité (meilleures stats de l'objet) et consomme des CP. Réparez si besoin pour regagner de la Solidité (coûte beaucoup de CP).", "info")} className="shrink-0 rounded bg-blue-500/30 px-2 py-1 hover:bg-blue-500/50">
+            [?] Tuto
+          </button>
+        </div>
+      </div>
       <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-1">
         {RECIPES.map((r) => {
           const out = item(r.output)!;

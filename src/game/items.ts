@@ -10,12 +10,17 @@ export const ITEMS: Record<string, ItemDef> = {
   void_dust: { id: 'void_dust', name: 'Poussière du vide', icon: '🌌', rarity: 'epic', slot: 'material', value: 80, desc: 'Aspire la lumière alentour.' },
 
   // ── Consommables & Divers ──
-  potion: { id: 'potion', name: 'Potion de soin', icon: '🧪', rarity: 'common', slot: 'consumable', hp: 60, value: 15, desc: 'Rend 60 PV.' },
-  hi_potion: { id: 'hi_potion', name: 'Hi-Potion', icon: '⚗️', rarity: 'uncommon', slot: 'consumable', hp: 180, value: 45, desc: 'Rend 180 PV.' },
+  herb_tea: { id: 'herb_tea', name: 'Thé aux herbes', icon: '🍵', rarity: 'common', slot: 'consumable', hp: 30, value: 5, desc: 'Rend 30 PV.' },
+  potion: { id: 'potion', name: 'Potion de soin', icon: '🧪', rarity: 'common', slot: 'consumable', hp: 80, value: 15, desc: 'Rend 80 PV.' },
+  hi_potion: { id: 'hi_potion', name: 'Hi-Potion', icon: '⚗️', rarity: 'uncommon', slot: 'consumable', hp: 400, value: 45, desc: 'Rend 400 PV.' },
+  grilled_fish: { id: 'grilled_fish', name: 'Poisson grillé', icon: '🍢', rarity: 'common', slot: 'consumable', hp: 120, value: 30, desc: 'Rend 120 PV. Cuisiné.' },
+  hearty_stew: { id: 'hearty_stew', name: 'Ragoût copieux', icon: '🍲', rarity: 'uncommon', slot: 'consumable', hp: 250, value: 70, desc: 'Rend 250 PV. Un vrai festin.' },
   dungeon_key: { id: 'dungeon_key', name: 'Clé de donjon', icon: '🗝️', rarity: 'rare', slot: 'consumable', value: 1000, desc: 'Ouvre les portes des donjons.' },
   lootbox: { id: 'lootbox', name: 'Lootbox', icon: '🎁', rarity: 'epic', slot: 'consumable', value: 100, desc: 'Ouvre pour obtenir des objets (utiliser la commande /open).' },
 
   // ── Armes de mêlée (Guerrier / Archer) ──
+  wooden_club: { id: 'wooden_club', name: 'Gourdin en bois', icon: '🏏', rarity: 'common', slot: 'weapon', atk: 2, classes: ['warrior', 'archer'], value: 5, desc: 'Une simple branche épaisse.' },
+  stone_axe: { id: 'stone_axe', name: 'Hache en pierre', icon: '🪓', rarity: 'common', slot: 'weapon', atk: 5, classes: ['warrior', 'archer'], value: 12, desc: 'Tranchant brut mais efficace.' },
   rusty_sword: { id: 'rusty_sword', name: 'Épée rouillée', icon: '🗡️', rarity: 'common', slot: 'weapon', atk: 4, classes: ['warrior', 'archer'], value: 10, desc: 'Mieux que rien.' },
   iron_blade: { id: 'iron_blade', name: 'Lame de fer', icon: '⚔️', rarity: 'uncommon', slot: 'weapon', atk: 10, classes: ['warrior', 'archer'], value: 60, desc: 'Tranchant fiable.' },
   frost_glaive: { id: 'frost_glaive', name: 'Glaive de givre', icon: '❄️', rarity: 'rare', slot: 'weapon', atk: 22, classes: ['warrior', 'archer'], value: 220, desc: 'Gèle les ennemis touchés.' },
@@ -28,7 +33,8 @@ export const ITEMS: Record<string, ItemDef> = {
   frost_scepter: { id: 'frost_scepter', name: 'Sceptre de givre', icon: '🔱', rarity: 'rare', slot: 'weapon', atk: 24, classes: ['mage', 'healer'], value: 230, desc: 'Le froid obéit à son porteur.' },
   crystal_staff: { id: 'crystal_staff', name: 'Bâton de cristal', icon: '🔮', rarity: 'epic', slot: 'weapon', atk: 40, classes: ['mage', 'healer'], value: 820, desc: 'Vibre d\'une puissance pure.' },
 
-  // ── Armures ──
+  // ── Armures (Guerrier / Archer / Mage) ──
+  woven_shirt: { id: 'woven_shirt', name: 'Chemise tissée', icon: '👕', rarity: 'common', slot: 'armor', def: 2, hp: 5, value: 8, desc: 'Tissée avec de la fibre végétale.' },
   cloth_robe: { id: 'cloth_robe', name: 'Robe de tissu', icon: '🧥', rarity: 'common', slot: 'armor', def: 3, hp: 10, value: 12, desc: 'Légère et confortable.' },
   iron_mail: { id: 'iron_mail', name: 'Cotte de fer', icon: '🛡️', rarity: 'uncommon', slot: 'armor', def: 9, hp: 30, value: 70, desc: 'Protection solide.' },
   frost_plate: { id: 'frost_plate', name: 'Plastron de givre', icon: '🥶', rarity: 'rare', slot: 'armor', def: 18, hp: 80, value: 260, desc: 'Repousse le froid mortel.' },
@@ -49,8 +55,7 @@ export const ITEMS: Record<string, ItemDef> = {
   crystal: { id: 'crystal', name: 'Cristal', icon: '🔮', rarity: 'rare', slot: 'material', value: 38, desc: 'Concentré d\'énergie pure.' },
 
   // ── Nourriture (craft) ──
-  grilled_fish: { id: 'grilled_fish', name: 'Poisson grillé', icon: '🍢', rarity: 'common', slot: 'consumable', hp: 240, value: 30, desc: 'Rend 240 PV. Cuisiné.' },
-  hearty_stew: { id: 'hearty_stew', name: 'Ragoût copieux', icon: '🍲', rarity: 'uncommon', slot: 'consumable', hp: 500, value: 70, desc: 'Rend 500 PV. Un vrai festin.' },
+
 
   // ── Matériaux d'artisanat intermédiaires ──
   iron_ingot: { id: 'iron_ingot', name: 'Lingot de fer', icon: '🔩', rarity: 'uncommon', slot: 'material', value: 25, desc: 'Fer fondu et purifié.' },

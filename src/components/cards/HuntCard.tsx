@@ -15,7 +15,7 @@ import {
   type HuntRewards,
 } from '../../game/combat';
 
-const POTIONS = ['potion', 'hi_potion', 'grilled_fish', 'hearty_stew'];
+const POTIONS = ['herb_tea', 'potion', 'hi_potion', 'grilled_fish', 'hearty_stew'];
 const ABILITY_TURNS = 5;
 
 type Status = 'fighting' | 'won' | 'lost' | 'fled';

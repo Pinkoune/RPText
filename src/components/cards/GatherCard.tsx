@@ -192,9 +192,14 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
         </div>
       </div>
 
-      <p className="text-xs text-slate-400">
-        Approche un filon pour commencer à l'exploiter. Attention, le nœud disparaît quand son intégrité atteint zéro ! {BIOMES[p.biome].emoji} {BIOMES[p.biome].name}
-      </p>
+      <div className="flex items-center justify-between text-xs text-slate-400">
+        <p>
+          Approche un filon pour commencer à l'exploiter. Attention, le nœud disparaît quand son intégrité atteint zéro ! {BIOMES[p.biome].emoji} {BIOMES[p.biome].name}
+        </p>
+        <button onClick={() => toast("TUTO : Vous disposez de GP et d'Intégrité. Standard : coûte -30 Int (60% succès). Minutieux : coûte -35 Int, -20 GP (90%). En Force : -40 Int (35%, x2 butin). Observation : -40 GP (+25 Int). Jouez avec ces actions jusqu'à épuisement de l'intégrité !", "info")} className="ml-2 shrink-0 rounded bg-blue-500/30 px-2 py-1 hover:bg-blue-500/50">
+          [?] Tuto
+        </button>
+      </div>
 
       {skills.length === 0 ? (
         <p className="text-sm text-slate-500">Aucune ressource à récolter dans ce biome.</p>

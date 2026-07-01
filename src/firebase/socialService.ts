@@ -1,4 +1,4 @@
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { ref, onValue, onDisconnect, set, serverTimestamp } from 'firebase/database';
 import { db, rtdb, isFirebaseConfigured } from './config';
 import type { ClassId } from '../game/types';
@@ -26,6 +26,17 @@ export async function fetchLeaderboard(max = 20): Promise<LeaderRow[]> {
   const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max));
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data() as LeaderRow);
+}
+
+export function watchLeaderboard(max: number, onChange: (rows: LeaderRow[]) => void): () => void {
+  if (!isFirebaseConfigured || !db) {
+    onChange([]);
+    return () => {};
+  }
+  const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max));
+  return onSnapshot(q, (snap) => {
+    onChange(snap.docs.map((d) => d.data() as LeaderRow));
+  });
 }
 
 /**

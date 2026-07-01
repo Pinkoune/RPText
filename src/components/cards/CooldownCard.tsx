@@ -26,9 +26,11 @@ export default function CooldownCard() {
 
   const entries: { icon: string; label: string; left: number }[] = [
     { icon: '⚔️', label: 'Chasse', left: cooldownLeft(p, 'hunt', HUNT_COOLDOWN) },
-    { icon: '🎁', label: 'Récompense quotidienne', left: cooldownLeft(p, 'daily', DAILY_COOLDOWN) },
+    { icon: '🔥', label: 'Aventure', left: cooldownLeft(p, 'adventure', 15 * 60 * 1000) },
+    { icon: '🏰', label: 'Donjon', left: cooldownLeft(p, 'dungeon', 60 * 60 * 1000) },
     { icon: '🐲', label: 'Attaque du boss', left: cooldownLeft(p, 'boss', BOSS_ATTACK_CD) },
     { icon: '🌾', label: 'Récolte', left: cooldownLeft(p, 'gather', GATHER_COOLDOWN) },
+    { icon: '🎁', label: 'Récompense quotidienne', left: cooldownLeft(p, 'daily', DAILY_COOLDOWN) },
   ];
   for (const d of DUNGEONS) {
     entries.push({ icon: d.emoji, label: d.name, left: cooldownLeft(p, `dungeon:${d.id}`, d.cooldownMs) });

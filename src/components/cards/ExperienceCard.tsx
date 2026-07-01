@@ -27,8 +27,11 @@ export default function ExperienceCard() {
   
   // Logic for craft xp
   const cLevel = getCraftLevel(p.craftXp);
-  const cInto = p.craftXp - 100 * Math.pow(cLevel - 1, 1.5);
-  const cNeed = 100 * Math.pow(cLevel, 1.5) - 100 * Math.pow(cLevel - 1, 1.5);
+  const basePrev = 100 * Math.pow(cLevel - 1, 1.5);
+  const baseNext = 100 * Math.pow(cLevel, 1.5);
+  
+  const cInto = Math.floor(p.craftXp - basePrev);
+  const cNeed = Math.floor(baseNext - basePrev);
 
   return (
     <div className="space-y-3">
@@ -54,7 +57,7 @@ export default function ExperienceCard() {
         into={Math.max(0, cInto)}
         need={Math.max(1, cNeed)}
         color="#d8a26a"
-        sub={`XP d'artisanat total : ${p.craftXp}`}
+        sub={`XP d'artisanat total : ${Math.floor(p.craftXp)}`}
       />
       <p className="text-center text-[11px] text-slate-500">
         L'aventure (combat) et le farm (récolte) montent séparément.
