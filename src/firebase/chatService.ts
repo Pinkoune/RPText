@@ -28,7 +28,8 @@ function loadLocal(): ChatMessage[] {
 export function sendChat(me: { uid: string; name: string }, text: string, channel: ChatChannel = 'global', targetId?: string): void {
   const clean = text.trim().slice(0, 240);
   if (!clean) return;
-  const msg: ChatMessage = { uid: me.uid, name: me.name, text: clean, ts: Date.now(), channel, targetId };
+  const msg: ChatMessage = { uid: me.uid, name: me.name, text: clean, ts: Date.now(), channel };
+  if (targetId) msg.targetId = targetId;
   if (!rtdb) {
     localMsgs = [...loadLocal(), msg].slice(-50);
     localStorage.setItem(LOCAL_KEY, JSON.stringify(localMsgs));

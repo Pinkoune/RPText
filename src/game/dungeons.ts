@@ -1,5 +1,5 @@
 import type { PlayerState, MonsterDef } from './types';
-import { deriveStats, grantXp, addItem, cooldownLeft } from './player';
+import { deriveStats, grantXp, addItem, cooldownLeft, reduceDurability } from './player';
 import { simulateCombat } from './combat';
 import { talentMods } from './talents';
 
@@ -22,9 +22,8 @@ export interface DungeonDef {
   reward: DungeonReward;
 }
 
-// Petit utilitaire pour fabriquer un monstre de donjon.
 function mob(id: string, name: string, emoji: string, hp: number, atk: number, def: number, xp: number): MonsterDef {
-  return { id, name, emoji, hp, atk, def, xp, gold: [0, 0], biomes: [], loot: {} };
+  return { id, name, emoji, hp, atk, def, xp, gold: [0, 0], biomes: [], loot: {}, element: 'earth', dmgType: 'physical' };
 }
 
 export const DUNGEONS: DungeonDef[] = [
@@ -118,9 +117,14 @@ export function runDungeon(p: PlayerState, def: DungeonDef): DungeonRun | { erro
 
   let hp = p.hp;
   let totalXp = 0;
+  let totalHitsDealt = 0;
+  let totalHitsTaken = 0;
+
   for (let i = 0; i < def.stages.length; i++) {
     const m = def.stages[i];
-    const sim = simulateCombat({ atk: stats.atk, def: stats.def, maxHp: stats.maxHp }, hp, m, mods);
+    const sim = simulateCombat(stats, hp, m, mods);
+    totalHitsDealt += sim.hitsDealt;
+    totalHitsTaken += sim.hitsTaken;
     const res: StageResult = { monster: m, rounds: sim.rounds, victory: sim.victory, endHp: sim.endHp };
     run.stages.push(res);
     hp = res.endHp;
@@ -128,9 +132,12 @@ export function runDungeon(p: PlayerState, def: DungeonDef): DungeonRun | { erro
     if (!res.victory) {
       run.failedAt = i;
       p.hp = 0;
+      reduceDurability(p, totalHitsTaken, totalHitsDealt);
       return run; // échec : pas de récompense
     }
   }
+
+  reduceDurability(p, totalHitsTaken, totalHitsDealt);
 
   // Succès
   run.success = true;

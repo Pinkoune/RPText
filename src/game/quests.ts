@@ -7,6 +7,7 @@ export interface QuestReward {
   gold?: number;
   fateCoins?: number;
   gems?: number;
+  items?: Record<string, number>;
 }
 
 export interface QuestDef {
@@ -26,11 +27,11 @@ export const QUESTS: QuestDef[] = [
   { id: 'd_hunt', period: 'daily', label: 'Chasser 10 fois', metric: 'hunts', target: 10, reward: { gold: 120, fateCoins: 2 } },
   { id: 'd_kill', period: 'daily', label: 'Vaincre 8 monstres', metric: 'kills', target: 8, reward: { gold: 100 } },
   { id: 'd_gamble', period: 'daily', label: 'Gagner 3 paris au casino', metric: 'gambleWins', target: 3, reward: { fateCoins: 3 } },
-  { id: 'd_gather', period: 'daily', label: 'Récolter 8 fois', metric: 'gathers', target: 8, reward: { gold: 90 } },
+  { id: 'd_gather', period: 'daily', label: 'Récolter 8 fois', metric: 'gathers', target: 8, reward: { gold: 90, items: { repair_kit: 1 } } },
   // Hebdomadaires
-  { id: 'w_kill', period: 'weekly', label: 'Vaincre 100 monstres', metric: 'kills', target: 100, reward: { gold: 1000, gems: 1 } },
-  { id: 'w_boss', period: 'weekly', label: 'Infliger 500 dégâts au boss mondial', metric: 'bossHits', target: 500, reward: { fateCoins: 10 } },
-  { id: 'w_craft', period: 'weekly', label: 'Forger 5 objets', metric: 'crafts', target: 5, reward: { gold: 800, gems: 1 } },
+  { id: 'w_kill', period: 'weekly', label: 'Vaincre 100 monstres', metric: 'kills', target: 100, reward: { gold: 1000, gems: 1, items: { repair_kit: 3, upgrade_matrix: 1 } } },
+  { id: 'w_boss', period: 'weekly', label: 'Infliger 500 dégâts au boss mondial', metric: 'bossHits', target: 500, reward: { fateCoins: 10, items: { upgrade_matrix: 1 } } },
+  { id: 'w_craft', period: 'weekly', label: 'Forger 5 objets', metric: 'crafts', target: 5, reward: { gold: 800, gems: 1, items: { repair_kit: 2, upgrade_matrix: 1 } } },
   { id: 'w_gather', period: 'weekly', label: 'Récolter 60 ressources', metric: 'gathers', target: 60, reward: { gold: 700, gems: 1 } },
 ];
 
@@ -94,6 +95,11 @@ export function claimQuest(p: PlayerState, id: string): QuestReward | null {
   if (def.reward.gold) p.gold += def.reward.gold;
   if (def.reward.fateCoins) p.fateCoins += def.reward.fateCoins;
   if (def.reward.gems) p.gems += def.reward.gems;
+  if (def.reward.items) {
+    for (const [itemId, qty] of Object.entries(def.reward.items)) {
+      p.inventory[itemId] = (p.inventory[itemId] ?? 0) + qty;
+    }
+  }
   return def.reward;
 }
 

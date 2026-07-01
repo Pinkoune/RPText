@@ -18,9 +18,21 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
-    version: 'windows-v1',
+    version: 'equip-v2',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [
+      {
+        title: '🛡️ Refonte de l\'Équipement V2',
+        items: [
+          'Nouveau système d\'éléments : les armes et armures ont des éléments (Feu, Eau, Terre, Vent, Lumière, Ténèbres, Givre) !',
+          'Interactions élémentaires : attaquer avec le bon élément multiplie vos dégâts par 1.5x.',
+          'Types de dégâts : attaquez physiquement ou magiquement selon les résistances et faiblesses du monstre.',
+          'Durabilité : vos équipements s\'usent au combat. S\'ils se cassent (durabilité à 0), ils ne donnent plus de bonus de statistiques !',
+          'Réparation : utilisez un "Kit de réparation" (nouveau craft) pour restaurer la durabilité de votre équipement.',
+          'Amélioration : utilisez une "Matrice d\'amélioration" (nouveau craft haut niveau) pour améliorer votre équipement jusqu\'à 5 étoiles. Chaque étoile augmente les stats de l\'équipement de 10% !',
+          'Bonus de Set : équipez 3 pièces du même set pour bénéficier de puissants bonus de statistiques !',
+        ]
+      },
       {
         title: '🪟 Nouveaux Gestionnaire de Fenêtres',
         items: [

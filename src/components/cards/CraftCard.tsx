@@ -122,7 +122,17 @@ export default function CraftCard() {
     if (it.def) parts.push(`🛡️+${it.def}`);
     if (it.hp && it.slot === 'armor') parts.push(`❤️+${it.hp}`);
     if (it.hp && it.slot === 'consumable') parts.push(`🧪+${it.hp} PV`);
-    return parts.length ? parts.join(' ') : null;
+    
+    // Add V2 stats
+    if (it.element) {
+      const eIcon = { fire: '🔥', water: '💧', earth: '🪨', wind: '🌪️', light: '✨', dark: '🌌', frost: '❄️' }[it.element as string] || '';
+      parts.push(`${eIcon} ${it.element}`);
+    }
+    if (it.dmgType) parts.push(`(${it.dmgType === 'magical' ? 'Magique' : 'Physique'})`);
+    if (it.maxDurability) parts.push(`🔧 ${it.maxDurability}`);
+    if (it.setId) parts.push(`[Set: ${it.setId.replace('_set', '')}]`);
+    
+    return parts.length ? parts.join(' · ') : null;
   }
 
   if (active) {
@@ -225,14 +235,16 @@ export default function CraftCard() {
           return (
             <div key={r.output} className={`rounded-lg p-2.5 ${levelOk ? 'bg-black/25' : 'bg-black/40 opacity-75'}`}>
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium" style={{ color: RARITY_COLOR[out.rarity] }}>
+              <div className="flex flex-col gap-1 justify-center min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium whitespace-nowrap" style={{ color: RARITY_COLOR[out.rarity] }}>
                     {out.icon} {out.name} {r.qty > 1 ? `x${r.qty}` : ''}
                   </span>
-                  {statsStr && <span className="text-[10px] bg-black/40 px-1.5 rounded text-amber-200">{statsStr}</span>}
-                  {out.classes && <span className="text-[10px] bg-slate-800 px-1.5 rounded text-slate-300">{out.classes.join(', ')}</span>}
+                  {out.classes && <span className="text-[10px] bg-slate-800 px-1.5 rounded text-slate-300 whitespace-nowrap">{out.classes.join(', ')}</span>}
                 </div>
-                <button
+                {statsStr && <div className="text-[10px] bg-black/40 px-1.5 rounded text-amber-200 w-fit">{statsStr}</div>}
+              </div>
+              <button
                   onClick={() => startCraft(r)}
                   disabled={!ok || !levelOk}
                   className="shrink-0 rounded bg-sky-500/30 px-3 py-1 text-xs font-semibold hover:bg-sky-500/50 disabled:opacity-40"

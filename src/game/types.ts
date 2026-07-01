@@ -14,6 +14,8 @@ export type Phase = 'dawn' | 'day' | 'dusk' | 'night';
 
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 export type ItemSlot = 'weapon' | 'armor' | 'trinket' | 'consumable' | 'material';
+export type Element = 'fire' | 'earth' | 'water' | 'wind' | 'frost' | 'light' | 'dark' | 'neutral';
+export type DamageType = 'physical' | 'magical';
 
 export interface ItemDef {
   id: string;
@@ -29,6 +31,16 @@ export interface ItemDef {
   /** Valeur de revente en or. */
   value: number;
   desc: string;
+  
+  // -- Nouveautés V2 Équipement --
+  element?: Element;
+  dmgType?: DamageType;
+  /** Identifiant du set pour les bonus de set. */
+  setId?: string;
+  /** Passif de l'objet, informatif ou géré manuellement. */
+  passive?: string;
+  /** Durabilité maximale de l'équipement (0 = incassable). */
+  maxDurability?: number;
 }
 
 export interface Stats {
@@ -36,6 +48,9 @@ export interface Stats {
   maxHp: number;
   atk: number;
   def: number;
+  weaponElement?: string;
+  weaponDmgType?: string;
+  armorElement?: string;
 }
 
 export interface EquippedGear {
@@ -61,6 +76,13 @@ export interface PlayerState {
   /** id de l'objet -> quantité */
   inventory: Record<string, number>;
   equipped: EquippedGear;
+  
+  // -- V2 Equipement --
+  /** Durabilité actuelle des équipements (0 à maxDurability). Si 0, l'équipement est cassé. */
+  gearDurability: Record<ItemSlot, number>;
+  /** Nombre d'étoiles (0 à 5) pour les équipements. Chaque étoile augmente les stats de base de l'objet. */
+  gearStars: Record<ItemSlot, number>;
+
   biome: BiomeId;
   /** Biomes débloqués. */
   unlockedBiomes: BiomeId[];
@@ -148,6 +170,15 @@ export interface MonsterDef {
   xp: number;
   gold: [number, number];
   biomes: BiomeId[];
+  
+  // -- V2 Combat --
+  element: Element;
+  /** Dégâts que le monstre inflige (physique/magique) */
+  dmgType: DamageType;
+  /** Faiblesses aux types de dégâts (reçoit 1.5x) */
+  weaknesses?: DamageType[];
+  /** Résistances aux types de dégâts (reçoit 0.5x) */
+  resistances?: DamageType[];
   /** Apparait seulement à ces phases (vide = toutes). */
   phases?: Phase[];
   /** Table de butin : id objet -> probabilité 0..1 */

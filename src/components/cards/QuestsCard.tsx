@@ -3,11 +3,19 @@ import { questViews, claimQuest, periodResetIn, type QuestReward, type QuestPeri
 import { cooldownLeft } from '../../game/player';
 import { DAILY_COOLDOWN } from '../../game/commands';
 
+import { ITEMS } from '../../game/items';
+
 function rewardText(r: QuestReward): string {
   const parts: string[] = [];
   if (r.gold) parts.push(`${r.gold} 🪙`);
   if (r.fateCoins) parts.push(`${r.fateCoins} 🎲`);
   if (r.gems) parts.push(`${r.gems} 💎`);
+  if (r.items) {
+    for (const [id, qty] of Object.entries(r.items)) {
+      const it = ITEMS[id];
+      if (it) parts.push(`${qty}x ${it.icon} ${it.name}`);
+    }
+  }
   return parts.join(' · ');
 }
 
@@ -61,7 +69,7 @@ export default function QuestsCard() {
                   Réclamer
                 </button>
               ) : (
-                <span className="shrink-0 text-xs text-slate-400">{rewardText(v.def.reward)}</span>
+                <span className="text-[11px] text-slate-400 text-right leading-tight max-w-[50%]">{rewardText(v.def.reward)}</span>
               )}
             </div>
             <div className="mt-1.5 flex items-center gap-2">

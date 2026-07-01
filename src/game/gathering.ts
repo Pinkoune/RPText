@@ -59,10 +59,11 @@ export const GATHER_SKILLS: Record<GatherSkillId, GatherSkill> = {
       forest: [
         { id: 'wood', weight: 70, min: 1, max: 3 },
         { id: 'hardwood', weight: 22, min: 1, max: 1, minLvl: 3 },
+        { id: 'ironwood', weight: 8, min: 1, max: 1, minLvl: 8 },
         { id: 'herb', weight: 8, min: 1, max: 2 },
       ],
       plains: [{ id: 'wood', weight: 90, min: 1, max: 2 }, { id: 'hardwood', weight: 10, min: 1, max: 1, minLvl: 3 }],
-      swamp: [{ id: 'wood', weight: 65, min: 1, max: 2 }, { id: 'hardwood', weight: 20, min: 1, max: 1, minLvl: 3 }, { id: 'herb', weight: 15, min: 1, max: 2 }],
+      swamp: [{ id: 'wood', weight: 60, min: 1, max: 2 }, { id: 'hardwood', weight: 18, min: 1, max: 1, minLvl: 3 }, { id: 'ironwood', weight: 7, min: 1, max: 1, minLvl: 8 }, { id: 'herb', weight: 15, min: 1, max: 2 }],
     },
   },
   mine: {
@@ -72,18 +73,20 @@ export const GATHER_SKILLS: Record<GatherSkillId, GatherSkill> = {
     emoji: '⛏️',
     byBiome: {
       mountains: [
-        { id: 'stone', weight: 55, min: 1, max: 3 },
-        { id: 'iron_ore', weight: 30, min: 1, max: 2 },
-        { id: 'mithril_ore', weight: 15, min: 1, max: 1, minLvl: 5 }, // exclusif aux Pics
+        { id: 'stone', weight: 50, min: 1, max: 3 },
+        { id: 'iron_ore', weight: 25, min: 1, max: 2 },
+        { id: 'mithril_ore', weight: 15, min: 1, max: 1, minLvl: 5 },
+        { id: 'obsidian', weight: 10, min: 1, max: 1, minLvl: 10 },
       ],
       desert: [
-        { id: 'stone', weight: 60, min: 1, max: 3 },
+        { id: 'stone', weight: 50, min: 1, max: 3 },
         { id: 'iron_ore', weight: 25, min: 1, max: 2 },
-        { id: 'sun_shard', weight: 15, min: 1, max: 1 }, // exclusif aux Dunes
+        { id: 'sun_shard', weight: 15, min: 1, max: 1 },
+        { id: 'obsidian', weight: 10, min: 1, max: 1, minLvl: 10 },
       ],
       frozen: [
         { id: 'stone', weight: 45, min: 1, max: 2 },
-        { id: 'crystal', weight: 55, min: 1, max: 1, minLvl: 6 }, // exclusif à l'Abysse
+        { id: 'crystal', weight: 55, min: 1, max: 1, minLvl: 6 },
       ],
     },
   },
@@ -96,9 +99,10 @@ export const GATHER_SKILLS: Record<GatherSkillId, GatherSkill> = {
       forest: [{ id: 'fish', weight: 100, min: 1, max: 2 }],
       plains: [{ id: 'fish', weight: 78, min: 1, max: 2 }, { id: 'big_fish', weight: 22, min: 1, max: 1, minLvl: 3 }],
       swamp: [
-        { id: 'fish', weight: 55, min: 1, max: 3 },
-        { id: 'big_fish', weight: 25, min: 1, max: 1, minLvl: 3 },
-        { id: 'mudfish', weight: 20, min: 1, max: 1 }, // exclusif au Marais
+        { id: 'fish', weight: 50, min: 1, max: 3 },
+        { id: 'big_fish', weight: 20, min: 1, max: 1, minLvl: 3 },
+        { id: 'mudfish', weight: 20, min: 1, max: 1 },
+        { id: 'cave_fish', weight: 10, min: 1, max: 1, minLvl: 8 },
       ],
     },
   },
@@ -109,25 +113,27 @@ export const GATHER_SKILLS: Record<GatherSkillId, GatherSkill> = {
     emoji: '🌿',
     byBiome: {
       forest: [
-        { id: 'herb', weight: 75, min: 1, max: 3 },
+        { id: 'herb', weight: 65, min: 1, max: 3 },
         { id: 'wood', weight: 15, min: 1, max: 1 },
-        { id: 'silk_thread', weight: 10, min: 1, max: 1 }, // exclusif à Sylvebois
+        { id: 'silk_thread', weight: 10, min: 1, max: 1 },
+        { id: 'mana_bloom', weight: 10, min: 1, max: 1, minLvl: 5 },
       ],
       plains: [
-        { id: 'herb', weight: 80, min: 1, max: 2 },
-        { id: 'wildflower', weight: 20, min: 1, max: 2 }, // exclusif aux Plaines
+        { id: 'herb', weight: 70, min: 1, max: 2 },
+        { id: 'wildflower', weight: 20, min: 1, max: 2 },
+        { id: 'mana_bloom', weight: 10, min: 1, max: 1, minLvl: 5 },
       ],
       swamp: [
         { id: 'herb', weight: 70, min: 2, max: 4 },
-        { id: 'bog_root', weight: 30, min: 1, max: 2 }, // exclusif au Marais
+        { id: 'bog_root', weight: 30, min: 1, max: 2 },
       ],
       desert: [
         { id: 'herb', weight: 60, min: 1, max: 1 },
-        { id: 'cactus_pulp', weight: 40, min: 1, max: 2 }, // exclusif aux Dunes
+        { id: 'cactus_pulp', weight: 40, min: 1, max: 2 },
       ],
       frozen: [
         { id: 'herb', weight: 50, min: 1, max: 1 },
-        { id: 'frost_lotus', weight: 50, min: 1, max: 1 }, // exclusif à l'Abysse
+        { id: 'frost_lotus', weight: 50, min: 1, max: 1 },
       ],
     },
   },

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { item, RARITY_COLOR } from '../../game/items';
 import { playSound } from '../../game/sound';
 import { useGame } from '../../store/gameStore';
-import { deriveStats, removeItem } from '../../game/player';
+import { deriveStats, removeItem, reduceDurability } from '../../game/player';
 import { talentMods } from '../../game/talents';
 import { ABILITIES } from '../../game/talents';
 import {
@@ -82,6 +82,10 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     mutate((d) => {
       d.hp = res.php;
       if (potUse) removeItem(d, potUse, 1);
+      
+      // Reduce durability based on hits
+      reduceDurability(d, res.hitsTaken, res.hitsDealt);
+
       if (newStatus === 'won') captured.rewards = grantMonsterRewards(d, m);
       if (newStatus === 'lost') {
         applyDeathPenalty(d);

@@ -40,7 +40,7 @@ export default function ChatCard() {
       if ((p.inventory['lootbox'] ?? 0) > 0) {
         useGame.getState().mutate((d) => {
           d.inventory['lootbox']--;
-          const randomLoot = ['iron_ore', 'stone', 'wood', 'herb', 'potion', 'rusty_sword', 'cloth_robe', 'dungeon_key'];
+          const randomLoot = ['iron_ore', 'stone', 'wood', 'herb', 'potion', 'rusty_sword', 'cloth_robe', 'dungeon_key', 'repair_kit', 'upgrade_matrix'];
           const lootId = randomLoot[Math.floor(Math.random() * randomLoot.length)];
           d.inventory[lootId] = (d.inventory[lootId] ?? 0) + 1;
           useGame.getState().toast(`Lootbox ouverte ! Obtenu : ${item(lootId)!.name}.`, 'good');

@@ -53,7 +53,7 @@ export default function InventoryCard() {
     mutate((d) => {
       removeItem(d, id);
       if (id === 'lootbox') {
-        const randomLoot = ['iron_ore', 'stone', 'wood', 'herb', 'potion', 'rusty_sword', 'cloth_robe', 'dungeon_key'];
+        const randomLoot = ['iron_ore', 'stone', 'wood', 'herb', 'potion', 'rusty_sword', 'cloth_robe', 'dungeon_key', 'repair_kit', 'upgrade_matrix'];
         const lootId = randomLoot[Math.floor(Math.random() * randomLoot.length)];
         d.inventory[lootId] = (d.inventory[lootId] ?? 0) + 1;
         toast(`Lootbox ouverte ! Obtenu : ${item(lootId)!.name}.`, 'good');
