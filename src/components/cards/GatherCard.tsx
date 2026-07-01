@@ -1,41 +1,182 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useGame } from '../../store/gameStore';
-import { skillsForBiome, gather, gatherCooldownLeft, farmProgress, type GatherSkill } from '../../game/gathering';
+import { skillsForBiome, extractResource, finishGatherSession, gatherCooldownLeft, farmProgress, type GatherSkill, GATHER_SKILLS } from '../../game/gathering';
 import { BIOMES } from '../../game/biomes';
 import { item } from '../../game/items';
 import { playSound } from '../../game/sound';
 
-export default function GatherCard() {
+export default function GatherCard({ initialSkillId }: { initialSkillId?: string }) {
   const p = useGame((s) => s.player);
   const mutate = useGame((s) => s.mutate);
   const toast = useGame((s) => s.toast);
   const [, tick] = useState(0);
+
+  const [active, setActive] = useState<GatherSkill | null>(null);
+  const [integrity, setIntegrity] = useState(0);
+  const [gp, setGp] = useState(0);
+  const [lootLog, setLootLog] = useState<{ id: string; qty: number; emoji: string }[]>([]);
+
+  const didInit = useRef(false);
 
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(t);
   }, []);
 
-  if (!p) return null;
-  const skills = skillsForBiome(p.biome);
-  const farm = farmProgress(p);
-  const cd = gatherCooldownLeft(p);
+  const farm = farmProgress(p!);
+  const maxGp = 50 + farm.level * 5;
 
-  function doGather(skill: GatherSkill) {
+  // startGather logic definition needed before effect
+  function startGather(skill: GatherSkill) {
     if (gatherCooldownLeft(p!) > 0) {
       toast(`Récolte en récupération (${Math.ceil(gatherCooldownLeft(p!) / 1000)}s).`, 'bad');
       return;
     }
-    mutate((d) => {
-      const r = gather(d, skill.id);
-      if (r.ok && r.itemId) {
-        playSound(r.leveledUp ? 'levelup' : 'coin');
-        toast(`${skill.emoji} +${r.qty} ${item(r.itemId)!.icon} ${item(r.itemId)!.name} (+${r.xpGain} XP farm)`, 'good');
-        if (r.leveledUp) toast(`⬆️ Niveau de farm ${r.level} !`, 'gold');
-      } else {
-        toast(r.reason ?? 'Échec.', 'bad');
+    setActive(skill);
+    setIntegrity(100);
+    setGp(maxGp);
+    setLootLog([]);
+  }
+
+  useEffect(() => {
+    if (!didInit.current && initialSkillId) {
+      didInit.current = true;
+      const skill = GATHER_SKILLS[initialSkillId as keyof typeof GATHER_SKILLS];
+      if (skill) {
+        // verify it's available in biome
+        if (skill.byBiome[p!.biome]) {
+          startGather(skill);
+        } else {
+          toast(`${skill.name} indisponible ici.`, 'bad');
+        }
       }
-    });
+    }
+  }, [initialSkillId, p, maxGp, toast]);
+
+  if (!p) return null;
+  const skills = skillsForBiome(p.biome);
+  const cd = gatherCooldownLeft(p);
+
+  function handleAction(chance: number, costInt: number, costGp: number, mult: number) {
+    if (!active) return;
+    
+    setGp(Math.max(0, gp - costGp));
+    const newInt = integrity - costInt;
+    
+    if (Math.random() < chance) {
+      // Succès
+      let resId = '';
+      let resQty = 0;
+      let leveled = false;
+      let newLvl = 0;
+
+      mutate((d) => {
+        const r = extractResource(d, active.id, mult);
+        if (r.ok && r.itemId) {
+          resId = r.itemId;
+          resQty = r.qty!;
+          leveled = r.leveledUp || false;
+          newLvl = r.level || 0;
+        }
+      });
+
+      if (resId) {
+        playSound(leveled ? 'levelup' : 'coin');
+        setLootLog((prev) => [...prev, { id: resId, qty: resQty, emoji: item(resId)!.icon }]);
+        if (leveled) toast(`⬆️ Niveau de farm ${newLvl} !`, 'gold');
+      }
+    } else {
+      // Échec
+      toast('Rien n\'a été extrait...', 'info');
+    }
+
+    if (newInt <= 0) {
+      // Fin de la session
+      setIntegrity(0);
+      mutate((d) => finishGatherSession(d));
+      setTimeout(() => {
+        setActive(null);
+      }, 1500); // Laisse le temps de voir le résultat
+    } else {
+      setIntegrity(newInt);
+    }
+  }
+
+  function actStandard() {
+    handleAction(0.65, 25, 0, 1);
+  }
+
+  function actCareful() {
+    if (gp < 10) return;
+    handleAction(0.95, 25, 10, 1);
+  }
+
+  function actForce() {
+    handleAction(0.40, 25, 0, 2);
+  }
+
+  function actObserve() {
+    if (gp < 30) return;
+    setGp(gp - 30);
+    setIntegrity(Math.min(100, integrity + 25));
+  }
+
+  if (active) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center">
+          <p className="text-sm font-bold text-emerald-300">Récolte en cours...</p>
+          <p className="text-lg">{active.emoji} Filon de {active.name}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 rounded-lg bg-black/30 p-4 text-sm">
+          <div>
+            <div className="flex justify-between text-slate-300 mb-1">
+              <span>Intégrité</span>
+              <span>{Math.max(0, integrity)} / 100</span>
+            </div>
+            <div className="h-2 rounded-full bg-slate-800">
+              <div className="h-full rounded-full bg-orange-500 transition-all" style={{ width: `${Math.max(0, integrity)}%` }} />
+            </div>
+          </div>
+          <div>
+            <div className="flex justify-between text-slate-300 mb-1">
+              <span>GP</span>
+              <span>{gp} / {maxGp}</span>
+            </div>
+            <div className="h-2 rounded-full bg-slate-800">
+              <div className="h-full rounded-full bg-emerald-400 transition-all" style={{ width: `${(gp / maxGp) * 100}%` }} />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <button onClick={actStandard} disabled={integrity <= 0} className="rounded bg-slate-600/80 p-2 text-xs font-bold hover:bg-slate-500 active:scale-95 disabled:opacity-30">
+            Standard<br/><span className="text-[10px] font-normal">(-25 Int | 65%)</span>
+          </button>
+          <button onClick={actCareful} disabled={gp < 10 || integrity <= 0} className="rounded bg-sky-600/80 p-2 text-xs font-bold hover:bg-sky-500 disabled:opacity-30 active:scale-95">
+            Minutieux<br/><span className="text-[10px] font-normal">(-10 GP | 95%)</span>
+          </button>
+          <button onClick={actForce} disabled={integrity <= 0} className="rounded bg-rose-600/80 p-2 text-xs font-bold hover:bg-rose-500 disabled:opacity-30 active:scale-95">
+            En Force<br/><span className="text-[10px] font-normal">(40% | x2 Butin)</span>
+          </button>
+          <button onClick={actObserve} disabled={gp < 30 || integrity <= 0} className="rounded bg-purple-600/80 p-2 text-xs font-bold hover:bg-purple-500 disabled:opacity-30 active:scale-95">
+            Observation<br/><span className="text-[10px] font-normal">(-30 GP | +25 Int)</span>
+          </button>
+        </div>
+
+        {lootLog.length > 0 && (
+          <div className="mt-4 rounded-lg bg-black/20 p-2 text-center text-sm">
+            <p className="mb-1 text-slate-400 text-xs">Butin extrait :</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {lootLog.map((l, i) => (
+                <span key={i} className="rounded bg-black/40 px-2 py-1">{l.emoji} +{l.qty}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -52,8 +193,7 @@ export default function GatherCard() {
       </div>
 
       <p className="text-xs text-slate-400">
-        Une seule récolte à la fois (cooldown partagé). {BIOMES[p.biome].emoji} {BIOMES[p.biome].name} —
-        monte ton niveau de farm pour les ressources rares et un meilleur rendement.
+        Approche un filon pour commencer à l'exploiter. Attention, le nœud disparaît quand son intégrité atteint zéro ! {BIOMES[p.biome].emoji} {BIOMES[p.biome].name}
       </p>
 
       {skills.length === 0 ? (
@@ -66,11 +206,11 @@ export default function GatherCard() {
               <div className="flex items-center justify-between">
                 <span className="font-semibold">{skill.emoji} {skill.name}</span>
                 <button
-                  onClick={() => doGather(skill)}
+                  onClick={() => startGather(skill)}
                   disabled={cd > 0}
                   className="rounded-lg bg-emerald-500/30 px-3 py-1.5 text-xs font-semibold hover:bg-emerald-500/50 disabled:opacity-40"
                 >
-                  {cd > 0 ? `⏳ ${Math.ceil(cd / 1000)}s` : 'Récolter'}
+                  {cd > 0 ? `⏳ ${Math.ceil(cd / 1000)}s` : 'Explorer'}
                 </button>
               </div>
               <div className="mt-1.5 flex flex-wrap gap-1.5 text-[11px]">

@@ -6,7 +6,7 @@ import { item } from './items';
 import { deriveStats, removeItem } from './player';
 import { currentPhase } from './daynight';
 import { addQuestMetric } from './quests';
-import { gather, GATHER_SKILLS, type GatherSkillId } from './gathering';
+import { GATHER_SKILLS, type GatherSkillId } from './gathering';
 
 export interface CommandCtx {
   getPlayer: () => PlayerState | null;
@@ -136,15 +136,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
     case 'fish':
     case 'forage': {
       const skill = cmd as GatherSkillId;
-      const holder: { res: ReturnType<typeof gather> | null } = { res: null };
-      ctx.mutate((d) => { holder.res = gather(d, skill); });
-      const r = holder.res;
-      if (r && r.ok && r.itemId) {
-        ctx.toast(`${GATHER_SKILLS[skill].emoji} +${r.qty} ${item(r.itemId)!.name} (+${r.xpGain} XP farm)`, 'good');
-        if (r.leveledUp) ctx.toast(`⬆️ Niveau de farm ${r.level} !`, 'gold');
-      } else {
-        ctx.toast(r?.reason ?? 'Échec.', 'bad');
-      }
+      ctx.open('gather', skill, { singleton: true });
       break;
     }
 

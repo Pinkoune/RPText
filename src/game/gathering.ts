@@ -131,7 +131,7 @@ export function gatherCooldownLeft(p: PlayerState): number {
   return cooldownLeft(p, 'gather', GATHER_COOLDOWN);
 }
 
-export interface GatherResult {
+export interface ExtractResult {
   ok: boolean;
   reason?: string;
   itemId?: string;
@@ -141,12 +141,23 @@ export interface GatherResult {
   level?: number;
 }
 
-/** Effectue une récolte. Mute le joueur (inventaire + cooldown unique + XP de farm). */
-export function gather(p: PlayerState, skillId: GatherSkillId): GatherResult {
+/**
+ * Applique le cooldown de récolte.
+ * Appelé à la fin du minijeu.
+ */
+export function finishGatherSession(p: PlayerState) {
+  p.cooldowns['gather'] = Date.now();
+}
+
+/**
+ * Extrait une ressource du pool du biome courant.
+ * Appelé lors d'un coup réussi dans le minijeu.
+ * qtyMult permet de doubler/multiplier le butin (ex: Coup en Force).
+ */
+export function extractResource(p: PlayerState, skillId: GatherSkillId, qtyMult = 1): ExtractResult {
   const skill = GATHER_SKILLS[skillId];
   const drops = skill.byBiome[p.biome];
   if (!drops) return { ok: false, reason: `${skill.name} indisponible dans ce biome.` };
-  if (gatherCooldownLeft(p) > 0) return { ok: false, reason: 'Tu récupères encore de ta dernière récolte.' };
 
   const lvlBefore = gatherProgress(p.farmXp ?? 0).level;
 
@@ -155,13 +166,14 @@ export function gather(p: PlayerState, skillId: GatherSkillId): GatherResult {
   const d = pickDrop(pool.length ? pool : drops.filter((x) => !x.minLvl));
 
   const bonus = Math.floor(lvlBefore / 5); // +1 quantité tous les 5 niveaux de farm
-  const qty = d.min + Math.floor(Math.random() * (d.max - d.min + 1)) + bonus;
+  const baseQty = d.min + Math.floor(Math.random() * (d.max - d.min + 1)) + bonus;
+  const qty = baseQty * qtyMult;
+  
   addItem(p, d.id, qty);
-  p.cooldowns['gather'] = Date.now(); // cooldown UNIQUE partagé
   addQuestMetric(p, 'gathers', 1);
 
   // XP de farm global : plus la ressource est exigeante, plus elle rapporte.
-  const xpGain = 8 + qty * 2 + (d.minLvl ?? 0) * 5;
+  const xpGain = (8 + baseQty * 2 + (d.minLvl ?? 0) * 5) * qtyMult;
   p.farmXp = (p.farmXp ?? 0) + xpGain;
   const after = gatherProgress(p.farmXp);
 

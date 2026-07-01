@@ -74,7 +74,7 @@ export default function WindowManager() {
               {w.kind === 'casino' && <CasinoCard />}
               {w.kind === 'shop' && <ShopCard />}
               {w.kind === 'craft' && <CraftCard />}
-              {w.kind === 'gather' && <GatherCard />}
+              {w.kind === 'gather' && <GatherCard initialSkillId={w.payload as string} />}
               {w.kind === 'market' && <MarketCard />}
               {w.kind === 'dungeon' && <DungeonCard />}
               {w.kind === 'talents' && <TalentCard />}
