@@ -1,6 +1,7 @@
 import { useGame } from '../../store/gameStore';
 import { BIOMES } from '../../game/biomes';
 import type { BiomeId } from '../../game/types';
+import { currentGlobalEvent, currentBiomeEvent } from '../../game/events';
 
 // Position de chaque biome sur la carte (% du conteneur), dans l'ordre de progression.
 const POS: Record<BiomeId, { x: number; y: number }> = {
@@ -90,6 +91,33 @@ export default function MapCard() {
         <span className="text-slate-400">Position : </span>
         <span style={{ color: BIOMES[p.biome].accent }}>{BIOMES[p.biome].emoji} {BIOMES[p.biome].name}</span>
         <div className="mt-0.5 text-[11px] text-slate-400">{BIOMES[p.biome].desc}</div>
+      </div>
+
+      <div className="rounded-lg bg-black/25 px-3 py-2 text-xs space-y-2">
+        <div className="font-semibold text-sky-300">Événements en cours</div>
+        
+        {(() => {
+          const global = currentGlobalEvent();
+          const regional = currentBiomeEvent(p.biome);
+          return (
+            <>
+              <div className="flex gap-2 items-start">
+                <span className="text-lg leading-none">{global.icon}</span>
+                <div>
+                  <span className="font-bold text-slate-200">Monde : {global.name}</span>
+                  <div className={`text-[11px] ${global.kind === 'buff' ? 'text-emerald-400' : global.kind === 'debuff' ? 'text-rose-400' : 'text-slate-400'}`}>{global.desc}</div>
+                </div>
+              </div>
+              <div className="flex gap-2 items-start">
+                <span className="text-lg leading-none">{regional.icon}</span>
+                <div>
+                  <span className="font-bold text-slate-200" style={{ color: BIOMES[p.biome].accent }}>Région ({BIOMES[p.biome].name}) : {regional.name}</span>
+                  <div className={`text-[11px] ${regional.kind === 'buff' ? 'text-emerald-400' : regional.kind === 'debuff' ? 'text-rose-400' : 'text-slate-400'}`}>{regional.desc}</div>
+                </div>
+              </div>
+            </>
+          );
+        })()}
       </div>
     </div>
   );

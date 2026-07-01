@@ -7,7 +7,7 @@ import { deriveStats, applyBonuses, grantXp, addItem } from '../../game/player';
 import { talentMods } from '../../game/talents';
 import { listenTeams, setTeamDungeon, type Team } from '../../firebase/groupsService';
 import {
-  listenDungeon, createDungeonLobby, joinDungeon, toggleReady, leaveDungeon,
+  listenDungeon, listenAllDungeons, createDungeonLobby, joinDungeon, toggleReady, leaveDungeon,
   startDungeon, submitDungeonAction, cleanupDungeon, type DungeonSession
 } from '../../firebase/dungeonService';
 
@@ -25,11 +25,13 @@ export default function DungeonCard() {
   
   const [teams, setTeams] = useState<Team[]>([]);
   const [session, setSession] = useState<DungeonSession | null>(null);
+  const [allSessions, setAllSessions] = useState<DungeonSession[]>([]);
   const [showPotions, setShowPotions] = useState(false);
   const [, tick] = useState(0);
   const logEnd = useRef<HTMLDivElement>(null);
 
   useEffect(() => listenTeams(setTeams), []);
+  useEffect(() => listenAllDungeons(setAllSessions), []);
 
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 1000);
@@ -346,11 +348,24 @@ export default function DungeonCard() {
         Donjons multijoueurs : créez un groupe ou jouez en solo. Les combats se déroulent au tour par tour !
       </p>
 
-      {/* Si l'équipe a un donjon actif, bouton pour rejoindre */}
-      {myTeam?.dungeonId && (
-        <div className="rounded-lg bg-sky-500/20 p-3 flex justify-between items-center border border-sky-500/40">
-          <div className="text-sm text-sky-200 font-semibold">Le chef a créé un donjon !</div>
-          <button onClick={() => joinLobby(myTeam.dungeonId!)} className="bg-sky-500 hover:bg-sky-400 text-black px-3 py-1.5 rounded font-bold text-xs">Rejoindre</button>
+      {/* Lobbies ouverts */}
+      {allSessions.filter(s => s.state === 'lobby' && s.id !== p.dungeonSessionId).length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs font-semibold uppercase tracking-wide text-sky-400">Groupes en attente</div>
+          {allSessions.filter(s => s.state === 'lobby' && s.id !== p.dungeonSessionId).map(s => {
+            const def = DUNGEONS.find(d => d.id === s.dungeonId);
+            const hostPlayer = s.players[s.host];
+            if (!def) return null;
+            return (
+              <div key={s.id} className="rounded-lg bg-sky-500/20 p-3 flex justify-between items-center border border-sky-500/40">
+                <div>
+                  <div className="text-sm text-sky-200 font-semibold">{def.emoji} {def.name}</div>
+                  <div className="text-[11px] text-sky-200/70">Hôte: {hostPlayer?.name ?? 'Inconnu'} · {Object.keys(s.players).length} joueur(s)</div>
+                </div>
+                <button onClick={() => joinLobby(s.id)} className="bg-sky-500 hover:bg-sky-400 text-black px-3 py-1.5 rounded font-bold text-xs">Rejoindre</button>
+              </div>
+            );
+          })}
         </div>
       )}
 

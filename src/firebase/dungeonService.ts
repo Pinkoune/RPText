@@ -317,3 +317,12 @@ export async function cleanupDungeon(id: string) {
   if (!rtdb) return;
   await remove(ref(rtdb, `dungeons/${id}`));
 }
+
+export function listenAllDungeons(cb: (sessions: DungeonSession[]) => void): () => void {
+  if (!rtdb) { cb([]); return () => {}; }
+  return onValue(ref(rtdb, 'dungeons'), (snap) => {
+    const val = snap.val();
+    if (!val) { cb([]); return; }
+    cb(Object.values(val));
+  });
+}

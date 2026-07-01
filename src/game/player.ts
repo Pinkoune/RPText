@@ -5,6 +5,10 @@ import { item } from './items';
 import { BIOMES, BIOME_LIST } from './biomes';
 import { familiarBonus } from './familiars';
 import { talentMods } from './talents';
+import { activeEventEffect } from './events';
+
+/** Incrémenter force un reset unique des talents de tous les joueurs (bugfix). */
+export const TALENT_RESET_VERSION = 1;
 
 /** Arme de départ selon la classe. */
 export function starterWeapon(classId: ClassId): string {
@@ -111,6 +115,15 @@ export function migratePlayer(p: PlayerState): PlayerState {
     }
   }
 
+  // Reset forcé unique : le rework des talents avait conservé les anciens points
+  // investis EN PLUS des nouveaux points de niveau, permettant d'en avoir trop.
+  // On réinitialise une fois et on redonne l'équivalent exact du niveau actuel.
+  if (p.talentResetVersion !== TALENT_RESET_VERSION) {
+    p.talents = {};
+    p.talentPoints = Math.max(0, p.level - 1);
+    p.talentResetVersion = TALENT_RESET_VERSION;
+  }
+
   // Biome level constraint verification
   const maxAllowedBiomeIdx = BIOME_LIST.findIndex((b, idx, arr) => 
     idx === arr.length - 1 || p.level < arr[idx + 1].minLevel
@@ -210,6 +223,7 @@ export function createPlayer(
     dungeonClears: {},
     talentPoints: 0,
     talents: {},
+    talentResetVersion: TALENT_RESET_VERSION,
     curveVersion: 2,
     familiars: {},
     activeFamiliarId: null,
@@ -240,11 +254,12 @@ export function deriveStats(p: PlayerState): Stats {
   def += fam.def;
   maxHp += fam.maxHp;
 
-  // Mods de stats permanentes des talents (pourcentages, appliqués en dernier).
+  // Mods de stats permanentes des talents + événements (pourcentages, en dernier).
   const mods = talentMods(p);
-  atk = Math.round(atk * (1 + mods.atkPct));
-  def = Math.round(def * (1 + mods.defPct));
-  maxHp = Math.round(maxHp * (1 + mods.hpPct));
+  const evt = activeEventEffect(p.biome);
+  atk = Math.round(atk * (1 + mods.atkPct + evt.atkPct));
+  def = Math.round(def * (1 + mods.defPct + evt.defPct));
+  maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct));
 
   return { maxHp, atk, def, hp: Math.min(p.hp, maxHp) };
 }
@@ -275,10 +290,11 @@ export function unequipItem(p: PlayerState, slot: 'weapon' | 'armor' | 'trinket'
 export function applyBonuses(p: PlayerState, base: { xp: number; gold: number }): { xp: number; gold: number } {
   const teamMult = getTeamBonus(p.teamId);
   const guildMult = getGuildBonus(p.guildId);
+  const evt = activeEventEffect(p.biome);
   // Seule l'XP bénéficie du bonus de guilde
   return {
-    xp: Math.floor(base.xp * teamMult * guildMult),
-    gold: Math.floor(base.gold * teamMult),
+    xp: Math.floor(base.xp * teamMult * guildMult * (1 + evt.xpMult)),
+    gold: Math.floor(base.gold * teamMult * (1 + evt.goldMult)),
   };
 }
 

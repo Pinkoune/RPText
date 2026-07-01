@@ -39,7 +39,10 @@ export default function PatchNotesModal() {
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-300">{sec.title}</div>
               <ul className="space-y-1 text-sm text-slate-200">
                 {sec.items.map((it, j) => (
-                  <li key={j}>• {it}</li>
+                  <li key={j} className="flex gap-2">
+                    <span>•</span>
+                    <span dangerouslySetInnerHTML={{ __html: it }} />
+                  </li>
                 ))}
               </ul>
             </div>

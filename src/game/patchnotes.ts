@@ -18,6 +18,28 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'events-v1',
+    date: '2026-07-02',
+    sections: [
+      {
+        title: '⚠️ IMPORTANT : Réinitialisation des talents',
+        items: [
+          '<span class="text-rose-400 font-bold">Avertissement : Les points de compétence de tous les joueurs ont été réinitialisés.</span>',
+          'Suite à un bug où des joueurs avaient conservé des points excédentaires après la refonte de l\'arbre, tous les talents ont été remis à zéro.',
+          'Vous avez reçu exactement le nombre de points correspondants à votre niveau (Niveau - 1). Répartissez-les judicieusement !',
+        ],
+      },
+      {
+        title: '🌍 Événements Dynamiques',
+        items: [
+          'Le monde est désormais soumis à des événements mondiaux (affectant tous les joueurs) et régionaux (selon le biome où vous vous trouvez).',
+          'Ces événements tournent automatiquement toutes les 3 heures et appliquent des bonus (ex: +10% XP) ou des malus (ex: -8% PV).',
+          'Rendez-vous sur la carte (commande `map`) pour voir les événements en cours !',
+        ],
+      }
+    ]
+  },
+  {
     version: 'regions-v1',
     date: '2026-07-06',
     sections: [
