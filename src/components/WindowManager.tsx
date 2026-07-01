@@ -20,6 +20,7 @@ import DuelCard from './cards/DuelCard';
 import CardJitsuCard from './cards/CardJitsuCard';
 import TeamCard from './cards/TeamCard';
 import GuildCard from './cards/GuildCard';
+import FamiliarCard from './cards/FamiliarCard';
 import BossCard from './cards/BossCard';
 import ChatCard from './cards/ChatCard';
 import LeaderboardCard from './cards/LeaderboardCard';
@@ -47,6 +48,7 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   cardjitsu: { title: '🥷 Card-Jitsu', accent: '#ff9a4a' },
   team: { title: '👥 Équipe', accent: '#8fd0ff' },
   guild: { title: '🏰 Guilde', accent: '#ffd45a' },
+  familiar: { title: '🐾 Familiers', accent: '#ff9a4a' },
   boss: { title: '🐲 Boss mondial', accent: '#ff6b6b' },
   chat: { title: '💬 Chat mondial', accent: '#7bd8d0' },
   leaderboard: { title: '🏆 Classement', accent: '#ffd45a' },
@@ -83,6 +85,7 @@ export default function WindowManager() {
               {w.kind === 'cardjitsu' && <CardJitsuCard />}
               {w.kind === 'team' && <TeamCard />}
               {w.kind === 'guild' && <GuildCard />}
+              {w.kind === 'familiar' && <FamiliarCard />}
               {w.kind === 'boss' && <BossCard />}
               {w.kind === 'chat' && <ChatCard />}
               {w.kind === 'leaderboard' && <LeaderboardCard />}

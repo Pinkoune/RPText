@@ -20,6 +20,7 @@ export type WindowKind =
   | 'cardjitsu'
   | 'team'
   | 'guild'
+  | 'familiar'
   | 'boss'
   | 'chat'
   | 'leaderboard'

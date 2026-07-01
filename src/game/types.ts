@@ -112,6 +112,10 @@ export interface PlayerState {
   talents: Record<string, number>;
   /** Version de la courbe d'XP appliquée (recalcul des niveaux à la migration). */
   curveVersion?: number;
+  /** Familiers possédés : id de définition -> XP accumulée. */
+  familiars: Record<string, number>;
+  /** Familier actuellement équipé (donne son bonus de stat). */
+  activeFamiliarId: string | null;
   createdAt: number;
   lastSeen: number;
 }

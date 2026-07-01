@@ -12,6 +12,10 @@ function fmt(ms: number): string {
 }
 
 import { contributeGuild } from '../../firebase/groupsService';
+import { rollFamiliar, FAMILIARS } from '../../game/familiars';
+
+// Chance qu'un contributeur reçoive un familier légendaire à la mort du boss.
+const LEGENDARY_DROP_CHANCE = 0.05;
 
 export default function BossCard() {
   const p = useGame((s) => s.player);
@@ -33,15 +37,25 @@ export default function BossCard() {
     if (!p || !boss || !boss.defeatedAt) return;
     if (!boss.contributors?.[p.uid] || p.bossClaims.includes(boss.id)) return;
     const r = bossReward(boss, p.uid);
+    const wonFamiliar = Math.random() < LEGENDARY_DROP_CHANCE;
+    let familiarId = '';
     mutate((d) => {
       d.gold += r.gold;
       d.fateCoins += r.fateCoins;
       d.bossClaims.push(boss.id);
+      if (wonFamiliar) {
+        familiarId = rollFamiliar(d, 'legendary');
+        d.familiars[familiarId] = (d.familiars[familiarId] ?? 0) + 0;
+        if (!d.activeFamiliarId) d.activeFamiliarId = familiarId;
+      }
     });
     if (p.guildId) {
       void contributeGuild(p.guildId, r.guildXp);
     }
     toast(`🏆 Boss vaincu ! Part du butin : +${r.gold} 🪙, +${r.fateCoins} 🎲, +${r.guildXp} XP Guilde`, 'gold');
+    if (wonFamiliar && familiarId) {
+      toast(`🌠 Butin rare ! ${FAMILIARS[familiarId].emoji} ${FAMILIARS[familiarId].name} rejoint ton équipe !`, 'gold');
+    }
   }, [boss?.id, boss?.defeatedAt, p?.uid, p?.guildId]);
 
   if (!p) return null;

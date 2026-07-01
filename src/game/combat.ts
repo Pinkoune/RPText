@@ -4,6 +4,7 @@ import { item } from './items';
 import { PHASE_MODIFIERS, currentPhase } from './daynight';
 import { addQuestMetric } from './quests';
 import { emptyMods, type CombatMods } from './talents';
+import { grantFamiliarXp } from './familiars';
 
 export interface CombatStats {
   atk: number;
@@ -37,15 +38,20 @@ export function simulateCombat(
   const maxHp = stats.maxHp;
   const rounds: SimResult['rounds'] = [];
 
+  const monsterMaxHp = monster.hp;
+  const effDef = monster.def * (1 - mods.armorPen);
+
   while (php > 0 && mhp > 0 && rounds.length < 80) {
     // Joueur frappe (1 ou 2 fois)
     const hits = 1 + (Math.random() < mods.doubleHit ? 1 : 0);
     for (let h = 0; h < hits && mhp > 0; h++) {
-      let dmg = Math.max(1, roll(stats.atk - 2, stats.atk + 3) - monster.def) + mods.flatDmg;
+      let dmg = Math.max(1, roll(stats.atk - 2, stats.atk + 3) - effDef) + mods.flatDmg;
       if (php < maxHp * 0.3 && mods.berserkBonus > 0) dmg = Math.round(dmg * (1 + mods.berserkBonus));
+      if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
       const crit = Math.random() < mods.crit;
-      if (crit) dmg *= 2;
+      if (crit) dmg = Math.round(dmg * (2 + mods.critMult));
       mhp -= dmg;
+      if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
       rounds.push({
         text: `${h > 0 ? 'Tir double ! ' : ''}Tu infliges ${dmg}${crit ? ' (CRIT !)' : ''} dégâts.`,
         playerHp: Math.max(0, php),
@@ -61,7 +67,8 @@ export function simulateCombat(
       let mdmg = Math.max(1, roll(monster.atk - 2, monster.atk + 2) - stats.def);
       mdmg = Math.max(1, Math.round(mdmg * (1 - mods.dmgReduction)));
       php -= mdmg;
-      rounds.push({ text: `${monster.name} t'inflige ${mdmg} dégâts.`, playerHp: Math.max(0, php), monsterHp: mhp });
+      if (mods.thorns > 0) mhp = Math.max(0, mhp - Math.round(mdmg * mods.thorns));
+      rounds.push({ text: `${monster.name} t'inflige ${mdmg} dégâts.`, playerHp: Math.max(0, php), monsterHp: Math.max(0, mhp) });
     }
 
     // Régénération de fin de tour
@@ -111,7 +118,7 @@ export interface HuntRewards {
 export function combatTurn(
   stats: CombatStats,
   mods: CombatMods,
-  monster: { name: string; atk: number; def: number },
+  monster: { name: string; atk: number; def: number; maxHp?: number },
   php0: number,
   mhp0: number,
   action: HuntAction,
@@ -120,6 +127,8 @@ export function combatTurn(
   let php = php0;
   let mhp = mhp0;
   const maxHp = stats.maxHp;
+  const monsterMaxHp = monster.maxHp ?? mhp0;
+  const effDef = monster.def * (1 - mods.armorPen);
   const events: TurnEvent[] = [];
   let fled = false;
   let abilityUsed = false;
@@ -135,9 +144,11 @@ export function combatTurn(
     php = Math.min(maxHp, php + (opts.potionHeal ?? 0));
     events.push({ text: `Tu te soignes (+${opts.potionHeal} PV).`, side: 'info' });
   } else if (action === 'ability') {
-    const dmg = Math.max(1, Math.round(stats.atk * (opts.abilityMult ?? 1.6) * (0.9 + Math.random() * 0.3)) - monster.def);
+    let dmg = Math.max(1, Math.round(stats.atk * (opts.abilityMult ?? 1.6) * (0.9 + Math.random() * 0.3)) - effDef);
+    if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
     mhp -= dmg;
     abilityUsed = true;
+    if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
     events.push({ text: `Capacité : ${dmg} dégâts !`, side: 'you' });
     if (opts.abilityHealFrac) {
       php = Math.min(maxHp, php + Math.round(maxHp * opts.abilityHealFrac));
@@ -146,11 +157,13 @@ export function combatTurn(
   } else {
     const hits = 1 + (Math.random() < mods.doubleHit ? 1 : 0);
     for (let h = 0; h < hits && mhp > 0; h++) {
-      let dmg = Math.max(1, roll(stats.atk - 2, stats.atk + 3) - monster.def) + mods.flatDmg;
+      let dmg = Math.max(1, roll(stats.atk - 2, stats.atk + 3) - effDef) + mods.flatDmg;
       if (php < maxHp * 0.3 && mods.berserkBonus > 0) dmg = Math.round(dmg * (1 + mods.berserkBonus));
+      if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
       const crit = Math.random() < mods.crit;
-      if (crit) dmg *= 2;
+      if (crit) dmg = Math.round(dmg * (2 + mods.critMult));
       mhp -= dmg;
+      if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
       events.push({ text: `${h > 0 ? 'Tir double ! ' : ''}Tu infliges ${dmg}${crit ? ' (CRIT !)' : ''}.`, side: 'you' });
     }
   }
@@ -164,6 +177,7 @@ export function combatTurn(
     let mdmg = Math.max(1, Math.round(roll(monster.atk, monster.atk + 4) - stats.def * 0.6));
     mdmg = Math.max(1, Math.round(mdmg * (1 - mods.dmgReduction)));
     php -= mdmg;
+    if (mods.thorns > 0) mhp = Math.max(0, mhp - Math.round(mdmg * mods.thorns));
     events.push({ text: `${monster.name} t'inflige ${mdmg}.`, side: 'enemy' });
   }
   if (mods.regen > 0 && php > 0 && php < maxHp) php = Math.min(maxHp, php + mods.regen);
@@ -191,6 +205,7 @@ export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRe
   addQuestMetric(p, 'kills', 1);
   addQuestMetric(p, 'goldEarned', gold);
   const levelsGained = grantXp(p, xp);
+  grantFamiliarXp(p, Math.ceil(xp * 0.15));
   const loot: string[] = [];
   const lootMult = phase === 'night' ? 2 : 1;
   for (const [id, chance] of Object.entries(monster.loot)) {

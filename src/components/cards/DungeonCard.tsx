@@ -118,7 +118,7 @@ export default function DungeonCard() {
     const stats = deriveStats(p!);
     const mods = talentMods(p!);
     try {
-      const id = await createDungeonLobby(p!.uid, p!.name, p!.classId, def.id, stats, mods);
+      const id = await createDungeonLobby(p!.uid, p!.name, p!.classId, def.id, stats, mods, p!.level);
       mutate(d => { d.dungeonSessionId = id; });
       if (myTeam) await setTeamDungeon(myTeam.id, id);
     } catch (e: any) {
@@ -131,7 +131,7 @@ export default function DungeonCard() {
     const stats = deriveStats(p!);
     const mods = talentMods(p!);
     try {
-      await joinDungeon(id, p!.uid, p!.name, p!.classId, stats, mods);
+      await joinDungeon(id, p!.uid, p!.name, p!.classId, stats, mods, p!.level);
       mutate(d => { d.dungeonSessionId = id; });
     } catch (e: any) {
       toast(e.message, 'bad');

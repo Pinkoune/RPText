@@ -67,7 +67,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
 
     const s = deriveStats(player);
     const mods = talentMods(player);
-    const res = combatTurn(s, mods, m, player.hp, monsterHp, action, {
+    const res = combatTurn(s, mods, { ...m, maxHp: m.hp }, player.hp, monsterHp, action, {
       abilityMult: ability.mult,
       abilityHealFrac: ability.healFrac,
       potionHeal: potHeal,

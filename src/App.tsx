@@ -9,6 +9,7 @@ import CommandBar from './components/CommandBar';
 import WindowManager from './components/WindowManager';
 import Toasts from './components/Toasts';
 import LevelUpFx from './components/LevelUpFx';
+import PatchNotesModal from './components/PatchNotesModal';
 import { setAmbient, stopAmbientMusic } from './game/sound';
 
 import PresenceTracker from './components/PresenceTracker';
@@ -52,6 +53,7 @@ export default function App() {
       <CommandBar />
       <Toasts />
       <LevelUpFx />
+      <PatchNotesModal />
     </div>
   );
 }

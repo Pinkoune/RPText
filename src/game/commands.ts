@@ -48,6 +48,7 @@ export const COMMANDS: CommandDef[] = [
   { name: 'cardjitsu', aliases: ['cj', 'cards', 'ninja', 'cartes'], desc: 'Duel de cartes Card-Jitsu (feu/eau/neige).', category: 'Multijoueur' },
   { name: 'team', aliases: ['equipe', 'équipe', 'party'], desc: 'Forme une équipe et partage des ressources.', category: 'Multijoueur' },
   { name: 'guild', aliases: ['guilde', 'clan'], desc: 'Rejoins ou fonde une guilde.', category: 'Multijoueur' },
+  { name: 'familiar', aliases: ['familier', 'pet', 'compagnon'], desc: 'Adopte et équipe un familier (petit bonus de stats).', category: 'Jeu' },
   { name: 'boss', aliases: ['raid', 'worldboss'], desc: 'Attaque le boss mondial avec les autres joueurs.', category: 'Multijoueur' },
   { name: 'chat', aliases: ['tchat', 'say'], desc: 'Chat mondial avec les joueurs connectés.', category: 'Multijoueur' },
   { name: 'leaderboard', aliases: ['classement', 'top', 'lb'], desc: 'Affiche le classement et les joueurs en ligne.', category: 'Multijoueur' },
@@ -161,6 +162,10 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.open('guild', undefined, { singleton: true });
       break;
 
+    case 'familiar':
+      ctx.open('familiar', undefined, { singleton: true });
+      break;
+
     case 'boss':
       ctx.open('boss', undefined, { singleton: true });
       break;
@@ -211,7 +216,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         ctx.toast('Tu es K.O. ! Soigne-toi (heal) avant de chasser.', 'bad');
         break;
       }
-      const monster = pickMonster(p!.biome, currentPhase());
+      const monster = pickMonster(p!.biome, currentPhase(), p!.level);
       ctx.mutate((d) => {
         d.cooldowns.hunt = Date.now();
         addQuestMetric(d, 'hunts', 1);
@@ -231,7 +236,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         ctx.toast('Tu es K.O. ! Soigne-toi avant de partir à l\'aventure.', 'bad');
         break;
       }
-      const baseMonster = pickMonster(p!.biome, currentPhase());
+      const baseMonster = pickMonster(p!.biome, currentPhase(), p!.level);
       const monster = {
         ...baseMonster,
         name: `${baseMonster.name} Furieux`,

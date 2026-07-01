@@ -55,16 +55,19 @@ export function listenDungeon(id: string, cb: (ds: DungeonSession | null) => voi
   return onValue(ref(rtdb, `dungeons/${id}`), (snap) => cb(snap.val() as DungeonSession | null));
 }
 
-export async function createDungeonLobby(hostUid: string, hostName: string, hostClass: ClassId, dungeonId: string, pStats: any, pMods: any): Promise<string> {
+export async function createDungeonLobby(hostUid: string, hostName: string, hostClass: ClassId, dungeonId: string, pStats: any, pMods: any, pLevel: number): Promise<string> {
   if (!rtdb) throw new Error('Firebase offline');
   const id = 'dgn-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   await runTransaction(ref(rtdb, `dungeons/${id}`), () => {
+    const def = DUNGEONS.find(d => d.id === dungeonId);
+    const ratio = def ? Math.pow(def.minLevel / Math.max(1, pLevel), 0.85) : 1;
     const ds: DungeonSession = {
       id, host: hostUid, dungeonId, state: 'lobby',
       players: {
         [hostUid]: {
           uid: hostUid, name: hostName, classId: hostClass, ready: true,
-          hp: pStats.maxHp, maxHp: pStats.maxHp, atk: pStats.atk, def: pStats.def,
+          hp: Math.floor(pStats.maxHp * ratio), maxHp: Math.floor(pStats.maxHp * ratio), 
+          atk: Math.floor(pStats.atk * ratio), def: Math.floor(pStats.def * ratio),
           isDead: false, mods: pMods, abilityCd: 0
         }
       },
@@ -75,14 +78,17 @@ export async function createDungeonLobby(hostUid: string, hostName: string, host
   return id;
 }
 
-export async function joinDungeon(id: string, uid: string, name: string, classId: ClassId, pStats: any, pMods: any): Promise<void> {
+export async function joinDungeon(id: string, uid: string, name: string, classId: ClassId, pStats: any, pMods: any, pLevel: number): Promise<void> {
   if (!rtdb) return;
   await runTransaction(ref(rtdb, `dungeons/${id}`), (cur: DungeonSession | null) => {
     if (!cur || cur.state !== 'lobby') return cur;
     if (!cur.players[uid]) {
+      const def = DUNGEONS.find(d => d.id === cur.dungeonId);
+      const ratio = def ? Math.pow(def.minLevel / Math.max(1, pLevel), 0.85) : 1;
       cur.players[uid] = {
         uid, name, classId, ready: false,
-        hp: pStats.maxHp, maxHp: pStats.maxHp, atk: pStats.atk, def: pStats.def,
+        hp: Math.floor(pStats.maxHp * ratio), maxHp: Math.floor(pStats.maxHp * ratio), 
+        atk: Math.floor(pStats.atk * ratio), def: Math.floor(pStats.def * ratio),
         isDead: false, mods: pMods, abilityCd: 0
       };
     }

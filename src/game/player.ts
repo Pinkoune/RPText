@@ -3,6 +3,8 @@ import { CLASSES, xpToNext, xpToNextV1 } from './classes';
 import { getTeamBonus, getGuildBonus } from '../firebase/groupsService';
 import { item } from './items';
 import { BIOMES, BIOME_LIST } from './biomes';
+import { familiarBonus } from './familiars';
+import { talentMods } from './talents';
 
 /** Arme de départ selon la classe. */
 export function starterWeapon(classId: ClassId): string {
@@ -75,6 +77,8 @@ export function migratePlayer(p: PlayerState): PlayerState {
     }
   }
 
+  if (!p.familiars) p.familiars = {};
+  if (p.activeFamiliarId === undefined) p.activeFamiliarId = null;
   if (p.guildId === undefined) p.guildId = null;
   if (!p.settledGifts) p.settledGifts = [];
   if (!p.gatherXp) p.gatherXp = { chop: 0, mine: 0, fish: 0, forage: 0 };
@@ -97,6 +101,14 @@ export function migratePlayer(p: PlayerState): PlayerState {
     p.talents = {};
     // Crédite rétroactivement les points pour les niveaux déjà atteints.
     p.talentPoints = Math.max(0, p.level - 1);
+  }
+  // Rework de l'arbre de talents : remap des ids renommés (aucun point perdu).
+  const TALENT_ID_REMAP: Record<string, string> = { a_crit: 'a_aim', a_dodge: 'a_step', h_armor: 'h_bless' };
+  for (const [oldId, newId] of Object.entries(TALENT_ID_REMAP)) {
+    if (p.talents[oldId] != null) {
+      p.talents[newId] = (p.talents[newId] ?? 0) + p.talents[oldId];
+      delete p.talents[oldId];
+    }
   }
 
   // Biome level constraint verification
@@ -199,6 +211,8 @@ export function createPlayer(
     talentPoints: 0,
     talents: {},
     curveVersion: 2,
+    familiars: {},
+    activeFamiliarId: null,
     createdAt: now,
     lastSeen: now,
   };
@@ -221,6 +235,17 @@ export function deriveStats(p: PlayerState): Stats {
       maxHp += it.hp ?? 0;
     }
   }
+  const fam = familiarBonus(p);
+  atk += fam.atk;
+  def += fam.def;
+  maxHp += fam.maxHp;
+
+  // Mods de stats permanentes des talents (pourcentages, appliqués en dernier).
+  const mods = talentMods(p);
+  atk = Math.round(atk * (1 + mods.atkPct));
+  def = Math.round(def * (1 + mods.defPct));
+  maxHp = Math.round(maxHp * (1 + mods.hpPct));
+
   return { maxHp, atk, def, hp: Math.min(p.hp, maxHp) };
 }
 
