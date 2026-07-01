@@ -11,6 +11,8 @@ import {
   startDungeon, submitDungeonAction, cleanupDungeon, type DungeonSession
 } from '../../firebase/dungeonService';
 
+const POTIONS = ['herb_tea', 'potion', 'hi_potion', 'grilled_fish', 'hearty_stew'];
+
 function fmt(ms: number): string {
   const m = Math.ceil(ms / 60000);
   return m >= 60 ? `${Math.floor(m / 60)}h${m % 60}` : `${m}min`;
@@ -23,6 +25,7 @@ export default function DungeonCard() {
   
   const [teams, setTeams] = useState<Team[]>([]);
   const [session, setSession] = useState<DungeonSession | null>(null);
+  const [showPotions, setShowPotions] = useState(false);
   const [, tick] = useState(0);
   const logEnd = useRef<HTMLDivElement>(null);
 
@@ -128,14 +131,14 @@ export default function DungeonCard() {
     mutate(d => { d.dungeonSessionId = null; });
   }
 
-  async function act(action: 'attack' | 'ability' | 'potion') {
+  async function act(action: 'attack' | 'ability' | 'potion', selectedPotionId?: string) {
     if (!session || session.state !== 'combat') return;
-    if (action === 'potion' && (p!.inventory['potion'] ?? 0) <= 0 && (p!.inventory['hi_potion'] ?? 0) <= 0) {
-      return toast('Aucune potion.', 'bad');
+    if (action === 'potion' && !selectedPotionId) {
+      return toast('Aucune potion sélectionnée.', 'bad');
     }
     let potHeal = 0;
     if (action === 'potion') {
-      const potUse = (p!.inventory['hi_potion'] ?? 0) > 0 ? 'hi_potion' : 'potion';
+      const potUse = selectedPotionId!;
       potHeal = item(potUse)!.hp ?? 0;
       mutate(d => { d.inventory[potUse]--; });
     }
@@ -242,27 +245,53 @@ export default function DungeonCard() {
           <div ref={logEnd} />
         </div>
 
-        {/* Actions */}
-        {myTurn && !me.isDead ? (
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => act('attack')} className="rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
-            <button
-              onClick={() => act('ability')}
-              disabled={me.abilityCd > 0}
-              className="rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
-            >
-              {me.abilityCd > 0 ? `✨ Compétence (${me.abilityCd})` : `✨ Compétence`}
-            </button>
-            <button
-              onClick={() => act('potion')}
-              className="rounded-lg bg-emerald-500/30 py-2.5 text-sm font-bold hover:bg-emerald-500/50"
-            >
-              🧪 Potion ({(p.inventory.potion ?? 0) + (p.inventory.hi_potion ?? 0)})
-            </button>
-            <div className="flex items-center justify-center rounded-lg bg-black/20 text-xs font-mono text-amber-200">
-              00:{timeLeft.toString().padStart(2, '0')}
+      {/* Actions */}
+      {myTurn && !me.isDead ? (
+        <div className="grid grid-cols-2 gap-2">
+          {showPotions ? (
+            <div className="col-span-2 space-y-2">
+              <div className="text-xs font-semibold text-slate-300">Choisir un soin :</div>
+              <div className="grid grid-cols-2 gap-2">
+                {POTIONS.filter(id => (p.inventory[id] ?? 0) > 0).map(id => (
+                  <button
+                    key={id}
+                    onClick={() => { setShowPotions(false); act('potion', id); }}
+                    className="rounded-lg bg-emerald-500/30 py-2 text-xs font-bold hover:bg-emerald-500/50 flex flex-col items-center justify-center gap-1"
+                  >
+                    <span>{item(id)!.icon} {item(id)!.name}</span>
+                    <span className="text-[10px] font-normal text-slate-300">({(p.inventory[id] ?? 0)} en stock)</span>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setShowPotions(false)} className="w-full rounded bg-slate-700/50 py-1.5 text-xs hover:bg-slate-700">Retour</button>
             </div>
-          </div>
+          ) : (
+            <>
+              <button onClick={() => act('attack')} className="rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
+              <button
+                onClick={() => act('ability')}
+                disabled={me.abilityCd > 0}
+                className="rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
+              >
+                {me.abilityCd > 0 ? `✨ Compétence (${me.abilityCd})` : `✨ Compétence`}
+              </button>
+              <button
+                onClick={() => {
+                  const available = POTIONS.filter(id => (p.inventory[id] ?? 0) > 0);
+                  if (available.length === 1) act('potion', available[0]);
+                  else setShowPotions(true);
+                }}
+                disabled={POTIONS.filter(id => (p.inventory[id] ?? 0) > 0).length === 0}
+                className="rounded-lg bg-emerald-500/30 py-2.5 text-sm font-bold hover:bg-emerald-500/50 disabled:opacity-40"
+              >
+                🧪 Potion ({POTIONS.reduce((n, id) => n + (p.inventory[id] ?? 0), 0)})
+              </button>
+              <div className="flex items-center justify-center rounded-lg bg-black/20 text-xs font-mono text-amber-200">
+                00:{timeLeft.toString().padStart(2, '0')}
+              </div>
+            </>
+          )}
+        </div>
         ) : (
           <div className="text-center text-xs text-slate-500 py-2">
             {me.isDead ? '💀 Tu es K.O.' : 'En attente des autres joueurs...'}

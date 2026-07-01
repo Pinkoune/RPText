@@ -1,3 +1,4 @@
+import { item } from './items';
 import type { PlayerState } from './types';
 import { addItem, removeItem } from './player';
 import { addQuestMetric } from './quests';
@@ -115,12 +116,13 @@ export function finishCraft(p: PlayerState, r: Recipe, qualityRatio: number, suc
   // On considère que 100% quality = stats +50% -> q150
   // 0% quality = stats de base -> q100
   let outId = r.output;
-  // Ne s'applique pas aux consos ou matériaux, seulement aux armes/armures/bijoux.
-  // On va dire que si c'est stackable on ne met pas de suffixe. Mais c'est géré par items.ts (les consos n'ont pas de stats à up).
-  // En fait items.ts modifie hp, atk, def. Si on met q150 sur une potion, elle rendra plus de PV ! C'est cool.
-  const bonus = Math.round(qualityRatio * 50); // 0 à 50% de bonus
-  if (bonus > 0) {
-    outId = `${r.output}:q${100 + bonus}`;
+  const outItem = item(r.output);
+  // Suffixe de qualité uniquement pour l'équipement
+  if (outItem && ['weapon', 'armor', 'trinket'].includes(outItem.slot)) {
+    const bonus = Math.round(qualityRatio * 50); // 0 à 50% de bonus
+    if (bonus > 0) {
+      outId = `${r.output}:q${100 + bonus}`;
+    }
   }
   
   addItem(p, outId, r.qty);

@@ -98,6 +98,39 @@ export function migratePlayer(p: PlayerState): PlayerState {
     // Crédite rétroactivement les points pour les niveaux déjà atteints.
     p.talentPoints = Math.max(0, p.level - 1);
   }
+
+  // Biome level constraint verification
+  const maxAllowedBiomeIdx = BIOME_LIST.findIndex((b, idx, arr) => 
+    idx === arr.length - 1 || p.level < arr[idx + 1].minLevel
+  );
+  const currentBiomeIdx = BIOME_LIST.findIndex(b => b.id === p.biome);
+  if (currentBiomeIdx > maxAllowedBiomeIdx && maxAllowedBiomeIdx !== -1) {
+    p.biome = BIOME_LIST[maxAllowedBiomeIdx].id;
+  }
+  // Déséquipe les objets achetés (sans qualité) et convertit les matériaux buggés
+  const toDelete: string[] = [];
+  const toAdd: Record<string, number> = {};
+
+  for (const [id, qty] of Object.entries(p.inventory)) {
+    const it = item(id);
+    if (!it) continue;
+    
+    // Si c'est un matériau ou un consommable mais qu'il a une qualité
+    if (id.includes(':q') && ['material', 'consumable'].includes(it.slot)) {
+      const baseId = id.split(':')[0];
+      toAdd[baseId] = (toAdd[baseId] || 0) + (qty || 0);
+      toDelete.push(id);
+    }
+  }
+
+  for (const id of toDelete) {
+    delete p.inventory[id];
+  }
+  for (const [id, qty] of Object.entries(toAdd)) {
+    p.inventory[id] = (p.inventory[id] || 0) + qty;
+  }
+
+  if (p.equipped.weapon && !canEquip(p, item(p.equipped.weapon)!)) p.equipped.weapon = null;
   // Arme équipée non autorisée pour la classe (ex: mage avec une épée) : on la
   // déséquipe et on s'assure que la classe a une arme de départ adaptée.
   const w = p.equipped.weapon ? item(p.equipped.weapon)! : null;

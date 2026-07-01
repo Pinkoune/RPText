@@ -245,7 +245,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         d.cooldowns.adventure = Date.now();
         addQuestMetric(d, 'hunts', 1);
       });
-      ctx.open('hunt', { monster, id: Date.now() }, { singleton: true });
+      ctx.open('hunt', { monster, id: Date.now(), isAdventure: true }, { singleton: true });
       break;
     }
   }

@@ -16,6 +16,10 @@
     "world": {
       ".read": "auth != null",
       ".write": "auth != null"
+    },
+    "dungeons": {
+      ".read": "auth != null",
+      ".write": "auth != null"
     }
   }
 }

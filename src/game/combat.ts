@@ -93,6 +93,7 @@ export interface TurnResult {
 export interface HuntEncounter {
   monster: MonsterDef;
   id: number;
+  isAdventure?: boolean;
 }
 
 export interface HuntRewards {

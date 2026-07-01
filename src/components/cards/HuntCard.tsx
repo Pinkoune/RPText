@@ -31,6 +31,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const [status, setStatus] = useState<Status>('fighting');
   const [abilityCd, setAbilityCd] = useState(0);
   const [outcome, setOutcome] = useState<HuntRewards | null>(null);
+  const [showPotions, setShowPotions] = useState(false);
   const logEnd = useRef<HTMLDivElement>(null);
 
   // Réinitialise quand une nouvelle rencontre arrive (relance de hunt).
@@ -50,7 +51,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const potionId = POTIONS.find((id) => (p.inventory[id] ?? 0) > 0);
   const potionCount = POTIONS.reduce((n, id) => n + (p.inventory[id] ?? 0), 0);
 
-  function act(action: HuntAction) {
+  function act(action: HuntAction, selectedPotionId?: string) {
     if (status !== 'fighting') return;
     const player = useGame.getState().player;
     if (!player) return;
@@ -59,8 +60,8 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     let potHeal = 0;
     let potUse: string | undefined;
     if (action === 'potion') {
-      potUse = POTIONS.find((id) => (player.inventory[id] ?? 0) > 0);
-      if (!potUse) { toast('Aucune potion ni nourriture.', 'bad'); return; }
+      potUse = selectedPotionId;
+      if (!potUse) { toast('Aucune potion sélectionnée.', 'bad'); return; }
       potHeal = item(potUse)!.hp ?? 0;
     }
 
@@ -82,7 +83,17 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       d.hp = res.php;
       if (potUse) removeItem(d, potUse, 1);
       if (newStatus === 'won') captured.rewards = grantMonsterRewards(d, m);
-      if (newStatus === 'lost') applyDeathPenalty(d);
+      if (newStatus === 'lost') {
+        applyDeathPenalty(d);
+        if (encounter.isAdventure && d.cooldowns.adventure) {
+          d.cooldowns.adventure = Date.now() - 10 * 60 * 1000; // CD devient 5 min
+        }
+      }
+      if (newStatus === 'fled') {
+        if (encounter.isAdventure && d.cooldowns.adventure) {
+          d.cooldowns.adventure = Date.now() - 5 * 60 * 1000; // CD devient 10 min
+        }
+      }
     });
 
     setMonsterHp(res.mhp);
@@ -143,23 +154,51 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       {/* Actions */}
       {fighting ? (
         <div className="grid grid-cols-2 gap-2">
-          <button onClick={() => act('attack')} className="rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
-          <button
-            onClick={() => act('ability')}
-            disabled={abilityCd > 0}
-            title={ability.desc}
-            className="rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
-          >
-            {abilityCd > 0 ? `${ability.icon} ${ability.name} (${abilityCd})` : `${ability.icon} ${ability.name}`}
-          </button>
-          <button
-            onClick={() => act('potion')}
-            disabled={!potionId}
-            className="rounded-lg bg-emerald-500/30 py-2.5 text-sm font-bold hover:bg-emerald-500/50 disabled:opacity-40"
-          >
-            🧪 Potion ({potionCount})
-          </button>
-          <button onClick={() => act('flee')} className="rounded-lg bg-slate-500/30 py-2.5 text-sm font-bold hover:bg-slate-500/50">🏃 Fuir</button>
+          {showPotions ? (
+            <div className="col-span-2 space-y-2">
+              <div className="text-xs font-semibold text-slate-300">Choisir un soin :</div>
+              <div className="grid grid-cols-2 gap-2">
+                {POTIONS.filter(id => (p.inventory[id] ?? 0) > 0).map(id => (
+                  <button
+                    key={id}
+                    onClick={() => { setShowPotions(false); act('potion', id); }}
+                    className="rounded-lg bg-emerald-500/30 py-2 text-xs font-bold hover:bg-emerald-500/50 flex flex-col items-center justify-center gap-1"
+                  >
+                    <span>{item(id)!.icon} {item(id)!.name}</span>
+                    <span className="text-[10px] font-normal text-slate-300">({(p.inventory[id] ?? 0)} en stock)</span>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setShowPotions(false)} className="w-full rounded bg-slate-700/50 py-1.5 text-xs hover:bg-slate-700">Retour</button>
+            </div>
+          ) : (
+            <>
+              <button onClick={() => act('attack')} className="rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
+              <button
+                onClick={() => act('ability')}
+                disabled={abilityCd > 0}
+                title={ability.desc}
+                className="rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
+              >
+                {abilityCd > 0 ? `${ability.icon} ${ability.name} (${abilityCd})` : `${ability.icon} ${ability.name}`}
+              </button>
+              <button
+                onClick={() => {
+                  const available = POTIONS.filter(id => (p.inventory[id] ?? 0) > 0);
+                  if (available.length === 1) {
+                    act('potion', available[0]);
+                  } else {
+                    setShowPotions(true);
+                  }
+                }}
+                disabled={potionCount <= 0}
+                className="rounded-lg bg-emerald-500/30 py-2.5 text-sm font-bold hover:bg-emerald-500/50 disabled:opacity-40"
+              >
+                🧪 Potion ({potionCount})
+              </button>
+              <button onClick={() => act('flee')} className="rounded-lg bg-slate-500/30 py-2.5 text-sm font-bold hover:bg-slate-500/50">🏃 Fuir</button>
+            </>
+          )}
         </div>
       ) : (
         <div className="animate-floatIn space-y-2">

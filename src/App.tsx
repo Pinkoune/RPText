@@ -11,6 +11,8 @@ import Toasts from './components/Toasts';
 import LevelUpFx from './components/LevelUpFx';
 import { setAmbient, stopAmbientMusic } from './game/sound';
 
+import PresenceTracker from './components/PresenceTracker';
+
 export default function App() {
   const status = useGame((s) => s.status);
   const player = useGame((s) => s.player);
@@ -43,6 +45,7 @@ export default function App() {
   // status === 'ready'
   return (
     <div className="relative h-full w-full">
+      <PresenceTracker />
       <Background biome={player?.biome ?? 'forest'} phase={phase} />
       <Topbar />
       <WindowManager />

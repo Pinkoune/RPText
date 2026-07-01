@@ -30,6 +30,7 @@ export default function ProfileCard() {
   const mutate = useGame((s) => s.mutate);
   const toast = useGame((s) => s.toast);
   const [editing, setEditing] = useState(false);
+  const [showClass, setShowClass] = useState(false);
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
 
@@ -49,6 +50,27 @@ export default function ProfileCard() {
     mutate((d) => { d.name = n; d.title = t; });
     setEditing(false);
     toast('Profil mis à jour.', 'good');
+  }
+
+  function changeClass(newClassId: string) {
+    if (p!.gold < 10000) {
+      toast('Pas assez d\'or (10 000 requis).', 'bad');
+      return;
+    }
+    if (p!.classId === newClassId) {
+      toast('Tu as déjà cette classe.', 'info');
+      return;
+    }
+    mutate((d) => {
+      d.gold -= 10000;
+      d.classId = newClassId as any;
+      d.talents = {};
+      d.talentPoints = Math.max(0, d.level - 1);
+      // Déséquiper l'arme s'il y en a une pour éviter les problèmes
+      d.equipped.weapon = null;
+    });
+    toast('Classe changée avec succès ! Talents réinitialisés.', 'good');
+    setShowClass(false);
   }
 
   return (
@@ -87,6 +109,28 @@ export default function ProfileCard() {
         <div className="rounded-lg border border-sky-400/40 bg-sky-500/15 px-3 py-1.5 text-xs">
           🌟 {p.talentPoints} point{p.talentPoints > 1 ? 's' : ''} de talent à dépenser — tape « talents ».
         </div>
+      )}
+
+      {showClass ? (
+        <div className="space-y-2 rounded-lg bg-black/30 p-3">
+          <div className="text-xs font-semibold text-slate-300">Changer de classe (10 000 🪙)</div>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.values(CLASSES).map((c) => (
+              <button
+                key={c.id}
+                onClick={() => changeClass(c.id)}
+                className={`rounded border px-2 py-1.5 text-xs font-medium hover:bg-white/10 ${p.classId === c.id ? 'border-sky-500/50 bg-sky-500/10' : 'border-slate-700 bg-black/40'}`}
+              >
+                {c.emoji} {c.name}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setShowClass(false)} className="w-full rounded bg-slate-700/50 py-1 text-xs hover:bg-slate-700">Annuler</button>
+        </div>
+      ) : (
+        <button onClick={() => setShowClass(true)} className="w-full rounded-lg bg-sky-500/20 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-500/30">
+          🔄 Changer de classe
+        </button>
       )}
 
       <div>
