@@ -50,6 +50,14 @@ export const ITEMS: Record<string, ItemDef> = {
   grilled_fish: { id: 'grilled_fish', name: 'Poisson grillé', icon: '🍢', rarity: 'common', slot: 'consumable', hp: 240, value: 30, desc: 'Rend 240 PV. Cuisiné.' },
   hearty_stew: { id: 'hearty_stew', name: 'Ragoût copieux', icon: '🍲', rarity: 'uncommon', slot: 'consumable', hp: 500, value: 70, desc: 'Rend 500 PV. Un vrai festin.' },
 
+  // ── Matériaux d'artisanat intermédiaires ──
+  iron_ingot: { id: 'iron_ingot', name: 'Lingot de fer', icon: '🔩', rarity: 'uncommon', slot: 'material', value: 25, desc: 'Fer fondu et purifié.' },
+  mithril_ingot: { id: 'mithril_ingot', name: 'Lingot de mithril', icon: '⚙️', rarity: 'rare', slot: 'material', value: 120, desc: 'Alliage magique très résistant.' },
+  sturdy_leather: { id: 'sturdy_leather', name: 'Cuir robuste', icon: '📜', rarity: 'uncommon', slot: 'material', value: 15, desc: 'Peau tannée avec soin.' },
+  refined_wood: { id: 'refined_wood', name: 'Bois raffiné', icon: '🪵', rarity: 'uncommon', slot: 'material', value: 30, desc: 'Planches poncées et traitées.' },
+  magic_dust: { id: 'magic_dust', name: 'Poudre magique', icon: '✨', rarity: 'rare', slot: 'material', value: 60, desc: 'Résidu d\'enchantement.' },
+  craft_trash: { id: 'craft_trash', name: 'Déchet', icon: '🗑️', rarity: 'common', slot: 'material', value: 1, desc: 'Restes d\'un craft raté.' },
+
   // ── Équipement craftable (ressources) ──
   iron_spear: { id: 'iron_spear', name: 'Lance de fer', icon: '🔱', rarity: 'uncommon', slot: 'weapon', atk: 16, classes: ['warrior', 'archer'], value: 140, desc: 'Allonge et puissance.' },
   steel_plate: { id: 'steel_plate', name: 'Harnois d\'acier', icon: '🛡️', rarity: 'rare', slot: 'armor', def: 16, hp: 70, value: 280, desc: 'Forgé à partir de minerai.' },
@@ -65,6 +73,38 @@ export const RARITY_COLOR: Record<ItemDef['rarity'], string> = {
   legendary: '#ffae42',
 };
 
+/**
+ * Récupère un objet par son ID.
+ * Supporte les ID dynamiques avec suffixe de qualité, ex: "iron_blade:q120"
+ * Le suffixe q120 signifie +20% sur les stats (ATK, DEF, HP).
+ */
+export function getItem(id: string): ItemDef | undefined {
+  if (!id) return undefined;
+  const [baseId, qualityTag] = id.split(':');
+  const base = ITEMS[baseId];
+  if (!base) return undefined;
+  
+  if (!qualityTag || !qualityTag.startsWith('q')) {
+    return base;
+  }
+  
+  const qStr = qualityTag.slice(1);
+  const qVal = parseInt(qStr, 10);
+  if (isNaN(qVal) || qVal === 100) return base;
+
+  const mult = qVal / 100;
+  
+  return {
+    ...base,
+    id,
+    name: `${base.name} ${qVal > 100 ? '+' + (qVal - 100) + '%' : '-' + (100 - qVal) + '%'}`,
+    atk: base.atk ? Math.max(1, Math.round(base.atk * mult)) : undefined,
+    def: base.def ? Math.max(1, Math.round(base.def * mult)) : undefined,
+    hp: base.hp ? Math.max(1, Math.round(base.hp * mult)) : undefined,
+    value: Math.max(1, Math.round(base.value * mult)),
+  };
+}
+
 export function item(id: string): ItemDef | undefined {
-  return ITEMS[id];
+  return getItem(id);
 }

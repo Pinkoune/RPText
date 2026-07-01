@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { skillsForBiome, gather, gatherCooldownLeft, farmProgress, type GatherSkill } from '../../game/gathering';
 import { BIOMES } from '../../game/biomes';
-import { ITEMS } from '../../game/items';
+import { item } from '../../game/items';
 import { playSound } from '../../game/sound';
 
 export default function GatherCard() {
@@ -30,7 +30,7 @@ export default function GatherCard() {
       const r = gather(d, skill.id);
       if (r.ok && r.itemId) {
         playSound(r.leveledUp ? 'levelup' : 'coin');
-        toast(`${skill.emoji} +${r.qty} ${ITEMS[r.itemId].icon} ${ITEMS[r.itemId].name} (+${r.xpGain} XP farm)`, 'good');
+        toast(`${skill.emoji} +${r.qty} ${item(r.itemId)!.icon} ${item(r.itemId)!.name} (+${r.xpGain} XP farm)`, 'good');
         if (r.leveledUp) toast(`⬆️ Niveau de farm ${r.level} !`, 'gold');
       } else {
         toast(r.reason ?? 'Échec.', 'bad');
@@ -78,7 +78,7 @@ export default function GatherCard() {
                   const locked = d.minLvl != null && farm.level < d.minLvl;
                   return (
                     <span key={d.id} className={`rounded px-1.5 py-0.5 ${locked ? 'bg-black/40 text-slate-600' : 'bg-black/30 text-slate-300'}`}>
-                      {locked ? '🔒' : ITEMS[d.id].icon} {ITEMS[d.id].name}{locked ? ` (farm ${d.minLvl})` : ''}
+                      {locked ? '🔒' : item(d.id)!.icon} {item(d.id)!.name}{locked ? ` (farm ${d.minLvl})` : ''}
                     </span>
                   );
                 })}

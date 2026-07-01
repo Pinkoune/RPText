@@ -1,16 +1,33 @@
 import { useGame } from '../../store/gameStore';
-import { ITEMS, RARITY_COLOR } from '../../game/items';
+import { item, RARITY_COLOR } from '../../game/items';
 import { addItem, canEquip } from '../../game/player';
 
 // Stock de la boutique : id -> prix d'achat (≈ 2.2× la valeur de revente).
 const STOCK: Record<string, number> = {
+  // Consommables
   potion: 30,
   hi_potion: 100,
+  
+  // Matériaux de base & Artisanat
+  wood: 10,
+  stone: 10,
+  iron_ore: 25,
+  herb: 15,
+  iron_ingot: 60,
+  sturdy_leather: 40,
+  refined_wood: 70,
+
+  // Armes
   iron_blade: 130, // mêlée
   arcane_staff: 150, // magie
+  iron_spear: 200, // mêlée
   frost_glaive: 480, // mêlée
   frost_scepter: 500, // magie
+  
+  // Armures & Bijoux
+  cloth_robe: 30,
   iron_mail: 150,
+  steel_plate: 400,
   frost_plate: 560,
   lucky_coin: 320,
 };
@@ -30,14 +47,14 @@ export default function ShopCard() {
       d.gold -= price;
       addItem(d, id, 1);
     });
-    toast(`Acheté : ${ITEMS[id].name}.`, 'good');
+    toast(`Acheté : ${item(id)!.name}.`, 'good');
   }
 
   return (
     <div className="space-y-2">
       <p className="text-xs text-slate-400">Or disponible : <b>{p.gold} 🪙</b></p>
-      {Object.entries(STOCK).filter(([id]) => ITEMS[id].slot !== 'weapon' || canEquip(p, ITEMS[id])).map(([id, price]) => {
-        const it = ITEMS[id];
+      {Object.entries(STOCK).filter(([id]) => item(id)!.slot !== 'weapon' || canEquip(p, item(id)!)).map(([id, price]) => {
+        const it = item(id)!;
         return (
           <div key={id} className="flex items-center gap-2 rounded-lg border-l-2 bg-black/25 p-2" style={{ borderColor: RARITY_COLOR[it.rarity] }}>
             <div className="min-w-0 flex-1">

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ITEMS, RARITY_COLOR } from '../../game/items';
+import { item, RARITY_COLOR } from '../../game/items';
 import { playSound } from '../../game/sound';
 import { useGame } from '../../store/gameStore';
 import { deriveStats, removeItem } from '../../game/player';
@@ -61,7 +61,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     if (action === 'potion') {
       potUse = POTIONS.find((id) => (player.inventory[id] ?? 0) > 0);
       if (!potUse) { toast('Aucune potion ni nourriture.', 'bad'); return; }
-      potHeal = ITEMS[potUse].hp ?? 0;
+      potHeal = item(potUse)!.hp ?? 0;
     }
 
     const s = deriveStats(player);
@@ -176,8 +176,8 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
                     id === '__fate' ? (
                       <span key={i} className="rounded bg-purple-500/25 px-2 py-0.5 text-xs">🎲 +1 Fate Coin</span>
                     ) : (
-                      <span key={i} className="rounded px-2 py-0.5 text-xs" style={{ background: `${RARITY_COLOR[ITEMS[id].rarity]}22`, color: RARITY_COLOR[ITEMS[id].rarity] }}>
-                        {ITEMS[id].icon} {ITEMS[id].name}
+                      <span key={i} className="rounded px-2 py-0.5 text-xs" style={{ background: `${RARITY_COLOR[item(id)!.rarity]}22`, color: RARITY_COLOR[item(id)!.rarity] }}>
+                        {item(id)!.icon} {item(id)!.name}
                       </span>
                     ),
                   )}

@@ -1,6 +1,6 @@
 import type { PlayerState, MonsterDef } from './types';
 import { deriveStats, grantXp, addItem } from './player';
-import { ITEMS } from './items';
+import { item } from './items';
 import { PHASE_MODIFIERS, currentPhase } from './daynight';
 import { addQuestMetric } from './quests';
 import { emptyMods, type CombatMods } from './talents';
@@ -188,7 +188,7 @@ export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRe
   const loot: string[] = [];
   const lootMult = phase === 'night' ? 2 : 1;
   for (const [id, chance] of Object.entries(monster.loot)) {
-    if (Math.random() < chance * lootMult && ITEMS[id]) {
+    if (Math.random() < chance * lootMult && item(id)!) {
       addItem(p, id, 1);
       loot.push(id);
     }

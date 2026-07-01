@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { DUNGEONS, runDungeon, dungeonCooldownLeft, type DungeonDef, type DungeonRun } from '../../game/dungeons';
-import { ITEMS, RARITY_COLOR } from '../../game/items';
+import { item, RARITY_COLOR } from '../../game/items';
 import { playSound } from '../../game/sound';
 
 function fmt(ms: number): string {
@@ -66,8 +66,8 @@ export default function DungeonCard() {
             {run.loot.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {run.loot.map((id, i) => (
-                  <span key={i} className="rounded px-2 py-0.5 text-xs" style={{ background: `${RARITY_COLOR[ITEMS[id].rarity]}22`, color: RARITY_COLOR[ITEMS[id].rarity] }}>
-                    {ITEMS[id].icon} {ITEMS[id].name}
+                  <span key={i} className="rounded px-2 py-0.5 text-xs" style={{ background: `${RARITY_COLOR[item(id)!.rarity]}22`, color: RARITY_COLOR[item(id)!.rarity] }}>
+                    {item(id)!.icon} {item(id)!.name}
                   </span>
                 ))}
               </div>

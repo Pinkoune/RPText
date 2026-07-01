@@ -4,7 +4,7 @@ import { CLASSES, xpToNext } from '../../game/classes';
 import { BIOMES } from '../../game/biomes';
 import { deriveStats } from '../../game/player';
 import { farmProgress } from '../../game/gathering';
-import { ITEMS, RARITY_COLOR } from '../../game/items';
+import { item, RARITY_COLOR } from '../../game/items';
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
@@ -16,7 +16,7 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 }
 
 function Gear({ slot, id }: { slot: string; id: string | null }) {
-  const it = id ? ITEMS[id] : null;
+  const it = id ? item(id)! : null;
   return (
     <div className="flex items-center justify-between rounded-lg bg-black/25 px-3 py-1.5 text-sm">
       <span className="text-slate-400">{slot}</span>

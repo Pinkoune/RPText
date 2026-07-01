@@ -99,6 +99,8 @@ export interface PlayerState {
   gatherXp: Record<string, number>;
   /** XP de farm global (niveau de récolte unique). */
   farmXp: number;
+  /** XP d'artisanat. */
+  craftXp: number;
   /** Nombre de clears par donjon. */
   dungeonClears: Record<string, number>;
   /** Points de talent non dépensés. */

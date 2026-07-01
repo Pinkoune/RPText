@@ -1,6 +1,6 @@
 import type { PlayerState, ClassId, Stats, QuestState, ItemDef } from './types';
 import { CLASSES, xpToNext, xpToNextV1 } from './classes';
-import { ITEMS } from './items';
+import { item } from './items';
 
 /** Arme de départ selon la classe. */
 export function starterWeapon(classId: ClassId): string {
@@ -49,6 +49,7 @@ export function migratePlayer(p: PlayerState): PlayerState {
     // Récupère l'XP de récolte des anciennes sauvegardes (somme des métiers).
     p.farmXp = Object.values(p.gatherXp ?? {}).reduce((s, v) => s + (v || 0), 0);
   }
+  if (p.craftXp == null) p.craftXp = 0;
   if (!p.dungeonClears) p.dungeonClears = {};
   if (!p.statistics) {
     p.statistics = {
@@ -66,7 +67,7 @@ export function migratePlayer(p: PlayerState): PlayerState {
   }
   // Arme équipée non autorisée pour la classe (ex: mage avec une épée) : on la
   // déséquipe et on s'assure que la classe a une arme de départ adaptée.
-  const w = p.equipped.weapon ? ITEMS[p.equipped.weapon] : null;
+  const w = p.equipped.weapon ? item(p.equipped.weapon)! : null;
   if (w && !canEquip(p, w)) {
     addItem(p, p.equipped.weapon!, 1);
     p.equipped.weapon = null;
@@ -126,6 +127,7 @@ export function createPlayer(
     settledGifts: [],
     gatherXp: { chop: 0, mine: 0, fish: 0, forage: 0 },
     farmXp: 0,
+    craftXp: 0,
     dungeonClears: {},
     talentPoints: 0,
     talents: {},
@@ -145,7 +147,7 @@ export function deriveStats(p: PlayerState): Stats {
 
   for (const slot of ['weapon', 'armor', 'trinket'] as const) {
     const id = p.equipped[slot];
-    const it = id ? ITEMS[id] : undefined;
+    const it = id ? item(id)! : undefined;
     if (it && canEquip(p, it)) {
       atk += it.atk ?? 0;
       def += it.def ?? 0;
@@ -157,7 +159,7 @@ export function deriveStats(p: PlayerState): Stats {
 
 /** Équipe un objet de l'inventaire (remet l'ancien dans le sac). Retourne true si ok. */
 export function equipItem(p: PlayerState, id: string): boolean {
-  const it = ITEMS[id];
+  const it = item(id)!;
   if (!it || !canEquip(p, it)) return false;
   if ((p.inventory[id] ?? 0) <= 0) return false;
   const slot = it.slot as 'weapon' | 'armor' | 'trinket';

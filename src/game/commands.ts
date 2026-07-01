@@ -2,7 +2,7 @@ import type { PlayerState } from './types';
 import type { WindowKind } from '../store/uiStore';
 import { pickMonster } from './monsters';
 import { cooldownLeft } from './player';
-import { ITEMS } from './items';
+import { item } from './items';
 import { deriveStats, removeItem } from './player';
 import { currentPhase } from './daynight';
 import { addQuestMetric } from './quests';
@@ -140,7 +140,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.mutate((d) => { holder.res = gather(d, skill); });
       const r = holder.res;
       if (r && r.ok && r.itemId) {
-        ctx.toast(`${GATHER_SKILLS[skill].emoji} +${r.qty} ${ITEMS[r.itemId].name} (+${r.xpGain} XP farm)`, 'good');
+        ctx.toast(`${GATHER_SKILLS[skill].emoji} +${r.qty} ${item(r.itemId)!.name} (+${r.xpGain} XP farm)`, 'good');
         if (r.leveledUp) ctx.toast(`⬆️ Niveau de farm ${r.level} !`, 'gold');
       } else {
         ctx.toast(r?.reason ?? 'Échec.', 'bad');
@@ -199,12 +199,12 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         break;
       }
       ctx.mutate((d) => {
-        const heal = ITEMS[has].hp ?? 0;
+        const heal = item(has)!.hp ?? 0;
         const max = deriveStats(d).maxHp;
         removeItem(d, has);
         d.hp = Math.min(max, d.hp + heal);
       });
-      ctx.toast(`Tu bois une ${ITEMS[has].name} (+${ITEMS[has].hp} PV).`, 'good');
+      ctx.toast(`Tu bois une ${item(has)!.name} (+${item(has)!.hp} PV).`, 'good');
       break;
     }
 

@@ -1,5 +1,5 @@
 import { useGame } from '../../store/gameStore';
-import { ITEMS, RARITY_COLOR } from '../../game/items';
+import { item, RARITY_COLOR } from '../../game/items';
 import { deriveStats, equipItem, unequipItem, canEquip } from '../../game/player';
 import type { ItemSlot } from '../../game/types';
 
@@ -10,7 +10,7 @@ const SLOTS: { slot: 'weapon' | 'armor' | 'trinket'; label: string; icon: string
 ];
 
 function statLine(id: string | null): string {
-  const it = id ? ITEMS[id] : null;
+  const it = id ? item(id)! : null;
   if (!it) return '—';
   const parts = [];
   if (it.atk) parts.push(`ATK+${it.atk}`);
@@ -29,7 +29,7 @@ export default function EquipmentCard() {
 
   function equip(id: string) {
     mutate((d) => { equipItem(d, id); });
-    toast(`${ITEMS[id].name} équipé.`, 'good');
+    toast(`${item(id)!.name} équipé.`, 'good');
   }
   function unequip(slot: 'weapon' | 'armor' | 'trinket') {
     mutate((d) => { unequipItem(d, slot); });
@@ -37,7 +37,7 @@ export default function EquipmentCard() {
 
   // Objets équipables possédés, par slot.
   const owned = (slot: ItemSlot) =>
-    Object.entries(p.inventory).filter(([id, q]) => ITEMS[id] && ITEMS[id].slot === slot && q > 0);
+    Object.entries(p.inventory).filter(([id, q]) => item(id)! && item(id)!.slot === slot && q > 0);
 
   return (
     <div className="space-y-3">
@@ -50,8 +50,8 @@ export default function EquipmentCard() {
 
       {SLOTS.map(({ slot, label, icon }) => {
         const equippedId = p.equipped[slot];
-        const eq = equippedId ? ITEMS[equippedId] : null;
-        const candidates = owned(slot).filter(([id]) => id !== equippedId && canEquip(p, ITEMS[id]));
+        const eq = equippedId ? item(equippedId)! : null;
+        const candidates = owned(slot).filter(([id]) => id !== equippedId && canEquip(p, item(id)!));
         return (
           <div key={slot} className="rounded-xl bg-black/25 p-3">
             <div className="flex items-center justify-between">
@@ -68,7 +68,7 @@ export default function EquipmentCard() {
             {candidates.length > 0 && (
               <div className="mt-2 space-y-1">
                 {candidates.map(([id, q]) => {
-                  const it = ITEMS[id];
+                  const it = item(id)!;
                   return (
                     <div key={id} className="flex items-center justify-between gap-2 rounded-lg bg-black/30 px-2 py-1.5">
                       <div className="min-w-0">

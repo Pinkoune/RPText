@@ -1,5 +1,5 @@
 import { useGame } from '../../store/gameStore';
-import { ITEMS, RARITY_COLOR } from '../../game/items';
+import { item, RARITY_COLOR } from '../../game/items';
 import { deriveStats, removeItem, equipItem, canEquip } from '../../game/player';
 
 export default function InventoryCard() {
@@ -8,10 +8,10 @@ export default function InventoryCard() {
   const toast = useGame((s) => s.toast);
   if (!p) return null;
 
-  const entries = Object.entries(p.inventory).filter(([id, q]) => ITEMS[id] && q > 0);
+  const entries = Object.entries(p.inventory).filter(([id, q]) => item(id)! && q > 0);
 
   function equip(id: string) {
-    const it = ITEMS[id];
+    const it = item(id)!;
     if (!canEquip(p!, it)) {
       toast(`Ta classe ne peut pas équiper ${it.name}.`, 'bad');
       return;
@@ -21,7 +21,7 @@ export default function InventoryCard() {
   }
 
   function use(id: string) {
-    const it = ITEMS[id];
+    const it = item(id)!;
     mutate((d) => {
       const max = deriveStats(d).maxHp;
       removeItem(d, id);
@@ -31,7 +31,7 @@ export default function InventoryCard() {
   }
 
   function sell(id: string) {
-    const it = ITEMS[id];
+    const it = item(id)!;
     mutate((d) => {
       if (removeItem(d, id)) d.gold += it.value;
     });
@@ -45,7 +45,7 @@ export default function InventoryCard() {
   return (
     <div className="space-y-2">
       {entries.map(([id, qty]) => {
-        const it = ITEMS[id];
+        const it = item(id)!;
         const equippable = it.slot === 'weapon' || it.slot === 'armor' || it.slot === 'trinket';
         const wrongClass = equippable && !canEquip(p, it);
         const isEquipped = Object.values(p.equipped).includes(id);
