@@ -1,6 +1,8 @@
 import type { PlayerState, ClassId, Stats, QuestState, ItemDef } from './types';
 import { CLASSES, xpToNext, xpToNextV1 } from './classes';
+import { getTeamBonus, getGuildBonus } from '../firebase/groupsService';
 import { item } from './items';
+import { BIOMES, BIOME_LIST } from './biomes';
 
 /** Arme de départ selon la classe. */
 export function starterWeapon(classId: ClassId): string {
@@ -9,6 +11,11 @@ export function starterWeapon(classId: ClassId): string {
 
 /** Le joueur peut-il équiper cet objet (restriction de classe sur les armes) ? */
 export function canEquip(p: PlayerState, it: ItemDef): boolean {
+  // Invalider l'ancienne faucheuse du vide (sans suffixe de qualité)
+  if (it.id === 'void_reaver') return false;
+  // Invalider les objets cheatés de l'ancienne boutique s'ils n'ont pas été craftés (pas de suffixe de qualité)
+  const OP_SHOP_ITEMS = ['frost_glaive', 'frost_scepter', 'steel_plate', 'frost_plate', 'lucky_coin', 'gambler_ring', 'iron_spear', 'crystal_staff', 'ember_axe'];
+  if (OP_SHOP_ITEMS.includes(it.id)) return false;
   if (it.slot !== 'weapon' && it.slot !== 'armor' && it.slot !== 'trinket') return false;
   if (it.classes && !it.classes.includes(p.classId)) return false;
   return true;
@@ -40,8 +47,34 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (!p.bossClaims) p.bossClaims = [];
   if (!p.settledSales) p.settledSales = [];
   if (!p.settledCJDuels) p.settledCJDuels = [];
+  if (!p.settledDungeons) p.settledDungeons = [];
   if (p.cjWins == null) p.cjWins = 0;
   if (p.teamId === undefined) p.teamId = null;
+
+  // Déséquiper les objets devenus invalides (ex: objets cheatés achetés en boutique)
+  for (const slot of ['weapon', 'armor', 'trinket'] as const) {
+    const id = p.equipped[slot];
+    if (id) {
+      const it = item(id);
+      if (!it || !canEquip(p, it)) {
+        p.equipped[slot] = null;
+        if (it) addItem(p, id, 1);
+      }
+    }
+  }
+
+  // Vérifier si le joueur est dans un biome trop élevé pour son niveau (ex: à cause d'un changement d'équilibrage)
+  const currentBiome = BIOMES[p.biome];
+  if (currentBiome && p.level < currentBiome.minLevel) {
+    // Le renvoyer au biome le plus haut possible
+    const available = BIOME_LIST.filter(b => p.level >= b.minLevel);
+    if (available.length > 0) {
+      p.biome = available[available.length - 1].id;
+    } else {
+      p.biome = 'forest';
+    }
+  }
+
   if (p.guildId === undefined) p.guildId = null;
   if (!p.settledGifts) p.settledGifts = [];
   if (!p.gatherXp) p.gatherXp = { chop: 0, mine: 0, fish: 0, forage: 0 };
@@ -119,6 +152,7 @@ export function createPlayer(
     quests: freshQuestState(now),
     settledDuels: [],
     settledCJDuels: [],
+    settledDungeons: [],
     cjWins: 0,
     bossClaims: [],
     settledSales: [],
@@ -177,6 +211,17 @@ export function unequipItem(p: PlayerState, slot: 'weapon' | 'armor' | 'trinket'
     addItem(p, prev, 1);
     p.equipped[slot] = null;
   }
+}
+
+/** Applique les multiplicateurs globaux (équipe, guilde) à l'XP et à l'Or. */
+export function applyBonuses(p: PlayerState, base: { xp: number; gold: number }): { xp: number; gold: number } {
+  const teamMult = getTeamBonus(p.teamId);
+  const guildMult = getGuildBonus(p.guildId);
+  // Seule l'XP bénéficie du bonus de guilde
+  return {
+    xp: Math.floor(base.xp * teamMult * guildMult),
+    gold: Math.floor(base.gold * teamMult),
+  };
 }
 
 /** Applique de l'XP et gère les montées de niveau. Retourne les niveaux gagnés. */

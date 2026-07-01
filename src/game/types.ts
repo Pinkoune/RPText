@@ -93,6 +93,9 @@ export interface PlayerState {
   /** Équipe et guilde actuelles (ids Firestore, ou null). */
   teamId: string | null;
   guildId: string | null;
+  /** Donjons (Multijoueur) */
+  dungeonSessionId?: string | null;
+  settledDungeons?: string[];
   /** Dons de ressources déjà encaissés (anti double-crédit). */
   settledGifts: string[];
   /** XP par métier de récolte (legacy, fusionné dans farmXp). */

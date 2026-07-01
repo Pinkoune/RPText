@@ -9,16 +9,18 @@ export const ITEMS: Record<string, ItemDef> = {
   ember_core: { id: 'ember_core', name: 'Cœur de braise', icon: '🔥', rarity: 'rare', slot: 'material', value: 30, desc: 'Pulse d\'une chaleur ardente.' },
   void_dust: { id: 'void_dust', name: 'Poussière du vide', icon: '🌌', rarity: 'epic', slot: 'material', value: 80, desc: 'Aspire la lumière alentour.' },
 
-  // ── Consommables ──
+  // ── Consommables & Divers ──
   potion: { id: 'potion', name: 'Potion de soin', icon: '🧪', rarity: 'common', slot: 'consumable', hp: 60, value: 15, desc: 'Rend 60 PV.' },
   hi_potion: { id: 'hi_potion', name: 'Hi-Potion', icon: '⚗️', rarity: 'uncommon', slot: 'consumable', hp: 180, value: 45, desc: 'Rend 180 PV.' },
+  dungeon_key: { id: 'dungeon_key', name: 'Clé de donjon', icon: '🗝️', rarity: 'rare', slot: 'consumable', value: 1000, desc: 'Ouvre les portes des donjons.' },
+  lootbox: { id: 'lootbox', name: 'Lootbox', icon: '🎁', rarity: 'epic', slot: 'consumable', value: 100, desc: 'Ouvre pour obtenir des objets (utiliser la commande /open).' },
 
   // ── Armes de mêlée (Guerrier / Archer) ──
   rusty_sword: { id: 'rusty_sword', name: 'Épée rouillée', icon: '🗡️', rarity: 'common', slot: 'weapon', atk: 4, classes: ['warrior', 'archer'], value: 10, desc: 'Mieux que rien.' },
   iron_blade: { id: 'iron_blade', name: 'Lame de fer', icon: '⚔️', rarity: 'uncommon', slot: 'weapon', atk: 10, classes: ['warrior', 'archer'], value: 60, desc: 'Tranchant fiable.' },
   frost_glaive: { id: 'frost_glaive', name: 'Glaive de givre', icon: '❄️', rarity: 'rare', slot: 'weapon', atk: 22, classes: ['warrior', 'archer'], value: 220, desc: 'Gèle les ennemis touchés.' },
   ember_axe: { id: 'ember_axe', name: 'Hache ardente', icon: '🪓', rarity: 'epic', slot: 'weapon', atk: 34, classes: ['warrior'], value: 500, desc: 'Brûle tout sur son passage.' },
-  void_reaver: { id: 'void_reaver', name: 'Faucheuse du vide', icon: '💀', rarity: 'legendary', slot: 'weapon', atk: 55, classes: ['warrior'], value: 1500, desc: 'Murmure des promesses interdites.' },
+  void_reaver: { id: 'void_reaver', name: 'Faucheuse du vide', icon: '💀', rarity: 'legendary', slot: 'weapon', atk: 55, classes: ['warrior'], value: 1500, desc: 'Murmure des promesses interdites. (Brisée - Impossible à équiper)' },
 
   // ── Bâtons & sceptres (Mage / Soigneur) ──
   apprentice_wand: { id: 'apprentice_wand', name: 'Baguette d\'apprenti', icon: '🪄', rarity: 'common', slot: 'weapon', atk: 4, classes: ['mage', 'healer'], value: 10, desc: 'Crépite d\'une faible magie.' },
@@ -102,6 +104,7 @@ export function getItem(id: string): ItemDef | undefined {
     def: base.def ? Math.max(1, Math.round(base.def * mult)) : undefined,
     hp: base.hp ? Math.max(1, Math.round(base.hp * mult)) : undefined,
     value: Math.max(1, Math.round(base.value * mult)),
+    desc: base.desc.replace(' (Brisée - Impossible à équiper)', ''),
   };
 }
 

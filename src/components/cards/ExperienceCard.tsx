@@ -17,11 +17,18 @@ function Bar({ label, level, into, need, color, sub }: { label: string; level: n
   );
 }
 
+import { getCraftLevel } from '../../game/crafting';
+
 export default function ExperienceCard() {
   const p = useGame((s) => s.player);
   if (!p) return null;
   const cls = CLASSES[p.classId];
   const farm = farmProgress(p);
+  
+  // Logic for craft xp
+  const cLevel = getCraftLevel(p.craftXp);
+  const cInto = p.craftXp - 100 * Math.pow(cLevel - 1, 1.5);
+  const cNeed = 100 * Math.pow(cLevel, 1.5) - 100 * Math.pow(cLevel - 1, 1.5);
 
   return (
     <div className="space-y-3">
@@ -40,6 +47,14 @@ export default function ExperienceCard() {
         need={farm.need}
         color="#e6d27a"
         sub={`XP de farm total : ${p.farmXp}`}
+      />
+      <Bar
+        label="🔨 Artisanat"
+        level={cLevel}
+        into={Math.max(0, cInto)}
+        need={Math.max(1, cNeed)}
+        color="#d8a26a"
+        sub={`XP d'artisanat total : ${p.craftXp}`}
       />
       <p className="text-center text-[11px] text-slate-500">
         L'aventure (combat) et le farm (récolte) montent séparément.

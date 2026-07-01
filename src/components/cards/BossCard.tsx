@@ -11,6 +11,8 @@ function fmt(ms: number): string {
   return `${m}min`;
 }
 
+import { contributeGuild } from '../../firebase/groupsService';
+
 export default function BossCard() {
   const p = useGame((s) => s.player);
   const mutate = useGame((s) => s.mutate);
@@ -36,10 +38,21 @@ export default function BossCard() {
       d.fateCoins += r.fateCoins;
       d.bossClaims.push(boss.id);
     });
-    toast(`🏆 Boss vaincu ! Part du butin : +${r.gold} 🪙, +${r.fateCoins} 🎲`, 'gold');
-  }, [boss?.id, boss?.defeatedAt, p?.uid]);
+    if (p.guildId) {
+      void contributeGuild(p.guildId, r.guildXp);
+    }
+    toast(`🏆 Boss vaincu ! Part du butin : +${r.gold} 🪙, +${r.fateCoins} 🎲, +${r.guildXp} XP Guilde`, 'gold');
+  }, [boss?.id, boss?.defeatedAt, p?.uid, p?.guildId]);
 
   if (!p) return null;
+  if (!p.guildId) {
+    return (
+      <div className="rounded border border-amber-500/20 bg-amber-500/10 p-4 text-center text-sm text-amber-200">
+        Les World Boss sont des menaces colossales. Tu dois <strong>rejoindre ou créer une Guilde</strong> pour pouvoir les affronter.
+      </div>
+    );
+  }
+
   const cdLeft = cooldownLeft(p, 'boss', BOSS_ATTACK_CD);
 
   function attack() {

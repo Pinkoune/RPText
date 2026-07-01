@@ -25,6 +25,7 @@ export interface CommandDef {
 export const COMMANDS: CommandDef[] = [
   { name: 'profile', aliases: ['profil', 'p', 'me'], desc: 'Affiche ta carte de profil.', category: 'Jeu' },
   { name: 'hunt', aliases: ['chasse', 'h'], desc: 'Pars chasser un monstre du biome actuel.', category: 'Combat' },
+  { name: 'adventure', aliases: ['adv', 'aventure'], desc: 'Pars pour une grande aventure dangereuse (15 min de CD).', category: 'Combat' },
   { name: 'dungeon', aliases: ['donjon', 'dj'], desc: 'Donjons à étapes (combats enchaînés, gros butin).', category: 'Combat' },
   { name: 'talents', aliases: ['talent', 'skills', 'competences', 'compétences'], desc: 'Arbre de talents de ta classe (points par niveau).', category: 'Combat' },
   { name: 'map', aliases: ['carte', 'm'], desc: 'Ouvre la carte des biomes.', category: 'Jeu' },
@@ -216,6 +217,34 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         addQuestMetric(d, 'hunts', 1);
       });
       // Ouvre une rencontre interactive (fenêtre unique).
+      ctx.open('hunt', { monster, id: Date.now() }, { singleton: true });
+      break;
+    }
+
+    case 'adventure': {
+      const left = cooldownLeft(p!, 'adventure', 15 * 60 * 1000);
+      if (left > 0) {
+        ctx.toast(`L'aventure est dangereuse. Attends ${Math.ceil(left / 60000)} minutes.`, 'bad');
+        break;
+      }
+      if (p!.hp <= 0) {
+        ctx.toast('Tu es K.O. ! Soigne-toi avant de partir à l\'aventure.', 'bad');
+        break;
+      }
+      const baseMonster = pickMonster(p!.biome, currentPhase());
+      const monster = {
+        ...baseMonster,
+        name: `${baseMonster.name} Furieux`,
+        hp: baseMonster.hp * 4,
+        atk: baseMonster.atk * 3,
+        def: baseMonster.def * 2,
+        xp: baseMonster.xp * 5,
+        gold: [baseMonster.gold[0] * 5, baseMonster.gold[1] * 5] as [number, number],
+      };
+      ctx.mutate((d) => {
+        d.cooldowns.adventure = Date.now();
+        addQuestMetric(d, 'hunts', 1);
+      });
       ctx.open('hunt', { monster, id: Date.now() }, { singleton: true });
       break;
     }

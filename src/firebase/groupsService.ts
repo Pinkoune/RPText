@@ -7,6 +7,8 @@ import {
   runTransaction,
   query,
   where,
+  updateDoc,
+  deleteField,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
 
@@ -22,6 +24,7 @@ export interface Team {
   name: string;
   hostUid: string;
   members: Record<string, Member>;
+  dungeonId?: string;
   createdAt: number;
 }
 
@@ -93,11 +96,23 @@ export async function leaveTeam(teamId: string, uid: string): Promise<void> {
   });
 }
 
+export async function setTeamDungeon(teamId: string, dungeonId: string | null): Promise<void> {
+  if (!db) return;
+  await updateDoc(doc(db, 'teams', teamId), {
+    dungeonId: dungeonId ? dungeonId : deleteField(),
+  });
+}
+
+let cachedTeams: Record<string, Team> = {};
+
 export function listenTeams(cb: (t: Team[]) => void): () => void {
   if (!db) { cb([]); return () => {}; }
-  return onSnapshot(collection(db, 'teams'), (snap) =>
-    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Team, 'id'>) }))),
-  );
+  return onSnapshot(collection(db, 'teams'), (snap) => {
+    const teams = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Team, 'id'>) }));
+    cachedTeams = {};
+    for (const t of teams) cachedTeams[t.id] = t;
+    cb(teams);
+  });
 }
 
 // ─── Guildes ──────────────────────────────────────────────────────────────
@@ -152,29 +167,33 @@ export async function contributeGuild(guildId: string, amount: number): Promise<
   });
 }
 
+let cachedGuilds: Record<string, Guild> = {};
+
 export function listenGuilds(cb: (g: Guild[]) => void): () => void {
   if (!db) { cb([]); return () => {}; }
-  return onSnapshot(collection(db, 'guilds'), (snap) =>
-    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Guild, 'id'>) }))),
-  );
-}
-
-// ─── Dons de ressources (or) ─────────────────────────────────────────────────
-export async function sendGift(from: { uid: string; name: string }, toUid: string, gold: number): Promise<void> {
-  if (!db) throw new Error('offline');
-  await addDoc(collection(db, 'gifts'), {
-    fromUid: from.uid, fromName: from.name, toUid, gold, createdAt: Date.now(),
+  return onSnapshot(collection(db, 'guilds'), (snap) => {
+    const guilds = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Guild, 'id'>) }));
+    cachedGuilds = {};
+    for (const g of guilds) cachedGuilds[g.id] = g;
+    cb(guilds);
   });
 }
 
-export function listenMyGifts(uid: string, cb: (g: Gift[]) => void): () => void {
-  if (!db) { cb([]); return () => {}; }
-  const q = query(collection(db, 'gifts'), where('toUid', '==', uid));
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Gift, 'id'>) }))));
+/** Renvoie le multiplicateur d'XP basé sur le niveau de la guilde (1.0 + 0.02 par niveau). */
+export function getGuildBonus(guildId: string | null): number {
+  if (!guildId || !cachedGuilds[guildId]) return 1.0;
+  const xp = cachedGuilds[guildId].xp ?? 0;
+  const lvl = guildLevel(xp).level;
+  return 1.0 + (lvl * 0.02);
 }
 
-/** Retire le don une fois encaissé. */
-export async function consumeGift(giftId: string): Promise<void> {
-  if (!db) return;
-  await deleteDoc(doc(db, 'gifts', giftId)).catch(() => {});
+// ─── Dons de ressources (SUPPRIMÉ) ─────────────────────────────────────────────
+// Le système de don d'or a été supprimé au profit d'un buff passif d'équipe.
+
+/** Renvoie le multiplicateur de récompenses d'équipe (1.0 = aucun, jusqu'à 1.20 pour 4 membres). */
+export function getTeamBonus(teamId: string | null): number {
+  if (!teamId || !cachedTeams[teamId]) return 1.0;
+  const size = Object.keys(cachedTeams[teamId].members).length;
+  // +5% par membre
+  return 1.0 + (size * 0.05);
 }

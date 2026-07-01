@@ -1,5 +1,5 @@
 import type { PlayerState, BiomeId } from './types';
-import { addItem, cooldownLeft } from './player';
+import { addItem, cooldownLeft, applyBonuses } from './player';
 import { addQuestMetric } from './quests';
 
 export const GATHER_COOLDOWN = 60_000; // 60s, cooldown UNIQUE partagé (une récolte à la fois)
@@ -173,7 +173,9 @@ export function extractResource(p: PlayerState, skillId: GatherSkillId, qtyMult 
   addQuestMetric(p, 'gathers', 1);
 
   // XP de farm global : plus la ressource est exigeante, plus elle rapporte.
-  const xpGain = (8 + baseQty * 2 + (d.minLvl ?? 0) * 5) * qtyMult;
+  const baseXp = (8 + baseQty * 2 + (d.minLvl ?? 0) * 5) * qtyMult;
+  const { xp: xpGain } = applyBonuses(p, { xp: baseXp, gold: 0 });
+
   p.farmXp = (p.farmXp ?? 0) + xpGain;
   const after = gatherProgress(p.farmXp);
 

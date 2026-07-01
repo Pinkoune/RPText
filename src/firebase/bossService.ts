@@ -17,16 +17,17 @@ export interface WorldBoss {
   hp: number;
   goldPool: number;
   fatePool: number;
+  guildXpPool: number;
   spawnedAt: number;
   defeatedAt?: number;
   contributors: Record<string, BossContributor>;
 }
 
 const POOL = [
-  { name: 'Kraghul, l\'Ancien', emoji: '🐲', maxHp: 6000, goldPool: 4000, fatePool: 60 },
-  { name: 'Némésis du Néant', emoji: '🕳️', maxHp: 10000, goldPool: 7000, fatePool: 90 },
-  { name: 'Titan de Givre', emoji: '🗿', maxHp: 8000, goldPool: 5500, fatePool: 75 },
-  { name: 'Phénix Corrompu', emoji: '🔥', maxHp: 12000, goldPool: 9000, fatePool: 120 },
+  { name: 'Kraghul, l\'Ancien', emoji: '🐲', maxHp: 6000, goldPool: 400, fatePool: 6, guildXpPool: 150 },
+  { name: 'Némésis du Néant', emoji: '🕳️', maxHp: 10000, goldPool: 700, fatePool: 9, guildXpPool: 300 },
+  { name: 'Titan de Givre', emoji: '🗿', maxHp: 8000, goldPool: 550, fatePool: 7, guildXpPool: 200 },
+  { name: 'Phénix Corrompu', emoji: '🔥', maxHp: 12000, goldPool: 900, fatePool: 12, guildXpPool: 450 },
 ];
 
 const RESPAWN_GRACE = 25_000; // 25s après la mort avant réapparition
@@ -41,6 +42,7 @@ function spawn(): WorldBoss {
     hp: b.maxHp,
     goldPool: b.goldPool,
     fatePool: b.fatePool,
+    guildXpPool: b.guildXpPool,
     spawnedAt: Date.now(),
     contributors: {},
   };
@@ -122,11 +124,12 @@ export async function attackBoss(
 }
 
 /** Récompense d'un contributeur (proportionnelle aux dégâts infligés). */
-export function bossReward(boss: WorldBoss, uid: string): { gold: number; fateCoins: number } {
+export function bossReward(boss: WorldBoss, uid: string): { gold: number; fateCoins: number; guildXp: number } {
   const dmg = boss.contributors?.[uid]?.dmg ?? 0;
   const share = dmg / boss.maxHp;
   return {
     gold: Math.round(share * boss.goldPool),
     fateCoins: Math.max(1, Math.round(share * boss.fatePool)),
+    guildXp: Math.max(1, Math.round(share * boss.guildXpPool)),
   };
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { watchChat, sendChat, chatOnline, type ChatMessage } from '../../firebase/chatService';
+import { item } from '../../game/items';
 
 export default function ChatCard() {
   const p = useGame((s) => s.player);
@@ -14,8 +15,26 @@ export default function ChatCard() {
   if (!p) return null;
 
   function send() {
-    if (!text.trim()) return;
-    sendChat({ uid: p!.uid, name: p!.name }, text);
+    const t = text.trim();
+    if (!t) return;
+    
+    if (t === '/open') {
+      if ((p!.inventory['lootbox'] ?? 0) > 0) {
+        useGame.getState().mutate((d) => {
+          d.inventory['lootbox']--;
+          const randomLoot = ['iron_ore', 'stone', 'wood', 'herb', 'potion', 'rusty_sword', 'cloth_robe', 'dungeon_key'];
+          const lootId = randomLoot[Math.floor(Math.random() * randomLoot.length)];
+          d.inventory[lootId] = (d.inventory[lootId] ?? 0) + 1;
+          useGame.getState().toast(`Lootbox ouverte ! Obtenu : ${item(lootId)!.name}.`, 'good');
+        });
+      } else {
+        useGame.getState().toast("Vous n'avez pas de lootbox.", 'bad');
+      }
+      setText('');
+      return;
+    }
+
+    sendChat({ uid: p!.uid, name: p!.name }, t);
     setText('');
   }
 

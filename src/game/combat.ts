@@ -1,5 +1,5 @@
 import type { PlayerState, MonsterDef } from './types';
-import { deriveStats, grantXp, addItem } from './player';
+import { deriveStats, grantXp, addItem, applyBonuses } from './player';
 import { item } from './items';
 import { PHASE_MODIFIERS, currentPhase } from './daynight';
 import { addQuestMetric } from './quests';
@@ -174,8 +174,13 @@ export function combatTurn(
 export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRewards {
   const phase = currentPhase();
   const mod = PHASE_MODIFIERS[phase];
-  const xp = Math.round(monster.xp * mod.xp);
-  const gold = Math.round(roll(monster.gold[0], monster.gold[1]) * mod.gold);
+  
+  const base = {
+    xp: Math.round(monster.xp * mod.xp),
+    gold: Math.round(roll(monster.gold[0], monster.gold[1]) * mod.gold)
+  };
+  const { xp, gold } = applyBonuses(p, base);
+
   p.gold += gold;
   if (p.statistics) {
     p.statistics.goldEarned += gold;

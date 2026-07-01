@@ -84,6 +84,15 @@ export default function CraftCard() {
     setCp(cp - 30);
   }
 
+  function getStatsStr(it: any) {
+    const parts = [];
+    if (it.atk) parts.push(`🗡️+${it.atk}`);
+    if (it.def) parts.push(`🛡️+${it.def}`);
+    if (it.hp && it.slot === 'armor') parts.push(`❤️+${it.hp}`);
+    if (it.hp && it.slot === 'consumable') parts.push(`🧪+${it.hp} PV`);
+    return parts.length ? parts.join(' ') : null;
+  }
+
   if (active) {
     const out = item(active.output)!;
     return (
@@ -158,12 +167,17 @@ export default function CraftCard() {
           const out = item(r.output)!;
           const ok = canCraft(p, r);
           const levelOk = craftLvl >= r.levelReq;
+          const statsStr = getStatsStr(out);
           return (
             <div key={r.output} className={`rounded-lg p-2.5 ${levelOk ? 'bg-black/25' : 'bg-black/40 opacity-75'}`}>
               <div className="flex items-center justify-between gap-2">
-                <span className="font-medium" style={{ color: RARITY_COLOR[out.rarity] }}>
-                  {out.icon} {out.name} {r.qty > 1 ? `x${r.qty}` : ''}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium" style={{ color: RARITY_COLOR[out.rarity] }}>
+                    {out.icon} {out.name} {r.qty > 1 ? `x${r.qty}` : ''}
+                  </span>
+                  {statsStr && <span className="text-[10px] bg-black/40 px-1.5 rounded text-amber-200">{statsStr}</span>}
+                  {out.classes && <span className="text-[10px] bg-slate-800 px-1.5 rounded text-slate-300">{out.classes.join(', ')}</span>}
+                </div>
                 <button
                   onClick={() => startCraft(r)}
                   disabled={!ok || !levelOk}
