@@ -103,21 +103,21 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
   }
 
   function actStandard() {
-    handleAction(0.65, 25, 0, 1);
+    handleAction(0.60, 30, 0, 1);
   }
 
   function actCareful() {
-    if (gp < 10) return;
-    handleAction(0.95, 25, 10, 1);
+    if (gp < 20) return;
+    handleAction(0.90, 35, 20, 1);
   }
 
   function actForce() {
-    handleAction(0.40, 25, 0, 2);
+    handleAction(0.35, 40, 0, 2);
   }
 
   function actObserve() {
-    if (gp < 30) return;
-    setGp(gp - 30);
+    if (gp < 40) return;
+    setGp(gp - 40);
     setIntegrity(Math.min(100, integrity + 25));
   }
 
@@ -152,16 +152,16 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <button onClick={actStandard} disabled={integrity <= 0} className="rounded bg-slate-600/80 p-2 text-xs font-bold hover:bg-slate-500 active:scale-95 disabled:opacity-30">
-            Standard<br/><span className="text-[10px] font-normal">(-25 Int | 65%)</span>
+            Standard<br/><span className="text-[10px] font-normal">(-30 Int | 60%)</span>
           </button>
-          <button onClick={actCareful} disabled={gp < 10 || integrity <= 0} className="rounded bg-sky-600/80 p-2 text-xs font-bold hover:bg-sky-500 disabled:opacity-30 active:scale-95">
-            Minutieux<br/><span className="text-[10px] font-normal">(-10 GP | 95%)</span>
+          <button onClick={actCareful} disabled={gp < 20 || integrity <= 0} className="rounded bg-sky-600/80 p-2 text-xs font-bold hover:bg-sky-500 disabled:opacity-30 active:scale-95">
+            Minutieux<br/><span className="text-[10px] font-normal">(-35 Int, -20 GP | 90%)</span>
           </button>
           <button onClick={actForce} disabled={integrity <= 0} className="rounded bg-rose-600/80 p-2 text-xs font-bold hover:bg-rose-500 disabled:opacity-30 active:scale-95">
-            En Force<br/><span className="text-[10px] font-normal">(40% | x2 Butin)</span>
+            En Force<br/><span className="text-[10px] font-normal">(-40 Int | 35%, x2)</span>
           </button>
-          <button onClick={actObserve} disabled={gp < 30 || integrity <= 0} className="rounded bg-purple-600/80 p-2 text-xs font-bold hover:bg-purple-500 disabled:opacity-30 active:scale-95">
-            Observation<br/><span className="text-[10px] font-normal">(-30 GP | +25 Int)</span>
+          <button onClick={actObserve} disabled={gp < 40 || integrity <= 0} className="rounded bg-purple-600/80 p-2 text-xs font-bold hover:bg-purple-500 disabled:opacity-30 active:scale-95">
+            Observation<br/><span className="text-[10px] font-normal">(-40 GP | +25 Int)</span>
           </button>
         </div>
 

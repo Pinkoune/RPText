@@ -2,7 +2,7 @@ import type { PlayerState, BiomeId } from './types';
 import { addItem, cooldownLeft } from './player';
 import { addQuestMetric } from './quests';
 
-export const GATHER_COOLDOWN = 20_000; // 20s, cooldown UNIQUE partagé (une récolte à la fois)
+export const GATHER_COOLDOWN = 60_000; // 60s, cooldown UNIQUE partagé (une récolte à la fois)
 
 export type GatherSkillId = 'chop' | 'mine' | 'fish' | 'forage';
 
