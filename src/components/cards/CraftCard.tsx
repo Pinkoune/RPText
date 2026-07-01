@@ -4,7 +4,8 @@ import { RECIPES, canCraft, consumeMaterials, finishCraft, getCraftLevel, type R
 import { item, RARITY_COLOR } from '../../game/items';
 import type { ItemSlot } from '../../game/types';
 
-const GROUPS: { slot: ItemSlot; label: string; icon: string }[] = [
+const GROUPS: { slot: ItemSlot | 'all'; label: string; icon: string }[] = [
+  { slot: 'all', label: 'Tout', icon: '📋' },
   { slot: 'material', label: 'Ressources', icon: '🧱' },
   { slot: 'consumable', label: 'Consommables', icon: '🍲' },
   { slot: 'armor', label: 'Armures', icon: '🛡️' },
@@ -22,13 +23,14 @@ export default function CraftCard() {
   const [quality, setQuality] = useState(0);
   const [durability, setDurability] = useState(0);
   const [cp, setCp] = useState(0);
-  const [group, setGroup] = useState<ItemSlot>('material');
+  const [group, setGroup] = useState<ItemSlot | 'all'>('all');
 
   const byGroup = useMemo(() => {
-    const map: Record<string, Recipe[]> = {};
+    const map: Record<string, Recipe[]> = { all: [] };
     for (const r of RECIPES) {
       const slot = item(r.output)?.slot ?? 'material';
       (map[slot] ??= []).push(r);
+      map.all.push(r);
     }
     return map;
   }, []);
@@ -64,10 +66,13 @@ export default function CraftCard() {
       // Succès
       const ratio = Math.min(1, newQual / r.maxQuality);
       let outId = '';
+      let outQty = 0;
       mutate((d) => {
-        outId = finishCraft(d, r, ratio, true);
+        const res = finishCraft(d, r, ratio, true);
+        outId = res.id;
+        outQty = res.qty;
       });
-      toast(`Succès ! Tu as fabriqué : ${item(outId)!.name} ${ratio > 0 ? `(Qualité ${Math.round(ratio * 100)}%)` : ''}`, 'good');
+      toast(`Succès ! Tu as fabriqué : ${item(outId)!.name} x${outQty} ${ratio > 0 && ['weapon', 'armor', 'trinket'].includes(item(outId)!.slot) ? `(Qualité ${Math.round(ratio * 100)}%)` : ''}`, 'good');
       setActive(null);
     } else if (newDur <= 0) {
       // Échec

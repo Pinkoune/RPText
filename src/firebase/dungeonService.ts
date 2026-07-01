@@ -220,10 +220,23 @@ function executeMonsterTurn(cur: DungeonSession) {
   }
 }
 
-export async function submitDungeonAction(id: string, uid: string, action: 'attack' | 'ability' | 'potion' | 'timeout', potionHeal?: number): Promise<void> {
+export async function submitDungeonAction(id: string, uid: string, action: 'attack' | 'ability' | 'potion' | 'timeout' | 'dungeon_timeout' | 'flee', potionHeal?: number): Promise<void> {
   if (!rtdb) return;
   await runTransaction(ref(rtdb, `dungeons/${id}`), (cur: DungeonSession | null) => {
     if (!cur || cur.state !== 'combat') return cur;
+
+    if (action === 'dungeon_timeout') {
+      cur.state = 'defeat';
+      cur.log.push({ text: `⌛ Temps écoulé (20 minutes). Le donjon s'effondre !`, side: 'info' });
+      return cur;
+    }
+    
+    if (action === 'flee') {
+      cur.state = 'defeat';
+      cur.log.push({ text: `🏃 ${cur.players[uid].name} a pris la fuite. Le groupe s'éparpille !`, side: 'info' });
+      return cur;
+    }
+
     if (cur.turnOrder[cur.turnIdx] !== uid && action !== 'timeout') return cur; // Not their turn
     if (action === 'timeout' && cur.turnOrder[cur.turnIdx] !== uid) {
       // Allow host or others to trigger timeout if the actual turn player took too long (>32s)

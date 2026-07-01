@@ -106,12 +106,12 @@ export function consumeMaterials(p: PlayerState, r: Recipe): boolean {
 }
 
 /** Appelé à la fin du minijeu. qualityRatio = (0 à 1) de maxQuality. */
-export function finishCraft(p: PlayerState, r: Recipe, qualityRatio: number, success: boolean): string {
+export function finishCraft(p: PlayerState, r: Recipe, qualityRatio: number, success: boolean): { id: string, qty: number } {
   if (!success) {
     addItem(p, 'craft_trash', 1);
     // XP consolatoire
     p.craftXp += Math.max(1, Math.floor(r.difficulty / 10));
-    return 'craft_trash';
+    return { id: 'craft_trash', qty: 1 };
   }
   
   addQuestMetric(p, 'crafts', 1);
@@ -125,14 +125,21 @@ export function finishCraft(p: PlayerState, r: Recipe, qualityRatio: number, suc
   // 0% quality = stats de base -> q100
   let outId = r.output;
   const outItem = item(r.output);
+  let finalQty = r.qty;
+
   // Suffixe de qualité uniquement pour l'équipement
   if (outItem && ['weapon', 'armor', 'trinket'].includes(outItem.slot)) {
     const bonus = Math.round(qualityRatio * 50); // 0 à 50% de bonus
     if (bonus > 0) {
       outId = `${r.output}:q${100 + bonus}`;
     }
+  } else if (outItem && ['material', 'consumable'].includes(outItem.slot)) {
+    // Chance de doubler les quantités selon la qualité (max 50% de chance)
+    if (Math.random() < qualityRatio * 0.5) {
+      finalQty *= 2;
+    }
   }
   
-  addItem(p, outId, r.qty);
-  return outId;
+  addItem(p, outId, finalQty);
+  return { id: outId, qty: finalQty };
 }

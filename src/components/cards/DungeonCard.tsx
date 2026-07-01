@@ -148,7 +148,7 @@ export default function DungeonCard() {
     mutate(d => { d.dungeonSessionId = null; });
   }
 
-  async function act(action: 'attack' | 'ability' | 'potion', selectedPotionId?: string) {
+  async function act(action: 'attack' | 'ability' | 'potion' | 'flee', selectedPotionId?: string) {
     if (!session || session.state !== 'combat') return;
     if (action === 'potion' && !selectedPotionId) {
       return toast('Aucune potion sélectionnée.', 'bad');
@@ -163,9 +163,14 @@ export default function DungeonCard() {
   }
 
   // Timeout check
-  if (session && session.state === 'combat' && session.turnOrder[session.turnIdx] === p.uid) {
-    if (Date.now() - session.turnStartAt > 30000) {
-      submitDungeonAction(session.id, p.uid, 'timeout');
+  if (session && session.state === 'combat') {
+    if (session.startedAt && Date.now() - session.startedAt > 20 * 60 * 1000) {
+      if (session.host === p.uid) submitDungeonAction(session.id, p.uid, 'dungeon_timeout');
+    }
+    else if (session.turnOrder[session.turnIdx] === p.uid) {
+      if (Date.now() - session.turnStartAt > 30000) {
+        submitDungeonAction(session.id, p.uid, 'timeout');
+      }
     }
   }
 
@@ -220,6 +225,11 @@ export default function DungeonCard() {
 
     return (
       <div className="space-y-3">
+        <div className="flex justify-between items-center px-1">
+          <div className="text-xs font-semibold text-slate-300">⚔️ Combat de donjon</div>
+          <button onClick={() => { if (confirm('Es-tu sûr de vouloir fuir et abandonner le donjon pour toute ton équipe ?')) act('flee'); }} className="bg-rose-500/30 hover:bg-rose-500/50 rounded px-2 py-1 text-xs">Fuir le donjon</button>
+        </div>
+
         {/* Monster HUD */}
         <div className="rounded-lg bg-black/25 p-3 text-center relative overflow-hidden">
           <div className="text-4xl mb-1">{m.emoji}</div>

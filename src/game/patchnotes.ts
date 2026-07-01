@@ -18,6 +18,21 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'qol-v1',
+    date: '2026-07-02',
+    sections: [
+      {
+        title: '⚙️ Améliorations',
+        items: [
+          'Ajout d\'un bouton pour quitter un donjon en cours (avec demande de confirmation).',
+          'Si un donjon dure plus de 20 minutes, il est désormais considéré comme un échec automatique.',
+          'Ajout d\'un onglet "Tout" dans la Forge pour voir l\'ensemble des recettes.',
+          'L\'Inventaire bénéficie désormais des mêmes filtres que la Forge (Ressources, Consommables, Armures, Armes, Bijoux) pour s\'y retrouver plus facilement.',
+        ],
+      }
+    ]
+  },
+  {
     version: 'events-v1',
     date: '2026-07-02',
     sections: [

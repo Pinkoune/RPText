@@ -248,7 +248,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         hp: baseMonster.hp * 4,
         atk: baseMonster.atk * 3,
         def: baseMonster.def * 2,
-        xp: baseMonster.xp * 5,
+        xp: baseMonster.xp * 10,
         gold: [baseMonster.gold[0] * 5, baseMonster.gold[1] * 5] as [number, number],
       };
       ctx.mutate((d) => {
