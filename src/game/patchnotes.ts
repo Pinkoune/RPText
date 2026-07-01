@@ -18,8 +18,23 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
-    version: 'chat-v1',
+    version: 'windows-v1',
     date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '🪟 Nouveaux Gestionnaire de Fenêtres',
+        items: [
+          'Réduction des cartes : vous pouvez maintenant masquer le contenu des cartes via le bouton en haut à droite !',
+          'Mémorisation : vos cartes se souviennent de leur position (et de leur réduction) après fermeture et rafraîchissement.',
+          'Magnétisme : les fenêtres ont désormais un effet de "collage" lorsqu\'elles sont lâchées l\'une près de l\'autre, pour un affichage propre.',
+          'Nouvelle commande `/reset` : remet toutes les cartes au milieu de l\'écran !',
+        ],
+      }
+    ],
+  },
+  {
+    version: 'chat-v1',
+    date: '2026-07-02',
     sections: [
       {
         title: '💬 Système de Chat Avancé',

@@ -38,20 +38,40 @@ export interface GameWindow {
   ttl?: number;
 }
 
+export interface WindowPref {
+  x: number;
+  y: number;
+  minimized: boolean;
+}
+
 interface UiState {
   windows: GameWindow[];
   topZ: number;
+  prefs: Partial<Record<WindowKind, WindowPref>>;
   open: (kind: WindowKind, payload?: unknown, opts?: { ttl?: number; singleton?: boolean }) => string;
   close: (id: string) => void;
   closeAll: () => void;
   focus: (id: string) => void;
+  savePref: (kind: WindowKind, pref: Partial<WindowPref>) => void;
+  resetPrefs: () => void;
 }
 
 let counter = 0;
 
+const PREFS_KEY = 'rptext.windowPrefs';
+function loadPrefs(): Partial<Record<WindowKind, WindowPref>> {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
 export const useUi = create<UiState>((set, get) => ({
   windows: [],
   topZ: 10,
+  prefs: loadPrefs(),
   open: (kind, payload, opts) => {
     const z = get().topZ + 1;
     // singleton : si une fenêtre du même type existe, on la remplace/focus.
@@ -83,4 +103,15 @@ export const useUi = create<UiState>((set, get) => ({
       windows: s.windows.map((w) => (w.id === id ? { ...w, z } : w)),
     }));
   },
+  savePref: (kind, pref) => {
+    set((s) => {
+      const newPrefs = { ...s.prefs, [kind]: { ...s.prefs[kind], ...pref } as WindowPref };
+      localStorage.setItem(PREFS_KEY, JSON.stringify(newPrefs));
+      return { prefs: newPrefs };
+    });
+  },
+  resetPrefs: () => {
+    localStorage.removeItem(PREFS_KEY);
+    set({ prefs: {} });
+  }
 }));

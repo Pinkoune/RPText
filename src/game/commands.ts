@@ -56,6 +56,7 @@ export const COMMANDS: CommandDef[] = [
   { name: 'news', aliases: ['changelog', 'nouveautes', 'nouveautés', 'patchnotes'], desc: 'Historique complet des mises à jour.', category: 'Système' },
   { name: 'help', aliases: ['aide', 'commands', '?'], desc: 'Liste toutes les commandes.', category: 'Système' },
   { name: 'close', aliases: ['clear', 'esc'], desc: 'Ferme toutes les fenêtres.', category: 'Système' },
+  { name: 'reset', aliases: ['resetui'], desc: 'Réinitialise la position et l\'état de toutes les fenêtres.', category: 'Système' },
 ];
 
 const ALIAS_MAP: Record<string, string> = {};
@@ -84,6 +85,14 @@ export function runCommand(input: string, ctx: CommandCtx): void {
   switch (cmd) {
     case 'profile':
       ctx.open('profile', undefined, { singleton: true });
+      break;
+
+    case 'reset':
+      import('../store/uiStore').then(({ useUi }) => {
+        useUi.getState().resetPrefs();
+        useUi.getState().closeAll();
+        ctx.toast('Toutes les fenêtres ont été réinitialisées.', 'info');
+      });
       break;
 
     case 'map':
