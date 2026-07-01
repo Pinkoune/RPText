@@ -112,7 +112,7 @@ export default function Window({ win, index, title, accent, wide, children }: Pr
     // Conteneur : flex items-start permet que la fenêtre réduise sa taille
     // vers le haut (la barre reste fixe) plutôt que vers le centre.
     <div
-      className="pointer-events-none fixed inset-0 flex justify-center items-start pt-[15vh] p-3"
+      className="pointer-events-none fixed inset-0 flex justify-center items-start pt-[8vh] p-3"
       style={{ zIndex: win.z }}
     >
       <motion.div

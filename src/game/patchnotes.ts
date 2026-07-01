@@ -18,6 +18,21 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'craft-gather-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '🔨 Refonte de la Progression des Métiers',
+        items: [
+          `Le niveau d'artisanat réduit désormais le coût de l'action "Minutieux" (Qualité).`,
+          `Le niveau de farm (récolte) réduit le coût des actions avancées "Minutieux" et "Observation".`,
+          '6 nouveaux équipements dédiés aux métiers ont été ajoutés à la forge (Tablier de forgeron, Bottes de fermier, etc.) !',
+          'Ces équipements vous octroient des points maximum (CP et GP) supplémentaires pour booster vos sessions.'
+        ]
+      }
+    ],
+  },
+  {
     version: 'equip-v2',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [

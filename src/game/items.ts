@@ -133,8 +133,16 @@ export const ITEMS: Record<string, ItemDef> = {
   silk_robe: { id: 'silk_robe', name: 'Robe de soie', icon: '🥻', rarity: 'uncommon', slot: 'armor', def: 6, hp: 25, value: 90, desc: 'Tissée avec la soie des araignées de Sylvebois.' },
   sunplate_armor: { id: 'sunplate_armor', name: 'Cuirasse solaire', icon: '🌞', rarity: 'rare', slot: 'armor', def: 20, hp: 60, value: 340, desc: 'Forgée dans le sable durci du désert.' },
   venom_fang: { id: 'venom_fang', name: 'Croc venimeux', icon: '🦷', rarity: 'rare', slot: 'trinket', atk: 10, value: 260, desc: 'Extrait des tourbières du marais, encore toxique.' },
-};
 
+  // ── Équipements de Métier ──
+  smith_apron: { id: 'smith_apron', name: 'Tablier de Forgeron', icon: '🎽', rarity: 'uncommon', slot: 'armor', def: 5, maxCp: 30, maxDurability: 500, value: 50, desc: 'Améliore la concentration pour l\'artisanat.' },
+  master_hammer: { id: 'master_hammer', name: 'Marteau de Maître', icon: '🔨', rarity: 'rare', slot: 'weapon', atk: 5, maxCp: 50, maxDurability: 500, value: 120, desc: 'Outil de précision pour la forge.' },
+  craft_goggles: { id: 'craft_goggles', name: 'Lunettes d\'Artisan', icon: '🥽', rarity: 'uncommon', slot: 'trinket', hp: 20, maxCp: 20, maxDurability: 300, value: 80, desc: 'Permet de voir les moindres détails.' },
+
+  farmer_boots: { id: 'farmer_boots', name: 'Bottes de Fermier', icon: '👢', rarity: 'uncommon', slot: 'armor', def: 5, maxGp: 20, maxDurability: 500, value: 50, desc: 'Bottes confortables pour les longues récoltes.' },
+  golden_sickle: { id: 'golden_sickle', name: 'Faucille en or', icon: '🌾', rarity: 'rare', slot: 'weapon', atk: 5, maxGp: 30, maxDurability: 500, value: 120, desc: 'Lame parfaite pour récolter sans abîmer.' },
+  gather_gloves: { id: 'gather_gloves', name: 'Gants de Récolte', icon: '🧤', rarity: 'uncommon', slot: 'trinket', hp: 20, maxGp: 15, maxDurability: 300, value: 80, desc: 'Protègent les mains et évitent la fatigue.' },
+};
 export const RARITY_COLOR: Record<ItemDef['rarity'], string> = {
   common: '#b8c0cf',
   uncommon: '#62d67a',

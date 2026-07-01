@@ -27,6 +27,7 @@ import LeaderboardCard from './cards/LeaderboardCard';
 import StatsCard from './cards/StatsCard';
 import NewsCard from './cards/NewsCard';
 import HelpCard from './cards/HelpCard';
+import WikiCard from './cards/WikiCard';
 import type { HuntEncounter } from '../game/combat';
 
 const META: Record<WindowKind, { title: string; accent: string }> = {
@@ -56,6 +57,7 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   stats: { title: '📊 Statistiques', accent: '#9fd0ff' },
   news: { title: '📰 Nouveautés', accent: '#7bd8d0' },
   help: { title: '❔ Commandes', accent: '#b8c0cf' },
+  wiki: { title: '📚 Wiki', accent: '#a26ad8' },
 };
 
 const WIDE: Partial<Record<WindowKind, boolean>> = { news: true };
@@ -96,6 +98,7 @@ export default function WindowManager() {
               {w.kind === 'stats' && <StatsCard />}
               {w.kind === 'news' && <NewsCard />}
               {w.kind === 'help' && <HelpCard />}
+              {w.kind === 'wiki' && <WikiCard />}
             </Window>
           );
         })}

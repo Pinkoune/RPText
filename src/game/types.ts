@@ -41,6 +41,8 @@ export interface ItemDef {
   passive?: string;
   /** Durabilité maximale de l'équipement (0 = incassable). */
   maxDurability?: number;
+  maxCp?: number;
+  maxGp?: number;
 }
 
 export interface Stats {
@@ -48,6 +50,8 @@ export interface Stats {
   maxHp: number;
   atk: number;
   def: number;
+  maxCp: number;
+  maxGp: number;
   weaponElement?: string;
   weaponDmgType?: string;
   armorElement?: string;
@@ -99,6 +103,7 @@ export interface PlayerState {
     gamblesPlayed: number;
     gamblesWon: number;
     mobsKilled: Record<string, number>;
+    mobsEncountered: Record<string, number>;
   };
   /** Progression des quêtes (journalières/hebdomadaires). */
   quests: QuestState;

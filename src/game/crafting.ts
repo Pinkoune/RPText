@@ -31,6 +31,15 @@ export const RECIPES: Recipe[] = [
   { output: 'repair_kit', qty: 1, materials: { iron_ingot: 2, wood: 5, herb: 5 }, gold: 100, levelReq: 2, difficulty: 25, maxQuality: 50, durability: 30 },
   { output: 'upgrade_matrix', qty: 1, materials: { magic_dust: 5, mithril_ingot: 3, void_dust: 2 }, gold: 5000, levelReq: 15, difficulty: 300, maxQuality: 1000, durability: 100 },
 
+  // ── Équipements de Métier ──
+  { output: 'smith_apron', qty: 1, materials: { sturdy_leather: 6, iron_ingot: 2 }, gold: 200, levelReq: 3, difficulty: 60, maxQuality: 150, durability: 50 },
+  { output: 'master_hammer', qty: 1, materials: { iron_ingot: 8, wood: 4, stone: 10 }, gold: 500, levelReq: 5, difficulty: 100, maxQuality: 250, durability: 60 },
+  { output: 'craft_goggles', qty: 1, materials: { iron_ingot: 2, crystal: 2, slime_gel: 4 }, gold: 300, levelReq: 4, difficulty: 80, maxQuality: 200, durability: 50 },
+  
+  { output: 'farmer_boots', qty: 1, materials: { wolf_pelt: 6, sturdy_leather: 2, herb: 10 }, gold: 200, levelReq: 3, difficulty: 60, maxQuality: 150, durability: 50 },
+  { output: 'golden_sickle', qty: 1, materials: { iron_ingot: 5, wood: 4, sun_shard: 2 }, gold: 500, levelReq: 5, difficulty: 100, maxQuality: 250, durability: 60 },
+  { output: 'gather_gloves', qty: 1, materials: { sturdy_leather: 4, dryad_leaf: 2, herb: 5 }, gold: 300, levelReq: 4, difficulty: 80, maxQuality: 200, durability: 50 },
+
   // ── Cuisine & Potions (Consommables) ──
   { output: 'herb_tea', qty: 1, materials: { herb: 6, wood: 3 }, gold: 5, levelReq: 1, difficulty: 10, maxQuality: 30, durability: 20 },
   { output: 'grilled_fish', qty: 1, materials: { fish: 6, herb: 3, wood: 3 }, gold: 20, levelReq: 1, difficulty: 15, maxQuality: 50, durability: 30 },

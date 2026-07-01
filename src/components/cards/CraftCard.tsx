@@ -3,6 +3,7 @@ import { useGame } from '../../store/gameStore';
 import { RECIPES, canCraft, consumeMaterials, finishCraft, getCraftLevel, type Recipe } from '../../game/crafting';
 import { item, RARITY_COLOR } from '../../game/items';
 import type { ItemSlot } from '../../game/types';
+import { deriveStats } from '../../game/player';
 
 const GROUPS: { slot: ItemSlot | 'all'; label: string; icon: string }[] = [
   { slot: 'all', label: 'Tout', icon: '📋' },
@@ -46,9 +47,11 @@ export default function CraftCard() {
 
   const craftLvlData = getCraftLevel(p.craftXp);
   const craftLvl = craftLvlData.level;
-  const maxCp = 50 + craftLvl * 10;
+  const gearStats = deriveStats(p);
+  const maxCp = 50 + craftLvl * 10 + (gearStats.maxCp || 0);
   const progGain = Math.floor(10 + craftLvl * 1.5);
   const qualGain = Math.floor(15 + craftLvl * 2);
+  const touchCost = Math.max(5, 15 - Math.floor(craftLvl / 2));
 
   function startCraft(r: Recipe) {
     if (!canCraft(p!, r)) {
@@ -101,12 +104,12 @@ export default function CraftCard() {
   }
 
   function actTouch() {
-    if (!active || cp < 15) return;
+    if (!active || cp < touchCost) return;
     const newQual = quality + qualGain;
     const newDur = durability - 10;
     setQuality(newQual);
     setDurability(newDur);
-    setCp(cp - 15);
+    setCp(cp - touchCost);
     handleResult(active, progress, newDur, newQual);
   }
 
@@ -187,8 +190,8 @@ export default function CraftCard() {
           <button onClick={actSynthesis} className="rounded bg-sky-600/80 p-2 text-xs font-bold hover:bg-sky-500 active:scale-95">
             Synthèse<br/><span className="text-[10px] font-normal">(-10 Sol)</span>
           </button>
-          <button onClick={actTouch} disabled={cp < 15} className="rounded bg-purple-600/80 p-2 text-xs font-bold hover:bg-purple-500 disabled:opacity-30 active:scale-95">
-            Minutieux<br/><span className="text-[10px] font-normal">(-10 Sol, -15 CP)</span>
+          <button onClick={actTouch} disabled={cp < touchCost} className="rounded bg-purple-600/80 p-2 text-xs font-bold hover:bg-purple-500 disabled:opacity-30 active:scale-95">
+            Minutieux<br/><span className="text-[10px] font-normal">(-10 Sol, -{touchCost} CP)</span>
           </button>
           <button onClick={actRepair} disabled={cp < 30} className="rounded bg-emerald-600/80 p-2 text-xs font-bold hover:bg-emerald-500 disabled:opacity-30 active:scale-95">
             Réparation<br/><span className="text-[10px] font-normal">(+30 Sol, -30 CP)</span>

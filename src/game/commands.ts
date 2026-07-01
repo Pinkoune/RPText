@@ -56,7 +56,8 @@ export const COMMANDS: CommandDef[] = [
   { name: 'news', aliases: ['changelog', 'nouveautes', 'nouveautés', 'patchnotes'], desc: 'Historique complet des mises à jour.', category: 'Système' },
   { name: 'help', aliases: ['aide', 'commands', '?'], desc: 'Liste toutes les commandes.', category: 'Système' },
   { name: 'close', aliases: ['clear', 'esc'], desc: 'Ferme toutes les fenêtres.', category: 'Système' },
-  { name: 'reset', aliases: ['resetui'], desc: 'Réinitialise la position et l\'état de toutes les fenêtres.', category: 'Système' },
+  { name: 'reset', aliases: ['resetui'], desc: "Réinitialise la position et l'état de toutes les fenêtres.", category: 'Système' },
+  { name: 'wiki', aliases: ['bestiaire', 'items', 'encyclopedie'], desc: "Consulte l'encyclopédie des objets et des monstres.", category: 'Système' },
 ];
 
 const ALIAS_MAP: Record<string, string> = {};
@@ -179,6 +180,9 @@ export function runCommand(input: string, ctx: CommandCtx): void {
     case 'news':
       ctx.open('news', undefined, { singleton: true });
       break;
+    case 'wiki':
+      ctx.open('wiki', undefined, { singleton: true });
+      break;
 
     case 'boss':
       ctx.open('boss', undefined, { singleton: true });
@@ -234,6 +238,8 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.mutate((d) => {
         d.cooldowns.hunt = Date.now();
         addQuestMetric(d, 'hunts', 1);
+        if (!d.statistics.mobsEncountered) d.statistics.mobsEncountered = {};
+        d.statistics.mobsEncountered[monster.id] = (d.statistics.mobsEncountered[monster.id] ?? 0) + 1;
       });
       // Ouvre une rencontre interactive (fenêtre unique).
       ctx.open('hunt', { monster, id: Date.now() }, { singleton: true });
@@ -263,6 +269,8 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.mutate((d) => {
         d.cooldowns.adventure = Date.now();
         addQuestMetric(d, 'hunts', 1);
+        if (!d.statistics.mobsEncountered) d.statistics.mobsEncountered = {};
+        d.statistics.mobsEncountered[baseMonster.id] = (d.statistics.mobsEncountered[baseMonster.id] ?? 0) + 1;
       });
       ctx.open('hunt', { monster, id: Date.now(), isAdventure: true }, { singleton: true });
       break;

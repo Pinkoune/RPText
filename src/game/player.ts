@@ -115,6 +115,7 @@ export function migratePlayer(p: PlayerState): PlayerState {
       gamblesPlayed: 0,
       gamblesWon: 0,
       mobsKilled: {},
+      mobsEncountered: {},
     };
   }
   if (p.title == null) p.title = 'Aventurier';
@@ -223,6 +224,7 @@ export function createPlayer(
       gamblesPlayed: 0,
       gamblesWon: 0,
       mobsKilled: {},
+      mobsEncountered: {},
     },
     quests: freshQuestState(now),
     settledDuels: [],
@@ -257,6 +259,8 @@ export function deriveStats(p: PlayerState): Stats {
   let maxHp = cls.base.maxHp + cls.growth.maxHp * lv;
   let atk = cls.base.atk + cls.growth.atk * lv;
   let def = cls.base.def + cls.growth.def * lv;
+  let maxCp = 0;
+  let maxGp = 0;
 
   const setIdsCount: Record<string, number> = {};
   let weaponElement: string | undefined;
@@ -284,6 +288,8 @@ export function deriveStats(p: PlayerState): Stats {
       atk += Math.floor((it.atk ?? 0) * starMult);
       def += Math.floor((it.def ?? 0) * starMult);
       maxHp += Math.floor((it.hp ?? 0) * starMult);
+      maxCp += Math.floor((it.maxCp ?? 0) * starMult);
+      maxGp += Math.floor((it.maxGp ?? 0) * starMult);
       
       if (it.setId) {
         setIdsCount[it.setId] = (setIdsCount[it.setId] || 0) + 1;
@@ -322,7 +328,7 @@ export function deriveStats(p: PlayerState): Stats {
   def = Math.round(def * (1 + mods.defPct + evt.defPct + setDefPct));
   maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct + setHpPct));
 
-  return { maxHp, atk, def, hp: Math.min(p.hp, maxHp), weaponElement, weaponDmgType, armorElement };
+  return { maxHp, atk, def, hp: Math.min(p.hp, maxHp), maxCp, maxGp, weaponElement, weaponDmgType, armorElement };
 }
 
 export function equipItem(p: PlayerState, id: string): boolean {

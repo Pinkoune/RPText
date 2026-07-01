@@ -4,6 +4,7 @@ import { skillsForBiome, extractResource, finishGatherSession, gatherCooldownLef
 import { BIOMES } from '../../game/biomes';
 import { item } from '../../game/items';
 import { playSound } from '../../game/sound';
+import { deriveStats } from '../../game/player';
 
 export default function GatherCard({ initialSkillId }: { initialSkillId?: string }) {
   const p = useGame((s) => s.player);
@@ -24,7 +25,11 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
   }, []);
 
   const farm = farmProgress(p!);
-  const maxGp = 50 + farm.level * 5;
+  const gearStats = deriveStats(p!);
+  const maxGp = 50 + farm.level * 5 + (gearStats.maxGp || 0);
+
+  const carefulCost = Math.max(5, 20 - Math.floor(farm.level / 2));
+  const observeCost = Math.max(15, 40 - Math.floor(farm.level / 2));
 
   // startGather logic definition needed before effect
   function startGather(skill: GatherSkill) {
@@ -107,8 +112,8 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
   }
 
   function actCareful() {
-    if (gp < 20) return;
-    handleAction(0.90, 35, 20, 1);
+    if (gp < carefulCost) return;
+    handleAction(0.90, 35, carefulCost, 1);
   }
 
   function actForce() {
@@ -116,8 +121,8 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
   }
 
   function actObserve() {
-    if (gp < 40) return;
-    setGp(gp - 40);
+    if (gp < observeCost) return;
+    setGp(gp - observeCost);
     setIntegrity(Math.min(100, integrity + 25));
   }
 
@@ -154,14 +159,14 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
           <button onClick={actStandard} disabled={integrity <= 0} className="rounded bg-slate-600/80 p-2 text-xs font-bold hover:bg-slate-500 active:scale-95 disabled:opacity-30">
             Standard<br/><span className="text-[10px] font-normal">(-30 Int | 60%)</span>
           </button>
-          <button onClick={actCareful} disabled={gp < 20 || integrity <= 0} className="rounded bg-sky-600/80 p-2 text-xs font-bold hover:bg-sky-500 disabled:opacity-30 active:scale-95">
-            Minutieux<br/><span className="text-[10px] font-normal">(-35 Int, -20 GP | 90%)</span>
+          <button onClick={actCareful} disabled={gp < carefulCost || integrity <= 0} className="rounded bg-purple-600/80 p-2 text-xs font-bold hover:bg-purple-500 disabled:opacity-30 active:scale-95">
+            Minutieux<br/><span className="text-[10px] font-normal">(-35 Int, -{carefulCost} GP)</span>
           </button>
           <button onClick={actForce} disabled={integrity <= 0} className="rounded bg-rose-600/80 p-2 text-xs font-bold hover:bg-rose-500 disabled:opacity-30 active:scale-95">
-            En Force<br/><span className="text-[10px] font-normal">(-40 Int | 35%, x2)</span>
+            Force Brute<br/><span className="text-[10px] font-normal">(-40 Int, x2)</span>
           </button>
-          <button onClick={actObserve} disabled={gp < 40 || integrity <= 0} className="rounded bg-purple-600/80 p-2 text-xs font-bold hover:bg-purple-500 disabled:opacity-30 active:scale-95">
-            Observation<br/><span className="text-[10px] font-normal">(-40 GP | +25 Int)</span>
+          <button onClick={actObserve} disabled={gp < observeCost || integrity <= 0} className="rounded bg-emerald-600/80 p-2 text-xs font-bold hover:bg-emerald-500 disabled:opacity-30 active:scale-95">
+            Observation<br/><span className="text-[10px] font-normal">(+25 Int, -{observeCost} GP)</span>
           </button>
         </div>
 

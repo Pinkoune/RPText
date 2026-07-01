@@ -34,7 +34,7 @@ export default function ExperienceCard() {
   return (
     <div className="space-y-3">
       <Bar
-        label={`${cls.emoji} Aventure`}
+        label={`${cls.emoji} Combat`}
         level={p.level}
         into={p.xp}
         need={xpToNext(p.level)}
@@ -57,9 +57,6 @@ export default function ExperienceCard() {
         color="#d8a26a"
         sub={`XP d'artisanat total : ${Math.floor(p.craftXp)}`}
       />
-      <p className="text-center text-[11px] text-slate-500">
-        L'aventure (combat) et le farm (récolte) montent séparément.
-      </p>
     </div>
   );
 }

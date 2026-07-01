@@ -26,7 +26,8 @@ export type WindowKind =
   | 'chat'
   | 'leaderboard'
   | 'stats'
-  | 'help';
+  | 'help'
+  | 'wiki';
 
 export interface GameWindow {
   id: string;
