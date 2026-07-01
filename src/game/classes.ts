@@ -47,9 +47,13 @@ export const CLASSES: Record<ClassId, ClassDef> = {
 
 export const CLASS_LIST = Object.values(CLASSES);
 
-/** XP nécessaire pour passer du niveau n au niveau n+1. */
+/** XP nécessaire pour passer du niveau n au niveau n+1 (courbe v2, dure). */
 export function xpToNext(level: number): number {
-  // Courbe volontairement longue : la progression doit prendre du temps,
-  // on ne finit pas le jeu en une soirée.
+  // Exposant 1.95 : chaque niveau coûte de plus en plus, la fin de jeu est longue.
+  return Math.floor(110 * Math.pow(level, 1.95)) + 90;
+}
+
+/** Ancienne courbe (v1) — sert au recalcul des niveaux lors de la migration. */
+export function xpToNextV1(level: number): number {
   return Math.floor(70 * Math.pow(level, 1.55)) + 70;
 }

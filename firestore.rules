@@ -29,5 +29,23 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.hostUid == request.auth.uid;
       allow update: if request.auth != null;
     }
+    // Équipes : créées par l'hôte, rejoignables/quittables par les joueurs.
+    match /teams/{teamId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.hostUid == request.auth.uid;
+      allow update, delete: if request.auth != null;
+    }
+    // Guildes : fondées par l'owner, rejoignables/contributions par les joueurs.
+    match /guilds/{guildId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if request.auth != null;
+    }
+    // Dons de ressources : créés par l'expéditeur, encaissés (supprimés) par le destinataire.
+    match /gifts/{giftId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.fromUid == request.auth.uid;
+      allow update, delete: if request.auth != null;
+    }
   }
 }

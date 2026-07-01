@@ -27,6 +27,8 @@ est sauvegardée dans Firebase.
   - **Duels PvP** au pile/face avec mise en or (le gagnant rafle tout).
   - **Boss mondial** partagé : **une attaque puissante toutes les 2h** par joueur, PV synchronisés, butin partagé au prorata des dégâts, classement des assaillants.
   - **Chat mondial** temps réel.
+  - **Équipes** : petits groupes (4 max) avec **partage d'or** entre coéquipiers.
+  - **Guildes** : groupes persistants (nom + tag), **contributions → niveau de guilde**, classement.
   - **Présence** (qui est en ligne) + **classement** global.
 - **Sons + musique d'ambiance** procéduraux (Web Audio, aucun asset) : l'ambiance musicale change selon le biome et la phase. Bouton mute.
 - **Capacités actives de classe** : chaque classe a une capacité spéciale (gros dégâts, soin) déclenchable manuellement dans le combat de boss mondial.
@@ -79,6 +81,8 @@ Idéal pour tester immédiatement.
 | `heal` | soin | Boire une potion |
 | `duel` | pvp | Défier un joueur au pile/face (mise en or) |
 | `cardjitsu` | cj, ninja, cartes | Duel de cartes Card-Jitsu (feu/eau/neige) |
+| `team` | equipe, party | Former une équipe et partager des ressources |
+| `guild` | guilde, clan | Rejoindre ou fonder une guilde |
 | `boss` | raid | Attaquer le boss mondial avec les autres |
 | `chat` | tchat | Chat mondial |
 | `leaderboard` | classement, top | Joueurs en ligne + classement |

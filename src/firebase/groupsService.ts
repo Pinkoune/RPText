@@ -1,0 +1,180 @@
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  doc,
+  deleteDoc,
+  runTransaction,
+  query,
+  where,
+} from 'firebase/firestore';
+import { db, isFirebaseConfigured } from './config';
+
+export const socialEnabled = isFirebaseConfigured && !!db;
+
+export interface Member {
+  name: string;
+  level: number;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  hostUid: string;
+  members: Record<string, Member>;
+  createdAt: number;
+}
+
+export interface Guild {
+  id: string;
+  name: string;
+  tag: string;
+  ownerUid: string;
+  ownerName: string;
+  members: Record<string, Member>;
+  xp: number;
+  createdAt: number;
+}
+
+export interface Gift {
+  id: string;
+  fromUid: string;
+  fromName: string;
+  toUid: string;
+  gold: number;
+  createdAt: number;
+}
+
+export const TEAM_MAX = 4;
+export const GUILD_MAX = 30;
+export const GUILD_CREATE_COST = 500;
+
+/** Niveau de guilde : +1 tous les 1000 d'XP contribué. */
+export function guildLevel(xp: number): { level: number; into: number; need: number } {
+  const need = 1000;
+  return { level: Math.floor(xp / need) + 1, into: xp % need, need };
+}
+
+// ─── Équipes ────────────────────────────────────────────────────────────────
+export async function createTeam(host: { uid: string; name: string; level: number }, name: string): Promise<string> {
+  if (!db) throw new Error('offline');
+  const ref = await addDoc(collection(db, 'teams'), {
+    name: name.slice(0, 24) || 'Équipe',
+    hostUid: host.uid,
+    members: { [host.uid]: { name: host.name, level: host.level } },
+    createdAt: Date.now(),
+  });
+  return ref.id;
+}
+
+export async function joinTeam(teamId: string, me: { uid: string; name: string; level: number }): Promise<void> {
+  if (!db) throw new Error('offline');
+  const ref = doc(db, 'teams', teamId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('introuvable');
+    const data = snap.data() as Omit<Team, 'id'>;
+    if (Object.keys(data.members).length >= TEAM_MAX) throw new Error('équipe pleine');
+    tx.update(ref, { [`members.${me.uid}`]: { name: me.name, level: me.level } });
+  });
+}
+
+export async function leaveTeam(teamId: string, uid: string): Promise<void> {
+  if (!db) return;
+  const ref = doc(db, 'teams', teamId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const data = snap.data() as Omit<Team, 'id'>;
+    const members = { ...data.members };
+    delete members[uid];
+    if (Object.keys(members).length === 0) tx.delete(ref);
+    else tx.update(ref, { members });
+  });
+}
+
+export function listenTeams(cb: (t: Team[]) => void): () => void {
+  if (!db) { cb([]); return () => {}; }
+  return onSnapshot(collection(db, 'teams'), (snap) =>
+    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Team, 'id'>) }))),
+  );
+}
+
+// ─── Guildes ──────────────────────────────────────────────────────────────
+export async function createGuild(owner: { uid: string; name: string; level: number }, name: string, tag: string): Promise<string> {
+  if (!db) throw new Error('offline');
+  const ref = await addDoc(collection(db, 'guilds'), {
+    name: name.slice(0, 24) || 'Guilde',
+    tag: (tag || 'GLD').slice(0, 4).toUpperCase(),
+    ownerUid: owner.uid,
+    ownerName: owner.name,
+    members: { [owner.uid]: { name: owner.name, level: owner.level } },
+    xp: 0,
+    createdAt: Date.now(),
+  });
+  return ref.id;
+}
+
+export async function joinGuild(guildId: string, me: { uid: string; name: string; level: number }): Promise<void> {
+  if (!db) throw new Error('offline');
+  const ref = doc(db, 'guilds', guildId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('introuvable');
+    const data = snap.data() as Omit<Guild, 'id'>;
+    if (Object.keys(data.members).length >= GUILD_MAX) throw new Error('guilde pleine');
+    tx.update(ref, { [`members.${me.uid}`]: { name: me.name, level: me.level } });
+  });
+}
+
+export async function leaveGuild(guildId: string, uid: string): Promise<void> {
+  if (!db) return;
+  const ref = doc(db, 'guilds', guildId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const data = snap.data() as Omit<Guild, 'id'>;
+    const members = { ...data.members };
+    delete members[uid];
+    if (Object.keys(members).length === 0) tx.delete(ref);
+    else tx.update(ref, { members });
+  });
+}
+
+export async function contributeGuild(guildId: string, amount: number): Promise<void> {
+  if (!db) return;
+  const ref = doc(db, 'guilds', guildId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const data = snap.data() as Omit<Guild, 'id'>;
+    tx.update(ref, { xp: (data.xp ?? 0) + amount });
+  });
+}
+
+export function listenGuilds(cb: (g: Guild[]) => void): () => void {
+  if (!db) { cb([]); return () => {}; }
+  return onSnapshot(collection(db, 'guilds'), (snap) =>
+    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Guild, 'id'>) }))),
+  );
+}
+
+// ─── Dons de ressources (or) ─────────────────────────────────────────────────
+export async function sendGift(from: { uid: string; name: string }, toUid: string, gold: number): Promise<void> {
+  if (!db) throw new Error('offline');
+  await addDoc(collection(db, 'gifts'), {
+    fromUid: from.uid, fromName: from.name, toUid, gold, createdAt: Date.now(),
+  });
+}
+
+export function listenMyGifts(uid: string, cb: (g: Gift[]) => void): () => void {
+  if (!db) { cb([]); return () => {}; }
+  const q = query(collection(db, 'gifts'), where('toUid', '==', uid));
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Gift, 'id'>) }))));
+}
+
+/** Retire le don une fois encaissé. */
+export async function consumeGift(giftId: string): Promise<void> {
+  if (!db) return;
+  await deleteDoc(doc(db, 'gifts', giftId)).catch(() => {});
+}

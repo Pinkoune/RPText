@@ -3,6 +3,28 @@
 // valeur l'emporte. On gagne en banquant 3 cartes du même élément OU une de
 // chaque élément.
 
+// Ceintures (façon Club Penguin), débloquées par victoires PvP.
+export interface CJBelt { name: string; color: string; wins: number; }
+export const CJ_BELTS: CJBelt[] = [
+  { name: 'Ceinture blanche', color: '#e5e7eb', wins: 0 },
+  { name: 'Ceinture jaune', color: '#facc15', wins: 3 },
+  { name: 'Ceinture orange', color: '#fb923c', wins: 8 },
+  { name: 'Ceinture verte', color: '#4ade80', wins: 15 },
+  { name: 'Ceinture bleue', color: '#60a5fa', wins: 25 },
+  { name: 'Ceinture rouge', color: '#f87171', wins: 40 },
+  { name: 'Ceinture violette', color: '#c084fc', wins: 60 },
+  { name: 'Ceinture marron', color: '#a16207', wins: 85 },
+  { name: 'Ceinture noire', color: '#111827', wins: 120 },
+  { name: 'Maître Ninja', color: '#f59e0b', wins: 170 },
+];
+
+/** Ceinture actuelle + prochaine selon le nombre de victoires. */
+export function cjBelt(wins: number): { current: CJBelt; next: CJBelt | null } {
+  let idx = 0;
+  for (let i = 0; i < CJ_BELTS.length; i++) if (wins >= CJ_BELTS[i].wins) idx = i;
+  return { current: CJ_BELTS[idx], next: CJ_BELTS[idx + 1] ?? null };
+}
+
 export type CJElement = 'fire' | 'water' | 'snow';
 
 export interface CJCard {
@@ -44,4 +66,17 @@ export function cjBankWin(bank: CJCard[]): boolean {
   return c.fire >= 1 && c.water >= 1 && c.snow >= 1;
 }
 
-
+/** IA : vise à compléter sa banque (atteindre 3 d'un élément ou diversifier). */
+export function aiPickCard(hand: CJCard[], bank: CJCard[]): number {
+  const c = cjCounts(bank);
+  let target: CJElement | null = null;
+  for (const e of CJ_ELEMENTS) if (c[e] === 2) target = e; // proche d'un trio
+  if (!target) {
+    const miss = CJ_ELEMENTS.find((e) => c[e] === 0 && hand.some((h) => h.element === e));
+    if (miss) target = miss; // complète "une de chaque"
+  }
+  let pool = target ? hand.map((h, i) => ({ h, i })).filter((x) => x.h.element === target) : [];
+  if (pool.length === 0) pool = hand.map((h, i) => ({ h, i }));
+  pool.sort((a, b) => b.h.value - a.h.value);
+  return pool[0].i;
+}

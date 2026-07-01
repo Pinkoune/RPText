@@ -18,6 +18,8 @@ export type WindowKind =
   | 'quests'
   | 'duel'
   | 'cardjitsu'
+  | 'team'
+  | 'guild'
   | 'boss'
   | 'chat'
   | 'leaderboard'

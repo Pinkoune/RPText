@@ -1,5 +1,5 @@
 import type { PlayerState, ClassId, Stats, QuestState, ItemDef } from './types';
-import { CLASSES, xpToNext } from './classes';
+import { CLASSES, xpToNext, xpToNextV1 } from './classes';
 import { ITEMS } from './items';
 
 /** Arme de départ selon la classe. */
@@ -23,11 +23,27 @@ export function freshQuestState(now = Date.now()): QuestState {
 
 /** Complète les champs manquants des anciennes sauvegardes (migration douce). */
 export function migratePlayer(p: PlayerState): PlayerState {
+  // Recalcul unique des niveaux sous la nouvelle courbe d'XP (v2, plus dure).
+  // On reconstitue l'XP totale sous l'ancienne courbe, puis on re-nivelle.
+  if (p.curveVersion !== 2) {
+    let total = p.xp || 0;
+    for (let n = 1; n < (p.level || 1); n++) total += xpToNextV1(n);
+    let lvl = 1;
+    let rem = total;
+    while (rem >= xpToNext(lvl)) { rem -= xpToNext(lvl); lvl += 1; }
+    p.level = lvl;
+    p.xp = rem;
+    p.curveVersion = 2;
+  }
   if (!p.quests) p.quests = freshQuestState();
   if (!p.settledDuels) p.settledDuels = [];
   if (!p.bossClaims) p.bossClaims = [];
   if (!p.settledSales) p.settledSales = [];
   if (!p.settledCJDuels) p.settledCJDuels = [];
+  if (p.cjWins == null) p.cjWins = 0;
+  if (p.teamId === undefined) p.teamId = null;
+  if (p.guildId === undefined) p.guildId = null;
+  if (!p.settledGifts) p.settledGifts = [];
   if (!p.gatherXp) p.gatherXp = { chop: 0, mine: 0, fish: 0, forage: 0 };
   if (p.farmXp == null) {
     // Récupère l'XP de récolte des anciennes sauvegardes (somme des métiers).
@@ -102,13 +118,18 @@ export function createPlayer(
     quests: freshQuestState(now),
     settledDuels: [],
     settledCJDuels: [],
+    cjWins: 0,
     bossClaims: [],
     settledSales: [],
+    teamId: null,
+    guildId: null,
+    settledGifts: [],
     gatherXp: { chop: 0, mine: 0, fish: 0, forage: 0 },
     farmXp: 0,
     dungeonClears: {},
     talentPoints: 0,
     talents: {},
+    curveVersion: 2,
     createdAt: now,
     lastSeen: now,
   };

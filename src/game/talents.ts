@@ -58,10 +58,10 @@ export interface ClassAbility {
 }
 
 export const ABILITIES: Record<ClassId, ClassAbility> = {
-  warrior: { name: 'Coup héroïque', icon: '⚔️', desc: '×3 dégâts au boss.', cooldownMs: 20_000, mult: 3 },
-  mage: { name: 'Météore', icon: '☄️', desc: '×4 dégâts au boss.', cooldownMs: 25_000, mult: 4 },
-  archer: { name: 'Pluie de flèches', icon: '🏹', desc: '×3 dégâts au boss.', cooldownMs: 20_000, mult: 3 },
-  healer: { name: 'Châtiment sacré', icon: '⚡', desc: '×2 dégâts + soigne 20% PV.', cooldownMs: 18_000, mult: 2, healFrac: 0.2 },
+  warrior: { name: 'Coup héroïque', icon: '⚔️', desc: '×1.8 dégâts.', cooldownMs: 20_000, mult: 1.8 },
+  mage: { name: 'Météore', icon: '☄️', desc: '×2.2 dégâts.', cooldownMs: 25_000, mult: 2.2 },
+  archer: { name: 'Pluie de flèches', icon: '🏹', desc: '×1.9 dégâts.', cooldownMs: 20_000, mult: 1.9 },
+  healer: { name: 'Châtiment sacré', icon: '⚡', desc: '×1.5 dégâts + soigne 12% PV.', cooldownMs: 18_000, mult: 1.5, healFrac: 0.12 },
 };
 
 export function emptyMods(): CombatMods {

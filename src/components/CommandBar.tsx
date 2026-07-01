@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGame } from '../store/gameStore';
 import { useUi } from '../store/uiStore';
 import { COMMANDS, runCommand, resolveCommand } from '../game/commands';
@@ -16,12 +16,34 @@ export default function CommandBar() {
   const mutate = useGame((s) => s.mutate);
   const toast = useGame((s) => s.toast);
 
+  const [suggIdx, setSuggIdx] = useState(0);
+
+  // Touche Entrée n'importe où → recible la barre d'écriture.
+  useEffect(() => {
+    function onGlobalKey(e: KeyboardEvent) {
+      if (e.key !== 'Enter') return;
+      const el = document.activeElement as HTMLElement | null;
+      const tag = el?.tagName;
+      if (el === inputRef.current) return;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
+      if (el?.isContentEditable) return;
+      inputRef.current?.focus();
+    }
+    window.addEventListener('keydown', onGlobalKey);
+    return () => window.removeEventListener('keydown', onGlobalKey);
+  }, []);
+
   const suggestions = useMemo(() => {
     const q = value.trim().toLowerCase();
     if (!q) return [];
     return COMMANDS.filter(
       (c) => c.name.startsWith(q) || c.aliases.some((a) => a.startsWith(q)),
     ).slice(0, 5);
+  }, [value]);
+
+  // Réinitialiser la sélection de suggestion quand la valeur change
+  useEffect(() => {
+    setSuggIdx(0);
   }, [value]);
 
   function submit(raw: string) {
@@ -40,18 +62,26 @@ export default function CommandBar() {
 
   function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') {
-      submit(suggestions[0] && !value.includes(' ') ? suggestions[0].name : value);
-    } else if (e.key === 'Tab' && suggestions[0]) {
+      submit(suggestions[suggIdx] && !value.includes(' ') ? suggestions[suggIdx].name : value);
+    } else if (e.key === 'Tab' && suggestions[suggIdx]) {
       e.preventDefault();
-      setValue(suggestions[0].name);
+      setValue(suggestions[suggIdx].name);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      const ni = Math.min(hist.length - 1, hIdx + 1);
-      if (hist[ni]) { setHIdx(ni); setValue(hist[ni]); }
+      if (suggestions.length > 0) {
+        setSuggIdx((i) => Math.max(0, i - 1));
+      } else {
+        const ni = Math.min(hist.length - 1, hIdx + 1);
+        if (hist[ni]) { setHIdx(ni); setValue(hist[ni]); }
+      }
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      const ni = Math.max(-1, hIdx - 1);
-      setHIdx(ni); setValue(ni === -1 ? '' : hist[ni]);
+      if (suggestions.length > 0) {
+        setSuggIdx((i) => Math.min(suggestions.length - 1, i + 1));
+      } else {
+        const ni = Math.max(-1, hIdx - 1);
+        setHIdx(ni); setValue(ni === -1 ? '' : hist[ni]);
+      }
     } else if (e.key === 'Escape') {
       closeAll();
     }
@@ -68,8 +98,8 @@ export default function CommandBar() {
                 key={c.name}
                 onClick={() => { setValue(c.name); inputRef.current?.focus(); }}
                 className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm ${
-                  i === 0 ? 'bg-white/5' : ''
-                } hover:bg-white/10`}
+                  i === suggIdx ? 'bg-white/15' : ''
+                } hover:bg-white/20`}
               >
                 <span className="font-semibold">{c.name}</span>
                 <span className="ml-3 truncate text-xs text-slate-400">{c.desc}</span>

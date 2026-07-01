@@ -16,7 +16,7 @@ import {
 } from '../../game/combat';
 
 const POTIONS = ['potion', 'hi_potion', 'grilled_fish', 'hearty_stew'];
-const ABILITY_TURNS = 3;
+const ABILITY_TURNS = 5;
 
 type Status = 'fighting' | 'won' | 'lost' | 'fled';
 
@@ -194,7 +194,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
           {status === 'fled' && (
             <div className="rounded-lg border border-slate-400/40 bg-slate-500/15 p-3 text-sm text-slate-300">Tu as fui le combat. Aucune récompense.</div>
           )}
-          <div className="text-center text-xs text-slate-500">Tape « hunt » pour repartir (cooldown 90s).</div>
+          <div className="text-center text-xs text-slate-500">Tape « hunt » pour repartir (cooldown 20s).</div>
         </div>
       )}
     </div>

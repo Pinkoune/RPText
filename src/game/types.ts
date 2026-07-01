@@ -88,6 +88,13 @@ export interface PlayerState {
   settledSales: string[];
   /** Duels Card-Jitsu déjà encaissés. */
   settledCJDuels: string[];
+  /** Victoires Card-Jitsu (détermine la ceinture). */
+  cjWins: number;
+  /** Équipe et guilde actuelles (ids Firestore, ou null). */
+  teamId: string | null;
+  guildId: string | null;
+  /** Dons de ressources déjà encaissés (anti double-crédit). */
+  settledGifts: string[];
   /** XP par métier de récolte (legacy, fusionné dans farmXp). */
   gatherXp: Record<string, number>;
   /** XP de farm global (niveau de récolte unique). */
@@ -98,6 +105,8 @@ export interface PlayerState {
   talentPoints: number;
   /** Rang investi par talent (id -> rang). */
   talents: Record<string, number>;
+  /** Version de la courbe d'XP appliquée (recalcul des niveaux à la migration). */
+  curveVersion?: number;
   createdAt: number;
   lastSeen: number;
 }

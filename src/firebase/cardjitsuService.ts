@@ -14,12 +14,15 @@ export interface CJDuel {
   id: string;
   hostUid: string;
   hostName: string;
+  hostWins?: number;
   guestUid?: string;
   guestName?: string;
+  guestWins?: number;
   bet: number;
   status: 'open' | 'playing' | 'resolved' | 'cancelled';
   winnerUid?: string | 'tie'; // tie si match nul final (ex: abandon mutuel ou bug)
   createdAt: number;
+  turnStartTime?: number;
   
   // État du jeu
   hostHand: CJCard[];
@@ -39,11 +42,12 @@ function generateHand(): CJCard[] {
   return Array.from({ length: HAND_SIZE }, drawCJCard);
 }
 
-export async function createCJDuel(host: { uid: string; name: string }, bet: number): Promise<string> {
+export async function createCJDuel(host: { uid: string; name: string; wins: number }, bet: number): Promise<string> {
   if (!db) throw new Error('offline');
   const ref = await addDoc(collection(db, 'cj_duels'), {
     hostUid: host.uid,
     hostName: host.name,
+    hostWins: host.wins,
     bet,
     status: 'open',
     createdAt: Date.now(),
@@ -64,7 +68,7 @@ export function listenCJDuels(cb: (duels: CJDuel[]) => void): () => void {
   });
 }
 
-export async function joinCJDuel(duelId: string, guest: { uid: string; name: string }): Promise<void> {
+export async function joinCJDuel(duelId: string, guest: { uid: string; name: string; wins: number }): Promise<void> {
   if (!db) throw new Error('offline');
   const ref = doc(db, 'cj_duels', duelId);
   await runTransaction(db, async (tx) => {
@@ -77,9 +81,11 @@ export async function joinCJDuel(duelId: string, guest: { uid: string; name: str
     tx.update(ref, {
       guestUid: guest.uid,
       guestName: guest.name,
+      guestWins: guest.wins,
       status: 'playing',
       guestHand: generateHand(),
       guestBank: [],
+      turnStartTime: Date.now(),
     });
   });
 }
@@ -111,6 +117,7 @@ export async function resolveCJTurn(
     guestBank,
     hostPick: null,
     guestPick: null,
+    turnStartTime: Date.now(),
   };
   if (winnerUid) {
     update.status = 'resolved';

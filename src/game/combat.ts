@@ -134,7 +134,7 @@ export function combatTurn(
     php = Math.min(maxHp, php + (opts.potionHeal ?? 0));
     events.push({ text: `Tu te soignes (+${opts.potionHeal} PV).`, side: 'info' });
   } else if (action === 'ability') {
-    const dmg = Math.max(1, Math.round(stats.atk * (opts.abilityMult ?? 2) * (1.1 + Math.random() * 0.5)) - monster.def);
+    const dmg = Math.max(1, Math.round(stats.atk * (opts.abilityMult ?? 1.6) * (0.9 + Math.random() * 0.3)) - monster.def);
     mhp -= dmg;
     abilityUsed = true;
     events.push({ text: `Capacité : ${dmg} dégâts !`, side: 'you' });
