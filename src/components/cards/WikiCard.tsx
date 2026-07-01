@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useGame } from '../../store/gameStore';
-import { ITEMS, RARITY_COLOR, type ItemDef } from '../../game/items';
-import { MONSTERS, type MonsterDef } from '../../game/monsters';
+import { ITEMS, RARITY_COLOR } from '../../game/items';
+import { MONSTERS } from '../../game/monsters';
+import type { ItemDef, MonsterDef } from '../../game/types';
 import { RECIPES } from '../../game/crafting';
 import { GATHER_SKILLS } from '../../game/gathering';
 
@@ -119,7 +120,7 @@ export default function WikiCard() {
             <div key={m.id} className="rounded-lg bg-black/25 p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">{m.sprite || '👿'}</span>
+                  <span className="text-2xl">{m.emoji || '👿'}</span>
                   <div className="flex flex-col">
                     <span className="font-bold text-rose-300">{m.name}</span>
                     <span className="text-[10px] text-slate-400">Vaincu : {k} fois</span>
