@@ -70,7 +70,10 @@ export default function TeamCard() {
         <p className="text-xs text-slate-500">Aucune équipe. Crée la tienne !</p>
       ) : open.map((t) => (
         <div key={t.id} className="flex items-center justify-between rounded-lg bg-black/25 px-3 py-2 text-sm">
-          <span className="min-w-0 truncate">{t.name} <span className="text-xs text-slate-400">{Object.keys(t.members).length}/{TEAM_MAX}</span></span>
+          <span className="min-w-0 truncate">
+            {t.dungeonId && <span className="mr-2 animate-pulse text-amber-400" title="En donjon">⚔️</span>}
+            {t.name} <span className="text-xs text-slate-400">{Object.keys(t.members).length}/{TEAM_MAX}</span>
+          </span>
           <button onClick={() => join(t)} className="shrink-0 rounded bg-emerald-500/30 px-3 py-1 text-xs font-semibold hover:bg-emerald-500/50">Rejoindre</button>
         </div>
       ))}

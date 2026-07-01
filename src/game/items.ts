@@ -52,9 +52,21 @@ export const ITEMS: Record<string, ItemDef> = {
   fish: { id: 'fish', name: 'Poisson', icon: '🐟', rarity: 'common', slot: 'material', value: 6, desc: 'Pêché dans les eaux du biome.' },
   big_fish: { id: 'big_fish', name: 'Gros poisson', icon: '🐠', rarity: 'uncommon', slot: 'material', value: 22, desc: 'Une belle prise.' },
   herb: { id: 'herb', name: 'Herbe médicinale', icon: '🌿', rarity: 'common', slot: 'material', value: 5, desc: 'Cueillie au sol. Base des remèdes.' },
-  crystal: { id: 'crystal', name: 'Cristal', icon: '🔮', rarity: 'rare', slot: 'material', value: 38, desc: 'Concentré d\'énergie pure.' },
+  crystal: { id: 'crystal', name: 'Cristal', icon: '🔮', rarity: 'rare', slot: 'material', value: 38, desc: 'Concentré d\'énergie pure. Introuvable hors de l\'Abysse Gelé.' },
+
+  // ── Ressources exclusives à un biome ──
+  wildflower: { id: 'wildflower', name: 'Fleur des plaines', icon: '🌼', rarity: 'common', slot: 'material', value: 7, desc: 'Ne pousse que dans les plaines venteuses.' },
+  silk_thread: { id: 'silk_thread', name: 'Fil de soie', icon: '🕸️', rarity: 'uncommon', slot: 'material', value: 12, desc: 'Tissé par les araignées des sous-bois de Sylvebois.' },
+  sun_shard: { id: 'sun_shard', name: 'Éclat solaire', icon: '☀️', rarity: 'rare', slot: 'material', value: 40, desc: 'Sable durci par des générations de soleil du désert.' },
+  cactus_pulp: { id: 'cactus_pulp', name: 'Pulpe de cactus', icon: '🌵', rarity: 'common', slot: 'material', value: 6, desc: 'Gorgée d\'eau, elle ne pousse que dans les dunes.' },
+  bog_root: { id: 'bog_root', name: 'Racine des tourbières', icon: '🪱', rarity: 'uncommon', slot: 'material', value: 13, desc: 'S\'enfonce profondément dans la vase du marais.' },
+  mudfish: { id: 'mudfish', name: 'Poisson des vases', icon: '🐡', rarity: 'uncommon', slot: 'material', value: 18, desc: 'Ne vit que dans les eaux troubles du marais.' },
+  frost_lotus: { id: 'frost_lotus', name: 'Lotus des glaces', icon: '🪷', rarity: 'rare', slot: 'material', value: 45, desc: 'Fleurit une fois par saison, uniquement dans l\'Abysse Gelé.' },
 
   // ── Nourriture (craft) ──
+  honey_mead: { id: 'honey_mead', name: 'Hydromel des plaines', icon: '🍯', rarity: 'common', slot: 'consumable', hp: 150, value: 25, desc: 'Rend 150 PV. Doux et réconfortant.' },
+  cactus_water: { id: 'cactus_water', name: 'Eau de cactus', icon: '🥤', rarity: 'common', slot: 'consumable', hp: 60, value: 10, desc: 'Rend 60 PV. Fraîche malgré la chaleur.' },
+  phoenix_elixir: { id: 'phoenix_elixir', name: 'Élixir du phénix', icon: '🧊', rarity: 'epic', slot: 'consumable', hp: 600, value: 200, desc: 'Rend 600 PV. Le remède le plus puissant du monde connu.' },
 
 
   // ── Matériaux d'artisanat intermédiaires ──
@@ -70,6 +82,11 @@ export const ITEMS: Record<string, ItemDef> = {
   steel_plate: { id: 'steel_plate', name: 'Harnois d\'acier', icon: '🛡️', rarity: 'rare', slot: 'armor', def: 16, hp: 70, value: 280, desc: 'Forgé à partir de minerai.' },
   mithril_blade: { id: 'mithril_blade', name: 'Lame de mithril', icon: '⚔️', rarity: 'epic', slot: 'weapon', atk: 40, classes: ['warrior', 'archer'], value: 800, desc: 'Tranchant qui ne s\'émousse jamais.' },
   crystal_charm: { id: 'crystal_charm', name: 'Charme de cristal', icon: '🔮', rarity: 'epic', slot: 'trinket', def: 8, hp: 40, value: 600, desc: 'Vibre d\'une énergie protectrice.' },
+
+  // ── Équipement régional (ressources exclusives à un biome) ──
+  silk_robe: { id: 'silk_robe', name: 'Robe de soie', icon: '🥻', rarity: 'uncommon', slot: 'armor', def: 6, hp: 25, value: 90, desc: 'Tissée avec la soie des araignées de Sylvebois.' },
+  sunplate_armor: { id: 'sunplate_armor', name: 'Cuirasse solaire', icon: '🌞', rarity: 'rare', slot: 'armor', def: 20, hp: 60, value: 340, desc: 'Forgée dans le sable durci du désert.' },
+  venom_fang: { id: 'venom_fang', name: 'Croc venimeux', icon: '🦷', rarity: 'rare', slot: 'trinket', atk: 10, value: 260, desc: 'Extrait des tourbières du marais, encore toxique.' },
 };
 
 export const RARITY_COLOR: Record<ItemDef['rarity'], string> = {

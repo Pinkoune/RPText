@@ -1,31 +1,73 @@
-// Annonce des nouveautés affichée une fois à l'ouverture du jeu.
-// Change PATCH_VERSION (et complète PATCH_NOTES) à chaque nouvelle vague de
-// modifs à annoncer ; l'utilisateur indique quand la réinitialiser (au push).
-
-export const PATCH_VERSION = 'familiars-v1';
+// Historique des nouveautés. La dernière entrée (index 0) est annoncée une
+// fois à l'ouverture du jeu (voir PatchNotesModal). Tout l'historique reste
+// consultable via la commande « news ». Ajoute une nouvelle entrée en tête à
+// chaque vague de modifs ; l'utilisateur indique quand marquer une version
+// comme "vue" pour tous (au push).
 
 export interface PatchSection {
   title: string;
   items: string[];
 }
 
-export const PATCH_NOTES: PatchSection[] = [
+export interface PatchRelease {
+  version: string;
+  date: string;
+  sections: PatchSection[];
+}
+
+/** Historique complet, plus récent en premier. */
+export const PATCH_HISTORY: PatchRelease[] = [
   {
-    title: '🐾 Familiers',
-    items: [
-      'Adopte un familier (commun/rare/épique en boutique de familiers, légendaire en butin rare de boss mondial).',
-      'Équipe-le pour un petit bonus de stat (ATK, DEF ou PV) qui grandit avec ses victoires à tes côtés, jusqu\'au niveau 10.',
-      'Bonus volontairement modeste : un compagnon, pas une arme secrète.',
-      'Commande : « familiar » (ou « pet », « compagnon »).',
+    version: 'regions-v1',
+    date: '2026-07-06',
+    sections: [
+      {
+        title: '🗺️ Régions plus vivantes',
+        items: [
+          '7 nouvelles ressources exclusives à un seul biome : fil de soie (Sylvebois), fleur des plaines, éclat solaire (Dunes), pulpe de cactus, racine des tourbières et poisson des vases (Marais), lotus des glaces (Abysse Gelé).',
+          'Mithril réservé aux Pics de Givre-Cime, cristal réservé à l\'Abysse Gelé — plus de doublon entre biomes.',
+          'Nouvelle cueillette disponible dans l\'Abysse Gelé (auparavant minage uniquement).',
+          '6 nouvelles recettes qui valorisent ces ressources : robe de soie, cuirasse solaire, croc venimeux, hydromel, eau de cactus, élixir du phénix (le plus gros soin du jeu).',
+          'Voyager d\'un biome à l\'autre a maintenant un vrai intérêt : chaque région a un ingrédient qu\'on ne trouve qu\'elle.',
+        ],
+      },
+      {
+        title: '🔨 Forge réorganisée',
+        items: [
+          'Les recettes sont maintenant groupées par onglets : Ressources, Consommables, Armures, Armes, Bijoux.',
+          'Plus facile de retrouver une recette dans la longue liste.',
+        ],
+      },
     ],
   },
   {
-    title: '🌳 Arbre de talents refait',
-    items: [
-      '3 paliers par classe (9 talents + 1 capstone), déblocage progressif à 5 puis 10 points investis.',
-      'Nouveaux effets : vol de vie, perce-armure, dégâts d\'exécution sur cible affaiblie, épines, multiplicateur de critique, et bonus permanents ATK/DEF/PV%.',
-      'Coût pour tout maximiser une classe : 23 points (~niveau 24) — une vraie progression de fond.',
-      'Tes points déjà investis sont conservés (rien n\'est perdu par le remaniement).',
+    version: 'familiars-v1',
+    date: '2026-07-01',
+    sections: [
+      {
+        title: '🐾 Familiers',
+        items: [
+          'Adopte un familier (commun/rare/épique en boutique de familiers, légendaire en butin rare de boss mondial).',
+          'Équipe-le pour un petit bonus de stat (ATK, DEF ou PV) qui grandit avec ses victoires à tes côtés, jusqu\'au niveau 10.',
+          'Bonus volontairement modeste : un compagnon, pas une arme secrète.',
+          'Commande : « familiar » (ou « pet », « compagnon »).',
+        ],
+      },
+      {
+        title: '🌳 Arbre de talents refait',
+        items: [
+          '3 paliers par classe (9 talents + 1 capstone), déblocage progressif à 5 puis 10 points investis.',
+          'Nouveaux effets : vol de vie, perce-armure, dégâts d\'exécution sur cible affaiblie, épines, multiplicateur de critique, et bonus permanents ATK/DEF/PV%.',
+          'Coût pour tout maximiser une classe : 23 points (~niveau 24) — une vraie progression de fond.',
+          'Tes points déjà investis sont conservés (rien n\'est perdu par le remaniement).',
+        ],
+      },
     ],
   },
 ];
+
+/** Dernière version publiée — comparée au flag local pour l'affiche de première ouverture. */
+export const PATCH_VERSION = PATCH_HISTORY[0].version;
+
+/** Sections de la dernière version (annoncées une fois à l'ouverture). */
+export const PATCH_NOTES = PATCH_HISTORY[0].sections;

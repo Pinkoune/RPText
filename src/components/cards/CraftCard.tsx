@@ -1,7 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { RECIPES, canCraft, consumeMaterials, finishCraft, getCraftLevel, type Recipe } from '../../game/crafting';
 import { item, RARITY_COLOR } from '../../game/items';
+import type { ItemSlot } from '../../game/types';
+
+const GROUPS: { slot: ItemSlot; label: string; icon: string }[] = [
+  { slot: 'material', label: 'Ressources', icon: '🧱' },
+  { slot: 'consumable', label: 'Consommables', icon: '🍲' },
+  { slot: 'armor', label: 'Armures', icon: '🛡️' },
+  { slot: 'weapon', label: 'Armes', icon: '⚔️' },
+  { slot: 'trinket', label: 'Bijoux', icon: '💍' },
+];
 
 export default function CraftCard() {
   const p = useGame((s) => s.player);
@@ -13,6 +22,16 @@ export default function CraftCard() {
   const [quality, setQuality] = useState(0);
   const [durability, setDurability] = useState(0);
   const [cp, setCp] = useState(0);
+  const [group, setGroup] = useState<ItemSlot>('material');
+
+  const byGroup = useMemo(() => {
+    const map: Record<string, Recipe[]> = {};
+    for (const r of RECIPES) {
+      const slot = item(r.output)?.slot ?? 'material';
+      (map[slot] ??= []).push(r);
+    }
+    return map;
+  }, []);
 
   if (!p) return null;
 
@@ -168,8 +187,25 @@ export default function CraftCard() {
           </button>
         </div>
       </div>
-      <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-1">
-        {RECIPES.map((r) => {
+      <div className="flex gap-1 overflow-x-auto pb-1">
+        {GROUPS.map((g) => {
+          const count = byGroup[g.slot]?.length ?? 0;
+          if (count === 0) return null;
+          return (
+            <button
+              key={g.slot}
+              onClick={() => setGroup(g.slot)}
+              className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                group === g.slot ? 'bg-sky-500/40 text-white' : 'bg-black/25 text-slate-300 hover:bg-white/10'
+              }`}
+            >
+              {g.icon} {g.label} <span className="opacity-60">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="max-h-[55vh] overflow-y-auto space-y-2 pr-1">
+        {(byGroup[group] ?? []).map((r) => {
           const out = item(r.output)!;
           const ok = canCraft(p, r);
           const levelOk = craftLvl >= r.levelReq;

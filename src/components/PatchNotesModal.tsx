@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { PATCH_VERSION, PATCH_NOTES } from '../game/patchnotes';
+import { useUi } from '../store/uiStore';
 
 const KEY = 'rptext.seenPatch';
 
 /** Petite affiche des nouveautés, montrée une fois par version vue. */
 export default function PatchNotesModal() {
   const [show, setShow] = useState(false);
+  const open = useUi((s) => s.open);
 
   useEffect(() => {
     if (PATCH_NOTES.length === 0) return;
@@ -17,6 +19,11 @@ export default function PatchNotesModal() {
   function close() {
     localStorage.setItem(KEY, PATCH_VERSION);
     setShow(false);
+  }
+
+  function openHistory() {
+    close();
+    open('news', undefined, { singleton: true });
   }
 
   return (
@@ -38,12 +45,20 @@ export default function PatchNotesModal() {
             </div>
           ))}
         </div>
-        <button
-          onClick={close}
-          className="mt-4 w-full rounded-lg bg-sky-500/40 py-2 text-sm font-semibold hover:bg-sky-500/60"
-        >
-          Compris !
-        </button>
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={openHistory}
+            className="rounded-lg bg-black/30 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-white/10"
+          >
+            Historique complet
+          </button>
+          <button
+            onClick={close}
+            className="flex-1 rounded-lg bg-sky-500/40 py-2 text-sm font-semibold hover:bg-sky-500/60"
+          >
+            Compris !
+          </button>
+        </div>
       </div>
     </div>
   );

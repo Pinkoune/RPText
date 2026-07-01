@@ -25,6 +25,7 @@ import BossCard from './cards/BossCard';
 import ChatCard from './cards/ChatCard';
 import LeaderboardCard from './cards/LeaderboardCard';
 import StatsCard from './cards/StatsCard';
+import NewsCard from './cards/NewsCard';
 import HelpCard from './cards/HelpCard';
 import type { HuntEncounter } from '../game/combat';
 
@@ -53,8 +54,11 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   chat: { title: '💬 Chat mondial', accent: '#7bd8d0' },
   leaderboard: { title: '🏆 Classement', accent: '#ffd45a' },
   stats: { title: '📊 Statistiques', accent: '#9fd0ff' },
+  news: { title: '📰 Nouveautés', accent: '#7bd8d0' },
   help: { title: '❔ Commandes', accent: '#b8c0cf' },
 };
+
+const WIDE: Partial<Record<WindowKind, boolean>> = { news: true };
 
 export default function WindowManager() {
   const windows = useUi((s) => s.windows);
@@ -65,7 +69,7 @@ export default function WindowManager() {
         {windows.map((w, i) => {
           const meta = META[w.kind];
           return (
-            <Window key={w.id} win={w} index={i} title={meta.title} accent={meta.accent}>
+            <Window key={w.id} win={w} index={i} title={meta.title} accent={meta.accent} wide={WIDE[w.kind]}>
               {w.kind === 'profile' && <ProfileCard />}
               {w.kind === 'hunt' && <HuntCard encounter={w.payload as HuntEncounter} />}
               {w.kind === 'map' && <MapCard />}
@@ -90,6 +94,7 @@ export default function WindowManager() {
               {w.kind === 'chat' && <ChatCard />}
               {w.kind === 'leaderboard' && <LeaderboardCard />}
               {w.kind === 'stats' && <StatsCard />}
+              {w.kind === 'news' && <NewsCard />}
               {w.kind === 'help' && <HelpCard />}
             </Window>
           );

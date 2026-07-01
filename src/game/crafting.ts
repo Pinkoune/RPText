@@ -33,6 +33,14 @@ export const RECIPES: Recipe[] = [
   { output: 'hi_potion', qty: 1, materials: { slime_gel: 4, herb: 12 }, gold: 50, levelReq: 3, difficulty: 40, maxQuality: 150, durability: 40 },
   { output: 'hearty_stew', qty: 1, materials: { big_fish: 3, fish: 6, herb: 10 }, gold: 100, levelReq: 4, difficulty: 35, maxQuality: 150, durability: 40 },
 
+  // ── Spécialités régionales (ressources exclusives à un biome) ──
+  { output: 'honey_mead', qty: 1, materials: { wildflower: 6, herb: 4 }, gold: 15, levelReq: 2, difficulty: 18, maxQuality: 60, durability: 25 },
+  { output: 'cactus_water', qty: 1, materials: { cactus_pulp: 8 }, gold: 10, levelReq: 2, difficulty: 15, maxQuality: 40, durability: 20 },
+  { output: 'silk_robe', qty: 1, materials: { silk_thread: 10, sturdy_leather: 3 }, gold: 350, levelReq: 4, difficulty: 55, maxQuality: 220, durability: 50 },
+  { output: 'sunplate_armor', qty: 1, materials: { sun_shard: 10, iron_ingot: 8 }, gold: 1400, levelReq: 11, difficulty: 140, maxQuality: 550, durability: 70 },
+  { output: 'venom_fang', qty: 1, materials: { bog_root: 12, mudfish: 6, sturdy_leather: 3 }, gold: 1000, levelReq: 13, difficulty: 160, maxQuality: 500, durability: 60 },
+  { output: 'phoenix_elixir', qty: 1, materials: { frost_lotus: 6, crystal: 4, herb: 10 }, gold: 800, levelReq: 20, difficulty: 350, maxQuality: 1200, durability: 80 },
+
   // ── Équipement Basique (Débutant) ──
   { output: 'wooden_club', qty: 1, materials: { wood: 12 }, gold: 10, levelReq: 1, difficulty: 20, maxQuality: 50, durability: 30 },
   { output: 'stone_axe', qty: 1, materials: { wood: 6, stone: 10 }, gold: 20, levelReq: 1, difficulty: 30, maxQuality: 80, durability: 30 },

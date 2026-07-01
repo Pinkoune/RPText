@@ -53,6 +53,7 @@ export const COMMANDS: CommandDef[] = [
   { name: 'chat', aliases: ['tchat', 'say'], desc: 'Chat mondial avec les joueurs connectés.', category: 'Multijoueur' },
   { name: 'leaderboard', aliases: ['classement', 'top', 'lb'], desc: 'Affiche le classement et les joueurs en ligne.', category: 'Multijoueur' },
   { name: 'stats', aliases: ['statistiques', 'stat', 'st'], desc: 'Affiche toutes tes statistiques.', category: 'Jeu' },
+  { name: 'news', aliases: ['changelog', 'nouveautes', 'nouveautés', 'patchnotes'], desc: 'Historique complet des mises à jour.', category: 'Système' },
   { name: 'help', aliases: ['aide', 'commands', '?'], desc: 'Liste toutes les commandes.', category: 'Système' },
   { name: 'close', aliases: ['clear', 'esc'], desc: 'Ferme toutes les fenêtres.', category: 'Système' },
 ];
@@ -164,6 +165,10 @@ export function runCommand(input: string, ctx: CommandCtx): void {
 
     case 'familiar':
       ctx.open('familiar', undefined, { singleton: true });
+      break;
+
+    case 'news':
+      ctx.open('news', undefined, { singleton: true });
       break;
 
     case 'boss':

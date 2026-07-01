@@ -63,7 +63,9 @@ export default function FamiliarCard() {
             return (
               <div className="mt-1.5">
                 <div className="flex items-center justify-between text-sm">
-                  <span style={{ color: RARITY_COLOR[def.rarity] }}>{def.emoji} {def.name} <span className="text-slate-400">Nv.{prog.level}</span></span>
+                  <span style={{ color: RARITY_COLOR[def.rarity] }}>
+                    {def.emoji} {def.name} <span className="text-slate-400">Nv.{prog.level} <span className="text-emerald-400">(+{def.stat === 'maxHp' ? Math.round(def.base + def.growth * (prog.level - 1)) : Math.round((def.base + def.growth * (prog.level - 1)) * 10) / 10} {def.stat === 'maxHp' ? 'PV' : def.stat.toUpperCase()})</span></span>
+                  </span>
                   <button onClick={unequip} className="rounded bg-rose-500/25 px-2 py-0.5 text-[11px] hover:bg-rose-500/45">Retirer</button>
                 </div>
                 <div className="mt-1.5 h-1.5 rounded bg-black/40">
@@ -111,9 +113,12 @@ export default function FamiliarCard() {
               if (!def) return null;
               const prog = familiarProgress(xp);
               const active = id === p.activeFamiliarId;
+              const statVal = def.stat === 'maxHp' ? Math.round(def.base + def.growth * (prog.level - 1)) : Math.round((def.base + def.growth * (prog.level - 1)) * 10) / 10;
               return (
                 <div key={id} className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-sm ${active ? 'bg-sky-500/15' : 'bg-black/20'}`}>
-                  <span style={{ color: RARITY_COLOR[def.rarity] }}>{def.emoji} {def.name} <span className="text-xs text-slate-400">Nv.{prog.level}</span></span>
+                  <span style={{ color: RARITY_COLOR[def.rarity] }}>
+                    {def.emoji} {def.name} <span className="text-xs text-slate-400">Nv.{prog.level} <span className="text-emerald-400">(+{statVal} {def.stat === 'maxHp' ? 'PV' : def.stat.toUpperCase()})</span></span>
+                  </span>
                   {active ? (
                     <span className="text-[11px] text-sky-300">équipé</span>
                   ) : (
@@ -138,8 +143,8 @@ export default function FamiliarCard() {
                   <span
                     key={f.id}
                     title={has ? f.name : '???'}
-                    className={`rounded px-1.5 py-0.5 text-[11px] ${has ? '' : 'bg-black/40 text-slate-600'}`}
-                    style={has ? { background: `${RARITY_COLOR[r]}22`, color: RARITY_COLOR[r] } : undefined}
+                    className={`rounded px-1.5 py-0.5 text-[11px]`}
+                    style={{ background: has ? `${RARITY_COLOR[r]}22` : 'rgba(0,0,0,0.3)', color: RARITY_COLOR[r], opacity: has ? 1 : 0.5 }}
                   >
                     {has ? `${f.emoji} ${f.name}` : '❔ ???'}
                   </span>

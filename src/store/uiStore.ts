@@ -21,6 +21,7 @@ export type WindowKind =
   | 'team'
   | 'guild'
   | 'familiar'
+  | 'news'
   | 'boss'
   | 'chat'
   | 'leaderboard'

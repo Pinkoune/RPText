@@ -7,11 +7,13 @@ interface Props {
   index: number;
   title: string;
   accent?: string;
+  /** Fenêtre plus large (ex: changelog complet). */
+  wide?: boolean;
   children: React.ReactNode;
 }
 
 /** Chrome d'une fenêtre flottante : drag par l'en-tête, focus, fermeture, TTL. */
-export default function Window({ win, index, title, accent, children }: Props) {
+export default function Window({ win, index, title, accent, wide, children }: Props) {
   const close = useUi((s) => s.close);
   const focus = useUi((s) => s.focus);
   const controls = useDragControls();
@@ -45,7 +47,7 @@ export default function Window({ win, index, title, accent, children }: Props) {
         dragElastic={0.08}
         onPointerDown={() => focus(win.id)}
         style={{ marginLeft: offset, marginTop: offset }}
-        className="pointer-events-auto flex max-h-[82vh] w-[min(94vw,440px)] flex-col overflow-hidden rounded-2xl glass"
+        className={`pointer-events-auto flex max-h-[82vh] flex-col overflow-hidden rounded-2xl glass ${wide ? 'w-[min(94vw,680px)]' : 'w-[min(94vw,440px)]'}`}
       >
         <div
           onPointerDown={(e) => controls.start(e)}

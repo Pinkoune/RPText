@@ -21,7 +21,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Forêt de Sylvebois',
     emoji: '🌲',
     minLevel: 1,
-    desc: 'Bois denses et clairières. Idéal pour débuter.',
+    desc: 'Bois denses et clairières. Le fil de soie de ses araignées ne se trouve nulle part ailleurs.',
     accent: '#7bd88f',
     bg: {
       dawn: ['#3e5c76', '#7293a0', '#a8c79a'],
@@ -41,7 +41,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Plaines de Vent-d\'Or',
     emoji: '🌾',
     minLevel: 3,
-    desc: 'Étendues herbeuses balayées par le vent.',
+    desc: 'Étendues herbeuses balayées par le vent. Ses fleurs sauvages ne poussent qu\'ici.',
     accent: '#e6d27a',
     bg: {
       dawn: ['#5a5a3a', '#9a8f55', '#e9dca0'],
@@ -55,7 +55,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Pics de Givre-Cime',
     emoji: '🏔️',
     minLevel: 8,
-    desc: 'Sommets enneigés et air glacial. Fond blanc/bleu.',
+    desc: 'Sommets enneigés et air glacial. Seul son sous-sol recèle du mithril.',
     accent: '#9fd0ff',
     bg: {
       dawn: ['#5a6b8a', '#aab8d0', '#e8eef7'],
@@ -69,7 +69,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Dunes de Braise',
     emoji: '🏜️',
     minLevel: 14,
-    desc: 'Sable brûlant le jour, glacial la nuit.',
+    desc: 'Sable brûlant le jour, glacial la nuit. Ses éclats solaires n\'existent que là.',
     accent: '#f0b46a',
     bg: {
       dawn: ['#7a5a3a', '#c89055', '#f0d0a0'],
@@ -83,7 +83,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Marais de Brume-Pâle',
     emoji: '🐸',
     minLevel: 20,
-    desc: 'Eaux stagnantes et brouillards toxiques.',
+    desc: 'Eaux stagnantes et brouillards toxiques. Racines et poissons des vases uniques au monde.',
     accent: '#8fd0a0',
     bg: {
       dawn: ['#2a3a30', '#4a5a40', '#7a8a60'],
@@ -97,7 +97,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Abysse Gelé',
     emoji: '❄️',
     minLevel: 28,
-    desc: 'Le bout du monde connu. Réservé aux vétérans.',
+    desc: 'Le bout du monde connu. Réservé aux vétérans — cristal et lotus des glaces n\'y poussent qu\'une fois par saison.',
     accent: '#c0e8ff',
     bg: {
       dawn: ['#3a4a6a', '#7a90c0', '#d0e4f7'],
