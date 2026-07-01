@@ -9,6 +9,8 @@ export interface BiomeDef {
   desc: string;
   /** Dégradés CSS par phase pour le fond d'écran. */
   bg: Record<Phase, [string, string, string]>;
+  /** Couleurs des silhouettes (premier plan, arrière plan). Si absent, utilise bg[0] et bg[1]. */
+  fg?: Record<Phase, [string, string]>;
   /** Couleur d'accent de l'UI dans ce biome. */
   accent: string;
 }
@@ -26,6 +28,12 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
       day: ['#4287f5', '#9bc0f5', '#a2e0ae'],
       dusk: ['#1d3326', '#5a4a2e', '#caa15a'],
       night: ['#0a1710', '#10241a', '#1c3a28'],
+    },
+    fg: {
+      dawn: ['#2e4a3a', '#3d6b4f'],
+      day: ['#1f4d2e', '#2f7a45'],
+      dusk: ['#1d3326', '#5a4a2e'],
+      night: ['#0a1710', '#10241a'],
     },
   },
   plains: {

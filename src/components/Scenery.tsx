@@ -86,8 +86,8 @@ function Particles({ biome, phase }: Props) {
 /** Silhouettes du décor au sol, selon le biome. Teintées par la phase. */
 function Silhouettes({ biome, phase }: Props) {
   const b = BIOMES[biome];
-  const near = b.bg[phase][0]; // couleur la plus sombre du dégradé
-  const far = b.bg[phase][1];
+  const near = b.fg ? b.fg[phase][0] : b.bg[phase][0]; // couleur la plus sombre du dégradé (premier plan)
+  const far = b.fg ? b.fg[phase][1] : b.bg[phase][1]; // second plan
   const night = phase === 'night';
   const snow = night ? 'rgba(220,235,255,0.5)' : 'rgba(255,255,255,0.9)';
 
