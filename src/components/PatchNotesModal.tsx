@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PATCH_VERSION, PATCH_NOTES } from '../game/patchnotes';
+import { PATCH_HISTORY, type PatchSection } from '../game/patchnotes';
 import { useUi } from '../store/uiStore';
 
 const KEY = 'rptext.seenPatch';
@@ -9,15 +9,17 @@ export default function PatchNotesModal() {
   const [show, setShow] = useState(false);
   const open = useUi((s) => s.open);
 
-  useEffect(() => {
-    if (PATCH_NOTES.length === 0) return;
-    if (localStorage.getItem(KEY) !== PATCH_VERSION) setShow(true);
-  }, []);
+  const latestPatch = PATCH_HISTORY[0];
 
-  if (!show) return null;
+  useEffect(() => {
+    if (!latestPatch) return;
+    if (localStorage.getItem(KEY) !== latestPatch.version) setShow(true);
+  }, [latestPatch]);
+
+  if (!show || !latestPatch) return null;
 
   function close() {
-    localStorage.setItem(KEY, PATCH_VERSION);
+    localStorage.setItem(KEY, latestPatch.version);
     setShow(false);
   }
 
@@ -34,11 +36,11 @@ export default function PatchNotesModal() {
       >
         <div className="mb-3 text-lg font-bold text-glow">📰 Quoi de neuf ?</div>
         <div className="max-h-[60vh] space-y-3 overflow-auto pr-1">
-          {PATCH_NOTES[0]?.sections.map((sec, i) => (
+          {latestPatch.sections.map((sec: PatchSection, i: number) => (
             <div key={i}>
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-300">{sec.title}</div>
               <ul className="space-y-1 text-sm text-slate-200">
-                {sec.items.map((it, j) => (
+                {sec.items.map((it: string, j: number) => (
                   <li key={j} className="flex gap-2">
                     <span>•</span>
                     <span dangerouslySetInnerHTML={{ __html: it }} />

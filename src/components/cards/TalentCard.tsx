@@ -33,7 +33,8 @@ export default function TalentCard() {
   const learn = (t: TalentDef) => {
     let res: boolean | string = false;
     mutate((d) => { res = spendTalent(d, t.id); });
-    if (res === true) { playSound('coin'); } else if (typeof res === 'string') { toast(res, 'bad'); } else { toast('Erreur inconnue', 'bad'); }
+    const result = res as boolean | string;
+    if (result === true) { playSound('coin'); } else if (typeof result === 'string') { toast(result, 'bad'); } else { toast('Erreur inconnue', 'bad'); }
   };
   const reset = () => {
     if (p.gold < 10000) return toast("Pas assez d'or (10 000 requis).", 'bad');

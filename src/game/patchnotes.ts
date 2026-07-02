@@ -18,6 +18,33 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'classes-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '🌟 Refonte complète des Classes & Talents',
+        items: [
+          'Un tout nouveau système d\'arbre de talents (commande « talents ») pour chaque classe.',
+          'Gagne 1 point de talent à chaque niveau. Investis-les pour débloquer des bonus passifs ou des capacités actives puissantes (SKILL).',
+          'Nouveau système d\'Ascension : au niveau 20, utilise une Âme de Boss pour faire évoluer ta classe (ex: Guerrier devient Paladin ou Berserker) et accéder à un nouvel arbre de spécialisation massif.',
+        ],
+      },
+      {
+        title: '🛡️ Nouvelles compétences de combat',
+        items: [
+          'Chaque arbre propose des compétences uniques à équiper (jusqu\'à 4).',
+          'Utilise-les pendant tes chasses, donjons ou combats de boss pour déclencher des effets puissants : soins, boucliers, attaques lourdes, esquive, etc.',
+        ],
+      },
+      {
+        title: '⚔️ Le Grand Rééquilibrage des Donjons',
+        items: [
+          'Les monstres en donjon ont reçu des ajustements de difficulté (pv, attaque et faiblesses) pour s\'adapter aux nouvelles compétences de classe.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'combat-craft-v1',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [
