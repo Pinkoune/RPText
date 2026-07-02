@@ -72,31 +72,31 @@ export default function EquipmentCard() {
   function unequip(slot: 'weapon' | 'armor' | 'trinket') {
     mutate((d) => { unequipItem(d, slot); });
   }
-  function repair(slot: 'weapon' | 'armor' | 'trinket', max: number) {
+  function repair(id: string, max: number) {
     if ((p!.inventory['repair_kit'] || 0) < 1) {
       toast("Tu n'as pas de kit de réparation.", 'bad');
       return;
     }
     mutate((d) => {
       d.inventory['repair_kit'] -= 1;
-      if (!d.gearDurability) d.gearDurability = { weapon: 0, armor: 0, trinket: 0, consumable: 0, material: 0 };
-      d.gearDurability[slot] = max;
+      if (!d.gearDurability) d.gearDurability = {};
+      d.gearDurability[id] = max;
     });
     toast('Équipement réparé !', 'good');
   }
-  function upgrade(slot: 'weapon' | 'armor' | 'trinket') {
+  function upgrade(id: string) {
     if ((p!.inventory['upgrade_matrix'] || 0) < 1) {
       toast("Tu n'as pas de matrice d'amélioration.", 'bad');
       return;
     }
     mutate((d) => {
       d.inventory['upgrade_matrix'] -= 1;
-      if (!d.gearStars) d.gearStars = { weapon: 0, armor: 0, trinket: 0, consumable: 0, material: 0 };
-      const cur = d.gearStars[slot] || 0;
+      if (!d.gearStars) d.gearStars = {};
+      const cur = d.gearStars[id] || 0;
       const chances = [1, 0.9, 0.75, 0.6, 0.4];
       if (Math.random() <= chances[cur]) {
-        d.gearStars[slot] = cur + 1;
-        toast(d.gearStars[slot] === 5 ? 'Légendaire ! Ton objet a atteint 5 étoiles !' : `Amélioration réussie ! (${d.gearStars[slot]}★)`, 'good');
+        d.gearStars[id] = cur + 1;
+        toast(d.gearStars[id] === 5 ? 'Légendaire ! Ton objet a atteint 5 étoiles !' : `Amélioration réussie ! (${d.gearStars[id]}★)`, 'good');
       } else {
         toast("L'amélioration a échoué...", 'bad');
       }
@@ -111,7 +111,7 @@ export default function EquipmentCard() {
   for (const slot of ['weapon', 'armor', 'trinket'] as const) {
     const eqId = p.equipped[slot];
     const it = eqId ? item(eqId) : null;
-    if (it && it.setId && (p.gearDurability?.[slot] ?? 1) > 0) {
+    if (it && it.setId && eqId && (p.gearDurability?.[eqId] ?? 1) > 0) {
       setIdsCount[it.setId] = (setIdsCount[it.setId] || 0) + 1;
     }
   }
@@ -129,8 +129,8 @@ export default function EquipmentCard() {
         const equippedId = p.equipped[slot];
         const eq = equippedId ? item(equippedId)! : null;
         const candidates = owned(slot).filter(([id]) => id !== equippedId && canEquip(p, item(id)!));
-        const stars = p.gearStars?.[slot] || 0;
-        const dur = p.gearDurability?.[slot] ?? eq?.maxDurability ?? 0;
+        const stars = equippedId ? (p.gearStars?.[equippedId] || 0) : 0;
+        const dur = equippedId ? (p.gearDurability?.[equippedId] ?? eq?.maxDurability ?? 0) : 0;
         const durMax = eq?.maxDurability ?? 0;
         const durRatio = durMax ? dur / durMax : 1;
         const durColor = durRatio <= 0 ? '#ef4444' : durRatio < 0.25 ? '#f97316' : durRatio < 0.6 ? '#eab308' : '#22c55e';
@@ -166,7 +166,7 @@ export default function EquipmentCard() {
                     <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
                       <span className={dur === 0 ? 'text-red-400 font-bold' : ''}>🔧 Durabilité {dur} / {durMax}</span>
                       {dur < durMax && (
-                        <button onClick={() => repair(slot, durMax)} className="rounded bg-orange-500/25 px-2 py-0.5 hover:bg-orange-500/45">
+                        <button onClick={() => repair(equippedId!, durMax)} className="rounded bg-orange-500/25 px-2 py-0.5 hover:bg-orange-500/45">
                           Réparer 🛠️{p.inventory['repair_kit'] || 0}
                         </button>
                       )}
@@ -185,7 +185,7 @@ export default function EquipmentCard() {
                       <span className="ml-1 text-slate-400">(+{stars * 10}% stats)</span>
                     </span>
                     {stars < 5 ? (
-                      <button onClick={() => upgrade(slot)} className="rounded bg-purple-500/30 px-2 py-0.5 text-[11px] hover:bg-purple-500/50">
+                      <button onClick={() => upgrade(equippedId!)} className="rounded bg-purple-500/30 px-2 py-0.5 text-[11px] hover:bg-purple-500/50">
                         Améliorer {UPGRADE_CHANCE[stars]} ✨{p.inventory['upgrade_matrix'] || 0}
                       </button>
                     ) : (

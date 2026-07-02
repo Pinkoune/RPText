@@ -86,10 +86,10 @@ export interface PlayerState {
   equipped: EquippedGear;
   
   // -- V2 Equipement --
-  /** Durabilité actuelle des équipements (0 à maxDurability). Si 0, l'équipement est cassé. */
-  gearDurability: Record<ItemSlot, number>;
-  /** Nombre d'étoiles (0 à 5) pour les équipements. Chaque étoile augmente les stats de base de l'objet. */
-  gearStars: Record<ItemSlot, number>;
+  /** Durabilité actuelle des équipements par ID (0 à maxDurability). Si 0, l'équipement est cassé. */
+  gearDurability: Record<string, number>;
+  /** Nombre d'étoiles (0 à 5) pour les équipements, par ID. */
+  gearStars: Record<string, number>;
 
   biome: BiomeId;
   /** Biomes débloqués. */

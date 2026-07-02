@@ -150,7 +150,7 @@ export default function WikiCard() {
                       const it = ITEMS[itemId];
                       return (
                         <span key={itemId} className="bg-black/40 px-1.5 py-0.5 rounded" style={{ color: it ? RARITY_COLOR[it.rarity] : 'white' }}>
-                          {it ? `${it.icon} ${it.name}` : itemId} ({chance}%)
+                          {it ? `${it.icon} ${it.name}` : itemId} ({Math.round(chance * 100)}%)
                         </span>
                       );
                     })}

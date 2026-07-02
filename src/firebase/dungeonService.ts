@@ -3,6 +3,7 @@ import { rtdb } from './config';
 import type { ClassId } from '../game/types';
 import type { CombatMods } from '../game/talents';
 import { DUNGEONS, type DungeonDef } from '../game/dungeons';
+import { getElementMult, getDmgTypeMult } from '../game/combat';
 
 export interface DungeonPlayer {
   uid: string;
@@ -16,7 +17,12 @@ export interface DungeonPlayer {
   isDead: boolean;
   mods: CombatMods;
   abilityCd: number;
+  weaponElement?: string;
+  weaponDmgType?: string;
+  armorElement?: string;
 }
+
+export type DungeonAffix = 'vampiric' | 'armored' | 'agile' | 'none';
 
 export interface DungeonMonster {
   idx: number; // Index in stages
@@ -27,6 +33,13 @@ export interface DungeonMonster {
   name: string;
   emoji: string;
   provokedBy: string | null;
+  provokeTurns: number;
+  element?: string;
+  weaknesses?: string[];
+  resistances?: string[];
+  staggerHits: number;
+  staggered: boolean;
+  affix: DungeonAffix;
 }
 
 export interface TurnEvent {
@@ -44,6 +57,7 @@ export interface DungeonSession {
   turnOrder: string[]; // uids and 'monster'
   turnIdx: number;
   turnStartAt: number;
+  roundCount: number;
   log: TurnEvent[];
   startedAt: number;
 }
@@ -68,10 +82,13 @@ export async function createDungeonLobby(hostUid: string, hostName: string, host
           uid: hostUid, name: hostName, classId: hostClass, ready: true,
           hp: Math.floor(pStats.maxHp * ratio), maxHp: Math.floor(pStats.maxHp * ratio), 
           atk: Math.floor(pStats.atk * ratio), def: Math.floor(pStats.def * ratio),
-          isDead: false, mods: pMods, abilityCd: 0
+          isDead: false, mods: pMods, abilityCd: 0,
+          weaponElement: pStats.weaponElement,
+          weaponDmgType: pStats.weaponDmgType,
+          armorElement: pStats.armorElement
         }
       },
-      turnOrder: [], turnIdx: 0, turnStartAt: 0, log: [], startedAt: 0
+      turnOrder: [], turnIdx: 0, turnStartAt: 0, roundCount: 1, log: [], startedAt: 0
     };
     return ds;
   });
@@ -89,7 +106,10 @@ export async function joinDungeon(id: string, uid: string, name: string, classId
         uid, name, classId, ready: false,
         hp: Math.floor(pStats.maxHp * ratio), maxHp: Math.floor(pStats.maxHp * ratio), 
         atk: Math.floor(pStats.atk * ratio), def: Math.floor(pStats.def * ratio),
-        isDead: false, mods: pMods, abilityCd: 0
+        isDead: false, mods: pMods, abilityCd: 0,
+        weaponElement: pStats.weaponElement,
+        weaponDmgType: pStats.weaponDmgType,
+        armorElement: pStats.armorElement
       };
     }
     return cur;
@@ -119,18 +139,24 @@ export async function leaveDungeon(id: string, uid: string): Promise<void> {
 function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1): DungeonMonster {
   const m = def.stages[idx];
   
-  // Scaling exponentiel de la difficulté en fonction du nombre de joueurs
-  const hpMult = Math.pow(numPlayers, 1.4); // 1->1, 2->2.6, 3->4.6, 4->6.9
-  const atkMult = Math.pow(numPlayers, 1.25); // 1->1, 2->2.3, 3->3.9, 4->5.6
-  const defMult = Math.pow(numPlayers, 1.15); // 1->1, 2->2.2, 3->3.5, 4->4.9
+  // NOUVEAU SCALING : PV montent vite, ATK modéré, DEF léger
+  const hpMult = Math.pow(numPlayers, 1.2) * (1 + (numPlayers - 1) * 0.1); 
+  const atkMult = 1 + (numPlayers - 1) * 0.3; // max 1.9x
+  const defMult = 1 + (numPlayers - 1) * 0.15; // max 1.45x
 
   const hp = Math.floor(m.hp * hpMult);
   const atk = Math.floor(m.atk * atkMult);
   const defense = Math.floor(m.def * defMult);
 
+  const affixes: DungeonAffix[] = ['vampiric', 'armored', 'agile', 'none', 'none'];
+  let affix = affixes[Math.floor(Math.random() * affixes.length)];
+  if (idx < def.stages.length - 1 && Math.random() < 0.5) affix = 'none'; // Bosses have higher chance
+
   return {
     idx, hp, maxHp: hp, def: defense, atk,
-    name: m.name, emoji: m.emoji, provokedBy: null
+    name: m.name, emoji: m.emoji, provokedBy: null, provokeTurns: 0,
+    element: m.element, weaknesses: m.weaknesses, resistances: m.resistances,
+    staggerHits: 0, staggered: false, affix
   };
 }
 
@@ -163,11 +189,13 @@ export async function startDungeon(id: string): Promise<void> {
 function advanceTurn(cur: DungeonSession) {
   cur.turnStartAt = Date.now();
   let nextIdx = (cur.turnIdx + 1) % cur.turnOrder.length;
+  if (nextIdx === 0) cur.roundCount++;
+
   let loops = 0;
-  
   // Skip dead players
   while (cur.turnOrder[nextIdx] !== 'monster' && cur.players[cur.turnOrder[nextIdx]].isDead && loops < 10) {
     nextIdx = (nextIdx + 1) % cur.turnOrder.length;
+    if (nextIdx === 0) cur.roundCount++;
     loops++;
   }
   cur.turnIdx = nextIdx;
@@ -179,28 +207,62 @@ function advanceTurn(cur: DungeonSession) {
 
 function executeMonsterTurn(cur: DungeonSession) {
   const m = cur.monster!;
-  let targetUid = m.provokedBy;
-  if (!targetUid || !cur.players[targetUid] || cur.players[targetUid].isDead) {
-    const alive = Object.values(cur.players).filter(p => !p.isDead);
-    if (alive.length > 0) {
-      targetUid = alive[Math.floor(Math.random() * alive.length)].uid;
-    } else {
-      targetUid = null;
-    }
+
+  if (m.staggered) {
+    m.staggered = false;
+    cur.log.push({ text: `🌀 ${m.name} est étourdi et passe son tour !`, side: 'info' });
+    advanceTurn(cur);
+    return;
   }
 
-  if (targetUid) {
-    const target = cur.players[targetUid];
-    // Monster attacks!
+  const isEnraged = cur.roundCount > 15;
+  const enrageMult = isEnraged ? 1.5 : 1;
+  const isAoE = cur.roundCount > 0 && cur.roundCount % 4 === 0;
+
+  // Decrease provoke
+  if (m.provokeTurns > 0) m.provokeTurns--;
+
+  let targetUid = m.provokeTurns > 0 ? m.provokedBy : null;
+  const alive = Object.values(cur.players).filter(p => !p.isDead);
+  
+  if (targetUid && (!cur.players[targetUid] || cur.players[targetUid].isDead)) {
+    targetUid = null;
+    m.provokedBy = null;
+    m.provokeTurns = 0;
+  }
+
+  if (alive.length === 0) {
+    cur.state = 'defeat';
+    cur.log.push({ text: `Toute l'équipe a été vaincue... Échec du donjon.`, side: 'enemy' });
+    return;
+  }
+
+  // Si on AoE et qu'il n'y a PAS de provocation, on cible tout le monde
+  const targets = (isAoE && !targetUid) ? alive : [targetUid ? cur.players[targetUid] : alive[Math.floor(Math.random() * alive.length)]];
+
+  if (isEnraged && !m.staggered && targets.length > 0) {
+    cur.log.push({ text: `😡 ${m.name} est ENRAGÉ ! (+50% Dégâts)`, side: 'enemy' });
+  }
+
+  if (isAoE && !targetUid) {
+    cur.log.push({ text: `⚠️ ${m.name} prépare une ATTAQUE DE ZONE !`, side: 'enemy' });
+  }
+
+  let totalHeal = 0;
+
+  for (const target of targets) {
     const roll = m.atk - 2 + Math.random() * 4;
     let dmg = Math.max(1, Math.round(roll - target.def * 0.6));
-    dmg = Math.max(1, Math.round(dmg * (1 - target.mods.dmgReduction)));
-    
+    dmg = Math.max(1, Math.round(dmg * enrageMult * (1 - target.mods.dmgReduction)));
+    if (m.affix === 'agile' && Math.random() < 0.2) dmg = Math.round(dmg * 1.2);
+
     if (Math.random() < target.mods.dodge) {
       cur.log.push({ text: `L'attaque de ${m.name} sur ${target.name} échoue (Esquive) !`, side: 'info' });
     } else {
       target.hp -= dmg;
+      if (m.affix === 'vampiric') totalHeal += Math.round(dmg * 0.2);
       cur.log.push({ text: `${m.name} attaque ${target.name} et inflige ${dmg} dégâts !`, side: 'enemy' });
+      
       if (target.hp <= 0) {
         target.hp = 0;
         target.isDead = true;
@@ -209,18 +271,23 @@ function executeMonsterTurn(cur: DungeonSession) {
     }
   }
 
-  m.provokedBy = null; // Provoke wears off after attack
+  if (totalHeal > 0) {
+    m.hp = Math.min(m.maxHp, m.hp + totalHeal);
+    cur.log.push({ text: `🩸 ${m.name} draine ${totalHeal} PV (Vampirique) !`, side: 'enemy' });
+  }
+
+  if (m.provokeTurns <= 0) m.provokedBy = null;
 
   const allDead = Object.values(cur.players).every(p => p.isDead);
   if (allDead) {
     cur.state = 'defeat';
     cur.log.push({ text: `Toute l'équipe a été vaincue... Échec du donjon.`, side: 'enemy' });
   } else {
-    advanceTurn(cur); // Move back to player turn
+    advanceTurn(cur);
   }
 }
 
-export async function submitDungeonAction(id: string, uid: string, action: 'attack' | 'ability' | 'potion' | 'timeout' | 'dungeon_timeout' | 'flee', potionHeal?: number): Promise<void> {
+export async function submitDungeonAction(id: string, uid: string, action: 'attack' | 'ability' | 'potion' | 'timeout' | 'dungeon_timeout' | 'flee' | 'revive', potionHeal?: number, targetUid?: string): Promise<void> {
   if (!rtdb) return;
   await runTransaction(ref(rtdb, `dungeons/${id}`), (cur: DungeonSession | null) => {
     if (!cur || cur.state !== 'combat') return cur;
@@ -237,14 +304,13 @@ export async function submitDungeonAction(id: string, uid: string, action: 'atta
       return cur;
     }
 
-    if (cur.turnOrder[cur.turnIdx] !== uid && action !== 'timeout') return cur; // Not their turn
+    if (cur.turnOrder[cur.turnIdx] !== uid && action !== 'timeout') return cur;
     if (action === 'timeout' && cur.turnOrder[cur.turnIdx] !== uid) {
-      // Allow host or others to trigger timeout if the actual turn player took too long (>32s)
       if (Date.now() - cur.turnStartAt < 32000) return cur;
     }
 
     const pUid = cur.turnOrder[cur.turnIdx];
-    const p = cur.players[pUid]; // Current player whose turn it is
+    const p = cur.players[pUid];
     const m = cur.monster!;
 
     if (p.isDead) {
@@ -252,8 +318,19 @@ export async function submitDungeonAction(id: string, uid: string, action: 'atta
       return cur;
     }
 
+    const isLastHope = Date.now() - cur.startedAt > 18 * 60 * 1000;
+    const hopeMult = isLastHope ? 1.3 : 1.0;
+    
+    const elemMult = getElementMult(p.weaponElement, m.element) * getDmgTypeMult(p.weaponDmgType, m as any);
+    const finalAtk = p.atk * hopeMult * elemMult;
+
     if (action === 'timeout') {
       cur.log.push({ text: `⌛ Le tour de ${p.name} est passé (inactif).`, side: 'info' });
+    } else if (action === 'revive' && targetUid && cur.players[targetUid]?.isDead) {
+      const t = cur.players[targetUid];
+      t.isDead = false;
+      t.hp = Math.floor(t.maxHp * 0.5);
+      cur.log.push({ text: `🪶 ${p.name} ressuscite ${t.name} !`, side: 'info' });
     } else if (action === 'potion') {
       const heal = potionHeal ?? 180;
       p.hp = Math.min(p.maxHp, p.hp + heal);
@@ -261,27 +338,37 @@ export async function submitDungeonAction(id: string, uid: string, action: 'atta
     } else if (action === 'ability' && p.abilityCd <= 0) {
       p.abilityCd = ABILITY_CD;
       if (p.classId === 'warrior') {
-        const dmg = Math.max(1, Math.round(p.atk * 1.5 - m.def));
+        const dmg = Math.max(1, Math.round(finalAtk * 1.5 - m.def));
         m.hp -= dmg;
         m.provokedBy = p.uid;
-        cur.log.push({ text: `🛡️ ${p.name} provoque ${m.name} et lui inflige ${dmg} dégâts !`, side: 'you' });
+        m.provokeTurns = 2; // 2 tours de provocation !
+        cur.log.push({ text: `🛡️ ${p.name} provoque ${m.name} pour 2 tours et inflige ${dmg} dégâts !`, side: 'you' });
       } else if (p.classId === 'healer') {
-        const heal = Math.round(p.maxHp * 0.4);
+        const heal = Math.round(p.atk * 2.5 + p.maxHp * 0.1);
         Object.values(cur.players).forEach(ally => {
           if (!ally.isDead) ally.hp = Math.min(ally.maxHp, ally.hp + heal);
         });
-        cur.log.push({ text: `✨ ${p.name} lance une vague de soin ! Toute l'équipe récupère des PV.`, side: 'info' });
+        cur.log.push({ text: `✨ ${p.name} lance une vague de soin ! (+${heal} PV à tous)`, side: 'info' });
+      } else if (p.classId === 'archer') {
+        const arrowHits = 3 + Math.floor(Math.random() * 3); // 3 to 5 hits
+        let total = 0;
+        for (let i = 0; i < arrowHits; i++) {
+          total += Math.max(1, Math.round(finalAtk * 0.8 - m.def * 0.5));
+        }
+        m.hp -= total;
+        cur.log.push({ text: `🏹 ${p.name} décoche une pluie de ${arrowHits} flèches : ${total} dégâts !`, side: 'you' });
       } else {
-        const dmg = Math.max(1, Math.round(p.atk * 2.5 - m.def));
+        // Mage
+        const dmg = Math.max(1, Math.round(finalAtk * 3.0 - m.def));
         m.hp -= dmg;
-        cur.log.push({ text: `🔥 ${p.name} déclenche une attaque surpuissante : ${dmg} dégâts !`, side: 'you' });
+        cur.log.push({ text: `🔥 ${p.name} lance une énorme Bombe Élémentaire : ${dmg} dégâts !`, side: 'you' });
       }
     } else {
       // Basic Attack
       const hits = 1 + (Math.random() < p.mods.doubleHit ? 1 : 0);
       let totalDmg = 0;
       for (let h = 0; h < hits; h++) {
-        let dmg = Math.max(1, (p.atk - 2 + Math.random() * 4) - m.def) + p.mods.flatDmg;
+        let dmg = Math.max(1, (finalAtk - 2 + Math.random() * 4) - m.def) + p.mods.flatDmg;
         if (p.hp < p.maxHp * 0.3 && p.mods.berserkBonus > 0) dmg = Math.round(dmg * (1 + p.mods.berserkBonus));
         if (Math.random() < p.mods.crit) dmg *= 2;
         dmg = Math.round(dmg);
@@ -289,29 +376,35 @@ export async function submitDungeonAction(id: string, uid: string, action: 'atta
         m.hp -= dmg;
       }
       cur.log.push({ text: `⚔️ ${p.name} attaque ${m.name} pour ${totalDmg} dégâts${hits > 1 ? ' (Tir double!)' : ''}.`, side: 'you' });
+      
+      // Stagger logic on weakness
+      if (elemMult > 1) {
+        m.staggerHits++;
+        if (m.staggerHits >= 3) {
+          m.staggered = true;
+          m.staggerHits = 0;
+          cur.log.push({ text: `⚡ FAIBLESSE EXPLOITÉE ! ${m.name} est BRISÉ (Stagger) !`, side: 'info' });
+        }
+      }
     }
 
     if (action !== 'timeout' && p.abilityCd > 0 && action !== 'ability') {
       p.abilityCd -= 1;
     }
 
-    // Regen
     if (p.mods.regen > 0 && p.hp > 0 && p.hp < p.maxHp) {
       p.hp = Math.min(p.maxHp, p.hp + p.mods.regen);
     }
 
-    // Keep only last 40 logs
     if (cur.log.length > 40) cur.log = cur.log.slice(cur.log.length - 40);
 
     if (m.hp <= 0) {
       cur.log.push({ text: `🎉 ${m.name} est vaincu !`, side: 'info' });
       const def = DUNGEONS.find(d => d.id === cur.dungeonId);
       if (def && m.idx + 1 < def.stages.length) {
-        // Next stage
         const numPlayers = Object.keys(cur.players).length;
         cur.monster = initMonster(def, m.idx + 1, numPlayers);
         cur.log.push({ text: `Un nouvel ennemi approche : ${cur.monster.name} !`, side: 'info' });
-        // Reset turn index to player 1
         cur.turnIdx = 0; 
         cur.turnStartAt = Date.now();
       } else {

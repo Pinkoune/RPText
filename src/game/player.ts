@@ -60,19 +60,39 @@ export function migratePlayer(p: PlayerState): PlayerState {
   
   // -- V2 Équipement --
   if (!p.gearDurability) {
-    p.gearDurability = { weapon: 0, armor: 0, trinket: 0, consumable: 0, material: 0 };
-    // Initialize full durability for equipped items
+    p.gearDurability = {};
     for (const slot of ['weapon', 'armor', 'trinket'] as const) {
       if (p.equipped[slot]) {
         const def = item(p.equipped[slot]!);
         if (def && def.maxDurability) {
-          p.gearDurability[slot] = def.maxDurability;
+          p.gearDurability[def.id] = def.maxDurability;
         }
       }
     }
+  } else {
+    // Migration from Slot-based to ID-based
+    for (const slot of ['weapon', 'armor', 'trinket'] as const) {
+      if (p.gearDurability[slot as string] !== undefined) {
+        if (p.equipped[slot]) {
+          p.gearDurability[p.equipped[slot]!] = p.gearDurability[slot as string];
+        }
+        delete p.gearDurability[slot as string];
+      }
+    }
   }
+
   if (!p.gearStars) {
-    p.gearStars = { weapon: 0, armor: 0, trinket: 0, consumable: 0, material: 0 };
+    p.gearStars = {};
+  } else {
+    // Migration from Slot-based to ID-based
+    for (const slot of ['weapon', 'armor', 'trinket'] as const) {
+      if (p.gearStars[slot as string] !== undefined) {
+        if (p.equipped[slot]) {
+          p.gearStars[p.equipped[slot]!] = p.gearStars[slot as string];
+        }
+        delete p.gearStars[slot as string];
+      }
+    }
   }
 
   // Déséquiper les objets devenus invalides (ex: objets cheatés achetés en boutique)
@@ -263,8 +283,8 @@ export function createPlayer(
     loginStreak: 0,
     seasonId: seasonId(),
     seasonPoints: 0,
-    gearDurability: { weapon: item(weapon)?.maxDurability ?? 0, armor: 0, trinket: 0, consumable: 0, material: 0 },
-    gearStars: { weapon: 0, armor: 0, trinket: 0, consumable: 0, material: 0 },
+    gearDurability: { [weapon]: item(weapon)?.maxDurability ?? 0 },
+    gearStars: {},
     createdAt: now,
     lastSeen: now,
   };
@@ -287,33 +307,36 @@ export function deriveStats(p: PlayerState): Stats {
 
   for (const slot of ['weapon', 'armor', 'trinket'] as const) {
     const id = p.equipped[slot];
-    const it = id ? item(id)! : undefined;
-    
-    // Check if broken (durability === 0)
-    const dur = p.gearDurability ? p.gearDurability[slot] : 1;
-    if (it && canEquip(p, it) && dur > 0) {
-      if (slot === 'weapon') {
-        weaponElement = it.element;
-        weaponDmgType = it.dmgType;
-      }
-      if (slot === 'armor') {
-        armorElement = it.element;
-      }
-      if (slot === 'trinket') {
-        trinketId = it.id;
-      }
+    if (id) {
+      const it = item(id);
+      if (it) {
+        const dur = p.gearDurability ? (p.gearDurability[id] ?? it.maxDurability ?? 1) : 1;
+        const broken = it.maxDurability && dur <= 0;
+        if (!broken && canEquip(p, it)) {
+          if (slot === 'weapon') {
+            weaponElement = it.element;
+            weaponDmgType = it.dmgType;
+          }
+          if (slot === 'armor') {
+            armorElement = it.element;
+          }
+          if (slot === 'trinket') {
+            trinketId = it.id;
+          }
 
-      const stars = p.gearStars ? (p.gearStars[slot] || 0) : 0;
-      const starMult = 1 + (stars * 0.1); // +10% stats per star
-      
-      atk += Math.floor((it.atk ?? 0) * starMult);
-      def += Math.floor((it.def ?? 0) * starMult);
-      maxHp += Math.floor((it.hp ?? 0) * starMult);
-      maxCp += Math.floor((it.maxCp ?? 0) * starMult);
-      maxGp += Math.floor((it.maxGp ?? 0) * starMult);
-      
-      if (it.setId) {
-        setIdsCount[it.setId] = (setIdsCount[it.setId] || 0) + 1;
+          const stars = p.gearStars ? (p.gearStars[id] || 0) : 0;
+          const starMult = 1 + (stars * 0.1); // +10% stats per star
+          
+          atk += Math.floor((it.atk ?? 0) * starMult);
+          def += Math.floor((it.def ?? 0) * starMult);
+          maxHp += Math.floor((it.hp ?? 0) * starMult);
+          maxCp += Math.floor((it.maxCp ?? 0) * starMult);
+          maxGp += Math.floor((it.maxGp ?? 0) * starMult);
+          
+          if (it.setId) {
+            setIdsCount[it.setId] = (setIdsCount[it.setId] || 0) + 1;
+          }
+        }
       }
     }
   }
@@ -366,12 +389,9 @@ export function equipItem(p: PlayerState, id: string): boolean {
   p.equipped[slot] = id;
   
   if (it.maxDurability) {
-    if (!p.gearDurability) p.gearDurability = { weapon: 0, armor: 0, trinket: 0, consumable: 0, material: 0 };
-    // Provide full durability if slot was empty or had no durability previously, else cap it
-    if (!prev) {
-      p.gearDurability[slot] = it.maxDurability;
-    } else {
-      p.gearDurability[slot] = Math.min(p.gearDurability[slot] || 0, it.maxDurability);
+    if (!p.gearDurability) p.gearDurability = {};
+    if (p.gearDurability[id] === undefined) {
+      p.gearDurability[id] = it.maxDurability;
     }
   }
 
@@ -443,15 +463,14 @@ export function cooldownLeft(p: PlayerState, key: string, durationMs: number): n
 /** Réduit la durabilité des équipements. Appelée après un combat (chasse, donjon). */
 export function reduceDurability(p: PlayerState, hitsTaken: number, hitsDealt: number) {
   if (!p.gearDurability) return;
-  // Les armes perdent de la durabilité en frappant
-  if (p.equipped.weapon && p.gearDurability.weapon > 0) {
-    p.gearDurability.weapon = Math.max(0, p.gearDurability.weapon - hitsDealt);
+  
+  if (p.equipped.weapon && (p.gearDurability[p.equipped.weapon] ?? 0) > 0) {
+    p.gearDurability[p.equipped.weapon] = Math.max(0, p.gearDurability[p.equipped.weapon] - hitsDealt);
   }
-  // L'armure et les bijoux perdent de la durabilité en encaissant des coups
-  if (p.equipped.armor && p.gearDurability.armor > 0) {
-    p.gearDurability.armor = Math.max(0, p.gearDurability.armor - hitsTaken);
+  if (p.equipped.armor && (p.gearDurability[p.equipped.armor] ?? 0) > 0) {
+    p.gearDurability[p.equipped.armor] = Math.max(0, p.gearDurability[p.equipped.armor] - hitsTaken);
   }
-  if (p.equipped.trinket && p.gearDurability.trinket > 0) {
-    p.gearDurability.trinket = Math.max(0, p.gearDurability.trinket - hitsTaken);
+  if (p.equipped.trinket && (p.gearDurability[p.equipped.trinket] ?? 0) > 0) {
+    p.gearDurability[p.equipped.trinket] = Math.max(0, p.gearDurability[p.equipped.trinket] - hitsTaken);
   }
 }

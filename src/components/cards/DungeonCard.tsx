@@ -160,7 +160,7 @@ export default function DungeonCard() {
     mutate(d => { d.dungeonSessionId = null; });
   }
 
-  async function act(action: 'attack' | 'ability' | 'potion' | 'flee', selectedPotionId?: string) {
+  async function act(action: 'attack' | 'ability' | 'potion' | 'flee' | 'revive', selectedPotionId?: string, targetUid?: string) {
     if (!session || session.state !== 'combat') return;
     if (action === 'potion' && !selectedPotionId) {
       return toast('Aucune potion sélectionnée.', 'bad');
@@ -171,7 +171,10 @@ export default function DungeonCard() {
       potHeal = item(potUse)!.hp ?? 0;
       mutate(d => { d.inventory[potUse]--; });
     }
-    await submitDungeonAction(session.id, p!.uid, action, potHeal);
+    if (action === 'revive') {
+      mutate(d => { d.inventory['phoenix_feather']--; });
+    }
+    await submitDungeonAction(session.id, p!.uid, action, potHeal, targetUid);
   }
 
   // Timeout check
@@ -235,18 +238,34 @@ export default function DungeonCard() {
     const timeLeft = Math.max(0, 30 - Math.floor((Date.now() - session.turnStartAt) / 1000));
     const me = session.players[p.uid];
 
+    const globalTimeLeft = Math.max(0, 20 * 60 - Math.floor((Date.now() - session.startedAt) / 1000));
+    const globalM = Math.floor(globalTimeLeft / 60);
+    const globalS = globalTimeLeft % 60;
+    const isEnraged = session.roundCount > 15;
+    const isLastHope = globalTimeLeft <= 120;
+
     return (
       <div className="space-y-3">
         <div className="flex justify-between items-center px-1">
-          <div className="text-xs font-semibold text-slate-300">⚔️ Combat de donjon</div>
-          <button onClick={() => { if (confirm('Es-tu sûr de vouloir fuir et abandonner le donjon pour toute ton équipe ?')) act('flee'); }} className="bg-rose-500/30 hover:bg-rose-500/50 rounded px-2 py-1 text-xs">Fuir le donjon</button>
+          <div className="text-xs font-semibold text-slate-300">
+            ⚔️ Combat de donjon <span className={isEnraged ? 'text-rose-400 animate-pulse' : ''}>(Tour {session.roundCount}/15)</span>
+          </div>
+          <div className={`text-xs font-mono font-bold ${isLastHope ? 'text-rose-400 animate-pulse' : 'text-amber-200'}`}>
+            ⌛ {globalM}:{globalS.toString().padStart(2, '0')}
+          </div>
+          <button onClick={() => { if (confirm('Es-tu sûr de vouloir fuir et abandonner le donjon pour toute ton équipe ?')) act('flee'); }} className="bg-rose-500/30 hover:bg-rose-500/50 rounded px-2 py-1 text-xs">Fuir</button>
         </div>
 
+        {isLastHope && <div className="text-[10px] text-center text-rose-400 font-bold bg-rose-500/10 py-1 rounded">🔥 Dernier Espoir : Dégâts +30% ! 🔥</div>}
+
         {/* Monster HUD */}
-        <div className="rounded-lg bg-black/25 p-3 text-center relative overflow-hidden">
+        <div className="rounded-lg bg-black/25 p-3 text-center relative overflow-hidden border border-black/10">
           <div className="text-4xl mb-1">{m.emoji}</div>
           <div className="font-bold">{m.name} <span className="text-xs text-slate-400">(Étape {m.idx + 1}/{def.stages.length})</span></div>
-          {m.provokedBy && <div className="text-[10px] text-rose-400 font-bold tracking-wide uppercase">💢 Provoqué par {session.players[m.provokedBy]?.name}</div>}
+          {m.affix !== 'none' && <div className="text-[10px] text-purple-400 font-bold uppercase">✨ {m.affix === 'vampiric' ? 'Vampirique' : m.affix === 'armored' ? 'Cuirassé' : 'Agile'}</div>}
+          {m.provokeTurns > 0 && <div className="text-[10px] text-rose-400 font-bold tracking-wide uppercase">💢 Provoqué par {session.players[m.provokedBy!]?.name}</div>}
+          {m.staggered && <div className="text-[10px] text-cyan-400 font-bold uppercase animate-pulse">⚡ BRISÉ (Passe son tour)</div>}
+          {!m.staggered && m.staggerHits > 0 && <div className="text-[10px] text-cyan-400/70">Faiblesse : {m.staggerHits}/3</div>}
           <div className="h-2 rounded bg-black/40 mt-2 mx-4">
             <div className="h-2 rounded bg-orange-400 transition-all duration-300" style={{ width: `${mhpPct}%` }} />
           </div>
@@ -261,8 +280,11 @@ export default function DungeonCard() {
             return (
               <div key={pl.uid} className={`rounded-lg p-2 text-xs border ${isTurn ? 'border-sky-400/50 bg-sky-500/10' : 'border-transparent bg-black/20'}`}>
                 <div className="flex justify-between items-center mb-1">
-                  <span className={`font-semibold ${pl.isDead ? 'text-slate-500 line-through' : ''}`}>
+                  <span className={`font-semibold flex gap-1 items-center ${pl.isDead ? 'text-slate-500 line-through' : ''}`}>
                     {pl.name} {isTurn && !pl.isDead && <span className="animate-pulse">⏳</span>}
+                    {pl.isDead && myTurn && !me.isDead && (p.inventory['phoenix_feather'] ?? 0) > 0 && (
+                      <button onClick={() => act('revive', undefined, pl.uid)} className="text-[10px] bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 px-1.5 py-0.5 rounded ml-2">🪶 Réanimer</button>
+                    )}
                   </span>
                   <span className="tabular-nums text-slate-400">{Math.round(pl.hp)}/{pl.maxHp}</span>
                 </div>
