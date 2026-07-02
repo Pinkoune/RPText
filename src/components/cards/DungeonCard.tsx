@@ -75,8 +75,12 @@ export default function DungeonCard() {
         // Bonus de groupe adouci (avant : superlinéaire n^1.2). +40% par membre
         // supplémentaire seulement — et la clé de donjon peut encore doubler.
         const groupMult = 1 + (numPlayers - 1) * 0.4;
-        const xpMult = groupMult;
-        const goldMult = groupMult;
+        
+        // Pénalité pour les joueurs bas niveau (anti-carry)
+        const lvlPenalty = Math.pow(Math.min(1, Math.max(1, p.level) / def.minLevel), 2);
+
+        const xpMult = groupMult * lvlPenalty;
+        const goldMult = groupMult * lvlPenalty;
         
         const baseReward = { 
           xp: Math.floor(totalXp * xpMult), 

@@ -74,6 +74,40 @@ export function migratePlayer(p: PlayerState): PlayerState {
       delete p.gearStars[slot as string];
     }
   }
+  
+  // -- V3 Normalisation anti-carry --
+  // Certains joueurs bas niveau ont reçu énormément d'XP en se faisant "carry" dans des donjons HL.
+  // On recalcule une "XP max légitime" basée sur leurs faits d'armes pour corriger les niveaux absurdes.
+  if ((p as any).levelNormalizedVersion !== 1) {
+    let totalXp = p.xp;
+    for (let l = 1; l < p.level; l++) {
+      totalXp += xpToNext(l);
+    }
+    
+    const totalClears = Object.values(p.dungeonClears || {}).reduce((a, b) => a + b, 0);
+    // Un kill donne max ~50xp, un donjon donne max ~800xp, + 3000xp buffer de quêtes/bonus
+    const maxLegitXp = (p.kills * 50) + (totalClears * 800) + 3000;
+    
+    if (totalXp > maxLegitXp && p.level > 2) {
+      // Le joueur a été propulsé illégitimement. On le plafonne à la maxLegitXp.
+      let newLevel = 1;
+      let remainingXp = maxLegitXp;
+      
+      while (remainingXp >= xpToNext(newLevel) && newLevel < 30) {
+        remainingXp -= xpToNext(newLevel);
+        newLevel++;
+      }
+      
+      p.level = newLevel;
+      p.xp = remainingXp;
+      // On corrige ses HP et on reset ses points de talent pour correspondre au nouveau niveau
+      p.hp = CLASSES[p.classId].base.maxHp; 
+      p.talentPoints = Math.max(0, p.level - 1);
+      p.talents = {}; // Reset complet de l'arbre
+    }
+    
+    (p as any).levelNormalizedVersion = 1;
+  }
 
   if (p.equipped.tool === undefined) p.equipped.tool = null;
   if (p.equipped.profession_armor === undefined) p.equipped.profession_armor = null;

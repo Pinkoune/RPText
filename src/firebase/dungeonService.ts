@@ -177,7 +177,7 @@ export async function startDungeon(id: string): Promise<void> {
     cur.state = 'combat';
     cur.startedAt = Date.now();
     const playersArr = Object.values(cur.players);
-    const avgLevel = playersArr.reduce((sum, p) => sum + p.level, 0) / Math.max(1, playersArr.length);
+    const avgLevel = playersArr.reduce((sum, p) => sum + (p.level || 1), 0) / Math.max(1, playersArr.length);
     cur.monster = initMonster(def, 0, playersArr.length, avgLevel);
     
     // Create turn order: randomly shuffle players, then add monster
@@ -432,7 +432,7 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
       const def = DUNGEONS.find(d => d.id === cur.dungeonId);
       if (def && m.idx + 1 < def.stages.length) {
         const playersArr = Object.values(cur.players);
-        const avgLevel = playersArr.reduce((sum, p) => sum + p.level, 0) / Math.max(1, playersArr.length);
+        const avgLevel = playersArr.reduce((sum, p) => sum + (p.level || 1), 0) / Math.max(1, playersArr.length);
         cur.monster = initMonster(def, m.idx + 1, playersArr.length, avgLevel);
         cur.log.push({ text: `Un nouvel ennemi approche : ${cur.monster.name} !`, side: 'info' });
         cur.turnIdx = 0; 
