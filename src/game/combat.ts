@@ -132,7 +132,7 @@ export function simulateCombat(
 
     // Régénération : passif à déclenchement aléatoire (pas chaque tour).
     if (mods.regen > 0 && php < maxHp && php > 0 && Math.random() < REGEN_CHANCE) {
-      const reg = Math.round(mods.regen);
+      const reg = Math.round(mods.regen / 3 + stats.level * 0.5);
       php = Math.min(maxHp, php + reg);
       rounds.push({ text: `Régénération ! +${reg} PV.`, playerHp: php, monsterHp: mhp });
     }
@@ -267,9 +267,9 @@ export function combatTurn(
     events.push({ text: `${monster.name} t'inflige ${mdmg}.`, side: 'enemy' });
   }
   
-  // Régénération : passif (Healer) 100% chance qui scale avec le niveau
+  // Régénération : passif (Healer) 100% chance qui scale avec le niveau, mais dont la base est divisée pour compenser le déclenchement garanti
   if (action === 'attack' && mods.regen > 0 && php < maxHp && php > 0) {
-    const reg = Math.round(mods.regen + stats.level * 0.5);
+    const reg = Math.max(1, Math.round(mods.regen / 3 + stats.level * 0.5));
     php = Math.min(maxHp, php + reg);
     events.push({ text: `Régénération ! +${reg} PV.`, side: 'info' });
   }

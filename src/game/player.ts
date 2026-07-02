@@ -140,6 +140,15 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (!Number.isFinite(p.craftXp)) p.craftXp = 0;
   if (!Number.isFinite(p.gold)) p.gold = 0;
   if (!Number.isFinite(p.level) || p.level < 1) p.level = 1;
+  
+  // Correction pour les familiers dont l'XP est passée en NaN
+  if (p.familiars) {
+    for (const [fId, fXp] of Object.entries(p.familiars)) {
+      if (!Number.isFinite(fXp)) {
+        p.familiars[fId] = 0;
+      }
+    }
+  }
 
   if (!p.dungeonClears) p.dungeonClears = {};
   if (!p.statistics) {

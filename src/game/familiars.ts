@@ -145,7 +145,7 @@ export function familiarAbility(p: PlayerState): FamiliarAbility | null {
 /** Ajoute de l'XP au familier actif (appelé après une victoire). Plafonne au niveau max. */
 export function grantFamiliarXp(p: PlayerState, amount: number): void {
   const id = p.activeFamiliarId;
-  if (!id || !p.familiars || !(id in p.familiars)) return;
+  if (!id || !p.familiars || !(id in p.familiars) || isNaN(amount)) return;
   const prog = familiarProgress(p.familiars[id]);
   if (prog.maxed) return;
   p.familiars[id] += amount;
