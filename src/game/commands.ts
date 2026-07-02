@@ -61,6 +61,8 @@ export const COMMANDS: CommandDef[] = [
   { name: 'help', aliases: ['aide', 'commands', '?'], desc: 'Liste toutes les commandes.', category: 'Système' },
   { name: 'close', aliases: ['clear', 'esc'], desc: 'Ferme toutes les fenêtres.', category: 'Système' },
   { name: 'reset', aliases: ['resetui'], desc: "Réinitialise la position et l'état de toutes les fenêtres.", category: 'Système' },
+  { name: 'save', aliases: ['saveui', 'sauvegarder'], desc: 'Sauvegarde les fenêtres ouvertes et leurs positions.', category: 'Système' },
+  { name: 'reload', aliases: ['loadui', 'charger'], desc: 'Réouvre les fenêtres précédemment sauvegardées.', category: 'Système' },
   { name: 'wiki', aliases: ['bestiaire', 'items', 'encyclopedie'], desc: "Consulte l'encyclopédie des objets et des monstres.", category: 'Système' },
 ];
 
@@ -98,6 +100,21 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         useUi.getState().resetPrefs();
         useUi.getState().closeAll();
         ctx.toast('Toutes les fenêtres ont été réinitialisées.', 'info');
+      });
+      break;
+
+    case 'save':
+      import('../store/uiStore').then(({ useUi }) => {
+        useUi.getState().saveLayout();
+        ctx.toast('Disposition des fenêtres sauvegardée !', 'good');
+      });
+      break;
+
+    case 'reload':
+      import('../store/uiStore').then(({ useUi }) => {
+        useUi.getState().closeAll();
+        useUi.getState().loadLayout();
+        ctx.toast('Disposition chargée.', 'good');
       });
       break;
 

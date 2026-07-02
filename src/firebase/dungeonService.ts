@@ -258,14 +258,18 @@ function executeMonsterTurn(cur: DungeonSession) {
 
   for (const target of targets) {
     const roll = m.atk - 2 + Math.random() * 4;
-    let dmg = Math.max(1, Math.round(roll - target.def * 0.6));
-    dmg = Math.max(1, Math.round(dmg * enrageMult * (1 - target.mods.dmgReduction)));
+    const tDef = target.def || 5;
+    const dmgRed = target.mods?.dmgReduction || 0;
+    const dodge = target.mods?.dodge || 0;
+    
+    let dmg = Math.max(1, Math.round(roll - tDef * 0.6));
+    dmg = Math.max(1, Math.round(dmg * enrageMult * (1 - dmgRed)));
     if (m.affix === 'agile' && Math.random() < 0.2) dmg = Math.round(dmg * 1.2);
 
-    if (Math.random() < target.mods.dodge) {
+    if (Math.random() < dodge) {
       cur.log.push({ text: `L'attaque de ${m.name} sur ${target.name} échoue (Esquive) !`, side: 'info' });
     } else {
-      target.hp -= dmg;
+      target.hp = (target.hp || 0) - dmg;
       if (m.affix === 'vampiric') totalHeal += Math.round(dmg * 0.2);
       cur.log.push({ text: `${m.name} attaque ${target.name} et inflige ${dmg} dégâts !`, side: 'enemy' });
       
@@ -327,8 +331,9 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
     const isLastHope = Date.now() - cur.startedAt > 18 * 60 * 1000;
     const hopeMult = isLastHope ? 1.5 : 1.0;
     
+    const pAtk = p.atk || 10;
     const elemMult = getElementMult(p.weaponElement, m.element) * getDmgTypeMult(p.weaponDmgType, m as any);
-    const finalAtk = p.atk * hopeMult * elemMult;
+    const finalAtk = pAtk * hopeMult * elemMult;
 
     if (action === 'timeout') {
       cur.log.push({ text: `⌛ Le tour de ${p.name} est passé (inactif).`, side: 'info' });
@@ -348,8 +353,8 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
       if (skill) {
         if (skill.type === 'attack' || skill.type === 'shield' || skill.type === 'heal' || skill.type === 'buff') {
           if (skill.mult) {
-            const dmg = Math.max(1, Math.round(finalAtk * skill.mult - m.def));
-            m.hp -= dmg;
+            const dmg = Math.max(1, Math.round(finalAtk * skill.mult - (m.def || 0)));
+            m.hp = (m.hp || 0) - dmg;
             if (p.classId === 'warrior' || p.classId === 'paladin') {
               m.provokedBy = p.uid;
               m.provokeTurns = 2;
@@ -357,15 +362,17 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
             cur.log.push({ text: `✨ ${p.name} utilise ${skill.name} : ${dmg} dégâts !`, side: 'you' });
           }
           if (skill.healFrac) {
-            const heal = Math.round(p.atk * 2.0 + p.maxHp * skill.healFrac);
+            const pMaxHp = p.maxHp || 100;
+            const heal = Math.round(pAtk * 2.0 + pMaxHp * skill.healFrac);
             // AoE Heal for Healer/Dawn Priest/Druid
             if (p.classId === 'healer' || p.classId === 'dawn_priest' || p.classId === 'druid') {
               Object.values(cur.players).forEach(ally => {
-                if (!ally.isDead) ally.hp = Math.min(ally.maxHp, ally.hp + heal);
+                const allyMaxHp = ally.maxHp || 100;
+                if (!ally.isDead) ally.hp = Math.min(allyMaxHp, (ally.hp || 0) + heal);
               });
               cur.log.push({ text: `✨ ${p.name} utilise ${skill.name} et soigne tout le groupe (+${heal} PV) !`, side: 'info' });
             } else {
-              p.hp = Math.min(p.maxHp, p.hp + heal);
+              p.hp = Math.min(pMaxHp, (p.hp || 0) + heal);
               cur.log.push({ text: `✨ ${p.name} utilise ${skill.name} et se soigne (+${heal} PV).`, side: 'info' });
             }
           }
@@ -380,15 +387,22 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
       }
     } else {
       // Basic Attack
-      const hits = 1 + (Math.random() < p.mods.doubleHit ? 1 : 0);
+      const doubleHit = p.mods?.doubleHit || 0;
+      const hits = 1 + (Math.random() < doubleHit ? 1 : 0);
       let totalDmg = 0;
       for (let h = 0; h < hits; h++) {
-        let dmg = Math.max(1, (finalAtk - 2 + Math.random() * 4) - m.def) + p.mods.flatDmg;
-        if (p.hp < p.maxHp * 0.3 && p.mods.berserkBonus > 0) dmg = Math.round(dmg * (1 + p.mods.berserkBonus));
-        if (Math.random() < p.mods.crit) dmg *= 2;
+        const mDef = m.def || 0;
+        const flatDmg = p.mods?.flatDmg || 0;
+        const berserkBonus = p.mods?.berserkBonus || 0;
+        const crit = p.mods?.crit || 0;
+        
+        let dmg = Math.max(1, (finalAtk - 2 + Math.random() * 4) - mDef) + flatDmg;
+        const pMaxHp = p.maxHp || 100;
+        if ((p.hp || 0) < pMaxHp * 0.3 && berserkBonus > 0) dmg = Math.round(dmg * (1 + berserkBonus));
+        if (Math.random() < crit) dmg *= 2;
         dmg = Math.round(dmg);
         totalDmg += dmg;
-        m.hp -= dmg;
+        m.hp = (m.hp || 0) - dmg;
       }
       cur.log.push({ text: `⚔️ ${p.name} attaque ${m.name} pour ${totalDmg} dégâts${hits > 1 ? ' (Tir double!)' : ''}.`, side: 'you' });
       

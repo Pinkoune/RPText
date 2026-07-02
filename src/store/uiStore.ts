@@ -59,6 +59,8 @@ interface UiState {
   focus: (id: string) => void;
   savePref: (kind: WindowKind, pref: Partial<WindowPref>) => void;
   resetPrefs: () => void;
+  saveLayout: () => void;
+  loadLayout: () => void;
 }
 
 let counter = 0;
@@ -118,5 +120,20 @@ export const useUi = create<UiState>((set, get) => ({
   resetPrefs: () => {
     localStorage.removeItem(PREFS_KEY);
     set({ prefs: {} });
+  },
+  saveLayout: () => {
+    const s = get();
+    // Ne sauvegarde que les fenêtres sans payload complexe pour éviter les soucis de sérialisation
+    const layout = s.windows.filter(w => !w.payload).map(w => w.kind);
+    localStorage.setItem('rptext.savedLayout', JSON.stringify(layout));
+  },
+  loadLayout: () => {
+    try {
+      const raw = localStorage.getItem('rptext.savedLayout');
+      if (raw) {
+        const layout: WindowKind[] = JSON.parse(raw);
+        layout.forEach(kind => get().open(kind, undefined, { singleton: true }));
+      }
+    } catch {}
   }
 }));
