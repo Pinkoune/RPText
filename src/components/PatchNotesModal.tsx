@@ -34,7 +34,7 @@ export default function PatchNotesModal() {
       >
         <div className="mb-3 text-lg font-bold text-glow">📰 Quoi de neuf ?</div>
         <div className="max-h-[60vh] space-y-3 overflow-auto pr-1">
-          {PATCH_NOTES.map((sec, i) => (
+          {PATCH_NOTES[0]?.sections.map((sec, i) => (
             <div key={i}>
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-300">{sec.title}</div>
               <ul className="space-y-1 text-sm text-slate-200">

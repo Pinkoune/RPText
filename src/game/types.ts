@@ -1,6 +1,10 @@
 // ─── Types de base du jeu ────────────────────────────────────────────────
 
-export type ClassId = 'warrior' | 'mage' | 'archer' | 'healer';
+export type ClassId = 
+  | 'warrior' | 'paladin' | 'berserker' | 'dark_knight'
+  | 'mage' | 'pyromancer' | 'cryomancer' | 'arcanist'
+  | 'archer' | 'rogue' | 'bard' | 'hunter'
+  | 'healer' | 'dawn_priest' | 'druid' | 'monk';
 
 export type BiomeId =
   | 'forest'
@@ -13,7 +17,7 @@ export type BiomeId =
 export type Phase = 'dawn' | 'day' | 'dusk' | 'night';
 
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-export type ItemSlot = 'weapon' | 'armor' | 'trinket' | 'consumable' | 'material';
+export type ItemSlot = 'weapon' | 'armor' | 'trinket' | 'tool' | 'profession_armor' | 'consumable' | 'material';
 export type Element = 'fire' | 'earth' | 'water' | 'wind' | 'frost' | 'light' | 'dark' | 'neutral';
 export type DamageType = 'physical' | 'magical';
 
@@ -57,6 +61,8 @@ export interface Stats {
   weaponDmgType?: string;
   armorElement?: string;
   trinketId?: string;
+  toolId?: string;
+  professionArmorId?: string;
   /** Capacité de combat du familier équipé (proc en combat). */
   familiar?: { kind: 'strike' | 'guard' | 'heal'; power: number; chance: number; emoji: string; name: string; label: string };
 }
@@ -65,6 +71,8 @@ export interface EquippedGear {
   weapon: string | null;
   armor: string | null;
   trinket: string | null;
+  tool: string | null;
+  profession_armor: string | null;
 }
 
 export interface PlayerState {
@@ -148,6 +156,8 @@ export interface PlayerState {
   talentPoints: number;
   /** Rang investi par talent (id -> rang). */
   talents: Record<string, number>;
+  /** Compétences actives équipées (IDs des talents actifs). */
+  equippedSkills: string[];
   /** Version de la courbe d'XP appliquée (recalcul des niveaux à la migration). */
   curveVersion?: number;
   /** Version du dernier reset forcé des talents (bug : points conservés après le rework). */

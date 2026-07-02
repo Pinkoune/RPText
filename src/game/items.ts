@@ -8,6 +8,7 @@ export const ITEMS: Record<string, ItemDef> = {
   frost_shard: { id: 'frost_shard', name: 'Éclat de givre', icon: '🧊', rarity: 'rare', slot: 'material', value: 25, desc: 'Froid qui ne fond jamais.' },
   ember_core: { id: 'ember_core', name: 'Cœur de braise', icon: '🔥', rarity: 'rare', slot: 'material', value: 30, desc: 'Pulse d\'une chaleur ardente.' },
   void_dust: { id: 'void_dust', name: 'Poussière du vide', icon: '🌌', rarity: 'epic', slot: 'material', value: 80, desc: 'Aspire la lumière alentour.' },
+  boss_soul: { id: 'boss_soul', name: 'Âme de Boss', icon: '💎', rarity: 'legendary', slot: 'material', value: 500, desc: 'Une âme surpuissante, nécessaire pour l\'ascension.' },
   dryad_leaf: { id: 'dryad_leaf', name: 'Feuille de dryade', icon: '🍂', rarity: 'uncommon', slot: 'material', value: 12, desc: 'Pleine de sève magique.' },
   pure_water: { id: 'pure_water', name: 'Eau pure', icon: '💧', rarity: 'uncommon', slot: 'material', value: 15, desc: 'Une eau qui ne se corrompt jamais.' },
   sun_orb: { id: 'sun_orb', name: 'Orbe solaire', icon: '☀️', rarity: 'rare', slot: 'material', value: 35, desc: 'Chaude au toucher, brille dans le noir.' },
@@ -156,12 +157,12 @@ export const ITEMS: Record<string, ItemDef> = {
   venom_fang: { id: 'venom_fang', name: 'Croc venimeux', icon: '🦷', rarity: 'rare', slot: 'trinket', atk: 10, value: 260, desc: 'Extrait des tourbières du marais, encore toxique.' },
 
   // ── Équipements de Métier ──
-  smith_apron: { id: 'smith_apron', name: 'Tablier de Forgeron', icon: '🎽', rarity: 'uncommon', slot: 'armor', def: 5, maxCp: 30, maxDurability: 500, value: 50, desc: 'Améliore la concentration pour l\'artisanat.' },
-  master_hammer: { id: 'master_hammer', name: 'Marteau de Maître', icon: '🔨', rarity: 'rare', slot: 'weapon', atk: 5, maxCp: 50, maxDurability: 500, value: 120, desc: 'Outil de précision pour la forge.' },
+  smith_apron: { id: 'smith_apron', name: 'Tablier de Forgeron', icon: '🎽', rarity: 'uncommon', slot: 'profession_armor', def: 5, maxCp: 30, maxDurability: 500, value: 50, desc: 'Améliore la concentration pour l\'artisanat.' },
+  master_hammer: { id: 'master_hammer', name: 'Marteau de Maître', icon: '🔨', rarity: 'rare', slot: 'tool', atk: 5, maxCp: 50, maxDurability: 500, value: 120, desc: 'Outil de précision pour la forge.' },
   craft_goggles: { id: 'craft_goggles', name: 'Lunettes d\'Artisan', icon: '🥽', rarity: 'uncommon', slot: 'trinket', hp: 20, maxCp: 20, maxDurability: 300, value: 80, desc: 'Permet de voir les moindres détails.' },
 
-  farmer_boots: { id: 'farmer_boots', name: 'Bottes de Fermier', icon: '👢', rarity: 'uncommon', slot: 'armor', def: 5, maxGp: 20, maxDurability: 500, value: 50, desc: 'Bottes confortables pour les longues récoltes.' },
-  golden_sickle: { id: 'golden_sickle', name: 'Faucille en or', icon: '🌾', rarity: 'rare', slot: 'weapon', atk: 5, maxGp: 30, maxDurability: 500, value: 120, desc: 'Lame parfaite pour récolter sans abîmer.' },
+  farmer_boots: { id: 'farmer_boots', name: 'Bottes de Fermier', icon: '👢', rarity: 'uncommon', slot: 'profession_armor', def: 5, maxGp: 20, maxDurability: 500, value: 50, desc: 'Bottes confortables pour les longues récoltes.' },
+  golden_sickle: { id: 'golden_sickle', name: 'Faucille en or', icon: '🌾', rarity: 'rare', slot: 'tool', atk: 5, maxGp: 30, maxDurability: 500, value: 120, desc: 'Lame parfaite pour récolter sans abîmer.' },
   gather_gloves: { id: 'gather_gloves', name: 'Gants de Récolte', icon: '🧤', rarity: 'uncommon', slot: 'trinket', hp: 20, maxGp: 15, maxDurability: 300, value: 80, desc: 'Protègent les mains et évitent la fatigue.' },
 };
 export const RARITY_COLOR: Record<ItemDef['rarity'], string> = {

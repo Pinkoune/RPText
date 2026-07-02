@@ -55,7 +55,7 @@ export default function CraftCard() {
   const [classFilter, setClassFilter] = useState<ClassFilter>('all');
 
   const byGroup = useMemo(() => {
-    const map: Record<Group, Recipe[]> = { all: [], material: [], consumable: [], armor: [], weapon: [], trinket: [], profession: [] };
+    const map: Record<Group, Recipe[]> = { all: [], material: [], consumable: [], armor: [], weapon: [], trinket: [], tool: [], profession_armor: [], profession: [] };
 
     // Trier par set (regroupe visuellement les objets qui vont ensemble), puis niveau, puis difficulté.
     const sortedRecipes = [...RECIPES].sort((a, b) => {

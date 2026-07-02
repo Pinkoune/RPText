@@ -4,7 +4,7 @@ import { DUNGEONS, dungeonCooldownLeft, type DungeonDef } from '../../game/dunge
 import { item, RARITY_COLOR } from '../../game/items';
 import { playSound } from '../../game/sound';
 import { deriveStats, applyBonuses, grantXp, addItem } from '../../game/player';
-import { talentMods } from '../../game/talents';
+import { talentMods, getAllActiveSkills } from '../../game/talents';
 import { listenTeams, setTeamDungeon, type Team } from '../../firebase/groupsService';
 import {
   listenDungeon, listenAllDungeons, createDungeonLobby, joinDungeon, toggleReady, leaveDungeon,
@@ -102,6 +102,12 @@ export default function DungeonCard() {
           toast(`Donjon terminé ! +${(gold * mult).toLocaleString()} 🪙 · +${xp.toLocaleString()} XP`, 'gold');
           if (def.reward.fateCoins) toast(`+${def.reward.fateCoins * mult} 🎲`, 'gold');
           if (def.reward.gems) toast(`+${def.reward.gems * mult} 💎`, 'gold');
+          // Le donjon le plus dur lâche une Âme de Boss (pour l'ascension de classe).
+          if (def.id === 'dragon_shrine') {
+            const souls = 1 * mult;
+            d.inventory['boss_soul'] = (d.inventory['boss_soul'] ?? 0) + souls;
+            toast(`+${souls} 💎 Âme de Boss !`, 'gold');
+          }
           d.dungeonClears[def.id] = (d.dungeonClears[def.id] ?? 0) + 1;
         });
         const levels = grantXp(useGame.getState().player!, xp);
@@ -256,7 +262,7 @@ export default function DungeonCard() {
           <button onClick={() => { if (confirm('Es-tu sûr de vouloir fuir et abandonner le donjon pour toute ton équipe ?')) act('flee'); }} className="bg-rose-500/30 hover:bg-rose-500/50 rounded px-2 py-1 text-xs">Fuir</button>
         </div>
 
-        {isLastHope && <div className="text-[10px] text-center text-rose-400 font-bold bg-rose-500/10 py-1 rounded">🔥 Dernier Espoir : Dégâts +30% ! 🔥</div>}
+        {isLastHope && <div className="text-[10px] text-center text-rose-400 font-bold bg-rose-500/10 py-1 rounded">🔥 Dernier Espoir : Dégâts +50% ! 🔥</div>}
 
         {/* Monster HUD */}
         <div className="rounded-lg bg-black/25 p-3 text-center relative overflow-hidden border border-black/10">
@@ -328,14 +334,18 @@ export default function DungeonCard() {
             </div>
           ) : (
             <>
-              <button onClick={() => act('attack')} className="rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
-              <button
-                onClick={() => act('ability')}
-                disabled={me.abilityCd > 0}
-                className="rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
-              >
-                {me.abilityCd > 0 ? `✨ Compétence (${me.abilityCd})` : `✨ Compétence`}
-              </button>
+              <button onClick={() => act('attack')} className="col-span-1 rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
+              {getAllActiveSkills().filter(s => p.equippedSkills.includes(s.id)).map(skill => (
+                <button
+                  key={skill.id}
+                  onClick={() => act(skill.id as any)}
+                  disabled={me.abilityCd > 0}
+                  title={skill.desc}
+                  className="col-span-1 rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
+                >
+                  {me.abilityCd > 0 ? `${skill.icon} ${skill.name} (${me.abilityCd})` : `${skill.icon} ${skill.name}`}
+                </button>
+              ))}
               <button
                 onClick={() => {
                   const available = POTIONS.filter(id => (p.inventory[id] ?? 0) > 0);

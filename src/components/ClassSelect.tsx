@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGame } from '../store/gameStore';
-import { CLASS_LIST } from '../game/classes';
+import { BASE_CLASSES } from '../game/classes';
 import type { ClassId } from '../game/types';
 
 export default function ClassSelect() {
@@ -23,7 +23,7 @@ export default function ClassSelect() {
         />
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {CLASS_LIST.map((c) => (
+          {BASE_CLASSES.map((c) => (
             <button
               key={c.id}
               onClick={() => setSel(c.id)}

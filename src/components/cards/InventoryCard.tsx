@@ -4,13 +4,16 @@ import { item, RARITY_COLOR } from '../../game/items';
 import { deriveStats, removeItem, equipItem, canEquip } from '../../game/player';
 import type { ItemSlot } from '../../game/types';
 
-const GROUPS: { slot: ItemSlot | 'all'; label: string; icon: string }[] = [
+type Group = ItemSlot | 'all' | 'profession';
+
+const GROUPS: { slot: Group; label: string; icon: string }[] = [
   { slot: 'all', label: 'Tout', icon: '📋' },
   { slot: 'material', label: 'Ressources', icon: '🧱' },
   { slot: 'consumable', label: 'Consommables', icon: '🍲' },
   { slot: 'armor', label: 'Armures', icon: '🛡️' },
   { slot: 'weapon', label: 'Armes', icon: '⚔️' },
   { slot: 'trinket', label: 'Bijoux', icon: '💍' },
+  { slot: 'profession', label: 'Métier', icon: '🧰' },
 ];
 
 // Consommables « passifs » : utilisés automatiquement ou depuis une autre carte
@@ -22,7 +25,7 @@ export default function InventoryCard() {
   const mutate = useGame((s) => s.mutate);
   const toast = useGame((s) => s.toast);
 
-  const [group, setGroup] = useState<ItemSlot | 'all'>('all');
+  const [group, setGroup] = useState<Group>('all');
 
   if (!p) return null;
 
@@ -30,14 +33,16 @@ export default function InventoryCard() {
 
   const filteredEntries = useMemo(() => {
     if (group === 'all') return entries;
+    if (group === 'profession') return entries.filter(([id]) => { const s = item(id)?.slot; return s === 'tool' || s === 'profession_armor'; });
     return entries.filter(([id]) => item(id)?.slot === group);
   }, [entries, group]);
 
   const byGroupCount = useMemo(() => {
-    const map: Record<string, number> = { all: entries.length };
+    const map: Record<string, number> = { all: entries.length, profession: 0 };
     for (const [id] of entries) {
       const slot = item(id)?.slot ?? 'material';
       map[slot] = (map[slot] ?? 0) + 1;
+      if (slot === 'tool' || slot === 'profession_armor') map.profession++;
     }
     return map;
   }, [entries]);
@@ -103,7 +108,7 @@ export default function InventoryCard() {
       <div className="space-y-2">
         {filteredEntries.map(([id, qty]) => {
           const it = item(id)!;
-          const equippable = it.slot === 'weapon' || it.slot === 'armor' || it.slot === 'trinket';
+          const equippable = it.slot === 'weapon' || it.slot === 'armor' || it.slot === 'trinket' || it.slot === 'tool' || it.slot === 'profession_armor';
           const wrongClass = equippable && !canEquip(p, it);
           const isEquipped = Object.values(p.equipped).includes(id);
           return (

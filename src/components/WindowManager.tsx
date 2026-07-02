@@ -68,7 +68,7 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   season: { title: '🏅 Saison PvP', accent: '#7ad0ff' },
 };
 
-const WIDE: Partial<Record<WindowKind, boolean>> = { news: true, craft: true };
+const WIDE: Partial<Record<WindowKind, boolean>> = { news: true, craft: true, talents: true };
 
 export default function WindowManager() {
   const windows = useUi((s) => s.windows);

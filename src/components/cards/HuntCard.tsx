@@ -3,12 +3,13 @@ import { item, RARITY_COLOR } from '../../game/items';
 import { playSound } from '../../game/sound';
 import { useGame } from '../../store/gameStore';
 import { deriveStats, removeItem, reduceDurability } from '../../game/player';
-import { talentMods } from '../../game/talents';
-import { ABILITIES } from '../../game/talents';
+import { talentMods, getAllActiveSkills } from '../../game/talents';
 import {
   combatTurn,
   grantMonsterRewards,
   applyDeathPenalty,
+  freshCombatState,
+  type CombatState,
   type HuntAction,
   type TurnEvent,
   type HuntEncounter,
@@ -29,7 +30,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const [monsterHp, setMonsterHp] = useState(m.hp);
   const [log, setLog] = useState<TurnEvent[]>([]);
   const [status, setStatus] = useState<Status>('fighting');
-  const [abilityCd, setAbilityCd] = useState(0);
+  const [skillCds, setSkillCds] = useState<Record<string, number>>({});
   const [outcome, setOutcome] = useState<HuntRewards | null>(null);
   const [showPotions, setShowPotions] = useState(false);
   const logEnd = useRef<HTMLDivElement>(null);
@@ -37,24 +38,26 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const [bonusAtk, setBonusAtk] = useState(0);
   const [bonusMaxHp, setBonusMaxHp] = useState(0);
   const [combatHits, setCombatHits] = useState(0);
+  const [cstate, setCstate] = useState<CombatState>(freshCombatState());
 
   // Réinitialise quand une nouvelle rencontre arrive (relance de hunt).
   useEffect(() => {
     setMonsterHp(m.hp);
     setLog([]);
     setStatus('fighting');
-    setAbilityCd(0);
+    setSkillCds({});
     setOutcome(null);
     setBonusAtk(0);
     setBonusMaxHp(0);
     setCombatHits(0);
+    setCstate(freshCombatState());
   }, [encounter.id]);
 
   useEffect(() => { logEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [log]);
 
   if (!p) return null;
   const stats = deriveStats(p);
-  const ability = ABILITIES[p.classId];
+  const activeSkills = getAllActiveSkills().filter(s => p.equippedSkills.includes(s.id));
   const potionId = POTIONS.find((id) => (p.inventory[id] ?? 0) > 0);
   const potionCount = POTIONS.reduce((n, id) => n + (p.inventory[id] ?? 0), 0);
 
@@ -62,7 +65,12 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     if (status !== 'fighting') return;
     const player = useGame.getState().player;
     if (!player) return;
-    if (action === 'ability' && abilityCd > 0) return;
+    
+    let skill = undefined;
+    if (action !== 'attack' && action !== 'potion' && action !== 'flee') {
+      skill = activeSkills.find(s => s.id === action);
+      if (skill && (skillCds[skill.id] || 0) > 0) return;
+    }
 
     let potHeal = 0;
     let potUse: string | undefined;
@@ -77,10 +85,9 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     s.maxHp += bonusMaxHp;
     const mods = talentMods(player);
     const res = combatTurn(s, mods, { ...m, maxHp: m.hp }, player.hp, monsterHp, action, {
-      abilityMult: ability.mult,
-      abilityHealFrac: ability.healFrac,
+      activeSkill: skill,
       potionHeal: potHeal,
-    });
+    }, { ...cstate });
 
     let newBonusAtk = bonusAtk;
     let newBonusMaxHp = bonusMaxHp;
@@ -127,11 +134,19 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
 
     setMonsterHp(res.mhp);
     setLog((l) => [...l, ...res.events].slice(-40));
-    setAbilityCd((c) => (res.abilityUsed ? ABILITY_TURNS : Math.max(0, c - 1)));
+    setSkillCds((cds) => {
+      const next = { ...cds };
+      for (const id in next) next[id] = Math.max(0, next[id] - 1);
+      if (res.abilityUsed && skill) {
+        next[skill.id] = Math.ceil(skill.cooldownMs / 5000); // 1 turn = ~5s
+      }
+      return next;
+    });
     setStatus(newStatus);
     setBonusAtk(newBonusAtk);
     setBonusMaxHp(newBonusMaxHp);
     setCombatHits(newCombatHits);
+    setCstate(res.state);
 
     if (action === 'attack' || action === 'ability') playSound('hit');
     if (newStatus === 'won') {
@@ -153,7 +168,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       <div className="flex items-stretch gap-2">
         <div className="flex-1 rounded-lg bg-black/25 p-2">
           <div className="mb-1 flex items-center justify-between text-xs">
-            <span className="font-semibold">⚔️ Toi</span>
+            <span className="font-semibold">⚔️ Toi{cstate.shield > 0 && <span className="ml-1 text-sky-300">🛡️{cstate.shield}</span>}</span>
             <span className="tabular-nums text-slate-400">{Math.round(p.hp)}/{stats.maxHp}</span>
           </div>
           <div className="h-2 overflow-hidden rounded bg-black/40">
@@ -163,7 +178,12 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
         <div className="grid place-items-center text-xs text-slate-500">VS</div>
         <div className="flex-1 rounded-lg bg-black/25 p-2">
           <div className="mb-1 flex items-center justify-between text-xs">
-            <span className="font-semibold">{m.emoji} {m.name}</span>
+            <span className="font-semibold">
+              {m.emoji} {m.name}
+              {cstate.burn > 0 && <span className="ml-1" title={`Brûlure (${cstate.burn})`}>🔥{cstate.burn}</span>}
+              {cstate.poison > 0 && <span className="ml-1" title={`Poison (${cstate.poison})`}>🧪{cstate.poison}</span>}
+              {cstate.chill > 0 && <span className="ml-1" title={`Gelé (${cstate.chill})`}>❄️{cstate.chill}</span>}
+            </span>
             <span className="tabular-nums text-slate-400">{Math.max(0, Math.round(monsterHp))}/{m.hp}</span>
           </div>
           <div className="h-2 overflow-hidden rounded bg-black/40">
@@ -205,15 +225,18 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
             </div>
           ) : (
             <>
-              <button onClick={() => act('attack')} className="rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
-              <button
-                onClick={() => act('ability')}
-                disabled={abilityCd > 0}
-                title={ability.desc}
-                className="rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
-              >
-                {abilityCd > 0 ? `${ability.icon} ${ability.name} (${abilityCd})` : `${ability.icon} ${ability.name}`}
-              </button>
+              <button onClick={() => act('attack')} className="col-span-1 rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
+              {activeSkills.map(skill => (
+                <button
+                  key={skill.id}
+                  onClick={() => act(skill.id)}
+                  disabled={(skillCds[skill.id] || 0) > 0}
+                  title={skill.desc}
+                  className="col-span-1 rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
+                >
+                  {(skillCds[skill.id] || 0) > 0 ? `${skill.icon} ${skill.name} (${skillCds[skill.id]})` : `${skill.icon} ${skill.name}`}
+                </button>
+              ))}
               <button
                 onClick={() => {
                   const available = POTIONS.filter(id => (p.inventory[id] ?? 0) > 0);

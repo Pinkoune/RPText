@@ -2,6 +2,7 @@ import { ref, onValue, runTransaction, remove } from 'firebase/database';
 import { rtdb } from './config';
 import type { ClassId } from '../game/types';
 import type { CombatMods } from '../game/talents';
+import { getAllActiveSkills } from '../game/talents';
 import { DUNGEONS, type DungeonDef } from '../game/dungeons';
 import { getElementMult, getDmgTypeMult } from '../game/combat';
 
@@ -9,6 +10,7 @@ export interface DungeonPlayer {
   uid: string;
   name: string;
   classId: ClassId;
+  level: number;
   ready: boolean;
   hp: number;
   maxHp: number;
@@ -79,7 +81,7 @@ export async function createDungeonLobby(hostUid: string, hostName: string, host
       id, host: hostUid, dungeonId, state: 'lobby',
       players: {
         [hostUid]: {
-          uid: hostUid, name: hostName, classId: hostClass, ready: true,
+          uid: hostUid, name: hostName, classId: hostClass, ready: true, level: pLevel,
           hp: Math.floor(pStats.maxHp * ratio), maxHp: Math.floor(pStats.maxHp * ratio), 
           atk: Math.floor(pStats.atk * ratio), def: Math.floor(pStats.def * ratio),
           isDead: false, mods: pMods, abilityCd: 0,
@@ -103,7 +105,7 @@ export async function joinDungeon(id: string, uid: string, name: string, classId
       const def = DUNGEONS.find(d => d.id === cur.dungeonId);
       const ratio = def ? Math.pow(def.minLevel / Math.max(1, pLevel), 0.85) : 1;
       cur.players[uid] = {
-        uid, name, classId, ready: false,
+        uid, name, classId, ready: false, level: pLevel,
         hp: Math.floor(pStats.maxHp * ratio), maxHp: Math.floor(pStats.maxHp * ratio), 
         atk: Math.floor(pStats.atk * ratio), def: Math.floor(pStats.def * ratio),
         isDead: false, mods: pMods, abilityCd: 0,
@@ -136,13 +138,15 @@ export async function leaveDungeon(id: string, uid: string): Promise<void> {
   });
 }
 
-function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1): DungeonMonster {
+function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1, avgLevel: number = 1): DungeonMonster {
   const m = def.stages[idx];
   
   // NOUVEAU SCALING : PV montent vite, ATK modéré, DEF léger
-  const hpMult = Math.pow(numPlayers, 1.2) * (1 + (numPlayers - 1) * 0.1); 
-  const atkMult = 1 + (numPlayers - 1) * 0.3; // max 1.9x
-  const defMult = 1 + (numPlayers - 1) * 0.15; // max 1.45x
+  // Ajustement pour les joueurs haut niveau
+  const lvlMult = Math.pow(1 + Math.max(0, avgLevel - 1) / 30, avgLevel >= 20 ? 1.8 : 1.4);
+  const hpMult = Math.pow(numPlayers, 1.2) * (1 + (numPlayers - 1) * 0.1) * lvlMult; 
+  const atkMult = (1 + (numPlayers - 1) * 0.3) * lvlMult; 
+  const defMult = (1 + (numPlayers - 1) * 0.15) * lvlMult; 
 
   const hp = Math.floor(m.hp * hpMult);
   const atk = Math.floor(m.atk * atkMult);
@@ -155,7 +159,7 @@ function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1): Dung
   return {
     idx, hp, maxHp: hp, def: defense, atk,
     name: m.name, emoji: m.emoji, provokedBy: null, provokeTurns: 0,
-    element: m.element, weaknesses: m.weaknesses, resistances: m.resistances,
+    element: m.element ?? 'neutral', weaknesses: m.weaknesses ?? [], resistances: m.resistances ?? [],
     staggerHits: 0, staggered: false, affix
   };
 }
@@ -172,15 +176,16 @@ export async function startDungeon(id: string): Promise<void> {
 
     cur.state = 'combat';
     cur.startedAt = Date.now();
-    const numPlayers = Object.keys(cur.players).length;
-    cur.monster = initMonster(def, 0, numPlayers);
+    const playersArr = Object.values(cur.players);
+    const avgLevel = playersArr.reduce((sum, p) => sum + p.level, 0) / Math.max(1, playersArr.length);
+    cur.monster = initMonster(def, 0, playersArr.length, avgLevel);
     
     // Create turn order: randomly shuffle players, then add monster
     const uids = Object.keys(cur.players).sort(() => Math.random() - 0.5);
     cur.turnOrder = [...uids, 'monster'];
     cur.turnIdx = 0;
     cur.turnStartAt = Date.now();
-    cur.log = [{ text: `Le donjon commence ! ${cur.monster.name} (x${numPlayers} joueurs) apparaît.`, side: 'info' }];
+    cur.log = [{ text: `Le donjon commence ! ${cur.monster.name} (x${playersArr.length} joueurs) apparaît.`, side: 'info' }];
 
     return cur;
   });
@@ -287,7 +292,7 @@ function executeMonsterTurn(cur: DungeonSession) {
   }
 }
 
-export async function submitDungeonAction(id: string, uid: string, action: 'attack' | 'ability' | 'potion' | 'timeout' | 'dungeon_timeout' | 'flee' | 'revive', potionHeal?: number, targetUid?: string): Promise<void> {
+export async function submitDungeonAction(id: string, uid: string, action: string, potionHeal?: number, targetUid?: string): Promise<void> {
   if (!rtdb) return;
   await runTransaction(ref(rtdb, `dungeons/${id}`), (cur: DungeonSession | null) => {
     if (!cur || cur.state !== 'combat') return cur;
@@ -319,7 +324,7 @@ export async function submitDungeonAction(id: string, uid: string, action: 'atta
     }
 
     const isLastHope = Date.now() - cur.startedAt > 18 * 60 * 1000;
-    const hopeMult = isLastHope ? 1.3 : 1.0;
+    const hopeMult = isLastHope ? 1.5 : 1.0;
     
     const elemMult = getElementMult(p.weaponElement, m.element) * getDmgTypeMult(p.weaponDmgType, m as any);
     const finalAtk = p.atk * hopeMult * elemMult;
@@ -335,33 +340,42 @@ export async function submitDungeonAction(id: string, uid: string, action: 'atta
       const heal = potionHeal ?? 180;
       p.hp = Math.min(p.maxHp, p.hp + heal);
       cur.log.push({ text: `${p.name} boit une potion (+${heal} PV).`, side: 'you' });
-    } else if (action === 'ability' && p.abilityCd <= 0) {
+    } else if (action !== 'attack' && action !== 'timeout' && action !== 'flee' && action !== 'potion' && action !== 'revive' && p.abilityCd <= 0) {
+      // Action is a skill ID
       p.abilityCd = ABILITY_CD;
-      if (p.classId === 'warrior') {
-        const dmg = Math.max(1, Math.round(finalAtk * 1.5 - m.def));
-        m.hp -= dmg;
-        m.provokedBy = p.uid;
-        m.provokeTurns = 2; // 2 tours de provocation !
-        cur.log.push({ text: `🛡️ ${p.name} provoque ${m.name} pour 2 tours et inflige ${dmg} dégâts !`, side: 'you' });
-      } else if (p.classId === 'healer') {
-        const heal = Math.round(p.atk * 2.5 + p.maxHp * 0.1);
-        Object.values(cur.players).forEach(ally => {
-          if (!ally.isDead) ally.hp = Math.min(ally.maxHp, ally.hp + heal);
-        });
-        cur.log.push({ text: `✨ ${p.name} lance une vague de soin ! (+${heal} PV à tous)`, side: 'info' });
-      } else if (p.classId === 'archer') {
-        const arrowHits = 3 + Math.floor(Math.random() * 3); // 3 to 5 hits
-        let total = 0;
-        for (let i = 0; i < arrowHits; i++) {
-          total += Math.max(1, Math.round(finalAtk * 0.8 - m.def * 0.5));
+      const skill = getAllActiveSkills().find(s => s.id === action);
+      if (skill) {
+        if (skill.type === 'attack' || skill.type === 'shield' || skill.type === 'heal' || skill.type === 'buff') {
+          if (skill.mult) {
+            const dmg = Math.max(1, Math.round(finalAtk * skill.mult - m.def));
+            m.hp -= dmg;
+            if (p.classId === 'warrior' || p.classId === 'paladin') {
+              m.provokedBy = p.uid;
+              m.provokeTurns = 2;
+            }
+            cur.log.push({ text: `✨ ${p.name} utilise ${skill.name} : ${dmg} dégâts !`, side: 'you' });
+          }
+          if (skill.healFrac) {
+            const heal = Math.round(p.atk * 2.0 + p.maxHp * skill.healFrac);
+            // AoE Heal for Healer/Dawn Priest/Druid
+            if (p.classId === 'healer' || p.classId === 'dawn_priest' || p.classId === 'druid') {
+              Object.values(cur.players).forEach(ally => {
+                if (!ally.isDead) ally.hp = Math.min(ally.maxHp, ally.hp + heal);
+              });
+              cur.log.push({ text: `✨ ${p.name} utilise ${skill.name} et soigne tout le groupe (+${heal} PV) !`, side: 'info' });
+            } else {
+              p.hp = Math.min(p.maxHp, p.hp + heal);
+              cur.log.push({ text: `✨ ${p.name} utilise ${skill.name} et se soigne (+${heal} PV).`, side: 'info' });
+            }
+          }
+          if (skill.shield) {
+            const heal = Math.round(p.maxHp * skill.shield);
+            p.hp = p.hp + heal; // Temp overheal for dungeon
+            cur.log.push({ text: `✨ ${p.name} gagne un bouclier via ${skill.name} (+${heal} PV).`, side: 'info' });
+          }
         }
-        m.hp -= total;
-        cur.log.push({ text: `🏹 ${p.name} décoche une pluie de ${arrowHits} flèches : ${total} dégâts !`, side: 'you' });
       } else {
-        // Mage
-        const dmg = Math.max(1, Math.round(finalAtk * 3.0 - m.def));
-        m.hp -= dmg;
-        cur.log.push({ text: `🔥 ${p.name} lance une énorme Bombe Élémentaire : ${dmg} dégâts !`, side: 'you' });
+        cur.log.push({ text: `Compétence inconnue utilisée par ${p.name}.`, side: 'info' });
       }
     } else {
       // Basic Attack
@@ -402,8 +416,9 @@ export async function submitDungeonAction(id: string, uid: string, action: 'atta
       cur.log.push({ text: `🎉 ${m.name} est vaincu !`, side: 'info' });
       const def = DUNGEONS.find(d => d.id === cur.dungeonId);
       if (def && m.idx + 1 < def.stages.length) {
-        const numPlayers = Object.keys(cur.players).length;
-        cur.monster = initMonster(def, m.idx + 1, numPlayers);
+        const playersArr = Object.values(cur.players);
+        const avgLevel = playersArr.reduce((sum, p) => sum + p.level, 0) / Math.max(1, playersArr.length);
+        cur.monster = initMonster(def, m.idx + 1, playersArr.length, avgLevel);
         cur.log.push({ text: `Un nouvel ennemi approche : ${cur.monster.name} !`, side: 'info' });
         cur.turnIdx = 0; 
         cur.turnStartAt = Date.now();

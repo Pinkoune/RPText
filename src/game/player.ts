@@ -1,5 +1,5 @@
 import type { PlayerState, ClassId, Stats, QuestState, ItemDef } from './types';
-import { CLASSES, xpToNext, xpToNextV1 } from './classes';
+import { CLASSES, xpToNext } from './classes';
 import { getTeamBonus, getGuildBonus } from '../firebase/groupsService';
 import { item } from './items';
 import { BIOMES, BIOME_LIST } from './biomes';
@@ -9,7 +9,7 @@ import { activeEventEffect } from './events';
 import { ensureSeason, seasonId } from './season';
 
 /** Incrémenter force un reset unique des talents de tous les joueurs (bugfix). */
-export const TALENT_RESET_VERSION = 1;
+export const TALENT_RESET_VERSION = 3;
 
 /** Arme de départ selon la classe. */
 export function starterWeapon(classId: ClassId): string {
@@ -37,16 +37,8 @@ export function freshQuestState(now = Date.now()): QuestState {
 
 /** Complète les champs manquants des anciennes sauvegardes (migration douce). */
 export function migratePlayer(p: PlayerState): PlayerState {
-  // Recalcul unique des niveaux sous la nouvelle courbe d'XP (v2, plus dure).
-  // On reconstitue l'XP totale sous l'ancienne courbe, puis on re-nivelle.
+  // (v2) on utilisait l'ancienne courbe, mais maintenant tout a migré
   if (p.curveVersion !== 2) {
-    let total = p.xp || 0;
-    for (let n = 1; n < (p.level || 1); n++) total += xpToNextV1(n);
-    let lvl = 1;
-    let rem = total;
-    while (rem >= xpToNext(lvl)) { rem -= xpToNext(lvl); lvl += 1; }
-    p.level = lvl;
-    p.xp = rem;
     p.curveVersion = 2;
   }
   if (!p.quests) p.quests = freshQuestState();
@@ -70,37 +62,29 @@ export function migratePlayer(p: PlayerState): PlayerState {
       }
     }
   } else {
-    // Migration from Slot-based to ID-based
     for (const slot of ['weapon', 'armor', 'trinket'] as const) {
-      if (p.gearDurability[slot as string] !== undefined) {
-        if (p.equipped[slot]) {
-          p.gearDurability[p.equipped[slot]!] = p.gearDurability[slot as string];
-        }
-        delete p.gearDurability[slot as string];
-      }
+      delete p.gearDurability[slot as string];
     }
   }
 
   if (!p.gearStars) {
     p.gearStars = {};
   } else {
-    // Migration from Slot-based to ID-based
     for (const slot of ['weapon', 'armor', 'trinket'] as const) {
-      if (p.gearStars[slot as string] !== undefined) {
-        if (p.equipped[slot]) {
-          p.gearStars[p.equipped[slot]!] = p.gearStars[slot as string];
-        }
-        delete p.gearStars[slot as string];
-      }
+      delete p.gearStars[slot as string];
     }
   }
 
+  if (p.equipped.tool === undefined) p.equipped.tool = null;
+  if (p.equipped.profession_armor === undefined) p.equipped.profession_armor = null;
+
   // Déséquiper les objets devenus invalides (ex: objets cheatés achetés en boutique)
-  for (const slot of ['weapon', 'armor', 'trinket'] as const) {
+  // Ou les objets qui ont changé de slot (ex: armes devenues outils)
+  for (const slot of ['weapon', 'armor', 'trinket', 'tool', 'profession_armor'] as const) {
     const id = p.equipped[slot];
     if (id) {
       const it = item(id);
-      if (!it || !canEquip(p, it)) {
+      if (!it || !canEquip(p, it) || it.slot !== slot) {
         p.equipped[slot] = null;
         if (it) addItem(p, id, 1);
       }
@@ -181,8 +165,11 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (p.talentResetVersion !== TALENT_RESET_VERSION) {
     p.talents = {};
     p.talentPoints = Math.max(0, p.level - 1);
+    p.equippedSkills = []; // On déséquipe tout lors d'un reset majeur
     p.talentResetVersion = TALENT_RESET_VERSION;
   }
+  
+  if (!p.equippedSkills) p.equippedSkills = [];
 
   // Biome level constraint verification
   const maxAllowedBiomeIdx = BIOME_LIST.findIndex((b, idx, arr) => 
@@ -254,7 +241,7 @@ export function createPlayer(
     gems: 0,
     hp: cls.base.maxHp,
     inventory: { potion: 2 },
-    equipped: { weapon, armor: null, trinket: null },
+    equipped: { weapon, armor: null, trinket: null, tool: null, profession_armor: null },
     biome: 'forest',
     unlockedBiomes: ['forest'],
     cooldowns: {},
@@ -284,6 +271,7 @@ export function createPlayer(
     dungeonClears: {},
     talentPoints: 0,
     talents: {},
+    equippedSkills: [],
     talentResetVersion: TALENT_RESET_VERSION,
     curveVersion: 2,
     familiars: {},
@@ -313,8 +301,10 @@ export function deriveStats(p: PlayerState): Stats {
   let weaponDmgType: string | undefined;
   let armorElement: string | undefined;
   let trinketId: string | undefined;
+  let toolId: string | undefined;
+  let professionArmorId: string | undefined;
 
-  for (const slot of ['weapon', 'armor', 'trinket'] as const) {
+  for (const slot of ['weapon', 'armor', 'trinket', 'tool', 'profession_armor'] as const) {
     const id = p.equipped[slot];
     if (id) {
       const it = item(id);
@@ -331,6 +321,12 @@ export function deriveStats(p: PlayerState): Stats {
           }
           if (slot === 'trinket') {
             trinketId = it.id;
+          }
+          if (slot === 'tool') {
+            toolId = it.id;
+          }
+          if (slot === 'profession_armor') {
+            professionArmorId = it.id;
           }
 
           const stars = p.gearStars ? (p.gearStars[id] || 0) : 0;
@@ -385,6 +381,8 @@ export function deriveStats(p: PlayerState): Stats {
     weaponDmgType,
     armorElement,
     trinketId,
+    toolId,
+    professionArmorId,
     familiar: familiarAbility(p) ?? undefined,
   };
 }
@@ -393,7 +391,7 @@ export function equipItem(p: PlayerState, id: string): boolean {
   const it = item(id)!;
   if (!it || !canEquip(p, it)) return false;
   if ((p.inventory[id] ?? 0) <= 0) return false;
-  const slot = it.slot as 'weapon' | 'armor' | 'trinket';
+  const slot = it.slot as 'weapon' | 'armor' | 'trinket' | 'tool' | 'profession_armor';
   const prev = p.equipped[slot];
   p.equipped[slot] = id;
   
@@ -410,7 +408,7 @@ export function equipItem(p: PlayerState, id: string): boolean {
 }
 
 /** Déséquipe un slot (remet l'objet dans le sac). */
-export function unequipItem(p: PlayerState, slot: 'weapon' | 'armor' | 'trinket'): void {
+export function unequipItem(p: PlayerState, slot: 'weapon' | 'armor' | 'trinket' | 'tool' | 'profession_armor'): void {
   const prev = p.equipped[slot];
   if (prev) {
     addItem(p, prev, 1);
@@ -482,4 +480,14 @@ export function reduceDurability(p: PlayerState, hitsTaken: number, hitsDealt: n
   if (p.equipped.trinket && (p.gearDurability[p.equipped.trinket] ?? 0) > 0) {
     p.gearDurability[p.equipped.trinket] = Math.max(0, p.gearDurability[p.equipped.trinket] - hitsTaken);
   }
+}
+
+export function ascendPlayer(p: PlayerState, newClassId: ClassId): boolean {
+  if (p.level < 20) return false;
+  p.classId = newClassId;
+  // Ascension resets talents
+  p.talents = {};
+  p.equippedSkills = [];
+  p.talentPoints = Math.max(0, p.level - 1);
+  return true;
 }

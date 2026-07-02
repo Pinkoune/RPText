@@ -2,8 +2,8 @@ import type { MonsterDef, BiomeId, Phase } from './types';
 
 export const MONSTERS: MonsterDef[] = [
   // ── Forêt ──
-  { id: 'slime', name: 'Slime', hp: 45, atk: 10, def: 1, xp: 12, gold: [3, 8], biomes: ['forest', 'plains'], loot: { slime_gel: 0.6, potion: 0.15 , repair_kit: 0.05 , upgrade_matrix: 0.02 }, emoji: '🟢', element: 'water', dmgType: 'physical', weaknesses: ['magical'], resistances: ['physical'] },
-  { id: 'wolf', name: 'Loup gris', hp: 75, atk: 16, def: 3, xp: 22, gold: [6, 14], biomes: ['forest'], loot: { wolf_pelt: 0.5, rusty_sword: 0.05 , repair_kit: 0.05 , upgrade_matrix: 0.02 }, emoji: '🐺', element: 'earth', dmgType: 'physical', weaknesses: ['magical'] },
+  { id: 'slime', name: 'Slime', hp: 45, atk: 10, def: 1, xp: 12, gold: [3, 8], biomes: ['forest', 'plains'], loot: { slime_gel: 0.8, potion: 0.15 , repair_kit: 0.05 , upgrade_matrix: 0.02 }, emoji: '🟢', element: 'water', dmgType: 'physical', weaknesses: ['magical'], resistances: ['physical'] },
+  { id: 'wolf', name: 'Loup gris', hp: 75, atk: 16, def: 3, xp: 22, gold: [6, 14], biomes: ['forest'], loot: { wolf_pelt: 0.75, rusty_sword: 0.05 , repair_kit: 0.05 , upgrade_matrix: 0.02 }, emoji: '🐺', element: 'earth', dmgType: 'physical', weaknesses: ['magical'] },
   { id: 'bat', name: 'Chauve-souris', hp: 60, atk: 14, def: 2, xp: 18, gold: [4, 10], biomes: ['forest', 'swamp'], phases: ['dusk', 'night'], loot: { void_dust: 0.03, potion: 0.15 , repair_kit: 0.05 , upgrade_matrix: 0.02 }, emoji: '🦇', element: 'dark', dmgType: 'physical', weaknesses: ['physical'] },
   { id: 'dryad', name: 'Dryade', hp: 90, atk: 20, def: 8, xp: 45, gold: [10, 20], biomes: ['forest'], loot: { dryad_leaf: 0.4, herb: 0.8 , repair_kit: 0.05 , upgrade_matrix: 0.02 }, emoji: '🌿', element: 'earth', dmgType: 'magical', weaknesses: ['magical'], resistances: ['physical'] },
 
@@ -38,8 +38,9 @@ export function pickMonster(biome: BiomeId, phase: Phase, playerLevel: number = 
   const list = pool.length ? pool : MONSTERS.filter((m) => m.biomes.includes(biome));
   const baseMonster = list[Math.floor(Math.random() * list.length)];
   
-  // Scaling exponentiel basé sur le niveau du joueur
-  const scale = Math.pow(1 + Math.max(0, playerLevel - 1) / 30, 1.5);
+  // Scaling exponentiel basé sur le niveau du joueur (plus raide après l'Ascension au nv 20)
+  const powerFactor = playerLevel >= 20 ? 2.0 : 1.5;
+  const scale = Math.pow(1 + Math.max(0, playerLevel - 1) / 30, powerFactor);
   
   return {
     ...baseMonster,

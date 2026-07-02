@@ -3,10 +3,12 @@ import { item, RARITY_COLOR } from '../../game/items';
 import { deriveStats, equipItem, unequipItem, canEquip } from '../../game/player';
 import type { ItemDef, ItemSlot } from '../../game/types';
 
-const SLOTS: { slot: 'weapon' | 'armor' | 'trinket'; label: string; icon: string }[] = [
+const SLOTS: { slot: 'weapon' | 'armor' | 'trinket' | 'tool' | 'profession_armor'; label: string; icon: string }[] = [
   { slot: 'weapon', label: 'Arme', icon: '⚔️' },
   { slot: 'armor', label: 'Armure', icon: '🛡️' },
   { slot: 'trinket', label: 'Bijou', icon: '💍' },
+  { slot: 'tool', label: 'Outil', icon: '🪓' },
+  { slot: 'profession_armor', label: 'Tenue de Métier', icon: '🎽' },
 ];
 
 const SET_BONUSES: Record<string, { name: string; desc: string }> = {
@@ -69,7 +71,7 @@ export default function EquipmentCard() {
     mutate((d) => { equipItem(d, id); });
     toast(`${item(id)!.name} équipé.`, 'good');
   }
-  function unequip(slot: 'weapon' | 'armor' | 'trinket') {
+  function unequip(slot: 'weapon' | 'armor' | 'trinket' | 'tool' | 'profession_armor') {
     mutate((d) => { unequipItem(d, slot); });
   }
   function repair(id: string, max: number) {
@@ -108,7 +110,7 @@ export default function EquipmentCard() {
     Object.entries(p.inventory).filter(([id, q]) => item(id) && item(id)!.slot === slot && q > 0);
 
   const setIdsCount: Record<string, number> = {};
-  for (const slot of ['weapon', 'armor', 'trinket'] as const) {
+  for (const slot of ['weapon', 'armor', 'trinket', 'tool', 'profession_armor'] as const) {
     const eqId = p.equipped[slot];
     const it = eqId ? item(eqId) : null;
     if (it && it.setId && eqId && (p.gearDurability?.[eqId] ?? 1) > 0) {

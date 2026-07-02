@@ -3,7 +3,7 @@ import { deriveStats, grantXp, addItem, applyBonuses } from './player';
 import { item } from './items';
 import { PHASE_MODIFIERS, currentPhase } from './daynight';
 import { addQuestMetric } from './quests';
-import { emptyMods, type CombatMods } from './talents';
+import { emptyMods, type CombatMods, type ActiveSkillDef } from './talents';
 import { grantFamiliarXp } from './familiars';
 
 /** Probabilité que la régénération se déclenche à un tour donné (passif). */
@@ -155,11 +155,29 @@ export function simulateCombat(
 
 // ─── Combat interactif (chasse au tour par tour) ───────────────────────────
 
-export type HuntAction = 'attack' | 'ability' | 'potion' | 'flee';
+export type HuntAction = 'attack' | 'potion' | 'flee' | string;
 
 export interface TurnEvent {
   text: string;
   side: 'you' | 'enemy' | 'info';
+}
+
+/** État persistant d'un combat (bouclier du joueur + altérations sur le monstre). */
+export interface CombatState {
+  /** PV de bouclier absorbant les dégâts entrants. */
+  shield: number;
+  /** Tours restants et dégâts/tour de brûlure sur le monstre. */
+  burn: number;
+  burnPow: number;
+  /** Tours restants et dégâts/tour de poison. */
+  poison: number;
+  poisonPow: number;
+  /** Tours de gel : le monstre frappe plus faiblement. */
+  chill: number;
+}
+
+export function freshCombatState(): CombatState {
+  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, chill: 0 };
 }
 
 export interface TurnResult {
@@ -170,6 +188,7 @@ export interface TurnResult {
   abilityUsed: boolean;
   hitsDealt: number;
   hitsTaken: number;
+  state: CombatState;
 }
 
 export interface HuntEncounter {
@@ -197,7 +216,8 @@ export function combatTurn(
   php0: number,
   mhp0: number,
   action: HuntAction,
-  opts: { abilityMult?: number; abilityHealFrac?: number; potionHeal?: number } = {},
+  opts: { activeSkill?: ActiveSkillDef; potionHeal?: number } = {},
+  state: CombatState = freshCombatState(),
 ): TurnResult {
   let php = php0;
   let mhp = mhp0;
@@ -217,24 +237,47 @@ export function combatTurn(
   if (action === 'flee') {
     if (Math.random() < 0.55) {
       events.push({ text: 'Tu prends la fuite !', side: 'info' });
-      return { events, php, mhp, fled: true, abilityUsed, hitsDealt, hitsTaken };
+      return { events, php, mhp, fled: true, abilityUsed: false, hitsDealt, hitsTaken, state };
     }
     events.push({ text: 'Fuite ratée ! Le monstre t\'attaque.', side: 'info' });
   } else if (action === 'potion') {
     php = Math.min(maxHp, php + (opts.potionHeal ?? 0));
     events.push({ text: `Tu te soignes (+${opts.potionHeal} PV).`, side: 'info' });
-  } else if (action === 'ability') {
-    hitsDealt++;
-    let dmg = Math.max(1, Math.round(stats.atk * (opts.abilityMult ?? 1.6) * (0.9 + Math.random() * 0.3)) - effDef);
-    dmg = Math.round(dmg * atkMult);
-    if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
-    mhp -= dmg;
-    abilityUsed = true;
-    if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
-    events.push({ text: `Capacité : ${dmg} dégâts !`, side: 'you' });
-    if (opts.abilityHealFrac) {
-      php = Math.min(maxHp, php + Math.round(maxHp * opts.abilityHealFrac));
-      events.push({ text: 'Tu canalises un soin.', side: 'info' });
+  } else if (action !== 'attack') {
+    // action est l'ID de la compétence (ex: 'skill_meteor')
+    const skill = opts.activeSkill;
+    if (skill) {
+      abilityUsed = true; // On signale qu'une compétence a été utilisée (pour le cooldown global ou anim)
+      
+      if (skill.type === 'attack' || skill.type === 'shield' || skill.type === 'heal' || skill.type === 'buff') {
+        if (skill.mult) {
+          hitsDealt++;
+          let dmg = Math.max(1, Math.round(stats.atk * skill.mult * (0.9 + Math.random() * 0.3)) - effDef);
+          dmg = Math.round(dmg * atkMult);
+          if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
+          mhp -= dmg;
+          if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
+          events.push({ text: `${skill.name} : ${dmg} dégâts !`, side: 'you' });
+        }
+        if (skill.healFrac) {
+          const heal = Math.round(maxHp * skill.healFrac);
+          php = Math.min(maxHp, php + heal);
+          events.push({ text: `${skill.name} te rend ${heal} PV.`, side: 'info' });
+        }
+        if (skill.shield) {
+          // Vrai bouclier : PV qui absorbent les prochains dégâts entrants.
+          const amount = Math.round(maxHp * skill.shield);
+          state.shield += amount;
+          events.push({ text: `🛡️ ${skill.name} t'accorde un bouclier de ${amount} PV.`, side: 'info' });
+        }
+        if (skill.status && mhp > 0) {
+          const st = skill.status;
+          const pow = st.pow ? Math.max(1, Math.round(stats.atk * st.pow)) : 0;
+          if (st.type === 'burn') { state.burn = Math.max(state.burn, st.turns); state.burnPow = Math.max(state.burnPow, pow); events.push({ text: `🔥 ${monster.name} prend feu !`, side: 'you' }); }
+          else if (st.type === 'poison') { state.poison = Math.max(state.poison, st.turns); state.poisonPow = Math.max(state.poisonPow, pow); events.push({ text: `🧪 ${monster.name} est empoisonné !`, side: 'you' }); }
+          else if (st.type === 'chill') { state.chill = Math.max(state.chill, st.turns); events.push({ text: `❄️ ${monster.name} est gelé (frappe affaiblie) !`, side: 'you' }); }
+        }
+      }
     }
   } else {
     const hits = 1 + (Math.random() < mods.doubleHit ? 1 : 0);
@@ -252,7 +295,7 @@ export function combatTurn(
     }
   }
 
-  if (mhp <= 0) return { events, php, mhp: 0, fled, abilityUsed, hitsDealt, hitsTaken };
+  if (mhp <= 0) return { events, php, mhp: 0, fled, abilityUsed, hitsDealt, hitsTaken, state };
 
   // ── Phase monstre (plus dangereux : la défense ne mitige qu'à 80%) ──
   if (Math.random() < mods.dodge) {
@@ -262,8 +305,16 @@ export function combatTurn(
     let mdmg = Math.max(1, Math.round(roll(monster.atk, monster.atk + 4) - stats.def * 0.8));
     mdmg = Math.round(mdmg * defMult);
     mdmg = Math.max(1, Math.round(mdmg * (1 - mods.dmgReduction)));
-    php -= mdmg;
-    if (mods.thorns > 0) mhp = Math.max(0, mhp - Math.round(mdmg * mods.thorns));
+    if (state.chill > 0) mdmg = Math.max(1, Math.round(mdmg * 0.6)); // gel : dégâts réduits
+    // Absorption par le bouclier avant les PV.
+    if (state.shield > 0) {
+      const absorbed = Math.min(state.shield, mdmg);
+      state.shield -= absorbed;
+      mdmg -= absorbed;
+      if (absorbed > 0) events.push({ text: `🛡️ Ton bouclier absorbe ${absorbed} dégâts.`, side: 'info' });
+    }
+    if (mdmg > 0) php -= mdmg;
+    if (mods.thorns > 0) mhp = Math.max(0, mhp - Math.round((mdmg || 1) * mods.thorns));
     events.push({ text: `${monster.name} t'inflige ${mdmg}.`, side: 'enemy' });
   }
   
@@ -286,7 +337,23 @@ export function combatTurn(
     }
   }
 
-  return { events, php: Math.max(0, php), mhp: Math.max(0, mhp), fled, abilityUsed, hitsDealt, hitsTaken };
+  // ── Altérations de fin de tour (brûlure / poison sur le monstre) ──
+  if (mhp > 0) {
+    if (state.burn > 0 && state.burnPow > 0) {
+      mhp = Math.max(0, mhp - state.burnPow);
+      events.push({ text: `🔥 Brûlure : ${monster.name} perd ${state.burnPow} PV.`, side: 'you' });
+    }
+    if (state.poison > 0 && state.poisonPow > 0) {
+      mhp = Math.max(0, mhp - state.poisonPow);
+      events.push({ text: `🧪 Poison : ${monster.name} perd ${state.poisonPow} PV.`, side: 'you' });
+    }
+  }
+  // Décrémente la durée des altérations.
+  if (state.burn > 0) state.burn -= 1;
+  if (state.poison > 0) state.poison -= 1;
+  if (state.chill > 0) state.chill -= 1;
+
+  return { events, php: Math.max(0, php), mhp: Math.max(0, mhp), fled, abilityUsed, hitsDealt, hitsTaken, state };
 }
 
 /** Récompenses de victoire (mute le joueur). */

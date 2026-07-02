@@ -42,6 +42,7 @@ export default function BossCard() {
     mutate((d) => {
       d.gold += r.gold;
       d.fateCoins += r.fateCoins;
+      d.inventory['boss_soul'] = (d.inventory['boss_soul'] ?? 0) + 1; // sert à l'ascension de classe
       d.bossClaims.push(boss.id);
       if (wonFamiliar) {
         familiarId = rollFamiliar(d, 'legendary');
@@ -51,7 +52,7 @@ export default function BossCard() {
     });
     if (p!.guildId) void contributeGuild(p!.guildId, r.guildXp);
     playSound('win');
-    toast(`🏆 Butin réclamé : +${r.gold} 🪙, +${r.fateCoins} 🎲, +${r.guildXp} XP Guilde`, 'gold');
+    toast(`🏆 Butin réclamé : +${r.gold} 🪙, +${r.fateCoins} 🎲, +1 💎 Âme de Boss, +${r.guildXp} XP Guilde`, 'gold');
     if (wonFamiliar && familiarId) {
       toast(`🌠 Butin rare ! ${FAMILIARS[familiarId].emoji} ${FAMILIARS[familiarId].name} rejoint ton équipe !`, 'gold');
     }

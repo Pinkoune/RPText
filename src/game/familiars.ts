@@ -71,7 +71,7 @@ export function familiarXpToNext(level: number): number {
 
 export function familiarProgress(xp: number): { level: number; into: number; need: number; maxed: boolean } {
   let level = 1;
-  let acc = xp;
+  let acc = isNaN(xp) ? 0 : xp;
   let need = familiarXpToNext(level);
   while (acc >= need && level < MAX_FAMILIAR_LEVEL) {
     acc -= need;
@@ -146,6 +146,7 @@ export function familiarAbility(p: PlayerState): FamiliarAbility | null {
 export function grantFamiliarXp(p: PlayerState, amount: number): void {
   const id = p.activeFamiliarId;
   if (!id || !p.familiars || !(id in p.familiars) || isNaN(amount)) return;
+  if (isNaN(p.familiars[id])) p.familiars[id] = 0;
   const prog = familiarProgress(p.familiars[id]);
   if (prog.maxed) return;
   p.familiars[id] += amount;
