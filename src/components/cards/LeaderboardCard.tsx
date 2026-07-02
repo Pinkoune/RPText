@@ -29,19 +29,32 @@ export default function LeaderboardCard() {
     };
   }, [p?.uid, p?.level]);
 
+  // Masque les inactifs depuis > 30 min ; marque en jaune ceux > 5 min.
+  const visibleOnline = online.filter((o) => o.lastActive == null || Date.now() - o.lastActive < 30 * 60 * 1000);
+
   return (
     <div className="space-y-3">
       <div>
         <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-          En ligne · {online.length}
+          En ligne · {visibleOnline.length}
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {online.length === 0 && <span className="text-xs text-slate-500">Personne pour l'instant.</span>}
-          {online.map((o) => (
-            <span key={o.uid} className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs">
-              🟢 {o.name} <span className="text-slate-400">Nv.{o.level}</span>
-            </span>
-          ))}
+          {(() => {
+            const visible = visibleOnline;
+            if (visible.length === 0) return <span className="text-xs text-slate-500">Personne pour l'instant.</span>;
+            return visible.map((o) => {
+              const idle = o.lastActive != null && Date.now() - o.lastActive >= 5 * 60 * 1000;
+              return (
+                <span
+                  key={o.uid}
+                  className={`rounded-full px-2 py-0.5 text-xs ${idle ? 'bg-yellow-500/20 text-yellow-300' : 'bg-emerald-500/20'}`}
+                  title={idle ? 'Inactif depuis plus de 5 min' : 'Actif'}
+                >
+                  {idle ? '🟡' : '🟢'} {o.name} <span className={idle ? 'text-yellow-500/70' : 'text-slate-400'}>Nv.{o.level}</span>
+                </span>
+              );
+            });
+          })()}
         </div>
       </div>
 

@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { listenDuels, createDuel, joinDuel, cancelDuel, duelsEnabled, type Duel } from '../../firebase/duelService';
+import { addSeasonPoints, SEASON_POINTS } from '../../game/season';
+import { deriveStats } from '../../game/player';
+import { simulateDuel } from '../../game/pvp';
 
 export default function DuelCard() {
   const p = useGame((s) => s.player);
@@ -8,6 +11,7 @@ export default function DuelCard() {
   const toast = useGame((s) => s.toast);
   const [duels, setDuels] = useState<Duel[]>([]);
   const [bet, setBet] = useState(20);
+  const [combatLog, setCombatLog] = useState<{ won: boolean; log: string[] } | null>(null);
 
   useEffect(() => listenDuels(setDuels), []);
 
@@ -19,10 +23,11 @@ export default function DuelCard() {
       if (dl.status === 'resolved' && mine && !p.settledDuels.includes(dl.id)) {
         const won = dl.winnerUid === p.uid;
         mutate((d) => {
-          if (won) d.gold += dl.bet * 2;
+          if (won) { d.gold += dl.bet * 2; addSeasonPoints(d, SEASON_POINTS.duelWin); }
           d.settledDuels.push(dl.id);
         });
-        toast(won ? `⚔️ Duel gagné ! +${dl.bet} 🪙 net` : `Duel perdu… -${dl.bet} 🪙`, won ? 'gold' : 'bad');
+        if (dl.log?.length) setCombatLog({ won, log: dl.log });
+        toast(won ? `⚔️ Duel gagné ! +${dl.bet} 🪙 net · +${SEASON_POINTS.duelWin} pts saison` : `Duel perdu… -${dl.bet} 🪙`, won ? 'gold' : 'bad');
       } else if (dl.status === 'cancelled' && dl.hostUid === p.uid && !p.settledDuels.includes(dl.id)) {
         mutate((d) => {
           d.gold += dl.bet;
@@ -33,15 +38,20 @@ export default function DuelCard() {
   }, [duels, p?.uid]);
 
   if (!p) return null;
-  const me = { uid: p.uid, name: p.name };
+  const s = deriveStats(p);
+  const myFighter = { name: p.name, atk: s.atk, def: s.def, maxHp: s.maxHp };
+  const me = { uid: p.uid, name: p.name, stats: myFighter };
 
   function create() {
     if (p!.gold < bet) return toast('Pas assez d\'or.', 'bad');
     if (!duelsEnabled) {
-      // Mode local : duel contre un adversaire fantôme.
-      const won = Math.random() < 0.5;
+      // Mode local : combat contre un adversaire fantôme de puissance proche.
+      const ghost = { name: 'Fantôme', atk: Math.round(myFighter.atk * (0.85 + Math.random() * 0.3)), def: Math.round(myFighter.def * (0.85 + Math.random() * 0.3)), maxHp: Math.round(myFighter.maxHp * (0.85 + Math.random() * 0.3)) };
+      const sim = simulateDuel(myFighter, ghost);
+      const won = sim.winner === 'host';
       mutate((d) => { d.gold += won ? bet : -bet; });
-      toast(won ? `👻 Tu bats l'adversaire fantôme ! +${bet} 🪙` : `👻 L'adversaire fantôme l'emporte. -${bet} 🪙`, won ? 'gold' : 'bad');
+      setCombatLog({ won, log: sim.log });
+      toast(won ? `👻 Tu bats le Fantôme ! +${bet} 🪙` : `👻 Le Fantôme l'emporte. -${bet} 🪙`, won ? 'gold' : 'bad');
       return;
     }
     mutate((d) => { d.gold -= bet; });
@@ -65,8 +75,20 @@ export default function DuelCard() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-slate-400">
-        Pile ou face en <b>PvP</b> : le gagnant rafle la mise des deux joueurs. Or : <b>{p.gold} 🪙</b>
+        <b>Combat PvP</b> : tes stats (ATK/DEF/PV) décident du vainqueur, qui rafle la mise des deux joueurs. Or : <b>{p.gold} 🪙</b>
       </p>
+
+      {combatLog && (
+        <div className="rounded-lg bg-black/30 p-2">
+          <div className={`mb-1 text-xs font-semibold ${combatLog.won ? 'text-emerald-300' : 'text-rose-300'}`}>
+            {combatLog.won ? '⚔️ Victoire !' : '💀 Défaite…'}
+            <button onClick={() => setCombatLog(null)} className="float-right text-slate-500 hover:text-slate-300">✕</button>
+          </div>
+          <div className="max-h-24 space-y-0.5 overflow-auto text-[11px] text-slate-400">
+            {combatLog.log.map((l, i) => <div key={i}>{l}</div>)}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-2">
         <span className="text-sm">Mise</span>

@@ -56,6 +56,8 @@ export const ITEMS: Record<string, ItemDef> = {
   dark_amulet: { id: 'dark_amulet', name: 'Amulette Sombre', icon: '👁️', rarity: 'legendary', slot: 'trinket', atk: 20, hp: -20, value: 1500, desc: 'Sacrifie la santé pour la puissance.', element: 'dark', maxDurability: 300, setId: 'dark_set' },
   obsidian_ring: { id: 'obsidian_ring', name: 'Anneau d\'Obsidienne', icon: '⬛', rarity: 'epic', slot: 'trinket', def: 15, value: 600, desc: 'Dure comme le roc.', element: 'earth', maxDurability: 300, setId: 'obsidian_set' },
   mana_ring: { id: 'mana_ring', name: 'Anneau de Mana', icon: '🌸', rarity: 'rare', slot: 'trinket', atk: 8, hp: 100, value: 450, desc: 'Infusé de pure magie.', element: 'light', maxDurability: 300 },
+  titan_seal: { id: 'titan_seal', name: 'Sceau du Titan', icon: '🛡️', rarity: 'epic', slot: 'trinket', def: 16, hp: 120, value: 900, desc: 'La robustesse d\'un titan condensée en un sceau.', element: 'earth', maxDurability: 400 },
+  berserker_fang: { id: 'berserker_fang', name: 'Croc du Berserker', icon: '🩸', rarity: 'legendary', slot: 'trinket', atk: 22, hp: -15, value: 1600, desc: 'Sacrifie un peu de vitalité pour une rage dévastatrice.', element: 'dark', maxDurability: 400 },
 
   // ── Ressources exclusives à un biome ──
   wildflower: { id: 'wildflower', name: 'Fleur des plaines', icon: '🌼', rarity: 'common', slot: 'material', value: 7, desc: 'Ne pousse que dans les plaines venteuses.' },
@@ -97,9 +99,22 @@ export const ITEMS: Record<string, ItemDef> = {
   obsidian_blade: { id: 'obsidian_blade', name: 'Lame d\'Obsidienne', icon: '🗡️', rarity: 'epic', slot: 'weapon', atk: 35, classes: ['warrior'], value: 700, desc: 'Tranchant terrifiant, très lourde.', element: 'earth', dmgType: 'physical', maxDurability: 500, setId: 'obsidian_set' },
   ironwood_bow: { id: 'ironwood_bow', name: 'Arc en Bois de Fer', icon: '🏹', rarity: 'rare', slot: 'weapon', atk: 28, classes: ['archer'], value: 380, desc: 'Nécessite une force surhumaine pour le bander.', element: 'neutral', dmgType: 'physical', maxDurability: 500 },
 
+  // ── Armes intermédiaires (craft, niveaux 4-8) ──
+  bronze_blade: { id: 'bronze_blade', name: 'Lame de bronze', icon: '🗡️', rarity: 'uncommon', slot: 'weapon', atk: 13, classes: ['warrior', 'archer'], value: 90, desc: 'Un cran au-dessus du fer brut.', element: 'neutral', dmgType: 'physical', maxDurability: 550 },
+  oak_bow: { id: 'oak_bow', name: 'Arc de chêne', icon: '🏹', rarity: 'uncommon', slot: 'weapon', atk: 15, classes: ['archer'], value: 110, desc: 'Souple et fiable pour le chasseur aguerri.', element: 'neutral', dmgType: 'physical', maxDurability: 550 },
+  soldier_sword: { id: 'soldier_sword', name: 'Épée de soldat', icon: '⚔️', rarity: 'rare', slot: 'weapon', atk: 20, classes: ['warrior', 'archer'], value: 240, desc: 'L\'arme réglementaire des vétérans.', element: 'neutral', dmgType: 'physical', maxDurability: 600 },
+  ranger_bow: { id: 'ranger_bow', name: 'Arc de rôdeur', icon: '🏹', rarity: 'rare', slot: 'weapon', atk: 24, classes: ['archer'], value: 300, desc: 'Précis à longue portée.', element: 'wind', dmgType: 'physical', maxDurability: 600 },
+
+  // ── Armes de transition (mid-game, non liées à un set, niveaux 13-15) ──
+  tempered_greatblade: { id: 'tempered_greatblade', name: 'Grande lame trempée', icon: '⚔️', rarity: 'epic', slot: 'weapon', atk: 44, classes: ['warrior'], value: 1400, desc: 'Acier replié mille fois, tranchant redoutable.', element: 'neutral', dmgType: 'physical', maxDurability: 800 },
+  master_longbow: { id: 'master_longbow', name: 'Arc long de maître', icon: '🏹', rarity: 'epic', slot: 'weapon', atk: 40, classes: ['archer'], value: 1300, desc: 'Portée et précision au sommet de l\'artisanat.', element: 'neutral', dmgType: 'physical', maxDurability: 800 },
+  sage_staff: { id: 'sage_staff', name: 'Bâton du sage', icon: '🪄', rarity: 'epic', slot: 'weapon', atk: 42, classes: ['mage', 'healer'], value: 1350, desc: 'Concentre une magie stable et puissante.', element: 'neutral', dmgType: 'magical', maxDurability: 800 },
+
   // ── Bâtons & sceptres (Mage / Soigneur) ──
   apprentice_wand: { id: 'apprentice_wand', name: 'Baguette d\'apprenti', icon: '🪄', rarity: 'common', slot: 'weapon', atk: 4, classes: ['mage', 'healer'], value: 10, desc: 'Crépite d\'une faible magie.', element: 'light', dmgType: 'magical', maxDurability: 500 },
   arcane_staff: { id: 'arcane_staff', name: 'Bâton arcanique', icon: '🪈', rarity: 'uncommon', slot: 'weapon', atk: 12, classes: ['mage', 'healer'], value: 70, desc: 'Canalise les flux magiques.', element: 'neutral', dmgType: 'magical', maxDurability: 500 },
+  acolyte_wand: { id: 'acolyte_wand', name: 'Baguette d\'acolyte', icon: '🪄', rarity: 'uncommon', slot: 'weapon', atk: 14, classes: ['mage', 'healer'], value: 95, desc: 'Un pas de plus vers la maîtrise arcanique.', element: 'light', dmgType: 'magical', maxDurability: 550 },
+  adept_staff: { id: 'adept_staff', name: 'Bâton d\'adepte', icon: '🪈', rarity: 'rare', slot: 'weapon', atk: 24, classes: ['mage', 'healer'], value: 290, desc: 'Canalise des sorts plus puissants.', element: 'neutral', dmgType: 'magical', maxDurability: 600 },
   frost_scepter: { id: 'frost_scepter', name: 'Sceptre de givre', icon: '🔱', rarity: 'rare', slot: 'weapon', atk: 24, classes: ['mage', 'healer'], value: 230, desc: 'Le froid obéit à son porteur.', element: 'frost', dmgType: 'magical', maxDurability: 500, setId: 'frost_set' },
   crystal_staff: { id: 'crystal_staff', name: 'Bâton de cristal', icon: '🔮', rarity: 'epic', slot: 'weapon', atk: 40, classes: ['mage', 'healer'], value: 820, desc: 'Vibre d\'une puissance pure.', element: 'light', dmgType: 'magical', maxDurability: 500 },
   wind_staff: { id: 'wind_staff', name: 'Bâton du Vent', icon: '🌪️', rarity: 'rare', slot: 'weapon', atk: 20, classes: ['mage', 'healer'], value: 210, desc: 'Invoque des rafales coupantes.', element: 'wind', dmgType: 'magical', maxDurability: 500, setId: 'wind_set' },

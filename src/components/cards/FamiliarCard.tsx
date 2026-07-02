@@ -1,6 +1,6 @@
 import { useGame } from '../../store/gameStore';
 import {
-  FAMILIARS, familiarsByRarity, familiarProgress, rollFamiliar,
+  FAMILIARS, familiarsByRarity, familiarProgress, rollFamiliar, familiarAbility,
   RARITY_COLOR, RARITY_COST, MAX_FAMILIAR_LEVEL,
   type FamiliarRarity,
 } from '../../game/familiars';
@@ -74,6 +74,14 @@ export default function FamiliarCard() {
                 <div className="mt-1 text-[10px] text-slate-500">
                   {prog.maxed ? 'Niveau maximum atteint.' : `${prog.into}/${prog.need} XP`} · {def.desc}
                 </div>
+                {(() => {
+                  const ab = familiarAbility(p);
+                  return ab ? (
+                    <div className="mt-1.5 rounded bg-purple-500/10 px-2 py-1 text-[11px] text-purple-200">
+                      ✨ Capacité : {ab.label}
+                    </div>
+                  ) : null;
+                })()}
               </div>
             );
           })()

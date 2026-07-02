@@ -13,6 +13,7 @@ import ChatNotifs from './components/ChatNotifs';
 import LevelUpFx from './components/LevelUpFx';
 import PatchNotesModal from './components/PatchNotesModal';
 import DailyRewardModal from './components/DailyRewardModal';
+import SeasonRewardModal from './components/SeasonRewardModal';
 import { setAmbient, stopAmbientMusic } from './game/sound';
 
 import PresenceTracker from './components/PresenceTracker';
@@ -76,6 +77,7 @@ export default function App() {
       <LevelUpFx />
       <PatchNotesModal />
       <DailyRewardModal />
+      <SeasonRewardModal />
     </div>
   );
 }

@@ -103,6 +103,45 @@ export function rollFamiliar(p: PlayerState, rarity: FamiliarRarity): string {
   return list[Math.floor(Math.random() * list.length)].id;
 }
 
+// ─── Capacité de combat du familier ─────────────────────────────────────────
+// Chaque familier a un petit passif qui se déclenche parfois en combat, selon
+// son thème : attaque = frappe bonus, défense = bouclier (soin), PV = soin.
+// Volontairement modeste et croissant avec le niveau/rareté du familier.
+
+export type FamiliarAbilityKind = 'strike' | 'guard' | 'heal';
+
+export interface FamiliarAbility {
+  kind: FamiliarAbilityKind;
+  /** Puissance (dégâts ou PV rendus). */
+  power: number;
+  /** Probabilité de déclenchement par tour. */
+  chance: number;
+  emoji: string;
+  name: string;
+  label: string;
+}
+
+const RARITY_ABILITY_MULT: Record<FamiliarRarity, number> = {
+  common: 1, rare: 1.5, epic: 2.2, legendary: 3,
+};
+
+/** Capacité active du familier équipé, mise à l'échelle du niveau/rareté (null si aucun). */
+export function familiarAbility(p: PlayerState): FamiliarAbility | null {
+  const id = p.activeFamiliarId;
+  const xp = id ? p.familiars?.[id] : undefined;
+  const def = id ? FAMILIARS[id] : undefined;
+  if (!id || xp == null || !def) return null;
+  const lvl = familiarProgress(xp).level;
+  const power = Math.round((2 + lvl * 1.2) * RARITY_ABILITY_MULT[def.rarity]);
+  const chance = Math.min(0.35, 0.18 + lvl * 0.012);
+  const kind: FamiliarAbilityKind = def.stat === 'atk' ? 'strike' : def.stat === 'def' ? 'guard' : 'heal';
+  const label =
+    kind === 'strike' ? `Frappe (+${power} dégâts, ${Math.round(chance * 100)}%/tour)`
+    : kind === 'guard' ? `Protection (+${power} PV bloqués, ${Math.round(chance * 100)}%/tour)`
+    : `Soin (+${power} PV, ${Math.round(chance * 100)}%/tour)`;
+  return { kind, power, chance, emoji: def.emoji, name: def.name, label };
+}
+
 /** Ajoute de l'XP au familier actif (appelé après une victoire). Plafonne au niveau max. */
 export function grantFamiliarXp(p: PlayerState, amount: number): void {
   const id = p.activeFamiliarId;

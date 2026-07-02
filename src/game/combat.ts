@@ -18,6 +18,7 @@ export interface CombatStats {
   weaponDmgType?: string;
   armorElement?: string;
   trinketId?: string;
+  familiar?: { kind: 'strike' | 'guard' | 'heal'; power: number; chance: number; emoji: string; name: string; label: string };
 }
 
 export interface SimResult {
@@ -134,6 +135,18 @@ export function simulateCombat(
       const reg = Math.round(mods.regen);
       php = Math.min(maxHp, php + reg);
       rounds.push({ text: `Régénération ! +${reg} PV.`, playerHp: php, monsterHp: mhp });
+    }
+
+    // Familier : capacité passive (frappe / soin / protection).
+    if (stats.familiar && php > 0 && mhp > 0 && Math.random() < stats.familiar.chance) {
+      const f = stats.familiar;
+      if (f.kind === 'strike') {
+        mhp = Math.max(0, mhp - f.power);
+        rounds.push({ text: `${f.emoji} ${f.name} frappe (+${f.power} dégâts) !`, playerHp: Math.max(0, php), monsterHp: mhp });
+      } else if (php < maxHp) {
+        php = Math.min(maxHp, php + f.power);
+        rounds.push({ text: `${f.emoji} ${f.name} te ${f.kind === 'guard' ? 'protège' : 'soigne'} (+${f.power} PV) !`, playerHp: php, monsterHp: mhp });
+      }
     }
   }
 
@@ -259,6 +272,18 @@ export function combatTurn(
     const reg = Math.round(mods.regen + stats.level * 0.5);
     php = Math.min(maxHp, php + reg);
     events.push({ text: `Régénération ! +${reg} PV.`, side: 'info' });
+  }
+
+  // Familier : capacité passive (frappe / soin / protection), hors fuite.
+  if (action !== 'flee' && stats.familiar && php > 0 && mhp > 0 && Math.random() < stats.familiar.chance) {
+    const f = stats.familiar;
+    if (f.kind === 'strike') {
+      mhp = Math.max(0, mhp - f.power);
+      events.push({ text: `${f.emoji} ${f.name} frappe (+${f.power} dégâts) !`, side: 'you' });
+    } else if (php < maxHp) {
+      php = Math.min(maxHp, php + f.power);
+      events.push({ text: `${f.emoji} ${f.name} te ${f.kind === 'guard' ? 'protège' : 'soigne'} (+${f.power} PV) !`, side: 'info' });
+    }
   }
 
   return { events, php: Math.max(0, php), mhp: Math.max(0, mhp), fled, abilityUsed, hitsDealt, hitsTaken };

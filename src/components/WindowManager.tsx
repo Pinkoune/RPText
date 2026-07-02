@@ -31,6 +31,7 @@ import WikiCard from './cards/WikiCard';
 import EventsCard from './cards/EventsCard';
 import AchievementsCard from './cards/AchievementsCard';
 import FateShopCard from './cards/FateShopCard';
+import SeasonCard from './cards/SeasonCard';
 import type { HuntEncounter } from '../game/combat';
 
 const META: Record<WindowKind, { title: string; accent: string }> = {
@@ -64,6 +65,7 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   events: { title: '🌍 Événements', accent: '#c084fc' },
   achievements: { title: '🏆 Succès', accent: '#ffd45a' },
   fateshop: { title: '🎲 Boutique du Destin', accent: '#e879f9' },
+  season: { title: '🏅 Saison PvP', accent: '#7ad0ff' },
 };
 
 const WIDE: Partial<Record<WindowKind, boolean>> = { news: true, craft: true };
@@ -108,6 +110,7 @@ export default function WindowManager() {
               {w.kind === 'events' && <EventsCard />}
               {w.kind === 'achievements' && <AchievementsCard />}
               {w.kind === 'fateshop' && <FateShopCard />}
+              {w.kind === 'season' && <SeasonCard />}
             </Window>
           );
         })}

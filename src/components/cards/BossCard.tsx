@@ -32,11 +32,11 @@ export default function BossCard() {
     return () => { unsub(); clearInterval(respawn); clearInterval(cd); };
   }, []);
 
-  // Récompense automatique à la mort du boss.
-  useEffect(() => {
-    if (!p || !boss || !boss.defeatedAt) return;
-    if (!boss.contributors?.[p.uid] || p.bossClaims.includes(boss.id)) return;
-    const r = bossReward(boss, p.uid);
+  function claimReward() {
+    if (!boss || !boss.defeatedAt) return;
+    if (!boss.contributors?.[p!.uid]) return toast('Tu n\'as pas participé à ce boss.', 'bad');
+    if (p!.bossClaims.includes(boss.id)) return toast('Butin déjà réclamé.', 'bad');
+    const r = bossReward(boss, p!.uid);
     const wonFamiliar = Math.random() < LEGENDARY_DROP_CHANCE;
     let familiarId = '';
     mutate((d) => {
@@ -49,14 +49,13 @@ export default function BossCard() {
         if (!d.activeFamiliarId) d.activeFamiliarId = familiarId;
       }
     });
-    if (p.guildId) {
-      void contributeGuild(p.guildId, r.guildXp);
-    }
-    toast(`🏆 Boss vaincu ! Part du butin : +${r.gold} 🪙, +${r.fateCoins} 🎲, +${r.guildXp} XP Guilde`, 'gold');
+    if (p!.guildId) void contributeGuild(p!.guildId, r.guildXp);
+    playSound('win');
+    toast(`🏆 Butin réclamé : +${r.gold} 🪙, +${r.fateCoins} 🎲, +${r.guildXp} XP Guilde`, 'gold');
     if (wonFamiliar && familiarId) {
       toast(`🌠 Butin rare ! ${FAMILIARS[familiarId].emoji} ${FAMILIARS[familiarId].name} rejoint ton équipe !`, 'gold');
     }
-  }, [boss?.id, boss?.defeatedAt, p?.uid, p?.guildId]);
+  }
 
   if (!p) return null;
   if (!p.guildId) {
@@ -125,8 +124,22 @@ export default function BossCard() {
           </p>
         </>
       ) : (
-        <div className="rounded-xl border border-amber-400/40 bg-amber-500/15 p-3 text-center text-sm">
-          🎉 Le boss est tombé ! Butin partagé au prorata des dégâts. Un nouveau boss approche.
+        <div className="rounded-xl border border-amber-400/40 bg-amber-500/15 p-3 text-center text-sm space-y-2">
+          <div>🎉 Le boss est tombé ! Butin partagé au prorata des dégâts.</div>
+          {myDmg > 0 ? (
+            p.bossClaims.includes(boss.id) ? (
+              <div className="text-xs text-emerald-300">✅ Butin réclamé.</div>
+            ) : (
+              <button
+                onClick={claimReward}
+                className="w-full rounded-lg bg-amber-500/40 py-2 text-sm font-bold hover:bg-amber-500/60"
+              >
+                🏆 Réclamer le butin
+              </button>
+            )
+          ) : (
+            <div className="text-xs text-slate-400">Tu n'as pas participé à ce boss.</div>
+          )}
         </div>
       )}
 

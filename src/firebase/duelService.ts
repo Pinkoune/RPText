@@ -7,17 +7,21 @@ import {
   runTransaction,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
+import { simulateDuel, type DuelFighter } from '../game/pvp';
 
 export interface Duel {
   id: string;
   hostUid: string;
   hostName: string;
+  hostStats: DuelFighter;
   guestUid?: string;
   guestName?: string;
+  guestStats?: DuelFighter;
   bet: number;
   status: 'open' | 'resolved' | 'cancelled';
   winnerUid?: string;
-  flip?: 'heads' | 'tails';
+  /** Journal du combat (affiché aux deux joueurs). */
+  log?: string[];
   createdAt: number;
   resolvedAt?: number;
 }
@@ -25,11 +29,12 @@ export interface Duel {
 export const duelsEnabled = isFirebaseConfigured && !!db;
 
 /** Crée un duel ouvert (la mise a déjà été mise en séquestre côté joueur). */
-export async function createDuel(host: { uid: string; name: string }, bet: number): Promise<string> {
+export async function createDuel(host: { uid: string; name: string; stats: DuelFighter }, bet: number): Promise<string> {
   if (!db) throw new Error('offline');
   const ref = await addDoc(collection(db, 'duels'), {
     hostUid: host.uid,
     hostName: host.name,
+    hostStats: host.stats,
     bet,
     status: 'open',
     createdAt: Date.now(),
@@ -52,7 +57,7 @@ export function listenDuels(cb: (duels: Duel[]) => void): () => void {
  * Rejoint un duel et le résout de façon atomique (transaction). Le gagnant est
  * tiré à pile/face. Retourne le duel résolu (pour que le joueur encaisse).
  */
-export async function joinDuel(duel: Duel, guest: { uid: string; name: string }): Promise<Duel> {
+export async function joinDuel(duel: Duel, guest: { uid: string; name: string; stats: DuelFighter }): Promise<Duel> {
   if (!db) throw new Error('offline');
   const ref = doc(db, 'duels', duel.id);
   const result = await runTransaction(db, async (tx) => {
@@ -61,15 +66,17 @@ export async function joinDuel(duel: Duel, guest: { uid: string; name: string })
     const data = snap.data() as Omit<Duel, 'id'>;
     if (data.status !== 'open') throw new Error('déjà pris');
     if (data.hostUid === guest.uid) throw new Error('toi-même');
-    const flip: 'heads' | 'tails' = Math.random() < 0.5 ? 'heads' : 'tails';
-    const winnerUid = Math.random() < 0.5 ? data.hostUid : guest.uid;
+    // Combat équilibré basé sur les stats des deux joueurs.
+    const sim = simulateDuel(data.hostStats, guest.stats);
+    const winnerUid = sim.winner === 'host' ? data.hostUid : guest.uid;
     const resolved = {
       ...data,
       guestUid: guest.uid,
       guestName: guest.name,
+      guestStats: guest.stats,
       status: 'resolved' as const,
       winnerUid,
-      flip,
+      log: sim.log,
       resolvedAt: Date.now(),
     };
     tx.update(ref, resolved);

@@ -3,9 +3,10 @@ import { CLASSES, xpToNext, xpToNextV1 } from './classes';
 import { getTeamBonus, getGuildBonus } from '../firebase/groupsService';
 import { item } from './items';
 import { BIOMES, BIOME_LIST } from './biomes';
-import { familiarBonus } from './familiars';
+import { familiarBonus, familiarAbility } from './familiars';
 import { talentMods } from './talents';
 import { activeEventEffect } from './events';
+import { ensureSeason, seasonId } from './season';
 
 /** Incrémenter force un reset unique des talents de tous les joueurs (bugfix). */
 export const TALENT_RESET_VERSION = 1;
@@ -108,6 +109,7 @@ export function migratePlayer(p: PlayerState): PlayerState {
     p.farmXp = Object.values(p.gatherXp ?? {}).reduce((s, v) => s + (v || 0), 0);
   }
   if (p.craftXp == null) p.craftXp = 0;
+  ensureSeason(p);
 
   // Auto-réparation : une valeur NaN (issue d'un ancien multiplicateur de guilde/équipe
   // cassé) se propageait et se sauvegardait définitivement, affichant « NaN » partout.
@@ -259,6 +261,8 @@ export function createPlayer(
     activeFamiliarId: null,
     claimedAchievements: [],
     loginStreak: 0,
+    seasonId: seasonId(),
+    seasonPoints: 0,
     gearDurability: { weapon: item(weapon)?.maxDurability ?? 0, armor: 0, trinket: 0, consumable: 0, material: 0 },
     gearStars: { weapon: 0, armor: 0, trinket: 0, consumable: 0, material: 0 },
     createdAt: now,
@@ -349,6 +353,7 @@ export function deriveStats(p: PlayerState): Stats {
     weaponDmgType,
     armorElement,
     trinketId,
+    familiar: familiarAbility(p) ?? undefined,
   };
 }
 

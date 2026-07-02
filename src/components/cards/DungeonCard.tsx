@@ -72,8 +72,11 @@ export default function DungeonCard() {
         for (const m of def.stages) totalXp += m.xp;
         
         const numPlayers = Object.keys(session.players).length;
-        const xpMult = Math.pow(numPlayers, 1.2);
-        const goldMult = Math.pow(numPlayers, 1.2);
+        // Bonus de groupe adouci (avant : superlinéaire n^1.2). +40% par membre
+        // supplémentaire seulement — et la clé de donjon peut encore doubler.
+        const groupMult = 1 + (numPlayers - 1) * 0.4;
+        const xpMult = groupMult;
+        const goldMult = groupMult;
         
         const baseReward = { 
           xp: Math.floor(totalXp * xpMult), 
@@ -96,6 +99,7 @@ export default function DungeonCard() {
           d.fateCoins += def.reward.fateCoins * mult;
           d.gems += def.reward.gems * mult;
           if (useKey) toast('🗝️ Clé de donjon utilisée : récompenses doublées !', 'gold');
+          toast(`Donjon terminé ! +${(gold * mult).toLocaleString()} 🪙 · +${xp.toLocaleString()} XP`, 'gold');
           if (def.reward.fateCoins) toast(`+${def.reward.fateCoins * mult} 🎲`, 'gold');
           if (def.reward.gems) toast(`+${def.reward.gems * mult} 💎`, 'gold');
           d.dungeonClears[def.id] = (d.dungeonClears[def.id] ?? 0) + 1;
@@ -345,7 +349,13 @@ export default function DungeonCard() {
           <div className="rounded-xl border border-amber-400/40 bg-amber-500/15 p-4 text-center">
             <div className="text-2xl mb-2">🏆</div>
             <div className="font-bold text-amber-300">Donjon conquis !</div>
-            <div className="text-sm mt-2">L'équipe a triomphé de {def.name}. Les récompenses ont été ajoutées.</div>
+            <div className="text-sm mt-2">L'équipe a triomphé de {def.name}.</div>
+            <div className="mt-2 flex flex-wrap justify-center gap-1.5 text-[11px]">
+              <span className="rounded bg-amber-500/20 px-2 py-0.5 text-amber-200">+{def.reward.gold.toLocaleString()} 🪙</span>
+              <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-emerald-200">+{def.stages.reduce((s, m) => s + m.xp, 0).toLocaleString()} XP</span>
+              {def.reward.fateCoins > 0 && <span className="rounded bg-fuchsia-500/20 px-2 py-0.5 text-fuchsia-200">+{def.reward.fateCoins} 🎲</span>}
+              {def.reward.gems > 0 && <span className="rounded bg-sky-500/20 px-2 py-0.5 text-sky-200">+{def.reward.gems} 💎</span>}
+            </div>
           </div>
         ) : (
           <div className="rounded-xl border border-rose-400/40 bg-rose-500/15 p-4 text-center">
@@ -399,6 +409,12 @@ export default function DungeonCard() {
                 <div className="text-[11px] text-slate-400">{def.desc}</div>
                 <div className="mt-0.5 text-[11px] text-slate-500">
                   {def.stages.length} salles · Nv.{def.minLevel}+ · récup. {fmt(def.cooldownMs)}{clears > 0 ? ` · ${clears} clear${clears > 1 ? 's' : ''}` : ''}
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
+                  <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-amber-200">+{def.reward.gold.toLocaleString()} 🪙</span>
+                  <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-emerald-200">+{def.stages.reduce((s, m) => s + m.xp, 0).toLocaleString()} XP</span>
+                  {def.reward.fateCoins > 0 && <span className="rounded bg-fuchsia-500/15 px-1.5 py-0.5 text-fuchsia-200">+{def.reward.fateCoins} 🎲</span>}
+                  {def.reward.gems > 0 && <span className="rounded bg-sky-500/15 px-1.5 py-0.5 text-sky-200">+{def.reward.gems} 💎</span>}
                 </div>
               </div>
               <button

@@ -57,6 +57,8 @@ export interface Stats {
   weaponDmgType?: string;
   armorElement?: string;
   trinketId?: string;
+  /** Capacité de combat du familier équipé (proc en combat). */
+  familiar?: { kind: 'strike' | 'guard' | 'heal'; power: number; chance: number; emoji: string; name: string; label: string };
 }
 
 export interface EquippedGear {
@@ -113,6 +115,13 @@ export interface PlayerState {
   settledDuels: string[];
   /** Récompenses de boss mondiaux déjà réclamées. */
   bossClaims: string[];
+  /** Récompenses de boss de guilde déjà réclamées (clé `guildId:weekId`). */
+  guildBossClaims?: string[];
+  /** Saison PvP en cours (mois) et points de ladder accumulés. */
+  seasonId?: string;
+  seasonPoints?: number;
+  /** Récompense de fin de saison à afficher (créditée à la rotation). */
+  lastSeasonReward?: { season: string; tierName: string; reward: { gold: number; fateCoins: number; gems?: number; items?: Record<string, number> } };
   /** Ventes au marché déjà encaissées (anti double-crédit). */
   settledSales: string[];
   /** Duels Card-Jitsu déjà encaissés. */

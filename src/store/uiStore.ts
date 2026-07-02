@@ -30,7 +30,8 @@ export type WindowKind =
   | 'wiki'
   | 'events'
   | 'achievements'
-  | 'fateshop';
+  | 'fateshop'
+  | 'season';
 
 export interface GameWindow {
   id: string;

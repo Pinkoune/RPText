@@ -47,6 +47,7 @@ export const COMMANDS: CommandDef[] = [
   { name: 'quests', aliases: ['quetes', 'quêtes', 'q', 'daily', 'quotidien'], desc: 'Quêtes journalières et hebdomadaires.', category: 'Jeu' },
   { name: 'duel', aliases: ['pvp', 'defi'], desc: 'Défie un autre joueur au pile/face (mise en or).', category: 'Multijoueur' },
   { name: 'cardjitsu', aliases: ['cj', 'cards', 'ninja', 'cartes'], desc: 'Duel de cartes Card-Jitsu (feu/eau/neige).', category: 'Multijoueur' },
+  { name: 'season', aliases: ['saison', 'ladder', 'rang', 'rank'], desc: 'Saison PvP : ton rang, le ladder et la fin de saison.', category: 'Multijoueur' },
   { name: 'team', aliases: ['equipe', 'équipe', 'party'], desc: 'Forme une équipe et partage des ressources.', category: 'Multijoueur' },
   { name: 'guild', aliases: ['guilde', 'clan'], desc: 'Rejoins ou fonde une guilde.', category: 'Multijoueur' },
   { name: 'familiar', aliases: ['familier', 'pet', 'compagnon'], desc: 'Adopte et équipe un familier (petit bonus de stats).', category: 'Jeu' },
@@ -71,6 +72,7 @@ for (const c of COMMANDS) {
 
 export function resolveCommand(input: string): string | null {
   const word = input.trim().toLowerCase().split(/\s+/)[0];
+  if (word === 'coeuraciermat') return 'coeuraciermat';
   return ALIAS_MAP[word] ?? null;
 }
 
@@ -111,7 +113,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.open('equipment', undefined, { singleton: true });
       break;
 
-    case 'mathieukdo': {
+    case 'coeuraciermat': {
       const p = ctx.getPlayer();
       if (!p) break;
       if (p.claimedMathieuKdo) {
@@ -185,6 +187,10 @@ export function runCommand(input: string, ctx: CommandCtx): void {
 
     case 'cardjitsu':
       ctx.open('cardjitsu', undefined, { singleton: true });
+      break;
+
+    case 'season':
+      ctx.open('season', undefined, { singleton: true });
       break;
 
     case 'team':

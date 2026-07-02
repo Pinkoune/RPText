@@ -24,7 +24,7 @@ export const RECIPES: Recipe[] = [
   { output: 'iron_ingot', qty: 1, materials: { iron_ore: 10, wood: 4 }, gold: 50, levelReq: 1, difficulty: 20, maxQuality: 100, durability: 40 },
   { output: 'sturdy_leather', qty: 1, materials: { wolf_pelt: 8, herb: 4 }, gold: 50, levelReq: 2, difficulty: 25, maxQuality: 100, durability: 40 },
   { output: 'refined_wood', qty: 1, materials: { hardwood: 6, slime_gel: 3 }, gold: 100, levelReq: 3, difficulty: 30, maxQuality: 150, durability: 40 },
-  { output: 'magic_dust', qty: 1, materials: { slime_gel: 3, void_dust: 2, herb: 1 }, gold: 150, levelReq: 4, difficulty: 60, maxQuality: 300, durability: 50 },
+  { output: 'magic_dust', qty: 1, materials: { slime_gel: 5, herb: 8 }, gold: 60, levelReq: 2, difficulty: 30, maxQuality: 150, durability: 40 },
   { output: 'mithril_ingot', qty: 1, materials: { mithril_ore: 10, ember_core: 5 }, gold: 500, levelReq: 12, difficulty: 120, maxQuality: 500, durability: 60 },
   
   // ── Utilitaires ──
@@ -72,7 +72,23 @@ export const RECIPES: Recipe[] = [
   { output: 'iron_mail', qty: 1, materials: { iron_ingot: 8, sturdy_leather: 3 }, gold: 120, levelReq: 5, difficulty: 70, maxQuality: 250, durability: 50 },
   { output: 'iron_blade', qty: 1, materials: { iron_ingot: 4, sturdy_leather: 2 }, gold: 400, levelReq: 3, difficulty: 40, maxQuality: 200, durability: 50 },
 
+  // Armes intermédiaires (comblent le vide entre le niveau 3 et le niveau 12).
+  { output: 'bronze_blade', qty: 1, materials: { iron_ingot: 5, sturdy_leather: 2, stone: 6 }, gold: 250, levelReq: 4, difficulty: 50, maxQuality: 220, durability: 55 },
+  { output: 'oak_bow', qty: 1, materials: { refined_wood: 3, sturdy_leather: 3, wood: 6 }, gold: 300, levelReq: 5, difficulty: 55, maxQuality: 240, durability: 55 },
+  { output: 'acolyte_wand', qty: 1, materials: { refined_wood: 3, magic_dust: 2, slime_gel: 4 }, gold: 300, levelReq: 4, difficulty: 50, maxQuality: 220, durability: 55 },
+  { output: 'soldier_sword', qty: 1, materials: { iron_ingot: 8, sturdy_leather: 4, refined_wood: 2 }, gold: 700, levelReq: 7, difficulty: 85, maxQuality: 320, durability: 60 },
+  { output: 'ranger_bow', qty: 1, materials: { refined_wood: 6, sturdy_leather: 5, wildflower: 6 }, gold: 900, levelReq: 8, difficulty: 95, maxQuality: 360, durability: 60 },
+  { output: 'adept_staff', qty: 1, materials: { refined_wood: 6, magic_dust: 4, mana_bloom: 4 }, gold: 900, levelReq: 8, difficulty: 95, maxQuality: 360, durability: 60 },
+
   { output: 'iron_spear', qty: 1, materials: { iron_ingot: 6, refined_wood: 4 }, gold: 900, levelReq: 6, difficulty: 70, maxQuality: 300, durability: 60 },
+
+  // Armes de transition (mid-game, sans set) — comblent le palier avant les sets élémentaires.
+  { output: 'tempered_greatblade', qty: 1, materials: { iron_ingot: 12, mithril_ingot: 2, magic_dust: 3 }, gold: 2000, levelReq: 13, difficulty: 170, maxQuality: 700, durability: 80 },
+  { output: 'master_longbow', qty: 1, materials: { ironwood: 8, refined_wood: 6, magic_dust: 3 }, gold: 1800, levelReq: 13, difficulty: 160, maxQuality: 650, durability: 80 },
+  { output: 'sage_staff', qty: 1, materials: { refined_wood: 8, magic_dust: 6, mana_bloom: 6 }, gold: 1900, levelReq: 13, difficulty: 165, maxQuality: 680, durability: 80 },
+  // Bijoux avancés.
+  { output: 'titan_seal', qty: 1, materials: { obsidian: 10, mithril_ingot: 3, stone: 20 }, gold: 2500, levelReq: 16, difficulty: 200, maxQuality: 800, durability: 70 },
+  { output: 'berserker_fang', qty: 1, materials: { void_dust: 6, ember_core: 6, mithril_ingot: 2 }, gold: 3500, levelReq: 19, difficulty: 260, maxQuality: 1000, durability: 80 },
   { output: 'steel_plate', qty: 1, materials: { iron_ingot: 12, sturdy_leather: 6, refined_wood: 3 }, gold: 1600, levelReq: 9, difficulty: 100, maxQuality: 400, durability: 60 },
   
   { output: 'frost_glaive', qty: 1, materials: { iron_ingot: 6, frost_shard: 10, refined_wood: 4 }, gold: 800, levelReq: 10, difficulty: 120, maxQuality: 500, durability: 70 },
@@ -82,7 +98,7 @@ export const RECIPES: Recipe[] = [
   // ── Bâtons & sceptres (magie) ──
   { output: 'arcane_staff', qty: 1, materials: { refined_wood: 6, magic_dust: 3 }, gold: 500, levelReq: 5, difficulty: 60, maxQuality: 250, durability: 50 },
   { output: 'frost_scepter', qty: 1, materials: { refined_wood: 4, frost_shard: 10, magic_dust: 5 }, gold: 900, levelReq: 11, difficulty: 130, maxQuality: 500, durability: 60 },
-  { output: 'crystal_staff', qty: 1, materials: { mithril_ingot: 4, crystal: 15, magic_dust: 8 }, gold: 5000, levelReq: 18, difficulty: 300, maxQuality: 1200, durability: 80 },
+  { output: 'crystal_staff', qty: 1, materials: { mithril_ingot: 4, crystal: 15, magic_dust: 8 }, gold: 5000, levelReq: 20, difficulty: 300, maxQuality: 1200, durability: 80 },
 
   // ── Sets d'Équipement ──
   { output: 'wind_blade', qty: 1, materials: { iron_ingot: 6, wildflower: 15 }, gold: 800, levelReq: 9, difficulty: 110, maxQuality: 400, durability: 60 },
@@ -110,9 +126,9 @@ export const RECIPES: Recipe[] = [
   { output: 'light_pendant', qty: 1, materials: { sun_orb: 4, magic_dust: 6 }, gold: 2500, levelReq: 16, difficulty: 200, maxQuality: 800, durability: 80 },
 
   { output: 'shadow_bow', qty: 1, materials: { ironwood: 6, voodoo_charm: 6 }, gold: 4000, levelReq: 18, difficulty: 280, maxQuality: 1100, durability: 90 },
-  { output: 'void_tome', qty: 1, materials: { void_dust: 10, voodoo_charm: 8 }, gold: 6000, levelReq: 20, difficulty: 400, maxQuality: 1500, durability: 100 },
+  { output: 'void_tome', qty: 1, materials: { void_dust: 10, voodoo_charm: 8 }, gold: 6000, levelReq: 23, difficulty: 400, maxQuality: 1500, durability: 100 },
   { output: 'cultist_robe', qty: 1, materials: { silk_thread: 15, voodoo_charm: 6 }, gold: 3500, levelReq: 18, difficulty: 250, maxQuality: 1000, durability: 85 },
-  { output: 'dark_amulet', qty: 1, materials: { void_dust: 6, voodoo_charm: 4 }, gold: 5000, levelReq: 20, difficulty: 350, maxQuality: 1200, durability: 90 },
+  { output: 'dark_amulet', qty: 1, materials: { void_dust: 6, voodoo_charm: 4 }, gold: 5000, levelReq: 23, difficulty: 350, maxQuality: 1200, durability: 90 },
 
   { output: 'obsidian_blade', qty: 1, materials: { obsidian: 15, iron_ingot: 10 }, gold: 3000, levelReq: 15, difficulty: 220, maxQuality: 900, durability: 120 },
   { output: 'obsidian_armor', qty: 1, materials: { obsidian: 25, iron_ingot: 15 }, gold: 4000, levelReq: 15, difficulty: 280, maxQuality: 1100, durability: 150 },
@@ -121,16 +137,16 @@ export const RECIPES: Recipe[] = [
   { output: 'ironwood_bow', qty: 1, materials: { ironwood: 8, sturdy_leather: 4 }, gold: 1800, levelReq: 13, difficulty: 160, maxQuality: 600, durability: 70 },
   { output: 'shadow_tome', qty: 1, materials: { void_dust: 6, magic_dust: 4 }, gold: 1500, levelReq: 12, difficulty: 150, maxQuality: 600, durability: 70 },
   { output: 'world_tree_staff', qty: 1, materials: { ironwood: 12, mana_bloom: 10, magic_dust: 8 }, gold: 4500, levelReq: 20, difficulty: 280, maxQuality: 1000, durability: 80 },
-  { output: 'star_orb', qty: 1, materials: { crystal: 20, sun_orb: 10, magic_dust: 12 }, gold: 8000, levelReq: 24, difficulty: 450, maxQuality: 2000, durability: 90 },
+  { output: 'star_orb', qty: 1, materials: { crystal: 20, sun_orb: 10, magic_dust: 12 }, gold: 8000, levelReq: 27, difficulty: 450, maxQuality: 2000, durability: 90 },
   { output: 'mana_ring', qty: 1, materials: { mana_bloom: 10, magic_dust: 6 }, gold: 2000, levelReq: 14, difficulty: 180, maxQuality: 700, durability: 60 },
   { output: 'cave_potion', qty: 1, materials: { cave_fish: 2, herb: 10 }, gold: 300, levelReq: 10, difficulty: 100, maxQuality: 350, durability: 40 },
 
   // ── Maîtrise & Bijoux ──
-  { output: 'mithril_blade', qty: 1, materials: { mithril_ingot: 8, sturdy_leather: 6, magic_dust: 4 }, gold: 5000, levelReq: 16, difficulty: 250, maxQuality: 1000, durability: 80 },
+  { output: 'mithril_blade', qty: 1, materials: { mithril_ingot: 8, sturdy_leather: 6, magic_dust: 4 }, gold: 5000, levelReq: 18, difficulty: 250, maxQuality: 1000, durability: 80 },
   { output: 'crystal_charm', qty: 1, materials: { crystal: 12, mithril_ingot: 2, magic_dust: 6 }, gold: 3000, levelReq: 15, difficulty: 220, maxQuality: 900, durability: 70 },
-  { output: 'lucky_coin', qty: 1, materials: { void_dust: 4, mithril_ingot: 3 }, gold: 1000, levelReq: 20, difficulty: 400, maxQuality: 1500, durability: 80 },
-  { output: 'gambler_ring', qty: 1, materials: { void_dust: 6, magic_dust: 10, crystal: 5 }, gold: 3000, levelReq: 22, difficulty: 500, maxQuality: 1800, durability: 90 },
-  { output: 'void_reaver', qty: 1, materials: { void_dust: 12, mithril_ingot: 10, magic_dust: 10 }, gold: 12000, levelReq: 25, difficulty: 800, maxQuality: 3000, durability: 100 },
+  { output: 'lucky_coin', qty: 1, materials: { void_dust: 4, mithril_ingot: 3 }, gold: 1000, levelReq: 24, difficulty: 400, maxQuality: 1500, durability: 80 },
+  { output: 'gambler_ring', qty: 1, materials: { void_dust: 6, magic_dust: 10, crystal: 5 }, gold: 3000, levelReq: 25, difficulty: 500, maxQuality: 1800, durability: 90 },
+  { output: 'void_reaver', qty: 1, materials: { void_dust: 12, mithril_ingot: 10, magic_dust: 10 }, gold: 12000, levelReq: 28, difficulty: 800, maxQuality: 3000, durability: 100 },
 ];
 
 export function missingFor(p: PlayerState, r: Recipe): { materials: Record<string, number>; gold: number } {
@@ -147,16 +163,19 @@ export function canCraft(p: PlayerState, r: Recipe): boolean {
   return Object.keys(m.materials).length === 0 && m.gold === 0;
 }
 
-/** Calcule le niveau d'artisanat selon l'XP. (Courbe très simple : 100 * lvl^1.5) */
+/**
+ * Niveau d'artisanat selon l'XP. Courbe adoucie : les premiers niveaux montent
+ * vite (quelques crafts suffisent), la pente devient plus raide ensuite.
+ */
 export function getCraftLevel(xp: number): { level: number; into: number; need: number } {
   let lvl = 1;
   while (true) {
-    const need = 100 * Math.pow(lvl, 1.5);
+    const need = Math.floor(45 * Math.pow(lvl, 1.4));
     if (xp >= need) {
       xp -= need;
       lvl++;
     } else {
-      return { level: lvl, into: xp, need: need };
+      return { level: lvl, into: xp, need };
     }
   }
 }
@@ -180,8 +199,9 @@ export function finishCraft(p: PlayerState, r: Recipe, qualityRatio: number, suc
   
   addQuestMetric(p, 'crafts', 1);
   
-  // XP basée sur la difficulté et la qualité atteinte
-  const xpGain = r.difficulty + Math.floor(r.difficulty * qualityRatio);
+  // XP basée sur la difficulté et la qualité atteinte, avec une base fixe pour
+  // que même les crafts faciles fassent progresser correctement en début de jeu.
+  const xpGain = 20 + r.difficulty + Math.floor(r.difficulty * qualityRatio);
   p.craftXp += xpGain;
   
   // Générer un ID dynamique basé sur la qualité si celle-ci a un impact (équipements).

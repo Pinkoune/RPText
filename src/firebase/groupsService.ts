@@ -28,6 +28,18 @@ export interface Team {
   createdAt: number;
 }
 
+export interface GuildBoss {
+  /** Identifiant de la semaine en cours (le boss tourne chaque semaine). */
+  weekId: string;
+  name: string;
+  emoji: string;
+  hp: number;
+  maxHp: number;
+  /** uid -> dégâts totaux infligés cette semaine. */
+  contributors: Record<string, number>;
+  defeatedAt?: number;
+}
+
 export interface Guild {
   id: string;
   name: string;
@@ -37,6 +49,7 @@ export interface Guild {
   members: Record<string, Member>;
   xp: number;
   createdAt: number;
+  boss?: GuildBoss;
 }
 
 export interface Gift {
@@ -165,6 +178,65 @@ export async function contributeGuild(guildId: string, amount: number): Promise<
     if (!snap.exists()) return;
     const data = snap.data() as Omit<Guild, 'id'>;
     tx.update(ref, { xp: safeGuildXp(data.xp) + (Number.isFinite(amount) ? amount : 0) });
+  });
+}
+
+// ─── Boss de guilde hebdomadaire ─────────────────────────────────────────────
+// Objectif coopératif : chaque semaine, un boss partagé apparaît pour la guilde.
+// Les membres l'attaquent (dégâts selon leur puissance), et sa récompense se
+// réclame une fois par membre à sa défaite. Déterministe sur la semaine.
+
+const GUILD_BOSS_ROSTER = [
+  { name: 'Golem Ancestral', emoji: '🗿' },
+  { name: 'Hydre des Abysses', emoji: '🐙' },
+  { name: 'Colosse de Givre', emoji: '🧊' },
+  { name: 'Dragon Céleste', emoji: '🐉' },
+  { name: 'Léviathan', emoji: '🐋' },
+];
+
+/** Identifiant de la semaine (numéro de semaine depuis l'epoch). */
+export function guildBossWeekId(now = Date.now()): string {
+  return String(Math.floor(now / (7 * 24 * 60 * 60 * 1000)));
+}
+
+function freshBoss(weekId: string, memberCount: number, avgLevel: number): GuildBoss {
+  const idx = (parseInt(weekId, 10) % GUILD_BOSS_ROSTER.length + GUILD_BOSS_ROSTER.length) % GUILD_BOSS_ROSTER.length;
+  const pick = GUILD_BOSS_ROSTER[idx];
+  const maxHp = Math.round(8000 + memberCount * 6000 + avgLevel * 400);
+  return { weekId, name: pick.name, emoji: pick.emoji, hp: maxHp, maxHp, contributors: {} };
+}
+
+export interface GuildBossHit {
+  boss: GuildBoss;
+  dmg: number;
+  defeated: boolean;
+  justDefeated: boolean;
+}
+
+/** Attaque le boss de guilde. Crée/réinitialise le boss si la semaine a changé. */
+export async function attackGuildBoss(guildId: string, uid: string, dmg: number): Promise<GuildBossHit | null> {
+  if (!db) return null;
+  const ref = doc(db, 'guilds', guildId);
+  const wid = guildBossWeekId();
+  const safeDmg = Number.isFinite(dmg) && dmg > 0 ? Math.round(dmg) : 0;
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return null;
+    const data = snap.data() as Omit<Guild, 'id'>;
+    const members = data.members ?? {};
+    const memberCount = Object.keys(members).length || 1;
+    const avgLevel = Object.values(members).reduce((s, m) => s + (m.level || 1), 0) / memberCount;
+
+    let boss = data.boss;
+    if (!boss || boss.weekId !== wid) boss = freshBoss(wid, memberCount, avgLevel);
+
+    const justDefeated = boss.hp > 0 && boss.hp - safeDmg <= 0;
+    boss.hp = Math.max(0, boss.hp - safeDmg);
+    boss.contributors = { ...boss.contributors, [uid]: (boss.contributors[uid] ?? 0) + safeDmg };
+    if (boss.hp <= 0 && !boss.defeatedAt) boss.defeatedAt = Date.now();
+
+    tx.update(ref, { boss });
+    return { boss, dmg: safeDmg, defeated: boss.hp <= 0, justDefeated };
   });
 }
 

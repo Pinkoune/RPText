@@ -2,8 +2,10 @@ import { create } from 'zustand';
 import type { PlayerState, ClassId } from '../game/types';
 import { createPlayer, migratePlayer } from '../game/player';
 import { claimDailyLogin, type DailyReward } from '../game/daily';
+import type { SeasonReward } from '../game/season';
 import { signInWithProvider, signOut, watchAuth, type AppUser, type AuthProviderType } from '../firebase/auth';
 import { loadPlayer, savePlayer } from '../firebase/playerService';
+import { touchPresence } from '../firebase/socialService';
 import { isFirebaseConfigured } from '../firebase/config';
 
 export type Status = 'loading' | 'login' | 'create' | 'ready';
@@ -34,6 +36,9 @@ interface GameState {
   /** Récompense de connexion journalière à afficher (null = rien). */
   dailyReward: DailyReward | null;
   clearDailyReward: () => void;
+  /** Récompense de fin de saison PvP à afficher (null = rien). */
+  seasonReward: { tierName: string; reward: SeasonReward } | null;
+  clearSeasonReward: () => void;
   initAuth: () => void;
   signIn: (provider: AuthProviderType) => Promise<void>;
   logout: () => Promise<void>;
@@ -59,9 +64,11 @@ export const useGame = create<GameState>((set, get) => ({
   toasts: [],
   levelCelebration: 0,
   dailyReward: null,
+  seasonReward: null,
 
   celebrateLevelUp: () => set((s) => ({ levelCelebration: s.levelCelebration + 1 })),
   clearDailyReward: () => set({ dailyReward: null }),
+  clearSeasonReward: () => set({ seasonReward: null }),
 
   initAuth: () => {
     watchAuth(async (user) => {
@@ -79,8 +86,14 @@ export const useGame = create<GameState>((set, get) => ({
           existing.photoURL = user.photoURL;
           // Récompense de connexion journalière (une fois par nouveau jour).
           const reward = claimDailyLogin(existing);
-          set({ player: existing, status: 'ready', dailyReward: reward });
-          if (reward) void savePlayer(existing);
+          // Récompense de fin de saison (créditée par migratePlayer si rotation).
+          let seasonReward: { tierName: string; reward: SeasonReward } | null = null;
+          if (existing.lastSeasonReward) {
+            seasonReward = { tierName: existing.lastSeasonReward.tierName, reward: existing.lastSeasonReward.reward };
+            delete existing.lastSeasonReward;
+          }
+          set({ player: existing, status: 'ready', dailyReward: reward, seasonReward });
+          if (reward || seasonReward) void savePlayer(existing);
         } else {
           set({ status: 'create' });
         }
@@ -126,6 +139,7 @@ export const useGame = create<GameState>((set, get) => ({
     const draft: PlayerState = structuredClone(cur);
     fn(draft);
     set({ player: draft });
+    touchPresence(); // toute action compte comme activité (présence "en ligne")
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       const p = get().player;

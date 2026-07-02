@@ -13,6 +13,10 @@ const GROUPS: { slot: ItemSlot | 'all'; label: string; icon: string }[] = [
   { slot: 'trinket', label: 'Bijoux', icon: '💍' },
 ];
 
+// Consommables « passifs » : utilisés automatiquement ou depuis une autre carte
+// (forge/équipement), pas via un bouton Utiliser dans l'inventaire.
+const NON_USABLE = new Set(['dungeon_key', 'repair_kit', 'upgrade_matrix']);
+
 export default function InventoryCard() {
   const p = useGame((s) => s.player);
   const mutate = useGame((s) => s.mutate);
@@ -116,7 +120,7 @@ export default function InventoryCard() {
                 </div>
               </div>
               <div className="flex shrink-0 gap-1">
-                {it.slot === 'consumable' && (
+                {it.slot === 'consumable' && !NON_USABLE.has(id) && (
                   <button onClick={() => use(id)} className="rounded bg-emerald-500/30 px-2 py-1 text-xs hover:bg-emerald-500/50">
                     Utiliser
                   </button>

@@ -32,5 +32,7 @@ export async function savePlayer(p: PlayerState): Promise<void> {
     gold: p.gold,
     gambleNet: p.gambleNet,
     lastSeen: p.lastSeen,
+    seasonId: p.seasonId ?? null,
+    seasonPoints: p.seasonPoints ?? 0,
   });
 }
