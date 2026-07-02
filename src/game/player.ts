@@ -78,7 +78,7 @@ export function migratePlayer(p: PlayerState): PlayerState {
   // -- V3 Normalisation anti-carry --
   // Certains joueurs bas niveau ont reçu énormément d'XP en se faisant "carry" dans des donjons HL.
   // On recalcule une "XP max légitime" basée sur leurs faits d'armes pour corriger les niveaux absurdes.
-  if ((p as any).levelNormalizedVersion !== 1) {
+  if ((p as any).levelNormalizedVersion !== 2) {
     let totalXp = p.xp;
     for (let l = 1; l < p.level; l++) {
       totalXp += xpToNext(l);
@@ -106,7 +106,7 @@ export function migratePlayer(p: PlayerState): PlayerState {
       p.talents = {}; // Reset complet de l'arbre
     }
     
-    (p as any).levelNormalizedVersion = 1;
+    (p as any).levelNormalizedVersion = 2;
   }
 
   if (p.equipped.tool === undefined) p.equipped.tool = null;

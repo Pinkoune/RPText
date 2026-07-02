@@ -175,7 +175,7 @@ export function getAscensions(classId: ClassId): ClassDef[] {
 /** XP nécessaire pour passer du niveau n au niveau n+1 (courbe v2, dure). */
 export function xpToNext(currentLevel: number): number {
   if (currentLevel >= 30) return Infinity; // Level 30 max
-  return Math.floor(100 * Math.pow(1.35, currentLevel - 1));
+  return Math.floor(100 * Math.pow(1.39, currentLevel - 1));
 }
 
 /** Niveau max */
