@@ -279,6 +279,7 @@ export function deriveStats(p: PlayerState): Stats {
   let weaponElement: string | undefined;
   let weaponDmgType: string | undefined;
   let armorElement: string | undefined;
+  let trinketId: string | undefined;
 
   for (const slot of ['weapon', 'armor', 'trinket'] as const) {
     const id = p.equipped[slot];
@@ -293,6 +294,9 @@ export function deriveStats(p: PlayerState): Stats {
       }
       if (slot === 'armor') {
         armorElement = it.element;
+      }
+      if (slot === 'trinket') {
+        trinketId = it.id;
       }
 
       const stars = p.gearStars ? (p.gearStars[slot] || 0) : 0;
@@ -341,7 +345,11 @@ export function deriveStats(p: PlayerState): Stats {
   def = Math.round(def * (1 + mods.defPct + evt.defPct + setDefPct));
   maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct + setHpPct));
 
-  return { maxHp, atk, def, hp: Math.min(p.hp, maxHp), maxCp, maxGp, weaponElement, weaponDmgType, armorElement };
+  return { level: p.level, maxHp, atk, def, hp: Math.min(p.hp, maxHp), maxCp, maxGp, weaponElement,
+    weaponDmgType,
+    armorElement,
+    trinketId,
+  };
 }
 
 export function equipItem(p: PlayerState, id: string): boolean {

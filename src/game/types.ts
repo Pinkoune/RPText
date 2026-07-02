@@ -55,6 +55,7 @@ export interface Stats {
   weaponElement?: string;
   weaponDmgType?: string;
   armorElement?: string;
+  trinketId?: string;
 }
 
 export interface EquippedGear {
@@ -153,6 +154,8 @@ export interface PlayerState {
   lastLoginDay?: string;
   /** Succès dont la récompense a été réclamée. */
   claimedAchievements?: string[];
+  /** Cadeau Mathieu (Heartsteel) déjà réclamé ? */
+  claimedMathieuKdo?: boolean;
   createdAt: number;
   lastSeen: number;
 }

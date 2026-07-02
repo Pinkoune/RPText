@@ -24,7 +24,7 @@ export const RECIPES: Recipe[] = [
   { output: 'iron_ingot', qty: 1, materials: { iron_ore: 10, wood: 4 }, gold: 50, levelReq: 1, difficulty: 20, maxQuality: 100, durability: 40 },
   { output: 'sturdy_leather', qty: 1, materials: { wolf_pelt: 8, herb: 4 }, gold: 50, levelReq: 2, difficulty: 25, maxQuality: 100, durability: 40 },
   { output: 'refined_wood', qty: 1, materials: { hardwood: 6, slime_gel: 3 }, gold: 100, levelReq: 3, difficulty: 30, maxQuality: 150, durability: 40 },
-  { output: 'magic_dust', qty: 1, materials: { crystal: 3, frost_shard: 3, ember_core: 3 }, gold: 300, levelReq: 8, difficulty: 60, maxQuality: 300, durability: 50 },
+  { output: 'magic_dust', qty: 1, materials: { slime_gel: 3, void_dust: 2, herb: 1 }, gold: 150, levelReq: 4, difficulty: 60, maxQuality: 300, durability: 50 },
   { output: 'mithril_ingot', qty: 1, materials: { mithril_ore: 10, ember_core: 5 }, gold: 500, levelReq: 12, difficulty: 120, maxQuality: 500, durability: 60 },
   
   // ── Utilitaires ──
@@ -56,17 +56,22 @@ export const RECIPES: Recipe[] = [
 
   // ── Équipement Basique (Débutant) ──
   { output: 'wooden_club', qty: 1, materials: { wood: 12 }, gold: 10, levelReq: 1, difficulty: 20, maxQuality: 50, durability: 30 },
+  { output: 'apprentice_wand', qty: 1, materials: { wood: 8, slime_gel: 2 }, gold: 10, levelReq: 1, difficulty: 20, maxQuality: 50, durability: 30 },
+  { output: 'cloth_robe', qty: 1, materials: { herb: 10, wolf_pelt: 2 }, gold: 15, levelReq: 1, difficulty: 25, maxQuality: 70, durability: 30 },
   { output: 'stone_axe', qty: 1, materials: { wood: 6, stone: 10 }, gold: 20, levelReq: 1, difficulty: 30, maxQuality: 80, durability: 30 },
   { output: 'hunter_bow', qty: 1, materials: { wood: 8, wolf_pelt: 2 }, gold: 25, levelReq: 2, difficulty: 35, maxQuality: 90, durability: 35 },
   { output: 'woven_shirt', qty: 1, materials: { herb: 15 }, gold: 15, levelReq: 1, difficulty: 25, maxQuality: 70, durability: 30 },
-  { output: 'leather_boots', qty: 1, materials: { wolf_pelt: 4, herb: 2 }, gold: 20, levelReq: 1, difficulty: 25, maxQuality: 75, durability: 30 },
+  { output: 'leather_boots', qty: 1, materials: { sturdy_leather: 2 }, gold: 20, levelReq: 3, difficulty: 25, maxQuality: 100, durability: 30 },
   { output: 'mage_hat', qty: 1, materials: { herb: 10, slime_gel: 2 }, gold: 25, levelReq: 2, difficulty: 30, maxQuality: 80, durability: 30 },
+  { output: 'wooden_shield', qty: 1, materials: { wood: 5, slime_gel: 1 }, gold: 15, levelReq: 1, difficulty: 15, maxQuality: 60, durability: 25 },
+  { output: 'flower_crown', qty: 1, materials: { herb: 3, slime_gel: 1 }, gold: 10, levelReq: 1, difficulty: 10, maxQuality: 50, durability: 15 },
   { output: 'bone_necklace', qty: 1, materials: { boar_tusk: 2, wolf_pelt: 1 }, gold: 30, levelReq: 2, difficulty: 30, maxQuality: 80, durability: 40 },
   { output: 'slime_ring', qty: 1, materials: { slime_gel: 6, herb: 2 }, gold: 30, levelReq: 2, difficulty: 25, maxQuality: 70, durability: 40 },
 
   // ── Forge (Équipements Avancés) ──
+  { output: 'iron_mail', qty: 1, materials: { iron_ingot: 8, sturdy_leather: 3 }, gold: 120, levelReq: 5, difficulty: 70, maxQuality: 250, durability: 50 },
   { output: 'iron_blade', qty: 1, materials: { iron_ingot: 4, sturdy_leather: 2 }, gold: 400, levelReq: 3, difficulty: 40, maxQuality: 200, durability: 50 },
-  { output: 'iron_mail', qty: 1, materials: { iron_ingot: 8, sturdy_leather: 4 }, gold: 500, levelReq: 4, difficulty: 50, maxQuality: 250, durability: 50 },
+
   { output: 'iron_spear', qty: 1, materials: { iron_ingot: 6, refined_wood: 4 }, gold: 900, levelReq: 6, difficulty: 70, maxQuality: 300, durability: 60 },
   { output: 'steel_plate', qty: 1, materials: { iron_ingot: 12, sturdy_leather: 6, refined_wood: 3 }, gold: 1600, levelReq: 9, difficulty: 100, maxQuality: 400, durability: 60 },
   
@@ -112,9 +117,11 @@ export const RECIPES: Recipe[] = [
   { output: 'obsidian_blade', qty: 1, materials: { obsidian: 15, iron_ingot: 10 }, gold: 3000, levelReq: 15, difficulty: 220, maxQuality: 900, durability: 120 },
   { output: 'obsidian_armor', qty: 1, materials: { obsidian: 25, iron_ingot: 15 }, gold: 4000, levelReq: 15, difficulty: 280, maxQuality: 1100, durability: 150 },
   { output: 'obsidian_ring', qty: 1, materials: { obsidian: 8, magic_dust: 5 }, gold: 2000, levelReq: 15, difficulty: 180, maxQuality: 700, durability: 100 },
-
   { output: 'ironwood_staff', qty: 1, materials: { ironwood: 8, magic_dust: 4 }, gold: 1800, levelReq: 13, difficulty: 160, maxQuality: 600, durability: 70 },
   { output: 'ironwood_bow', qty: 1, materials: { ironwood: 8, sturdy_leather: 4 }, gold: 1800, levelReq: 13, difficulty: 160, maxQuality: 600, durability: 70 },
+  { output: 'shadow_tome', qty: 1, materials: { void_dust: 6, magic_dust: 4 }, gold: 1500, levelReq: 12, difficulty: 150, maxQuality: 600, durability: 70 },
+  { output: 'world_tree_staff', qty: 1, materials: { ironwood: 12, mana_bloom: 10, magic_dust: 8 }, gold: 4500, levelReq: 20, difficulty: 280, maxQuality: 1000, durability: 80 },
+  { output: 'star_orb', qty: 1, materials: { crystal: 20, sun_orb: 10, magic_dust: 12 }, gold: 8000, levelReq: 24, difficulty: 450, maxQuality: 2000, durability: 90 },
   { output: 'mana_ring', qty: 1, materials: { mana_bloom: 10, magic_dust: 6 }, gold: 2000, levelReq: 14, difficulty: 180, maxQuality: 700, durability: 60 },
   { output: 'cave_potion', qty: 1, materials: { cave_fish: 2, herb: 10 }, gold: 300, levelReq: 10, difficulty: 100, maxQuality: 350, durability: 40 },
 

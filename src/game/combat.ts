@@ -10,12 +10,14 @@ import { grantFamiliarXp } from './familiars';
 const REGEN_CHANCE = 0.3;
 
 export interface CombatStats {
+  level: number;
   atk: number;
   def: number;
   maxHp: number;
   weaponElement?: string;
   weaponDmgType?: string;
   armorElement?: string;
+  trinketId?: string;
 }
 
 export interface SimResult {
@@ -70,7 +72,7 @@ export function simulateCombat(
 ): SimResult {
   let php = startHp;
   let mhp = monster.hp;
-  const maxHp = stats.maxHp;
+  let maxHp = stats.maxHp;
   const rounds: SimResult['rounds'] = [];
 
   const monsterMaxHp = monster.hp;
@@ -95,8 +97,19 @@ export function simulateCombat(
       if (crit) dmg = Math.round(dmg * (2 + mods.critMult));
       mhp -= dmg;
       if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
+      
+      let bonusText = '';
+      if (stats.trinketId === 'heartsteel' && hitsDealt % 3 === 0) {
+        // Coeuracier trigger!
+        stats.atk += 3;
+        const hpBonus = 20;
+        php += hpBonus;
+        maxHp += hpBonus; // Increase local maxHp to allow keeping the extra health
+        bonusText = ' 💥 Coeuracier proc (+ATK, +PV max) !';
+      }
+
       rounds.push({
-        text: `${h > 0 ? 'Tir double ! ' : ''}Tu infliges ${dmg}${crit ? ' (CRIT !)' : ''} dégâts.`,
+        text: `${h > 0 ? 'Tir double ! ' : ''}Tu infliges ${dmg}${crit ? ' (CRIT !)' : ''} dégâts.${bonusText}`,
         playerHp: Math.max(0, php),
         monsterHp: Math.max(0, mhp),
       });
@@ -228,12 +241,12 @@ export function combatTurn(
 
   if (mhp <= 0) return { events, php, mhp: 0, fled, abilityUsed, hitsDealt, hitsTaken };
 
-  // ── Phase monstre (plus dangereux : la défense ne mitige qu'à 60%) ──
+  // ── Phase monstre (plus dangereux : la défense ne mitige qu'à 80%) ──
   if (Math.random() < mods.dodge) {
     events.push({ text: `Tu esquives l'attaque de ${monster.name} !`, side: 'info' });
   } else {
     hitsTaken++;
-    let mdmg = Math.max(1, Math.round(roll(monster.atk, monster.atk + 4) - stats.def * 0.6));
+    let mdmg = Math.max(1, Math.round(roll(monster.atk, monster.atk + 4) - stats.def * 0.8));
     mdmg = Math.round(mdmg * defMult);
     mdmg = Math.max(1, Math.round(mdmg * (1 - mods.dmgReduction)));
     php -= mdmg;
@@ -241,9 +254,9 @@ export function combatTurn(
     events.push({ text: `${monster.name} t'inflige ${mdmg}.`, side: 'enemy' });
   }
   
-  // Régénération : passif à déclenchement aléatoire (sauf potion/fuite).
-  if (action === 'attack' && mods.regen > 0 && php < maxHp && php > 0 && Math.random() < REGEN_CHANCE) {
-    const reg = Math.round(mods.regen);
+  // Régénération : passif (Healer) 100% chance qui scale avec le niveau
+  if (action === 'attack' && mods.regen > 0 && php < maxHp && php > 0) {
+    const reg = Math.round(mods.regen + stats.level * 0.5);
     php = Math.min(maxHp, php + reg);
     events.push({ text: `Régénération ! +${reg} PV.`, side: 'info' });
   }

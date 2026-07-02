@@ -41,6 +41,8 @@ export const ITEMS: Record<string, ItemDef> = {
   upgrade_matrix: { id: 'upgrade_matrix', name: 'Matrice d\'amélioration', icon: '✨', rarity: 'legendary', slot: 'consumable', value: 2000, desc: 'Un artefact puissant capable d\'améliorer un équipement d\'une étoile.' },
 
   // ── Trinkets ──
+  heartsteel: { id: 'heartsteel', name: 'Coeuracier', icon: '❤️‍🔥', rarity: 'legendary', slot: 'trinket', hp: 100, value: 0, desc: 'Tous les 3 coups portés, augmente la santé et l\'attaque pour le reste du combat.', element: 'neutral', maxDurability: 0 },
+  flower_crown: { id: 'flower_crown', name: 'Couronne de fleurs', icon: '🌸', rarity: 'common', slot: 'trinket', hp: 15, value: 8, desc: 'Tressée à la main.', element: 'earth', maxDurability: 300 },
   bone_necklace: { id: 'bone_necklace', name: 'Collier d\'os', icon: '🦴', rarity: 'uncommon', slot: 'trinket', atk: 2, hp: 10, value: 35, desc: 'Trophée de chasse.', element: 'earth', maxDurability: 300 },
   slime_ring: { id: 'slime_ring', name: 'Anneau gluant', icon: '🟢', rarity: 'common', slot: 'trinket', hp: 25, value: 20, desc: 'Toujours humide.', element: 'water', maxDurability: 300 },
   lucky_coin: { id: 'lucky_coin', name: 'Pièce porte-bonheur', icon: '🍀', rarity: 'rare', slot: 'trinket', value: 150, desc: 'Améliore légèrement la chance au casino.', element: 'light', maxDurability: 300 },
@@ -107,10 +109,13 @@ export const ITEMS: Record<string, ItemDef> = {
   radiant_staff: { id: 'radiant_staff', name: 'Bâton Radiant', icon: '✨', rarity: 'epic', slot: 'weapon', atk: 45, classes: ['mage', 'healer'], value: 900, desc: 'Illumine les ténèbres.', element: 'light', dmgType: 'magical', maxDurability: 500, setId: 'light_set' },
   void_tome: { id: 'void_tome', name: 'Tome du Vide', icon: '📓', rarity: 'legendary', slot: 'weapon', atk: 65, classes: ['mage', 'healer'], value: 2000, desc: 'Dévore l\'âme de celui qui le lit.', element: 'dark', dmgType: 'magical', maxDurability: 500, setId: 'dark_set' },
   ironwood_staff: { id: 'ironwood_staff', name: 'Bâton en Bois de Fer', icon: '🦯', rarity: 'rare', slot: 'weapon', atk: 30, classes: ['mage', 'healer'], value: 350, desc: 'Extrêmement lourd pour un bâton magique.', element: 'neutral', dmgType: 'magical', maxDurability: 500 },
-
+  shadow_tome: { id: 'shadow_tome', name: 'Grimoire des Ombres', icon: '📓', rarity: 'rare', slot: 'weapon', atk: 28, hp: 20, classes: ['mage', 'healer'], value: 300, desc: 'Ses pages sont écrites avec du sang.', element: 'dark', dmgType: 'magical', maxDurability: 500 },
+  world_tree_staff: { id: 'world_tree_staff', name: 'Bâton de l\'Arbre-Monde', icon: '🌿', rarity: 'epic', slot: 'weapon', atk: 45, hp: 150, classes: ['mage', 'healer'], value: 1200, desc: 'Palpite d\'une vie éternelle.', element: 'earth', dmgType: 'magical', maxDurability: 500 },
+  star_orb: { id: 'star_orb', name: 'Orbe Stellaire', icon: '💫', rarity: 'legendary', slot: 'weapon', atk: 60, classes: ['mage', 'healer'], value: 1800, desc: 'Contient une constellation entière.', element: 'light', dmgType: 'magical', maxDurability: 500 },
   // ── Armures (Guerrier / Archer / Mage) ──
   woven_shirt: { id: 'woven_shirt', name: 'Chemise tissée', icon: '👕', rarity: 'common', slot: 'armor', def: 2, hp: 5, value: 8, desc: 'Tissée avec de la fibre végétale.', element: 'earth', maxDurability: 1000 },
   leather_boots: { id: 'leather_boots', name: 'Bottes en cuir', icon: '🥾', rarity: 'common', slot: 'armor', def: 3, hp: 10, value: 15, desc: 'Protège les pieds des ronces.', element: 'neutral', maxDurability: 1000 },
+  wooden_shield: { id: 'wooden_shield', name: 'Bouclier en bois', icon: '🛡️', rarity: 'common', slot: 'armor', def: 4, hp: 15, value: 12, desc: 'Un couvercle de tonneau reconverti.', element: 'earth', maxDurability: 1000 },
   mage_hat: { id: 'mage_hat', name: 'Chapeau pointu', icon: '🧙', rarity: 'uncommon', slot: 'armor', def: 1, hp: 15, value: 25, desc: 'Le couvre-chef classique des mages.', element: 'light', maxDurability: 1000 },
   cloth_robe: { id: 'cloth_robe', name: 'Robe de tissu', icon: '🧥', rarity: 'common', slot: 'armor', def: 3, hp: 10, value: 12, desc: 'Légère et confortable.', element: 'neutral', maxDurability: 1000 },
   iron_mail: { id: 'iron_mail', name: 'Cotte de fer', icon: '🛡️', rarity: 'uncommon', slot: 'armor', def: 9, hp: 30, value: 70, desc: 'Protection solide.', element: 'neutral', maxDurability: 1000 },

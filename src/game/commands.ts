@@ -111,6 +111,18 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.open('equipment', undefined, { singleton: true });
       break;
 
+    case 'mathieukdo':
+      if (ctx.p.claimedMathieuKdo) {
+        ctx.toast('Tu as déjà réclamé ce cadeau !', 'bad');
+      } else {
+        ctx.mutate((d) => {
+          d.claimedMathieuKdo = true;
+          d.inventory['heartsteel'] = (d.inventory['heartsteel'] || 0) + 1;
+        });
+        ctx.toast('🎁 Tu as reçu le Coeuracier !', 'good');
+      }
+      break;
+
     case 'cooldown':
       ctx.open('cooldown', undefined, { singleton: true });
       break;
@@ -275,10 +287,10 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       const monster = {
         ...baseMonster,
         name: `${baseMonster.name} Furieux`,
-        hp: baseMonster.hp * 4,
-        atk: baseMonster.atk * 3,
-        def: baseMonster.def * 2,
-        xp: baseMonster.xp * 10,
+        hp: Math.round(baseMonster.hp * 3),
+        atk: Math.round(baseMonster.atk * 2),
+        def: Math.round(baseMonster.def * 1.5),
+        xp: Math.round(baseMonster.xp * 5),
         gold: [baseMonster.gold[0] * 5, baseMonster.gold[1] * 5] as [number, number],
       };
       ctx.mutate((d) => {

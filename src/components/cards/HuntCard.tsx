@@ -34,6 +34,10 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const [showPotions, setShowPotions] = useState(false);
   const logEnd = useRef<HTMLDivElement>(null);
 
+  const [bonusAtk, setBonusAtk] = useState(0);
+  const [bonusMaxHp, setBonusMaxHp] = useState(0);
+  const [combatHits, setCombatHits] = useState(0);
+
   // Réinitialise quand une nouvelle rencontre arrive (relance de hunt).
   useEffect(() => {
     setMonsterHp(m.hp);
@@ -41,6 +45,9 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     setStatus('fighting');
     setAbilityCd(0);
     setOutcome(null);
+    setBonusAtk(0);
+    setBonusMaxHp(0);
+    setCombatHits(0);
   }, [encounter.id]);
 
   useEffect(() => { logEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [log]);
@@ -66,12 +73,30 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     }
 
     const s = deriveStats(player);
+    s.atk += bonusAtk;
+    s.maxHp += bonusMaxHp;
     const mods = talentMods(player);
     const res = combatTurn(s, mods, { ...m, maxHp: m.hp }, player.hp, monsterHp, action, {
       abilityMult: ability.mult,
       abilityHealFrac: ability.healFrac,
       potionHeal: potHeal,
     });
+
+    let newBonusAtk = bonusAtk;
+    let newBonusMaxHp = bonusMaxHp;
+    let newCombatHits = combatHits + res.hitsDealt;
+
+    if (s.trinketId === 'heartsteel') {
+      const triggersBefore = Math.floor(combatHits / 3);
+      const triggersAfter = Math.floor(newCombatHits / 3);
+      const diff = triggersAfter - triggersBefore;
+      if (diff > 0) {
+        newBonusAtk += diff * 3;
+        newBonusMaxHp += diff * 20;
+        res.php += diff * 20; // Heal by the same amount
+        res.events.push({ text: `💥 Coeuracier proc ! (+${diff * 3} ATK, +${diff * 20} PV max)`, side: 'you' });
+      }
+    }
 
     let newStatus: Status = 'fighting';
     if (res.fled) newStatus = 'fled';
@@ -104,6 +129,9 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     setLog((l) => [...l, ...res.events].slice(-40));
     setAbilityCd((c) => (res.abilityUsed ? ABILITY_TURNS : Math.max(0, c - 1)));
     setStatus(newStatus);
+    setBonusAtk(newBonusAtk);
+    setBonusMaxHp(newBonusMaxHp);
+    setCombatHits(newCombatHits);
 
     if (action === 'attack' || action === 'ability') playSound('hit');
     if (newStatus === 'won') {
