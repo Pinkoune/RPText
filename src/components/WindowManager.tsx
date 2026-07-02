@@ -32,9 +32,11 @@ import EventsCard from './cards/EventsCard';
 import AchievementsCard from './cards/AchievementsCard';
 import FateShopCard from './cards/FateShopCard';
 import SeasonCard from './cards/SeasonCard';
+import { AdminModal } from './AdminModal';
 import type { HuntEncounter } from '../game/combat';
 
 const META: Record<WindowKind, { title: string; accent: string }> = {
+  admin: { title: '👑 Panel Administrateur', accent: '#4ade80' },
   profile: { title: '👤 Profil', accent: '#9fd0ff' },
   hunt: { title: '⚔️ Chasse', accent: '#ff8a8a' },
   map: { title: '🗺️ Carte du monde', accent: '#7bd88f' },
@@ -68,7 +70,7 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   season: { title: '🏅 Saison PvP', accent: '#7ad0ff' },
 };
 
-const WIDE: Partial<Record<WindowKind, boolean>> = { news: true, craft: true, talents: true };
+const WIDE: Partial<Record<WindowKind, boolean>> = { news: true, craft: true, talents: true, admin: true };
 
 export default function WindowManager() {
   const windows = useUi((s) => s.windows);
@@ -111,6 +113,7 @@ export default function WindowManager() {
               {w.kind === 'achievements' && <AchievementsCard />}
               {w.kind === 'fateshop' && <FateShopCard />}
               {w.kind === 'season' && <SeasonCard />}
+              {w.kind === 'admin' && <AdminModal />}
             </Window>
           );
         })}

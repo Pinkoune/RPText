@@ -81,6 +81,7 @@ export interface PlayerState {
   /** Titre/devise personnalisable affiché sous le nom. */
   title: string;
   photoURL: string | null;
+  isAdmin?: boolean;
   classId: ClassId;
   level: number;
   xp: number;

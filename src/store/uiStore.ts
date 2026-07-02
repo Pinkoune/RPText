@@ -28,6 +28,7 @@ export type WindowKind =
   | 'stats'
   | 'help'
   | 'wiki'
+  | 'admin'
   | 'events'
   | 'achievements'
   | 'fateshop'

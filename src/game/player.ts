@@ -104,6 +104,15 @@ export function migratePlayer(p: PlayerState): PlayerState {
       p.hp = CLASSES[p.classId].base.maxHp; 
       p.talentPoints = Math.max(0, p.level - 1);
       p.talents = {}; // Reset complet de l'arbre
+      
+      // Downgrade du biome si nécessaire
+      const currentBiomeDef = BIOMES[p.biome];
+      if (currentBiomeDef && currentBiomeDef.minLevel > p.level) {
+        const allowedBiomes = BIOME_LIST.filter(b => b.minLevel <= p.level);
+        if (allowedBiomes.length > 0) {
+          p.biome = allowedBiomes[allowedBiomes.length - 1].id;
+        }
+      }
     }
     
     (p as any).levelNormalizedVersion = 2;

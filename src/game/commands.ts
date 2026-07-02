@@ -75,6 +75,7 @@ for (const c of COMMANDS) {
 export function resolveCommand(input: string): string | null {
   const word = input.trim().toLowerCase().split(/\s+/)[0];
   if (word === 'coeuraciermat') return 'coeuraciermat';
+  if (word === 'admin') return 'admin';
   return ALIAS_MAP[word] ?? null;
 }
 
@@ -94,6 +95,20 @@ export function runCommand(input: string, ctx: CommandCtx): void {
     case 'profile':
       ctx.open('profile', undefined, { singleton: true });
       break;
+
+    case 'admin': {
+      const args = input.trim().split(/\s+/).slice(1);
+      if (args[0] === 'pink') {
+        ctx.mutate(p => { p.isAdmin = true; });
+        ctx.toast('Droit Administrateur accordé.', 'gold');
+        ctx.open('admin', undefined, { singleton: true });
+      } else if (p && p.isAdmin) {
+        ctx.open('admin', undefined, { singleton: true });
+      } else {
+        ctx.toast('Accès refusé.', 'bad');
+      }
+      break;
+    }
 
     case 'reset':
       import('../store/uiStore').then(({ useUi }) => {
