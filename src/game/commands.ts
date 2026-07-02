@@ -111,8 +111,10 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.open('equipment', undefined, { singleton: true });
       break;
 
-    case 'mathieukdo':
-      if (ctx.p.claimedMathieuKdo) {
+    case 'mathieukdo': {
+      const p = ctx.getPlayer();
+      if (!p) break;
+      if (p.claimedMathieuKdo) {
         ctx.toast('Tu as déjà réclamé ce cadeau !', 'bad');
       } else {
         ctx.mutate((d) => {
@@ -122,6 +124,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         ctx.toast('🎁 Tu as reçu le Coeuracier !', 'good');
       }
       break;
+    }
 
     case 'cooldown':
       ctx.open('cooldown', undefined, { singleton: true });

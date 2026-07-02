@@ -46,6 +46,7 @@ export interface ItemDef {
 }
 
 export interface Stats {
+  level: number;
   hp: number;
   maxHp: number;
   atk: number;
