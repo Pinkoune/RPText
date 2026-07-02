@@ -1,6 +1,7 @@
 import { useGame } from '../../store/gameStore';
 import { item, RARITY_COLOR } from '../../game/items';
 import { deriveStats, equipItem, unequipItem, canEquip } from '../../game/player';
+import { RECIPES, getCraftLevel } from '../../game/crafting';
 import type { ItemDef, ItemSlot } from '../../game/types';
 
 const SLOTS: { slot: 'weapon' | 'armor' | 'trinket' | 'tool' | 'profession_armor'; label: string; icon: string }[] = [
@@ -206,23 +207,39 @@ export default function EquipmentCard() {
                 {candidates.map(([id, q]) => {
                   const it = item(id)!;
                   const cb = statBadges(it);
+                  
+                  let reqReason: string | null = null;
+                  const craftLvl = getCraftLevel(p.craftXp).level;
+                  const recipe = RECIPES.find(x => x.output === it.id);
+                  if (recipe && craftLvl < recipe.levelReq) {
+                    reqReason = `Artis. Niv ${recipe.levelReq} requis`;
+                  } else if (!recipe && it.reqLevel && p.level < it.reqLevel) {
+                    reqReason = `Niv ${it.reqLevel} requis`;
+                  }
+
                   return (
-                    <div key={id} className="flex items-center justify-between gap-2 rounded-lg bg-black/30 px-3 py-2">
+                    <div key={id} className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 ${reqReason ? 'bg-red-950/40 opacity-75' : 'bg-black/30'}`}>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 text-sm">
-                          <span className="leading-none">{it.icon}</span>
-                          <span className="truncate" style={{ color: RARITY_COLOR[it.rarity] }}>{it.name}</span>
+                          <span className={`leading-none ${reqReason ? 'grayscale' : ''}`}>{it.icon}</span>
+                          <span className="truncate" style={{ color: reqReason ? '#7f1d1d' : RARITY_COLOR[it.rarity] }}>{it.name}</span>
                           {q > 1 && <span className="text-[10px] text-slate-500">×{q}</span>}
                         </div>
                         {cb.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1.5 text-[10px]">
+                          <div className={`mt-1 flex flex-wrap gap-1.5 text-[10px] ${reqReason ? 'opacity-50' : ''}`}>
                             {cb.map((bd, i) => (
                               <span key={i} className={`rounded px-2 py-1 ${bd.cls}`}>{bd.txt}</span>
                             ))}
                           </div>
                         )}
                       </div>
-                      <button onClick={() => equip(id)} className="shrink-0 rounded bg-sky-500/30 px-2.5 py-1 text-xs font-semibold hover:bg-sky-500/50">Équiper</button>
+                      {reqReason ? (
+                        <div className="shrink-0 text-[10px] font-bold text-red-400 max-w-[80px] text-right">
+                          {reqReason}
+                        </div>
+                      ) : (
+                        <button onClick={() => equip(id)} className="shrink-0 rounded bg-sky-500/30 px-2.5 py-1 text-xs font-semibold hover:bg-sky-500/50">Équiper</button>
+                      )}
                     </div>
                   );
                 })}

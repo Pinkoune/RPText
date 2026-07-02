@@ -2,6 +2,7 @@ import type { PlayerState, ClassId, Stats, QuestState, ItemDef } from './types';
 import { CLASSES, xpToNext } from './classes';
 import { getTeamBonus, getGuildBonus } from '../firebase/groupsService';
 import { item } from './items';
+import { RECIPES, getCraftLevel } from './crafting';
 import { BIOMES, BIOME_LIST } from './biomes';
 import { familiarBonus, familiarAbility } from './familiars';
 import { talentMods } from './talents';
@@ -23,7 +24,8 @@ export function canEquip(p: PlayerState, it: ItemDef): boolean {
   // Invalider les objets cheatés de l'ancienne boutique s'ils n'ont pas été craftés (pas de suffixe de qualité)
   const OP_SHOP_ITEMS = ['frost_glaive', 'frost_scepter', 'steel_plate', 'frost_plate', 'lucky_coin', 'gambler_ring', 'iron_spear', 'crystal_staff', 'ember_axe'];
   if (OP_SHOP_ITEMS.includes(it.id)) return false;
-  if (it.slot !== 'weapon' && it.slot !== 'armor' && it.slot !== 'trinket') return false;
+  const ALLOWED_SLOTS = ['weapon', 'armor', 'trinket', 'tool', 'profession_armor'];
+  if (!ALLOWED_SLOTS.includes(it.slot)) return false;
   if (it.classes && !it.classes.includes(p.classId)) return false;
   return true;
 }
@@ -245,14 +247,30 @@ export function migratePlayer(p: PlayerState): PlayerState {
     p.inventory[id] = (p.inventory[id] || 0) + qty;
   }
 
-  if (p.equipped.weapon && !canEquip(p, item(p.equipped.weapon)!)) p.equipped.weapon = null;
-  // Arme équipée non autorisée pour la classe (ex: mage avec une épée) : on la
-  // déséquipe et on s'assure que la classe a une arme de départ adaptée.
-  const w = p.equipped.weapon ? item(p.equipped.weapon)! : null;
-  if (w && !canEquip(p, w)) {
-    addItem(p, p.equipped.weapon!, 1);
-    p.equipped.weapon = null;
+  // Force unequip invalid items (class req, craft req, level req)
+  const craftLvl = getCraftLevel(p.craftXp).level;
+  for (const slot of ['weapon', 'armor', 'trinket', 'tool', 'profession_armor'] as const) {
+    const eqId = p.equipped[slot];
+    if (!eqId) continue;
+    const it = item(eqId);
+    if (!it) {
+      p.equipped[slot] = null;
+      continue;
+    }
+    
+    let isInvalid = !canEquip(p, it);
+    if (!isInvalid) {
+      const r = RECIPES.find(x => x.output === it.id);
+      if (r && craftLvl < r.levelReq) isInvalid = true;
+      if (!r && it.reqLevel && p.level < it.reqLevel) isInvalid = true;
+    }
+    
+    if (isInvalid) {
+      addItem(p, eqId, 1);
+      p.equipped[slot] = null;
+    }
   }
+
   if (!p.equipped.weapon) {
     const start = starterWeapon(p.classId);
     if ((p.inventory[start] ?? 0) <= 0) addItem(p, start, 1);

@@ -4,12 +4,12 @@ service cloud.firestore {
     // Chaque joueur ne peut lire/écrire que son propre document.
     match /players/{uid} {
       allow read: if request.auth != null;            // profils lisibles (classement, PvP)
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && (request.auth.uid == uid || get(/databases/$(database)/documents/players/$(request.auth.uid)).data.isAdmin == true);
     }
     // Classement public en lecture, écriture via le doc joueur seulement.
     match /leaderboard/{uid} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && (request.auth.uid == uid || get(/databases/$(database)/documents/players/$(request.auth.uid)).data.isAdmin == true);
     }
     // Duels coinflip : créés par un joueur, rejoignables par un autre.
     match /duels/{duelId} {

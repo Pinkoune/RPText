@@ -43,6 +43,8 @@ export interface ItemDef {
   setId?: string;
   /** Passif de l'objet, informatif ou géré manuellement. */
   passive?: string;
+  /** Niveau de combat requis pour équiper (pour les objets non-craftables). */
+  reqLevel?: number;
   /** Durabilité maximale de l'équipement (0 = incassable). */
   maxDurability?: number;
   maxCp?: number;
