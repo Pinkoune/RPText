@@ -1,14 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useGame } from '../store/gameStore';
-import { useUi } from '../store/uiStore';
-import { WindowFrame } from './WindowFrame';
 import type { PlayerState } from '../game/types';
 import { getAllPlayers, updatePlayerAdmin } from '../firebase/adminService';
 
 export function AdminModal() {
   const { player, toast } = useGame();
-  const { activeWindows, toggleWindow } = useUi();
-  const win = activeWindows.find(w => w.kind === 'admin');
   
   const [players, setPlayers] = useState<PlayerState[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,9 +20,8 @@ export function AdminModal() {
   const [editKills, setEditKills] = useState(0);
 
   useEffect(() => {
-    if (!win) return;
     loadPlayers();
-  }, [win]);
+  }, []);
 
   async function loadPlayers() {
     setLoading(true);
@@ -46,7 +41,7 @@ export function AdminModal() {
       .sort((a, b) => b.level - a.level);
   }, [players, search]);
 
-  if (!win || !player?.isAdmin) return null;
+  if (!player?.isAdmin) return null;
 
   function handleEditClick(p: PlayerState) {
     setEditingPlayer(p);
