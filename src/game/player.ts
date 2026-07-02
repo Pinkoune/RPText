@@ -257,6 +257,8 @@ export function createPlayer(
     curveVersion: 2,
     familiars: {},
     activeFamiliarId: null,
+    claimedAchievements: [],
+    loginStreak: 0,
     gearDurability: { weapon: item(weapon)?.maxDurability ?? 0, armor: 0, trinket: 0, consumable: 0, material: 0 },
     gearStars: { weapon: 0, armor: 0, trinket: 0, consumable: 0, material: 0 },
     createdAt: now,

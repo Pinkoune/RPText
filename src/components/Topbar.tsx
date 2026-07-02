@@ -6,6 +6,8 @@ import { BIOMES } from '../game/biomes';
 import { CLASSES, xpToNext } from '../game/classes';
 import { PHASE_EMOJI, PHASE_LABEL } from '../game/daynight';
 import { deriveStats } from '../game/player';
+import { useUi } from '../store/uiStore';
+import { currentGlobalEvent, currentBiomeEvent, type EventDef } from '../game/events';
 
 function Pill({ icon, value, title }: { icon: string; value: string | number; title: string }) {
   return (
@@ -19,15 +21,41 @@ function Pill({ icon, value, title }: { icon: string; value: string | number; ti
   );
 }
 
+const EVENT_COLOR: Record<EventDef['kind'], string> = {
+  buff: '#4ade80',
+  debuff: '#fb7185',
+  neutral: '#94a3b8',
+  invasion: '#c084fc',
+};
+
+/** Pastille cliquable d'événement (ouvre la fenêtre Événements). */
+function EventPill({ e, onClick }: { e: EventDef; onClick: () => void }) {
+  const color = EVENT_COLOR[e.kind];
+  const notable = e.kind === 'buff' || e.kind === 'debuff' || e.kind === 'invasion';
+  return (
+    <button
+      onClick={onClick}
+      title={`${e.name} — ${e.desc}`}
+      className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs transition hover:brightness-125 ${e.kind === 'invasion' ? 'animate-pulse' : ''}`}
+      style={{ background: notable ? `${color}22` : 'rgba(0,0,0,0.35)' }}
+    >
+      <span>{e.icon}</span>
+    </button>
+  );
+}
+
 export default function Topbar() {
   const player = useGame((s) => s.player);
   const logout = useGame((s) => s.logout);
+  const open = useUi((s) => s.open);
   const { now, phase } = useClock();
   const [muted, setMuted] = useState(isMuted());
   if (!player) return null;
 
   const biome = BIOMES[player.biome];
   const cls = CLASSES[player.classId];
+  const globalEvent = currentGlobalEvent(now.getTime());
+  const biomeEvent = currentBiomeEvent(player.biome, now.getTime());
   const stats = deriveStats(player);
   const hpPct = Math.max(0, Math.round((player.hp / stats.maxHp) * 100));
   const xpPct = Math.round((player.xp / xpToNext(player.level)) * 100);
@@ -68,8 +96,19 @@ export default function Topbar() {
 
         {/* Ressources */}
         <div className="ml-auto flex items-center gap-1.5">
+          <div className="flex items-center gap-1" title="Événements en cours (clic pour détails)">
+            <EventPill e={globalEvent} onClick={() => open('events', undefined, { singleton: true })} />
+            <EventPill e={biomeEvent} onClick={() => open('events', undefined, { singleton: true })} />
+          </div>
           <Pill icon="🪙" value={player.gold} title="Or" />
-          <Pill icon="🎲" value={player.fateCoins} title="Fate Coins" />
+          <button
+            onClick={() => open('fateshop', undefined, { singleton: true })}
+            title="Fate Coins — clic pour ouvrir la Boutique du Destin"
+            className="flex items-center gap-1 rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-fuchsia-500/30 sm:text-sm"
+          >
+            <span>🎲</span>
+            <span className="font-semibold tabular-nums">{player.fateCoins}</span>
+          </button>
           <Pill icon={PHASE_EMOJI[phase]} value={now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} title={PHASE_LABEL[phase]} />
           <Pill icon={biome.emoji} value={biome.name.split(' ')[0]} title={biome.name} />
           <button

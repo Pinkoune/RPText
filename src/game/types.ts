@@ -147,6 +147,12 @@ export interface PlayerState {
   familiars: Record<string, number>;
   /** Familier actuellement équipé (donne son bonus de stat). */
   activeFamiliarId: string | null;
+  /** Connexion journalière : nombre de jours consécutifs. */
+  loginStreak?: number;
+  /** Dernier jour de connexion réclamé (clé locale AAAA-M-J). */
+  lastLoginDay?: string;
+  /** Succès dont la récompense a été réclamée. */
+  claimedAchievements?: string[];
   createdAt: number;
   lastSeen: number;
 }

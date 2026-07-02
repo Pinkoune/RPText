@@ -18,6 +18,36 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'engagement-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '🎁 Récompense de connexion journalière',
+        items: [
+          'Connecte-toi chaque jour pour recevoir une récompense (or, Lootbox, Fate Coins, gemmes…).',
+          'Cycle de 7 jours : plus ta série de jours consécutifs est longue, meilleures sont les récompenses. Le 7e jour est le plus généreux !',
+          'Attention : rater un jour remet la série à zéro.',
+        ],
+      },
+      {
+        title: '🏆 Succès',
+        items: [
+          '13 succès à débloquer (niveau, monstres vaincus, artisanat, récolte, donjons, casino, biomes…).',
+          'Chaque succès accompli offre une récompense à réclamer (or, gemmes, Fate Coins, objets rares).',
+          'Commande : « succes » (ou « achievements »).',
+        ],
+      },
+      {
+        title: '🌍 Événements visibles + Invasions',
+        items: [
+          'Les événements mondiaux et régionaux en cours sont maintenant affichés dans la barre du haut (clic pour le détail).',
+          'Nouvel événement rare : l\'Invasion de monstres ! Elle déferle parfois sur une région et octroie +25% XP et +25% or sur place.',
+          'Commande : « events » pour tout voir et le compte à rebours de la prochaine rotation.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'forge-ui-v1',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [

@@ -9,8 +9,10 @@ import Topbar from './components/Topbar';
 import CommandBar from './components/CommandBar';
 import WindowManager from './components/WindowManager';
 import Toasts from './components/Toasts';
+import ChatNotifs from './components/ChatNotifs';
 import LevelUpFx from './components/LevelUpFx';
 import PatchNotesModal from './components/PatchNotesModal';
+import DailyRewardModal from './components/DailyRewardModal';
 import { setAmbient, stopAmbientMusic } from './game/sound';
 
 import PresenceTracker from './components/PresenceTracker';
@@ -41,12 +43,10 @@ export default function App() {
       player.teamId,
       player.guildId,
       (msg) => {
-        let prefix = 'Global';
-        if (msg.channel === 'guild') prefix = 'Guilde';
-        else if (msg.channel === 'team') prefix = 'Équipe';
-        else if (msg.channel === 'private') prefix = 'Privé';
-        
-        useGame.getState().toast(`[${prefix}] ${msg.name}: ${msg.text.slice(0, 30)}${msg.text.length > 30 ? '...' : ''}`, 'info');
+        const channel = (msg.channel ?? 'global') as 'global' | 'team' | 'guild' | 'private';
+        // Pas de notif pour le chat global (trop bruyant) — seulement équipe/guilde/privé.
+        if (channel === 'global') return;
+        useGame.getState().pushChatNotif({ channel, name: msg.name, text: msg.text });
       }
     );
     return unsub;
@@ -72,8 +72,10 @@ export default function App() {
       <WindowManager />
       <CommandBar />
       <Toasts />
+      <ChatNotifs />
       <LevelUpFx />
       <PatchNotesModal />
+      <DailyRewardModal />
     </div>
   );
 }

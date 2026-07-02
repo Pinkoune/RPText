@@ -92,6 +92,8 @@ export interface DungeonRun {
   fateCoins: number;
   gems: number;
   loot: string[];
+  /** Récompenses doublées par une clé de donjon consommée. */
+  doubled?: boolean;
 }
 
 export function dungeonCooldownLeft(p: PlayerState, def: DungeonDef): number {
@@ -145,16 +147,27 @@ export function runDungeon(p: PlayerState, def: DungeonDef): DungeonRun | { erro
   p.kills += def.stages.length;
   run.xp = totalXp;
   run.levelsGained = grantXp(p, totalXp);
-  run.gold = def.reward.gold;
-  run.fateCoins = def.reward.fateCoins;
-  run.gems = def.reward.gems;
-  p.gold += def.reward.gold;
-  p.fateCoins += def.reward.fateCoins;
-  p.gems += def.reward.gems;
+
+  // Clé de donjon : si le joueur en possède, elle est consommée pour doubler
+  // toutes les récompenses de fin (or, Fate Coins, gemmes et butin).
+  const useKey = (p.inventory['dungeon_key'] ?? 0) > 0;
+  const mult = useKey ? 2 : 1;
+  if (useKey) {
+    p.inventory['dungeon_key'] -= 1;
+    if (p.inventory['dungeon_key'] <= 0) delete p.inventory['dungeon_key'];
+    run.doubled = true;
+  }
+
+  run.gold = def.reward.gold * mult;
+  run.fateCoins = def.reward.fateCoins * mult;
+  run.gems = def.reward.gems * mult;
+  p.gold += run.gold;
+  p.fateCoins += run.fateCoins;
+  p.gems += run.gems;
   for (const [id, chance] of Object.entries(def.reward.loot)) {
     if (Math.random() < chance) {
-      addItem(p, id, 1);
-      run.loot.push(id);
+      addItem(p, id, mult);
+      for (let k = 0; k < mult; k++) run.loot.push(id);
     }
   }
   p.dungeonClears[def.id] = (p.dungeonClears[def.id] ?? 0) + 1;

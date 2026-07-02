@@ -85,11 +85,19 @@ export default function DungeonCard() {
           d.settledDungeons = d.settledDungeons || [];
           d.settledDungeons.push(session.id);
           d.kills += def.stages.length;
-          d.gold += gold;
-          d.fateCoins += def.reward.fateCoins;
-          d.gems += def.reward.gems;
-          if (def.reward.fateCoins) toast(`+${def.reward.fateCoins} 🎲`, 'gold');
-          if (def.reward.gems) toast(`+${def.reward.gems} 💎`, 'gold');
+          // Clé de donjon : consommée pour doubler les récompenses de fin.
+          const useKey = (d.inventory['dungeon_key'] ?? 0) > 0;
+          const mult = useKey ? 2 : 1;
+          if (useKey) {
+            d.inventory['dungeon_key'] -= 1;
+            if (d.inventory['dungeon_key'] <= 0) delete d.inventory['dungeon_key'];
+          }
+          d.gold += gold * mult;
+          d.fateCoins += def.reward.fateCoins * mult;
+          d.gems += def.reward.gems * mult;
+          if (useKey) toast('🗝️ Clé de donjon utilisée : récompenses doublées !', 'gold');
+          if (def.reward.fateCoins) toast(`+${def.reward.fateCoins * mult} 🎲`, 'gold');
+          if (def.reward.gems) toast(`+${def.reward.gems * mult} 💎`, 'gold');
           d.dungeonClears[def.id] = (d.dungeonClears[def.id] ?? 0) + 1;
         });
         const levels = grantXp(useGame.getState().player!, xp);

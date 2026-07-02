@@ -6,6 +6,9 @@ import { addQuestMetric } from './quests';
 import { emptyMods, type CombatMods } from './talents';
 import { grantFamiliarXp } from './familiars';
 
+/** Probabilité que la régénération se déclenche à un tour donné (passif). */
+const REGEN_CHANCE = 0.3;
+
 export interface CombatStats {
   atk: number;
   def: number;
@@ -113,11 +116,11 @@ export function simulateCombat(
       rounds.push({ text: `${monster.name} t'inflige ${mdmg} dégâts.`, playerHp: Math.max(0, php), monsterHp: Math.max(0, mhp) });
     }
 
-    // Régénération de fin de tour
-    if (mods.regen > 0 && php < maxHp && php > 0) {
-      const reg = Math.round(maxHp * mods.regen);
+    // Régénération : passif à déclenchement aléatoire (pas chaque tour).
+    if (mods.regen > 0 && php < maxHp && php > 0 && Math.random() < REGEN_CHANCE) {
+      const reg = Math.round(mods.regen);
       php = Math.min(maxHp, php + reg);
-      rounds.push({ text: `Tu te soignes de ${reg} PV.`, playerHp: php, monsterHp: mhp });
+      rounds.push({ text: `Régénération ! +${reg} PV.`, playerHp: php, monsterHp: mhp });
     }
   }
 
@@ -238,11 +241,11 @@ export function combatTurn(
     events.push({ text: `${monster.name} t'inflige ${mdmg}.`, side: 'enemy' });
   }
   
-  // Régénération (sauf potion/fuite)
-  if (action === 'attack' && mods.regen > 0 && php < maxHp && php > 0) {
-    const reg = Math.round(maxHp * mods.regen);
+  // Régénération : passif à déclenchement aléatoire (sauf potion/fuite).
+  if (action === 'attack' && mods.regen > 0 && php < maxHp && php > 0 && Math.random() < REGEN_CHANCE) {
+    const reg = Math.round(mods.regen);
     php = Math.min(maxHp, php + reg);
-    events.push({ text: `Régénération : +${reg} PV.`, side: 'info' });
+    events.push({ text: `Régénération ! +${reg} PV.`, side: 'info' });
   }
 
   return { events, php: Math.max(0, php), mhp: Math.max(0, mhp), fled, abilityUsed, hitsDealt, hitsTaken };

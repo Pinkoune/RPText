@@ -28,6 +28,9 @@ import StatsCard from './cards/StatsCard';
 import NewsCard from './cards/NewsCard';
 import HelpCard from './cards/HelpCard';
 import WikiCard from './cards/WikiCard';
+import EventsCard from './cards/EventsCard';
+import AchievementsCard from './cards/AchievementsCard';
+import FateShopCard from './cards/FateShopCard';
 import type { HuntEncounter } from '../game/combat';
 
 const META: Record<WindowKind, { title: string; accent: string }> = {
@@ -58,6 +61,9 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   news: { title: '📰 Nouveautés', accent: '#7bd8d0' },
   help: { title: '❔ Commandes', accent: '#b8c0cf' },
   wiki: { title: '📚 Wiki', accent: '#a26ad8' },
+  events: { title: '🌍 Événements', accent: '#c084fc' },
+  achievements: { title: '🏆 Succès', accent: '#ffd45a' },
+  fateshop: { title: '🎲 Boutique du Destin', accent: '#e879f9' },
 };
 
 const WIDE: Partial<Record<WindowKind, boolean>> = { news: true, craft: true };
@@ -99,6 +105,9 @@ export default function WindowManager() {
               {w.kind === 'news' && <NewsCard />}
               {w.kind === 'help' && <HelpCard />}
               {w.kind === 'wiki' && <WikiCard />}
+              {w.kind === 'events' && <EventsCard />}
+              {w.kind === 'achievements' && <AchievementsCard />}
+              {w.kind === 'fateshop' && <FateShopCard />}
             </Window>
           );
         })}

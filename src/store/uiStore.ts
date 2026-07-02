@@ -27,7 +27,10 @@ export type WindowKind =
   | 'leaderboard'
   | 'stats'
   | 'help'
-  | 'wiki';
+  | 'wiki'
+  | 'events'
+  | 'achievements'
+  | 'fateshop';
 
 export interface GameWindow {
   id: string;

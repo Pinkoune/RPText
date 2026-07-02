@@ -35,7 +35,7 @@ export const ITEMS: Record<string, ItemDef> = {
   cave_potion: { id: 'cave_potion', name: 'Potion des cavernes', icon: '🧪', rarity: 'rare', slot: 'consumable', hp: 800, value: 120, desc: 'Rend 800 PV. Préparée dans le noir absolu.' },
   grilled_fish: { id: 'grilled_fish', name: 'Poisson grillé', icon: '🍢', rarity: 'common', slot: 'consumable', hp: 120, value: 30, desc: 'Rend 120 PV. Cuisiné.' },
   hearty_stew: { id: 'hearty_stew', name: 'Ragoût copieux', icon: '🍲', rarity: 'uncommon', slot: 'consumable', hp: 250, value: 70, desc: 'Rend 250 PV. Un vrai festin.' },
-  dungeon_key: { id: 'dungeon_key', name: 'Clé de donjon', icon: '🗝️', rarity: 'rare', slot: 'consumable', value: 1000, desc: 'Ouvre les portes des donjons.' },
+  dungeon_key: { id: 'dungeon_key', name: 'Clé de donjon', icon: '🗝️', rarity: 'rare', slot: 'consumable', value: 1000, desc: 'Double les récompenses d\'un donjon réussi (consommée automatiquement à la victoire si tu en possèdes une).' },
   lootbox: { id: 'lootbox', name: 'Lootbox', icon: '🎁', rarity: 'epic', slot: 'consumable', value: 100, desc: 'Ouvre pour obtenir des objets (utiliser la commande /open).' },
   repair_kit: { id: 'repair_kit', name: 'Kit de réparation', icon: '🛠️', rarity: 'uncommon', slot: 'consumable', value: 50, desc: 'Permet de restaurer la durabilité d\'un équipement dans la forge.' },
   upgrade_matrix: { id: 'upgrade_matrix', name: 'Matrice d\'amélioration', icon: '✨', rarity: 'legendary', slot: 'consumable', value: 2000, desc: 'Un artefact puissant capable d\'améliorer un équipement d\'une étoile.' },

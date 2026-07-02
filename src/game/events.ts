@@ -20,12 +20,28 @@ export interface EventDef {
   id: string;
   name: string;
   icon: string;
-  kind: 'buff' | 'debuff' | 'neutral';
+  kind: 'buff' | 'debuff' | 'neutral' | 'invasion';
   desc: string;
   effect: EventEffect;
 }
 
 export const ROTATION_MS = 3 * 60 * 60 * 1000; // 3h
+
+// Une invasion remplace parfois l'événement régional : rare, spectaculaire, et
+// très rentable — de quoi donner envie de rejoindre le biome concerné maintenant.
+export const INVASION_EVENT: EventDef = {
+  id: 'invasion',
+  name: 'Invasion de monstres',
+  icon: '⚔️',
+  kind: 'invasion',
+  desc: 'Des hordes déferlent sur la région : +25% XP et +25% or gagnés ici !',
+  effect: { xpMult: 0.25, goldMult: 0.25 },
+};
+
+/** Un biome est envahi environ 1 fenêtre sur 12 (déterministe). */
+export function isInvasion(biome: BiomeId, now = Date.now()): boolean {
+  return ((rotationWindow(now) + hashStr(biome)) % 12 + 12) % 12 === 0;
+}
 
 // ── Mondiaux : touchent tous les joueurs, peu importe leur biome ──
 export const GLOBAL_EVENTS: EventDef[] = [
@@ -89,6 +105,7 @@ export function currentGlobalEvent(now = Date.now()): EventDef {
 }
 
 export function currentBiomeEvent(biome: BiomeId, now = Date.now()): EventDef {
+  if (isInvasion(biome, now)) return INVASION_EVENT;
   const list = BIOME_EVENTS[biome];
   return pickDeterministic(list, rotationWindow(now) + hashStr(biome));
 }

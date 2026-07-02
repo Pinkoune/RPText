@@ -41,6 +41,7 @@ export const COMMANDS: CommandDef[] = [
   { name: 'forage', aliases: ['cueillette', 'cueillir'], desc: 'Cueillette : herbes médicinales.', category: 'Récolte' },
   { name: 'casino', aliases: ['gamble', 'pari', 'g'], desc: 'Entre au casino (pile/face, blackjack, machine, roue).', category: 'Casino' },
   { name: 'shop', aliases: ['boutique', 'store'], desc: 'Achète potions et équipement.', category: 'Jeu' },
+  { name: 'fateshop', aliases: ['fate', 'destin', 'boutiquefate'], desc: 'Boutique du Destin : dépense tes Fate Coins.', category: 'Casino' },
   { name: 'market', aliases: ['marche', 'marché', 'hv', 'vente'], desc: 'Marché entre joueurs : vendre et acheter.', category: 'Multijoueur' },
   { name: 'heal', aliases: ['soin', 'potion'], desc: 'Bois une potion pour récupérer des PV.', category: 'Combat' },
   { name: 'quests', aliases: ['quetes', 'quêtes', 'q', 'daily', 'quotidien'], desc: 'Quêtes journalières et hebdomadaires.', category: 'Jeu' },
@@ -53,6 +54,8 @@ export const COMMANDS: CommandDef[] = [
   { name: 'chat', aliases: ['tchat', 'say'], desc: 'Chat mondial avec les joueurs connectés.', category: 'Multijoueur' },
   { name: 'leaderboard', aliases: ['classement', 'top', 'lb'], desc: 'Affiche le classement et les joueurs en ligne.', category: 'Multijoueur' },
   { name: 'stats', aliases: ['statistiques', 'stat', 'st'], desc: 'Affiche toutes tes statistiques.', category: 'Jeu' },
+  { name: 'events', aliases: ['event', 'evenement', 'événement', 'evenements', 'événements'], desc: 'Événements mondiaux et régionaux en cours.', category: 'Jeu' },
+  { name: 'achievements', aliases: ['succes', 'succès', 'trophees', 'trophées', 'achi'], desc: 'Tes succès et leurs récompenses.', category: 'Jeu' },
   { name: 'news', aliases: ['changelog', 'nouveautes', 'nouveautés', 'patchnotes'], desc: 'Historique complet des mises à jour.', category: 'Système' },
   { name: 'help', aliases: ['aide', 'commands', '?'], desc: 'Liste toutes les commandes.', category: 'Système' },
   { name: 'close', aliases: ['clear', 'esc'], desc: 'Ferme toutes les fenêtres.', category: 'Système' },
@@ -124,6 +127,10 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.open('shop', undefined, { singleton: true });
       break;
 
+    case 'fateshop':
+      ctx.open('fateshop', undefined, { singleton: true });
+      break;
+
     case 'craft':
       ctx.open('craft', undefined, { singleton: true });
       break;
@@ -175,6 +182,14 @@ export function runCommand(input: string, ctx: CommandCtx): void {
 
     case 'familiar':
       ctx.open('familiar', undefined, { singleton: true });
+      break;
+
+    case 'events':
+      ctx.open('events', undefined, { singleton: true });
+      break;
+
+    case 'achievements':
+      ctx.open('achievements', undefined, { singleton: true });
       break;
 
     case 'news':

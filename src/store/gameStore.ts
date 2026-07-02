@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { PlayerState, ClassId } from '../game/types';
 import { createPlayer, migratePlayer } from '../game/player';
+import { claimDailyLogin, type DailyReward } from '../game/daily';
 import { signInWithProvider, signOut, watchAuth, type AppUser, type AuthProviderType } from '../firebase/auth';
 import { loadPlayer, savePlayer } from '../firebase/playerService';
 import { isFirebaseConfigured } from '../firebase/config';
@@ -13,6 +14,15 @@ export interface Toast {
   tone: 'info' | 'good' | 'bad' | 'gold';
 }
 
+export type ChatChannelKind = 'global' | 'team' | 'guild' | 'private';
+
+export interface ChatNotif {
+  id: number;
+  channel: ChatChannelKind;
+  name: string;
+  text: string;
+}
+
 interface GameState {
   user: AppUser | null;
   player: PlayerState | null;
@@ -21,6 +31,9 @@ interface GameState {
   /** Compteur incrémenté à chaque montée de niveau (déclenche l'animation). */
   levelCelebration: number;
   celebrateLevelUp: () => void;
+  /** Récompense de connexion journalière à afficher (null = rien). */
+  dailyReward: DailyReward | null;
+  clearDailyReward: () => void;
   initAuth: () => void;
   signIn: (provider: AuthProviderType) => Promise<void>;
   logout: () => Promise<void>;
@@ -29,10 +42,15 @@ interface GameState {
   mutate: (fn: (p: PlayerState) => void) => void;
   toast: (text: string, tone?: Toast['tone']) => void;
   dismissToast: (id: number) => void;
+  /** Notifications de chat (haut-droite, colorées par canal). */
+  chatNotifs: ChatNotif[];
+  pushChatNotif: (n: Omit<ChatNotif, 'id'>) => void;
+  dismissChatNotif: (id: number) => void;
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let toastId = 0;
+let chatNotifId = 0;
 
 export const useGame = create<GameState>((set, get) => ({
   user: null,
@@ -40,8 +58,10 @@ export const useGame = create<GameState>((set, get) => ({
   status: 'loading',
   toasts: [],
   levelCelebration: 0,
+  dailyReward: null,
 
   celebrateLevelUp: () => set((s) => ({ levelCelebration: s.levelCelebration + 1 })),
+  clearDailyReward: () => set({ dailyReward: null }),
 
   initAuth: () => {
     watchAuth(async (user) => {
@@ -57,7 +77,10 @@ export const useGame = create<GameState>((set, get) => ({
           // Resync identité Google (avatar/nom peuvent changer).
           existing.name = existing.name || user.name;
           existing.photoURL = user.photoURL;
-          set({ player: existing, status: 'ready' });
+          // Récompense de connexion journalière (une fois par nouveau jour).
+          const reward = claimDailyLogin(existing);
+          set({ player: existing, status: 'ready', dailyReward: reward });
+          if (reward) void savePlayer(existing);
         } else {
           set({ status: 'create' });
         }
@@ -117,4 +140,12 @@ export const useGame = create<GameState>((set, get) => ({
   },
 
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+
+  chatNotifs: [],
+  pushChatNotif: (n) => {
+    const id = ++chatNotifId;
+    set((s) => ({ chatNotifs: [...s.chatNotifs, { id, ...n }] }));
+    setTimeout(() => get().dismissChatNotif(id), 5000);
+  },
+  dismissChatNotif: (id) => set((s) => ({ chatNotifs: s.chatNotifs.filter((n) => n.id !== id) })),
 }));
