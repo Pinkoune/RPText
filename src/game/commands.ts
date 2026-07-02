@@ -97,15 +97,10 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       break;
 
     case 'admin': {
-      const args = input.trim().split(/\s+/).slice(1);
-      if (args[0] === 'pink') {
-        ctx.mutate(p => { p.isAdmin = true; });
-        ctx.toast('Droit Administrateur accordé.', 'gold');
-        ctx.open('admin', undefined, { singleton: true });
-      } else if (p && p.isAdmin) {
+      if (p && p.isAdmin) {
         ctx.open('admin', undefined, { singleton: true });
       } else {
-        ctx.toast('Accès refusé.', 'bad');
+        ctx.toast('Commande introuvable.', 'bad');
       }
       break;
     }

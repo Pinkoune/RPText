@@ -72,6 +72,33 @@ export function AdminModal() {
     }
   }
 
+  async function handleAction(action: string) {
+    if (!editingPlayer) return;
+    try {
+      if (action === 'wipe_inventory') {
+        if (!window.confirm('Vider tout l\'inventaire ?')) return;
+        await updatePlayerAdmin(editingPlayer.uid, { inventory: {} });
+        toast('Inventaire vidé.', 'good');
+      } else if (action === 'reset_talents') {
+        if (!window.confirm('Réinitialiser les talents ?')) return;
+        await updatePlayerAdmin(editingPlayer.uid, { talents: {}, talentPoints: editingPlayer.level - 1, equippedSkills: [] });
+        toast('Talents réinitialisés.', 'good');
+      } else if (action === 'give_item') {
+        const id = window.prompt('ID de l\'objet à donner (ex: potion) :');
+        if (!id) return;
+        const qtyStr = window.prompt('Quantité :', '1');
+        const qty = parseInt(qtyStr || '1', 10);
+        if (isNaN(qty) || qty <= 0) return;
+        const newInv = { ...editingPlayer.inventory, [id]: (editingPlayer.inventory[id] || 0) + qty };
+        await updatePlayerAdmin(editingPlayer.uid, { inventory: newInv });
+        toast(`Donné ${qty}x ${id}.`, 'good');
+      }
+      loadPlayers();
+    } catch (e: any) {
+      toast('Erreur action: ' + e.message, 'bad');
+    }
+  }
+
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] text-green-400 font-mono text-sm p-4 overflow-hidden">
       
@@ -113,6 +140,15 @@ export function AdminModal() {
             onClick={handleSave}>
             SAUVEGARDER LES MODIFICATIONS
           </button>
+          
+          <div className="mt-6 border-t border-green-500/30 pt-4">
+            <h3 className="text-green-300 font-bold mb-2">Actions Rapides</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <button className="py-2 bg-blue-900 hover:bg-blue-800 text-blue-100 rounded" onClick={() => handleAction('give_item')}>🎁 Donner Objet</button>
+              <button className="py-2 bg-yellow-900 hover:bg-yellow-800 text-yellow-100 rounded" onClick={() => handleAction('reset_talents')}>🔄 Reset Talents</button>
+              <button className="py-2 bg-red-900 hover:bg-red-800 text-red-100 rounded col-span-2" onClick={() => handleAction('wipe_inventory')}>🗑️ Vider Inventaire</button>
+            </div>
+          </div>
         </div>
       ) : (
         <>
