@@ -1,7 +1,7 @@
 import { useGame } from '../../store/gameStore';
 import { item, RARITY_COLOR } from '../../game/items';
 import { deriveStats, equipItem, unequipItem, canEquip } from '../../game/player';
-import type { ItemSlot } from '../../game/types';
+import type { ItemDef, ItemSlot } from '../../game/types';
 
 const SLOTS: { slot: 'weapon' | 'armor' | 'trinket'; label: string; icon: string }[] = [
   { slot: 'weapon', label: 'Arme', icon: '⚔️' },
@@ -20,15 +20,42 @@ const SET_BONUSES: Record<string, { name: string; desc: string }> = {
   obsidian_set: { name: 'Set d\'Obsidienne', desc: '+25% DEF, +10% PV' },
 };
 
-function statLine(id: string | null): string {
-  const it = id ? item(id)! : null;
-  if (!it) return '—';
-  const parts = [];
-  if (it.atk) parts.push(`ATK+${it.atk}`);
-  if (it.def) parts.push(`DEF+${it.def}`);
-  if (it.hp) parts.push(`PV+${it.hp}`);
-  return parts.join(' · ') || 'aucun bonus';
+const ELEMENTS: Record<string, { icon: string; label: string }> = {
+  fire: { icon: '🔥', label: 'Feu' },
+  water: { icon: '💧', label: 'Eau' },
+  earth: { icon: '🪨', label: 'Terre' },
+  wind: { icon: '🌪️', label: 'Vent' },
+  light: { icon: '✨', label: 'Lumière' },
+  dark: { icon: '🌌', label: 'Ténèbres' },
+  frost: { icon: '❄️', label: 'Givre' },
+  neutral: { icon: '⚪', label: 'Neutre' },
+};
+
+/** Badges de stats/type d'un objet (icône + mot, fond coloré) — même langage visuel que la forge. */
+function statBadges(it: ItemDef | null): { txt: string; cls: string }[] {
+  if (!it) return [];
+  const b: { txt: string; cls: string }[] = [];
+  if (it.atk) b.push({ txt: `🗡️ ${it.atk} ATK`, cls: 'bg-rose-500/15 text-rose-200' });
+  if (it.def) b.push({ txt: `🛡️ ${it.def} DEF`, cls: 'bg-sky-500/15 text-sky-200' });
+  if (it.hp) b.push({ txt: `${it.hp > 0 ? '❤️' : '💔'} ${it.hp > 0 ? '+' : ''}${it.hp} PV`, cls: it.hp > 0 ? 'bg-emerald-500/15 text-emerald-200' : 'bg-rose-500/15 text-rose-200' });
+  if (it.maxCp) b.push({ txt: `🧠 +${it.maxCp} CP`, cls: 'bg-indigo-500/15 text-indigo-200' });
+  if (it.maxGp) b.push({ txt: `🌾 +${it.maxGp} GP`, cls: 'bg-lime-500/15 text-lime-200' });
+  return b;
 }
+
+/** Badges "type" : élément + type de dégâts. */
+function typeBadges(it: ItemDef | null): { txt: string; cls: string }[] {
+  if (!it) return [];
+  const b: { txt: string; cls: string }[] = [];
+  if (it.element && ELEMENTS[it.element]) {
+    const e = ELEMENTS[it.element];
+    b.push({ txt: `${e.icon} ${e.label}`, cls: 'bg-white/5 text-slate-300' });
+  }
+  if (it.dmgType) b.push({ txt: it.dmgType === 'magical' ? '🔮 Magique' : '⚔️ Physique', cls: 'bg-white/5 text-slate-300' });
+  return b;
+}
+
+const UPGRADE_CHANCE = ['100%', '90%', '75%', '60%', '40%'];
 
 export default function EquipmentCard() {
   const p = useGame((s) => s.player);
@@ -45,10 +72,40 @@ export default function EquipmentCard() {
   function unequip(slot: 'weapon' | 'armor' | 'trinket') {
     mutate((d) => { unequipItem(d, slot); });
   }
+  function repair(slot: 'weapon' | 'armor' | 'trinket', max: number) {
+    if ((p!.inventory['repair_kit'] || 0) < 1) {
+      toast("Tu n'as pas de kit de réparation.", 'bad');
+      return;
+    }
+    mutate((d) => {
+      d.inventory['repair_kit'] -= 1;
+      if (!d.gearDurability) d.gearDurability = { weapon: 0, armor: 0, trinket: 0, consumable: 0, material: 0 };
+      d.gearDurability[slot] = max;
+    });
+    toast('Équipement réparé !', 'good');
+  }
+  function upgrade(slot: 'weapon' | 'armor' | 'trinket') {
+    if ((p!.inventory['upgrade_matrix'] || 0) < 1) {
+      toast("Tu n'as pas de matrice d'amélioration.", 'bad');
+      return;
+    }
+    mutate((d) => {
+      d.inventory['upgrade_matrix'] -= 1;
+      if (!d.gearStars) d.gearStars = { weapon: 0, armor: 0, trinket: 0, consumable: 0, material: 0 };
+      const cur = d.gearStars[slot] || 0;
+      const chances = [1, 0.9, 0.75, 0.6, 0.4];
+      if (Math.random() <= chances[cur]) {
+        d.gearStars[slot] = cur + 1;
+        toast(d.gearStars[slot] === 5 ? 'Légendaire ! Ton objet a atteint 5 étoiles !' : `Amélioration réussie ! (${d.gearStars[slot]}★)`, 'good');
+      } else {
+        toast("L'amélioration a échoué...", 'bad');
+      }
+    });
+  }
 
   // Objets équipables possédés, par slot.
   const owned = (slot: ItemSlot) =>
-    Object.entries(p.inventory).filter(([id, q]) => item(id)! && item(id)!.slot === slot && q > 0);
+    Object.entries(p.inventory).filter(([id, q]) => item(id) && item(id)!.slot === slot && q > 0);
 
   const setIdsCount: Record<string, number> = {};
   for (const slot of ['weapon', 'armor', 'trinket'] as const) {
@@ -60,120 +117,108 @@ export default function EquipmentCard() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Stats résultantes */}
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-lg bg-black/25 py-1.5"><div className="text-[10px] text-slate-400">PV</div><div className="font-bold">{stats.maxHp}</div></div>
-        <div className="rounded-lg bg-black/25 py-1.5"><div className="text-[10px] text-slate-400">ATK</div><div className="font-bold">{stats.atk}</div></div>
-        <div className="rounded-lg bg-black/25 py-1.5"><div className="text-[10px] text-slate-400">DEF</div><div className="font-bold">{stats.def}</div></div>
+      <div className="grid grid-cols-3 gap-2.5 text-center">
+        <div className="rounded-lg bg-emerald-500/10 py-3"><div className="text-[10px] text-emerald-300/80">❤️ PV</div><div className="mt-0.5 text-lg font-bold text-emerald-200">{stats.maxHp}</div></div>
+        <div className="rounded-lg bg-rose-500/10 py-3"><div className="text-[10px] text-rose-300/80">🗡️ ATK</div><div className="mt-0.5 text-lg font-bold text-rose-200">{stats.atk}</div></div>
+        <div className="rounded-lg bg-sky-500/10 py-3"><div className="text-[10px] text-sky-300/80">🛡️ DEF</div><div className="mt-0.5 text-lg font-bold text-sky-200">{stats.def}</div></div>
       </div>
 
       {SLOTS.map(({ slot, label, icon }) => {
         const equippedId = p.equipped[slot];
         const eq = equippedId ? item(equippedId)! : null;
         const candidates = owned(slot).filter(([id]) => id !== equippedId && canEquip(p, item(id)!));
+        const stars = p.gearStars?.[slot] || 0;
+        const dur = p.gearDurability?.[slot] ?? eq?.maxDurability ?? 0;
+        const durMax = eq?.maxDurability ?? 0;
+        const durRatio = durMax ? dur / durMax : 1;
+        const durColor = durRatio <= 0 ? '#ef4444' : durRatio < 0.25 ? '#f97316' : durRatio < 0.6 ? '#eab308' : '#22c55e';
+        const badges = [...statBadges(eq), ...typeBadges(eq)];
         return (
-          <div key={slot} className="rounded-xl bg-black/25 p-3">
+          <div key={slot} className="rounded-xl bg-black/25 p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{icon} {label}</span>
               {eq && (
                 <button onClick={() => unequip(slot)} className="rounded bg-rose-500/25 px-2 py-0.5 text-[11px] hover:bg-rose-500/45">Retirer</button>
               )}
             </div>
-            <div className="mt-1 text-sm" style={{ color: eq ? RARITY_COLOR[eq.rarity] : '#64748b' }}>
-              {eq ? (
-                <>
-                  {eq.icon} {eq.name}
-                  {p.gearStars?.[slot] ? <span className="ml-1 text-yellow-400">{'★'.repeat(p.gearStars[slot])}</span> : null}
-                </>
-              ) : '— vide —'}
-            </div>
-            {eq && (
-              <div className="text-[11px] text-slate-400 flex flex-col gap-1 mt-1">
-                <div>{statLine(equippedId)}</div>
-                
-                {/* Durability */}
-                {eq.maxDurability && (
-                  <div className="flex items-center gap-2">
-                    <span className={p.gearDurability?.[slot] === 0 ? 'text-red-500 font-bold' : ''}>
-                      Durabilité : {p.gearDurability?.[slot] ?? eq.maxDurability} / {eq.maxDurability}
+
+            {eq ? (
+              <>
+                <div className="mt-2 flex items-center gap-2 text-sm font-medium" style={{ color: RARITY_COLOR[eq.rarity] }}>
+                  <span className="text-lg leading-none">{eq.icon}</span>
+                  <span className="truncate">{eq.name}</span>
+                  {stars > 0 && <span className="text-yellow-400 text-xs">{'★'.repeat(stars)}</span>}
+                </div>
+
+                {badges.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+                    {badges.map((bd, i) => (
+                      <span key={i} className={`rounded px-2 py-1 ${bd.cls}`}>{bd.txt}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Durabilité */}
+                {durMax > 0 && (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                      <span className={dur === 0 ? 'text-red-400 font-bold' : ''}>🔧 Durabilité {dur} / {durMax}</span>
+                      {dur < durMax && (
+                        <button onClick={() => repair(slot, durMax)} className="rounded bg-orange-500/25 px-2 py-0.5 hover:bg-orange-500/45">
+                          Réparer 🛠️{p.inventory['repair_kit'] || 0}
+                        </button>
+                      )}
+                    </div>
+                    <div className="h-1.5 rounded-full bg-slate-800">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${Math.max(0, durRatio * 100)}%`, background: durColor }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Amélioration (étoiles) */}
+                {durMax > 0 && (
+                  <div className="mt-3 flex items-center justify-between rounded-lg bg-purple-500/10 px-3 py-2">
+                    <span className="text-[11px] text-purple-200">
+                      Étoiles <span className="text-yellow-400">{'★'.repeat(stars)}</span><span className="text-slate-600">{'★'.repeat(5 - stars)}</span>
+                      <span className="ml-1 text-slate-400">(+{stars * 10}% stats)</span>
                     </span>
-                    {(p.gearDurability?.[slot] ?? eq.maxDurability) < eq.maxDurability && (
-                      <button 
-                        onClick={() => {
-                          const cost = 1;
-                          if ((p.inventory['repair_kit'] || 0) >= cost) {
-                            mutate(d => {
-                              d.inventory['repair_kit'] -= cost;
-                              if (!d.gearDurability) d.gearDurability = { weapon:0, armor:0, trinket:0, consumable:0, material:0 };
-                              d.gearDurability[slot] = eq.maxDurability!;
-                            });
-                            toast('Équipement réparé !', 'good');
-                          } else {
-                            toast("Tu n'as pas de kit de réparation.", 'bad');
-                          }
-                        }}
-                        className="rounded bg-orange-500/25 px-2 py-0.5 hover:bg-orange-500/45"
-                      >
-                        Réparer
+                    {stars < 5 ? (
+                      <button onClick={() => upgrade(slot)} className="rounded bg-purple-500/30 px-2 py-0.5 text-[11px] hover:bg-purple-500/50">
+                        Améliorer {UPGRADE_CHANCE[stars]} ✨{p.inventory['upgrade_matrix'] || 0}
                       </button>
+                    ) : (
+                      <span className="text-[11px] font-bold text-yellow-400">MAX</span>
                     )}
                   </div>
                 )}
-
-                {/* Stars Upgrade */}
-                {eq.maxDurability && (p.gearStars?.[slot] || 0) < 5 && (
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => {
-                        const cost = 1;
-                        if ((p.inventory['upgrade_matrix'] || 0) >= cost) {
-                          mutate(d => {
-                            d.inventory['upgrade_matrix'] -= cost;
-                            if (!d.gearStars) d.gearStars = { weapon:0, armor:0, trinket:0, consumable:0, material:0 };
-                            const currentStars = d.gearStars[slot] || 0;
-                            // Chances: 100%, 90%, 75%, 60%, 40%
-                            const chances = [1, 0.9, 0.75, 0.6, 0.4];
-                            if (Math.random() <= chances[currentStars]) {
-                              d.gearStars[slot] = currentStars + 1;
-                              toast(`Amélioration réussie ! (${d.gearStars[slot]}★)`, 'good');
-                              if (d.gearStars[slot] === 5) {
-                                // Simulate global announce (locally or let backend handle it, we'll just toast for now since sendChat is async)
-                                toast(`Légendaire ! Ton objet a atteint 5 étoiles !`, 'good');
-                              }
-                            } else {
-                              toast("L'amélioration a échoué...", 'bad');
-                            }
-                          });
-                        } else {
-                          toast("Tu n'as pas de matrice d'amélioration.", 'bad');
-                        }
-                      }}
-                      className="rounded bg-purple-500/25 px-2 py-0.5 hover:bg-purple-500/45"
-                    >
-                      Améliorer ({(p.gearStars?.[slot] || 0) === 0 ? '100%' : (p.gearStars?.[slot] || 0) === 1 ? '90%' : (p.gearStars?.[slot] || 0) === 2 ? '75%' : (p.gearStars?.[slot] || 0) === 3 ? '60%' : '40%'})
-                    </button>
-                  </div>
-                )}
-                
-                {/* Element & Type */}
-                <div className="flex gap-2">
-                  {eq.element && <span>Élément: {eq.element}</span>}
-                  {eq.dmgType && <span>Dégâts: {eq.dmgType}</span>}
-                </div>
-                {eq.setId && <span>Set: {eq.setId.replace('_set', '')}</span>}
-              </div>
+              </>
+            ) : (
+              <div className="mt-1 text-sm italic text-slate-500">— vide —</div>
             )}
 
             {candidates.length > 0 && (
-              <div className="mt-2 space-y-1">
+              <div className="mt-4 space-y-1.5">
+                <div className="text-[10px] uppercase tracking-wide text-slate-500">Dans le sac</div>
                 {candidates.map(([id, q]) => {
                   const it = item(id)!;
+                  const cb = statBadges(it);
                   return (
-                    <div key={id} className="flex items-center justify-between gap-2 rounded-lg bg-black/30 px-2 py-1.5">
-                      <div className="min-w-0">
-                        <span className="truncate text-sm" style={{ color: RARITY_COLOR[it.rarity] }}>{it.icon} {it.name}</span>
-                        <span className="ml-1 text-[10px] text-slate-500">×{q} · {statLine(id)}</span>
+                    <div key={id} className="flex items-center justify-between gap-2 rounded-lg bg-black/30 px-3 py-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 text-sm">
+                          <span className="leading-none">{it.icon}</span>
+                          <span className="truncate" style={{ color: RARITY_COLOR[it.rarity] }}>{it.name}</span>
+                          {q > 1 && <span className="text-[10px] text-slate-500">×{q}</span>}
+                        </div>
+                        {cb.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1.5 text-[10px]">
+                            {cb.map((bd, i) => (
+                              <span key={i} className={`rounded px-2 py-1 ${bd.cls}`}>{bd.txt}</span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <button onClick={() => equip(id)} className="shrink-0 rounded bg-sky-500/30 px-2.5 py-1 text-xs font-semibold hover:bg-sky-500/50">Équiper</button>
                     </div>
@@ -186,16 +231,21 @@ export default function EquipmentCard() {
       })}
 
       {/* Bonus de Sets Actifs */}
-      <div className="rounded-xl bg-black/25 p-3">
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Bonus de Sets (3 pièces)</h3>
+      <div className="rounded-xl bg-black/25 p-4">
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">✦ Bonus de Sets (3 pièces)</h3>
         {Object.entries(SET_BONUSES).map(([setId, info]) => {
           const count = setIdsCount[setId] || 0;
           if (count === 0) return null;
           const isActive = count >= 3;
           return (
-            <div key={setId} className={`flex justify-between text-sm ${isActive ? 'text-green-400 font-bold' : 'text-slate-500'}`}>
-              <span>{info.name} ({count}/3)</span>
-              <span>{info.desc}</span>
+            <div key={setId} className="mb-2.5">
+              <div className={`flex justify-between text-sm ${isActive ? 'text-green-400 font-bold' : 'text-slate-400'}`}>
+                <span>{isActive ? '✅ ' : ''}{info.name} ({count}/3)</span>
+                <span className="text-[11px]">{info.desc}</span>
+              </div>
+              <div className="mt-0.5 h-1 rounded-full bg-slate-800">
+                <div className={`h-full rounded-full ${isActive ? 'bg-green-500' : 'bg-slate-500'}`} style={{ width: `${Math.min(100, (count / 3) * 100)}%` }} />
+              </div>
             </div>
           );
         })}

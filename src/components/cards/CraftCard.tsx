@@ -1,18 +1,45 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useGame } from '../../store/gameStore';
 import { RECIPES, canCraft, consumeMaterials, finishCraft, getCraftLevel, type Recipe } from '../../game/crafting';
 import { item, RARITY_COLOR } from '../../game/items';
 import type { ItemSlot } from '../../game/types';
 import { deriveStats } from '../../game/player';
 
-const GROUPS: { slot: ItemSlot | 'all'; label: string; icon: string }[] = [
+type Group = ItemSlot | 'all' | 'profession';
+
+const GROUPS: { slot: Group; label: string; icon: string }[] = [
   { slot: 'all', label: 'Tout', icon: '📋' },
+  { slot: 'weapon', label: 'Armes', icon: '⚔️' },
+  { slot: 'armor', label: 'Armures', icon: '🛡️' },
+  { slot: 'trinket', label: 'Bijoux', icon: '💍' },
+  { slot: 'profession', label: 'Métier', icon: '🧰' },
   { slot: 'material', label: 'Ressources', icon: '🧱' },
   { slot: 'consumable', label: 'Consommables', icon: '🍲' },
-  { slot: 'armor', label: 'Armures', icon: '🛡️' },
-  { slot: 'weapon', label: 'Armes', icon: '⚔️' },
-  { slot: 'trinket', label: 'Bijoux', icon: '💍' },
 ];
+
+type ClassFilter = 'all' | 'melee' | 'caster';
+const CLASS_FILTERS: { id: ClassFilter; label: string; icon: string }[] = [
+  { id: 'all', label: 'Toutes classes', icon: '👥' },
+  { id: 'melee', label: 'Guerrier / Archer', icon: '⚔️' },
+  { id: 'caster', label: 'Mage / Soigneur', icon: '🔮' },
+];
+
+/** Identité visuelle de chaque set d'équipement, pour regrouper les objets qui vont ensemble. */
+const SET_INFO: Record<string, { name: string; icon: string; color: string }> = {
+  frost_set: { name: 'Givre', icon: '❄️', color: '#7ad0ff' },
+  fire_set: { name: 'Braise', icon: '🔥', color: '#ff8a4a' },
+  wind_set: { name: 'Vent', icon: '🌪️', color: '#8fe6c8' },
+  earth_set: { name: 'Terre', icon: '🪨', color: '#c9a36a' },
+  water_set: { name: 'Marée', icon: '🌊', color: '#5aa6ff' },
+  light_set: { name: 'Lumière', icon: '✨', color: '#ffe27a' },
+  dark_set: { name: 'Ombre', icon: '👁️', color: '#c46bff' },
+  obsidian_set: { name: 'Obsidienne', icon: '⬛', color: '#b0b8c8' },
+};
+
+/** Objets d'artisan/récolteur : boostent CP (artisanat) ou GP (récolte) au lieu du combat. */
+function isProfessionGear(it: { maxCp?: number; maxGp?: number }) {
+  return !!(it.maxCp || it.maxGp);
+}
 
 export default function CraftCard() {
   const p = useGame((s) => s.player);
@@ -24,21 +51,27 @@ export default function CraftCard() {
   const [quality, setQuality] = useState(0);
   const [durability, setDurability] = useState(0);
   const [cp, setCp] = useState(0);
-  const [group, setGroup] = useState<ItemSlot | 'all'>('all');
+  const [group, setGroup] = useState<Group>('all');
+  const [classFilter, setClassFilter] = useState<ClassFilter>('all');
 
   const byGroup = useMemo(() => {
-    const map: Record<string, Recipe[]> = { all: [] };
-    
-    // Trier par niveau requis, puis par difficulté
+    const map: Record<Group, Recipe[]> = { all: [], material: [], consumable: [], armor: [], weapon: [], trinket: [], profession: [] };
+
+    // Trier par set (regroupe visuellement les objets qui vont ensemble), puis niveau, puis difficulté.
     const sortedRecipes = [...RECIPES].sort((a, b) => {
+      const ia = item(a.output), ib = item(b.output);
+      const sa = ia?.setId ?? '', sb = ib?.setId ?? '';
+      if (sa !== sb) return sa.localeCompare(sb);
       if (a.levelReq !== b.levelReq) return a.levelReq - b.levelReq;
       return a.difficulty - b.difficulty;
     });
 
     for (const r of sortedRecipes) {
-      const slot = item(r.output)?.slot ?? 'material';
-      (map[slot] ??= []).push(r);
+      const out = item(r.output);
+      const slot = out?.slot ?? 'material';
+      (map[slot as ItemSlot] ??= []).push(r);
       map.all.push(r);
+      if (out && isProfessionGear(out)) map.profession.push(r);
     }
     return map;
   }, []);
@@ -119,23 +152,30 @@ export default function CraftCard() {
     setCp(cp - 30);
   }
 
-  function getStatsStr(it: any) {
-    const parts = [];
-    if (it.atk) parts.push(`🗡️+${it.atk}`);
-    if (it.def) parts.push(`🛡️+${it.def}`);
-    if (it.hp && it.slot === 'armor') parts.push(`❤️+${it.hp}`);
-    if (it.hp && it.slot === 'consumable') parts.push(`🧪+${it.hp} PV`);
-    
-    // Add V2 stats
-    if (it.element) {
-      const eIcon = { fire: '🔥', water: '💧', earth: '🪨', wind: '🌪️', light: '✨', dark: '🌌', frost: '❄️' }[it.element as string] || '';
-      parts.push(`${eIcon} ${it.element}`);
+  const ELEMENTS: Record<string, { icon: string; label: string }> = {
+    fire: { icon: '🔥', label: 'Feu' },
+    water: { icon: '💧', label: 'Eau' },
+    earth: { icon: '🪨', label: 'Terre' },
+    wind: { icon: '🌪️', label: 'Vent' },
+    light: { icon: '✨', label: 'Lumière' },
+    dark: { icon: '🌌', label: 'Ténèbres' },
+    frost: { icon: '❄️', label: 'Givre' },
+  };
+
+  /** Badges de stats/type d'un objet : chaque badge a une icône ET un mot pour rester clair. */
+  function statBadges(it: any): { txt: string; cls: string }[] {
+    const b: { txt: string; cls: string }[] = [];
+    if (it.atk) b.push({ txt: `🗡️ ${it.atk} ATK`, cls: 'bg-rose-500/15 text-rose-200' });
+    if (it.def) b.push({ txt: `🛡️ ${it.def} DEF`, cls: 'bg-sky-500/15 text-sky-200' });
+    if (it.hp && it.slot === 'armor') b.push({ txt: `❤️ ${it.hp} PV`, cls: 'bg-emerald-500/15 text-emerald-200' });
+    if (it.hp && it.slot === 'consumable') b.push({ txt: `🧪 +${it.hp} PV`, cls: 'bg-emerald-500/15 text-emerald-200' });
+    if (it.maxCp) b.push({ txt: `🧠 +${it.maxCp} CP`, cls: 'bg-indigo-500/15 text-indigo-200' });
+    if (it.maxGp) b.push({ txt: `🌾 +${it.maxGp} GP`, cls: 'bg-lime-500/15 text-lime-200' });
+    if (it.element && it.slot !== 'material' && it.slot !== 'consumable' && ELEMENTS[it.element]) {
+      const e = ELEMENTS[it.element];
+      b.push({ txt: `${e.icon} ${e.label}`, cls: 'bg-white/5 text-slate-300' });
     }
-    if (it.dmgType) parts.push(`(${it.dmgType === 'magical' ? 'Magique' : 'Physique'})`);
-    if (it.maxDurability) parts.push(`🔧 ${it.maxDurability}`);
-    if (it.setId) parts.push(`[Set: ${it.setId.replace('_set', '')}]`);
-    
-    return parts.length ? parts.join(' · ') : null;
+    return b;
   }
 
   if (active) {
@@ -197,21 +237,28 @@ export default function CraftCard() {
             Réparation<br/><span className="text-[10px] font-normal">(+30 Sol, -30 CP)</span>
           </button>
         </div>
+
+        {/* Tuto affiché ici, pendant le craft (là où c'est utile). */}
+        <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 text-[11px] leading-relaxed text-slate-300 space-y-1">
+          <p className="font-semibold text-blue-300">Comment ça marche</p>
+          <p><b className="text-sky-300">Synthèse</b> : monte l'<b>Avancement</b>. Remplis-le avant que la Solidité tombe à 0.</p>
+          <p><b className="text-purple-300">Minutieux</b> : monte la <b>Qualité</b> (= meilleures stats de l'objet), consomme des CP.</p>
+          <p><b className="text-emerald-300">Réparation</b> : regagne de la Solidité contre beaucoup de CP.</p>
+        </div>
       </div>
     );
   }
 
+  const list = (byGroup[group] ?? []).filter((r) => {
+    if (group !== 'weapon' || classFilter === 'all') return true;
+    const cls = item(r.output)?.classes;
+    if (!cls) return true;
+    if (classFilter === 'melee') return cls.includes('warrior') || cls.includes('archer');
+    return cls.includes('mage') || cls.includes('healer');
+  });
+
   return (
     <div className="space-y-2">
-      <div className="text-xs text-slate-400 flex items-center justify-between">
-        <span>Niveau d'artisanat : <b>{craftLvl}</b> ({Math.floor(p.craftXp)} XP)</span>
-        <div className="flex items-center gap-2">
-          <span>Or : <b>{p.gold} 🪙</b></span>
-          <button onClick={() => toast("TUTO : Complétez l'avancement avant que la solidité tombe à zéro. Synthèse: Avancement (sans Qualité). Minutieux: Monte la Qualité (meilleures stats de l'objet) et consomme des CP. Réparez si besoin pour regagner de la Solidité (coûte beaucoup de CP).", "info")} className="shrink-0 rounded bg-blue-500/30 px-2 py-1 hover:bg-blue-500/50">
-            [?] Tuto
-          </button>
-        </div>
-      </div>
       <div className="flex gap-1 overflow-x-auto pb-1">
         {GROUPS.map((g) => {
           const count = byGroup[g.slot]?.length ?? 0;
@@ -219,7 +266,7 @@ export default function CraftCard() {
           return (
             <button
               key={g.slot}
-              onClick={() => setGroup(g.slot)}
+              onClick={() => { setGroup(g.slot); setClassFilter('all'); }}
               className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
                 group === g.slot ? 'bg-sky-500/40 text-white' : 'bg-black/25 text-slate-300 hover:bg-white/10'
               }`}
@@ -229,53 +276,110 @@ export default function CraftCard() {
           );
         })}
       </div>
-      <div className="max-h-[55vh] overflow-y-auto space-y-2 pr-1">
-        {(byGroup[group] ?? []).map((r) => {
-          const out = item(r.output)!;
-          const ok = canCraft(p, r);
-          const levelOk = craftLvl >= r.levelReq;
-          const statsStr = getStatsStr(out);
-          return (
-            <div key={r.output} className={`rounded-lg p-2.5 ${levelOk ? 'bg-black/25' : 'bg-black/40 opacity-75'}`}>
-              <div className="flex items-center justify-between gap-2">
-              <div className="flex flex-col gap-1 justify-center min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium whitespace-nowrap" style={{ color: RARITY_COLOR[out.rarity] }}>
-                    {out.icon} {out.name} {r.qty > 1 ? `x${r.qty}` : ''}
-                  </span>
-                  {out.classes && <span className="text-[10px] bg-slate-800 px-1.5 rounded text-slate-300 whitespace-nowrap">{out.classes.join(', ')}</span>}
-                </div>
-                {statsStr && <div className="text-[10px] bg-black/40 px-1.5 rounded text-amber-200 w-fit">{statsStr}</div>}
-              </div>
-              <button
-                  onClick={() => startCraft(r)}
-                  disabled={!ok || !levelOk}
-                  className="shrink-0 rounded bg-sky-500/30 px-3 py-1 text-xs font-semibold hover:bg-sky-500/50 disabled:opacity-40"
+      {group === 'weapon' && (
+        <div className="flex gap-1 overflow-x-auto pb-1">
+          {CLASS_FILTERS.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setClassFilter(c.id)}
+              className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium transition ${
+                classFilter === c.id ? 'bg-purple-500/40 text-white' : 'bg-black/20 text-slate-400 hover:bg-white/10'
+              }`}
+            >
+              {c.icon} {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {group === 'profession' && (
+        <p className="text-[11px] text-slate-400 px-0.5">
+          🧠 CP = concentration (artisanat) &nbsp;·&nbsp; 🌾 GP = endurance (récolte). Ces objets ne boostent pas le combat.
+        </p>
+      )}
+
+      <div className="max-h-[62vh] overflow-y-auto pr-1">
+        <div className="grid grid-cols-2 gap-2">
+          {(() => {
+            let lastSetId: string | undefined;
+            const nodes: ReactNode[] = [];
+            for (const r of list) {
+              const out = item(r.output)!;
+              const ok = canCraft(p, r);
+              const levelOk = craftLvl >= r.levelReq;
+              const badges = statBadges(out);
+              const classLabel = out.classes
+                ? (out.classes.includes('mage') || out.classes.includes('healer') ? '🔮 Mage/Soigneur' : '⚔️ Guerrier/Archer')
+                : null;
+              const setInfo = out.setId ? SET_INFO[out.setId] : undefined;
+              if (out.setId && out.setId !== lastSetId && setInfo) {
+                nodes.push(
+                  <div key={`h-${out.setId}`} className="col-span-2 flex items-center gap-1.5 px-1 pt-2 pb-0.5 text-[11px] font-semibold" style={{ color: setInfo.color }}>
+                    <span>{setInfo.icon}</span>
+                    <span>Ensemble {setInfo.name}</span>
+                    <span className="h-px flex-1 opacity-30" style={{ background: setInfo.color }} />
+                  </div>,
+                );
+              }
+              lastSetId = out.setId;
+              nodes.push(
+                <div
+                  key={r.output}
+                  className={`flex flex-col rounded-lg p-2 ${levelOk ? 'bg-black/25' : 'bg-black/40 opacity-70'}`}
+                  style={setInfo ? { boxShadow: `inset 3px 0 0 ${setInfo.color}` } : undefined}
                 >
-                  {levelOk ? 'Forger' : `Niv. ${r.levelReq}`}
-                </button>
-              </div>
-              <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-                {Object.entries(r.materials).map(([id, need]) => {
-                  const have = p.inventory[id] ?? 0;
-                  return (
-                    <span key={id} className={`rounded px-1.5 py-0.5 ${have >= need ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'}`}>
-                      {item(id)!.icon} {item(id)!.name} {have}/{need}
-                    </span>
-                  );
-                })}
-                {r.gold > 0 && (
-                  <span className={`rounded px-1.5 py-0.5 ${p.gold >= r.gold ? 'bg-amber-500/20 text-amber-200' : 'bg-rose-500/20 text-rose-200'}`}>
-                    {r.gold} 🪙
-                  </span>
-                )}
-                <span className="rounded px-1.5 py-0.5 bg-slate-500/20 text-slate-300">
-                  Diff: {r.difficulty}
-                </span>
-              </div>
-            </div>
-          );
-        })}
+                  <div className="flex items-start gap-2">
+                    <span className="text-xl leading-none mt-0.5">{out.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium truncate" style={{ color: RARITY_COLOR[out.rarity] }} title={out.name}>
+                        {out.name}{r.qty > 1 ? ` x${r.qty}` : ''}
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-1 flex-wrap text-[10px]">
+                        {badges.map((bd, i) => (
+                          <span key={i} className={`rounded px-1 py-0.5 ${bd.cls}`}>{bd.txt}</span>
+                        ))}
+                        {classLabel && (
+                          <span className="rounded px-1 py-0.5 bg-slate-700/50 text-slate-300">{classLabel}</span>
+                        )}
+                      </div>
+
+                      <div className="mt-1.5 flex flex-wrap gap-1 text-[10px]">
+                        {Object.entries(r.materials).map(([id, need]) => {
+                          const have = p.inventory[id] ?? 0;
+                          return (
+                            <span
+                              key={id}
+                              title={`${item(id)!.name} : ${have}/${need}`}
+                              className={`rounded px-1 py-0.5 ${have >= need ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'}`}
+                            >
+                              {item(id)!.icon} {have}/{need}
+                            </span>
+                          );
+                        })}
+                        {r.gold > 0 && (
+                          <span
+                            title={`Or : ${r.gold}`}
+                            className={`rounded px-1 py-0.5 ${p.gold >= r.gold ? 'bg-amber-500/20 text-amber-200' : 'bg-rose-500/20 text-rose-200'}`}
+                          >
+                            🪙 {r.gold}
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => startCraft(r)}
+                        disabled={!ok || !levelOk}
+                        className="mt-2 w-full rounded bg-sky-500/30 py-1 text-xs font-semibold hover:bg-sky-500/50 disabled:opacity-40"
+                      >
+                        {levelOk ? 'Forger' : `Niveau ${r.levelReq} requis`}
+                      </button>
+                    </div>
+                  </div>
+                </div>,
+              );
+            }
+            return nodes;
+          })()}
+        </div>
       </div>
     </div>
   );

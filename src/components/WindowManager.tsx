@@ -60,7 +60,7 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   wiki: { title: '📚 Wiki', accent: '#a26ad8' },
 };
 
-const WIDE: Partial<Record<WindowKind, boolean>> = { news: true };
+const WIDE: Partial<Record<WindowKind, boolean>> = { news: true, craft: true };
 
 export default function WindowManager() {
   const windows = useUi((s) => s.windows);

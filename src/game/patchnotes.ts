@@ -18,6 +18,21 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'forge-ui-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '🔨 Forge repensée',
+        items: [
+          'La carte de la Forge a été entièrement refaite pour être plus lisible : elle est plus grande et affiche désormais les recettes en grille sur deux colonnes.',
+          'Chaque recette montre clairement ses stats et son type (ATK/DEF/PV, CP/GP métier, élément Feu/Eau/Terre…) et sa classe (⚔️ Guerrier/Archer ou 🔮 Mage/Soigneur).',
+          'Les pièces d\'un même ensemble sont regroupées sous un en-tête coloré, et les objets de métier (artisanat/récolte) ont leur propre onglet 🧰.',
+          'Le niveau d\'artisanat, l\'or et le bouton Tuto ont été retirés de la liste : le tutoriel s\'affiche maintenant pendant un craft, là où il est utile.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'craft-gather-v1',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [

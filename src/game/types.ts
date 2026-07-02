@@ -141,6 +141,8 @@ export interface PlayerState {
   curveVersion?: number;
   /** Version du dernier reset forcé des talents (bug : points conservés après le rework). */
   talentResetVersion?: number;
+  /** Restauration one-time de l'XP perdue par le bug NaN (1 = déjà réclamée). */
+  restoredXpV1?: number;
   /** Familiers possédés : id de définition -> XP accumulée. */
   familiars: Record<string, number>;
   /** Familier actuellement équipé (donne son bonus de stat). */

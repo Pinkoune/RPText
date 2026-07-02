@@ -108,6 +108,17 @@ export function migratePlayer(p: PlayerState): PlayerState {
     p.farmXp = Object.values(p.gatherXp ?? {}).reduce((s, v) => s + (v || 0), 0);
   }
   if (p.craftXp == null) p.craftXp = 0;
+
+  // Auto-réparation : une valeur NaN (issue d'un ancien multiplicateur de guilde/équipe
+  // cassé) se propageait et se sauvegardait définitivement, affichant « NaN » partout.
+  // On remet à zéro toute valeur numérique non finie, à chaque migration (pas seulement
+  // une fois), pour rattraper les sauvegardes déjà corrompues.
+  if (!Number.isFinite(p.xp)) p.xp = 0;
+  if (!Number.isFinite(p.farmXp)) p.farmXp = 0;
+  if (!Number.isFinite(p.craftXp)) p.craftXp = 0;
+  if (!Number.isFinite(p.gold)) p.gold = 0;
+  if (!Number.isFinite(p.level) || p.level < 1) p.level = 1;
+
   if (!p.dungeonClears) p.dungeonClears = {};
   if (!p.statistics) {
     p.statistics = {
@@ -365,13 +376,17 @@ export function unequipItem(p: PlayerState, slot: 'weapon' | 'armor' | 'trinket'
 
 /** Applique les multiplicateurs globaux (équipe, guilde) à l'XP et à l'Or. */
 export function applyBonuses(p: PlayerState, base: { xp: number; gold: number }): { xp: number; gold: number } {
-  const teamMult = getTeamBonus(p.teamId);
-  const guildMult = getGuildBonus(p.guildId);
+  // Garde-fous : un multiplicateur non fini empoisonnerait durablement l'XP/Or du joueur.
+  const fin = (v: number, fallback: number) => (Number.isFinite(v) ? v : fallback);
+  const teamMult = fin(getTeamBonus(p.teamId), 1);
+  const guildMult = fin(getGuildBonus(p.guildId), 1);
   const evt = activeEventEffect(p.biome);
+  const baseXp = fin(base.xp, 0);
+  const baseGold = fin(base.gold, 0);
   // Seule l'XP bénéficie du bonus de guilde
   return {
-    xp: Math.floor(base.xp * teamMult * guildMult * (1 + evt.xpMult)),
-    gold: Math.floor(base.gold * teamMult * (1 + evt.goldMult)),
+    xp: Math.floor(baseXp * teamMult * guildMult * (1 + fin(evt.xpMult, 0))),
+    gold: Math.floor(baseGold * teamMult * (1 + fin(evt.goldMult, 0))),
   };
 }
 

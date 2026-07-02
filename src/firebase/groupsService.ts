@@ -55,7 +55,8 @@ export const GUILD_CREATE_COST = 500;
 /** Niveau de guilde : +1 tous les 1000 d'XP contribué. */
 export function guildLevel(xp: number): { level: number; into: number; need: number } {
   const need = 1000;
-  return { level: Math.floor(xp / need) + 1, into: xp % need, need };
+  const x = Number.isFinite(xp) && xp > 0 ? xp : 0;
+  return { level: Math.floor(x / need) + 1, into: x % need, need };
 }
 
 // ─── Équipes ────────────────────────────────────────────────────────────────
@@ -163,7 +164,7 @@ export async function contributeGuild(guildId: string, amount: number): Promise<
     const snap = await tx.get(ref);
     if (!snap.exists()) return;
     const data = snap.data() as Omit<Guild, 'id'>;
-    tx.update(ref, { xp: (data.xp ?? 0) + amount });
+    tx.update(ref, { xp: safeGuildXp(data.xp) + (Number.isFinite(amount) ? amount : 0) });
   });
 }
 
@@ -185,6 +186,11 @@ export function getGuildBonus(guildId: string | null): number {
   const xp = cachedGuilds[guildId].xp ?? 0;
   const lvl = guildLevel(xp).level;
   return 1.0 + (lvl * 0.02);
+}
+
+/** Répare une valeur d'XP de guilde corrompue (NaN/undefined) pour l'affichage. */
+export function safeGuildXp(xp: number): number {
+  return Number.isFinite(xp) && xp > 0 ? xp : 0;
 }
 
 // ─── Dons de ressources (SUPPRIMÉ) ─────────────────────────────────────────────
