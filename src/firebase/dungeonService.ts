@@ -193,6 +193,7 @@ export async function startDungeon(id: string): Promise<void> {
 
 function advanceTurn(cur: DungeonSession) {
   cur.turnStartAt = Date.now();
+  cur.roundCount = cur.roundCount || 1;
   let nextIdx = (cur.turnIdx + 1) % cur.turnOrder.length;
   if (nextIdx === 0) cur.roundCount++;
 
