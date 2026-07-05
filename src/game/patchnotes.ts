@@ -18,6 +18,29 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'endless-enchant-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '✨ Système d\'Enchantement',
+        items: [
+          'Les Gemmes gagnent une vraie utilité ! Dépensez-les pour sertir des Runes sur votre équipement (commande « enchant »).',
+          'Chaque pièce (arme, armure, bijou) possède jusqu\'à 2 emplacements de rune.',
+          'Les runes offrent des bonus permanents en pourcentage (+5% ou +10%) en Attaque, Défense ou Points de Vie.',
+        ],
+      },
+      {
+        title: '🕳️ Abysses Infinis (Mode Endless)',
+        items: [
+          'Nouveau mode de jeu solo : descendez aussi profondément que possible dans la tour infinie (commande « endless »).',
+          'La difficulté et les récompenses (Or, XP, Gemmes) augmentent à chaque étage. Boss tous les 5 étages.',
+          'Vos Points de Vie ne se régénèrent pas entre les combats. Si vous mourez, le run se termine (sans perdre vos gains accumulés).',
+          'Classement mondial intégré pour voir qui ira le plus profond !',
+        ],
+      },
+    ],
+  },
+  {
     version: 'classes-v1',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [

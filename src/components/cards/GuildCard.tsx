@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { deriveStats } from '../../game/player';
 import { talentMods } from '../../game/talents';
+import { auraColor } from '../../game/prestige';
 import {
-  listenGuilds, createGuild, joinGuild, leaveGuild, contributeGuild, guildLevel,
+  listenGuilds, createGuild, applyGuild, acceptApplication, rejectApplication, leaveGuild, contributeGuild, guildLevel,
   attackGuildBoss, guildBossWeekId,
   socialEnabled, GUILD_MAX, GUILD_CREATE_COST, type Guild,
 } from '../../firebase/groupsService';
@@ -20,7 +21,7 @@ export default function GuildCard() {
 
   useEffect(() => listenGuilds(setGuilds), []);
   if (!p) return null;
-  const me = { uid: p.uid, name: p.name, level: p.level };
+  const me = { uid: p.uid, name: p.name, level: p.level, aura: p.prestigeAura, auraColorOn: p.auraColorOn };
   const myGuild = guilds.find((g) => p.uid in (g.members ?? {}));
 
   async function attackBoss() {
@@ -77,8 +78,8 @@ export default function GuildCard() {
       .then((id) => { mutate((d) => { d.guildId = id; }); toast('Guilde fondée !', 'good'); })
       .catch(() => { mutate((d) => { d.gold += GUILD_CREATE_COST; }); toast('Échec.', 'bad'); });
   }
-  function join(g: Guild) {
-    joinGuild(g.id, me).then(() => mutate((d) => { d.guildId = g.id; })).catch((e) => toast(`Impossible (${e.message}).`, 'bad'));
+  function apply(g: Guild) {
+    applyGuild(g.id, me).then(() => toast('Candidature envoyée !', 'good')).catch((e) => toast(`Impossible (${e.message}).`, 'bad'));
   }
   function leave() {
     if (!myGuild) return;
@@ -172,12 +173,29 @@ export default function GuildCard() {
           <div className="space-y-1">
             {members.map(([uid, m]) => (
               <div key={uid} className="flex justify-between rounded-lg bg-black/25 px-3 py-1.5 text-sm">
-                <span>{uid === myGuild.ownerUid ? '👑 ' : ''}{uid === p.uid ? '⭐ ' : ''}{m.name}</span>
+                <span>{uid === myGuild.ownerUid ? '👑 ' : ''}{uid === p.uid ? '⭐ ' : ''}<span style={{ color: auraColor(m.aura, m.auraColorOn ?? true) }}>{m.name}</span></span>
                 <span className="text-xs text-slate-400">Nv.{m.level}</span>
               </div>
             ))}
           </div>
         </div>
+
+        {myGuild.ownerUid === p.uid && Object.keys(myGuild.applications || {}).length > 0 && (
+          <div className="mt-4">
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-400">Candidatures · {Object.keys(myGuild.applications || {}).length}</div>
+            <div className="space-y-1">
+              {Object.entries(myGuild.applications || {}).map(([uid, m]) => (
+                <div key={uid} className="flex justify-between items-center rounded-lg bg-black/25 px-3 py-1.5 text-sm">
+                  <span>{m.name} <span className="text-[10px] text-slate-400">Nv.{m.level}</span></span>
+                  <div className="flex gap-1">
+                    <button onClick={() => acceptApplication(myGuild.id, uid).catch(e => toast(e.message, 'bad'))} className="rounded bg-emerald-500/30 px-2 py-0.5 text-[10px] hover:bg-emerald-500/50">Accepter</button>
+                    <button onClick={() => rejectApplication(myGuild.id, uid).catch(e => toast(e.message, 'bad'))} className="rounded bg-rose-500/30 px-2 py-0.5 text-[10px] hover:bg-rose-500/50">Refuser</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -193,12 +211,19 @@ export default function GuildCard() {
       <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Guildes · {ranked.length}</div>
       {ranked.length === 0 ? (
         <p className="text-xs text-slate-500">Aucune guilde. Fonde la première !</p>
-      ) : ranked.map((g, i) => (
-        <div key={g.id} className="flex items-center justify-between rounded-lg bg-black/25 px-3 py-2 text-sm">
-          <span className="min-w-0 truncate">{i + 1}. [{g.tag}] {g.name} <span className="text-xs text-slate-400">Nv.{guildLevel(g.xp).level} · {Object.keys(g.members).length}/{GUILD_MAX}</span></span>
-          <button onClick={() => join(g)} className="shrink-0 rounded bg-emerald-500/30 px-3 py-1 text-xs font-semibold hover:bg-emerald-500/50">Rejoindre</button>
-        </div>
-      ))}
+      ) : ranked.map((g, i) => {
+        const hasApplied = p.uid in (g.applications || {});
+        return (
+          <div key={g.id} className="flex items-center justify-between rounded-lg bg-black/25 px-3 py-2 text-sm">
+            <span className="min-w-0 truncate">{i + 1}. [{g.tag}] {g.name} <span className="text-xs text-slate-400">Nv.{guildLevel(g.xp).level} · {Object.keys(g.members).length}/{GUILD_MAX}</span></span>
+            {hasApplied ? (
+              <span className="shrink-0 rounded bg-slate-500/30 px-3 py-1 text-xs font-semibold text-slate-300">En attente</span>
+            ) : (
+              <button onClick={() => apply(g)} className="shrink-0 rounded bg-emerald-500/30 px-3 py-1 text-xs font-semibold hover:bg-emerald-500/50">Postuler</button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

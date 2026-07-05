@@ -1,7 +1,18 @@
-import { collection, getDocs, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { ref, onValue, onDisconnect, set, serverTimestamp } from 'firebase/database';
 import { db, rtdb, isFirebaseConfigured } from './config';
-import type { ClassId } from '../game/types';
+import type { ClassId, PlayerState } from '../game/types';
+
+/** Lit le profil public d'un joueur (best-effort). Null si indisponible. */
+export async function fetchPublicProfile(uid: string): Promise<Partial<PlayerState> | null> {
+  if (!isFirebaseConfigured || !db) return null;
+  try {
+    const snap = await getDoc(doc(db, 'players', uid));
+    return snap.exists() ? (snap.data() as Partial<PlayerState>) : null;
+  } catch {
+    return null;
+  }
+}
 
 export interface LeaderRow {
   uid: string;
@@ -13,8 +24,12 @@ export interface LeaderRow {
   gold: number;
   gambleNet: number;
   lastSeen?: number;
+  title?: string;
   seasonId?: string | null;
   seasonPoints?: number;
+  prestigeAura?: string;
+  prestigeLevel?: number;
+  auraColorOn?: boolean;
 }
 
 export interface OnlinePlayer {

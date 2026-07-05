@@ -90,7 +90,7 @@ export function canGamble(p: PlayerState, bet: number): boolean {
 }
 
 const SLOT_SYMBOLS = ['🍒', '🔔', '⭐', '💎', '7️⃣'];
-const SLOT_PAYOUT: Record<string, number> = { '🍒': 2, '🔔': 4, '⭐': 7, '💎': 12, '7️⃣': 30 };
+const SLOT_PAYOUT: Record<string, number> = { '🍒': 2, '🔔': 7, '⭐': 9, '💎': 12, '7️⃣': 30 };
 
 /** Machine à sous : 3 rouleaux. 3 identiques = jackpot, 2 identiques = remboursement partiel. */
 export function slots(p: PlayerState, cur: Currency, bet: number): GambleResult {

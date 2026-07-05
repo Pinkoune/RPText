@@ -10,6 +10,9 @@ export interface ChatMessage {
   ts: number;
   channel?: ChatChannel;
   targetId?: string; // guildId, teamId, or recipient name
+  system?: boolean; // annonce automatique du monde
+  aura?: string;
+  auraColorOn?: boolean;
 }
 
 export const chatOnline = isFirebaseConfigured && !!rtdb;
@@ -18,20 +21,24 @@ const LOCAL_KEY = 'rptext.localChat';
 let localMsgs: ChatMessage[] = [];
 const localListeners = new Set<(m: ChatMessage[]) => void>();
 
-function loadLocal(): ChatMessage[] {
-  if (localMsgs.length) return localMsgs;
-  const raw = localStorage.getItem(LOCAL_KEY);
-  localMsgs = raw ? (JSON.parse(raw) as ChatMessage[]) : [];
-  return localMsgs;
+function loadLocal(channel?: ChatChannel): ChatMessage[] {
+  if (localMsgs.length === 0) {
+    const raw = localStorage.getItem(LOCAL_KEY);
+    localMsgs = raw ? (JSON.parse(raw) as ChatMessage[]) : [];
+  }
+  return channel ? localMsgs.filter(m => m.channel === channel) : localMsgs;
 }
 
-export function sendChat(me: { uid: string; name: string }, text: string, channel: ChatChannel = 'global', targetId?: string): void {
+export function sendChat(me: { uid: string; name: string; aura?: string; auraColorOn?: boolean }, text: string, channel: ChatChannel = 'global', targetId?: string): void {
   const clean = text.trim().slice(0, 240);
   if (!clean) return;
   const msg: ChatMessage = { uid: me.uid, name: me.name, text: clean, ts: Date.now(), channel };
+  if (me.aura) msg.aura = me.aura;
+  if (me.auraColorOn === false) msg.auraColorOn = false;
   if (targetId) msg.targetId = targetId;
   if (!rtdb) {
-    localMsgs = [...loadLocal(), msg].slice(-50);
+    localMsgs.push(msg);
+    if (localMsgs.length > 50) localMsgs.shift();
     localStorage.setItem(LOCAL_KEY, JSON.stringify(localMsgs));
     localListeners.forEach((cb) => cb(localMsgs));
     return;
@@ -53,11 +60,26 @@ export function sendChat(me: { uid: string; name: string }, text: string, channe
   }
 }
 
+/** Envoie une annonce système automatique dans le chat global (victoire notable, level-up...). */
+export function sendAutoAnnounce(text: string): void {
+  if (!rtdb) return;
+  const msg = {
+    uid: 'system',
+    name: '\ud83c\udf0d Monde',
+    text,
+    ts: Date.now(),
+    channel: 'global' as ChatChannel,
+    system: true,
+  };
+  void push(ref(rtdb, 'chat/global'), msg);
+}
+
 export function watchChat(channel: ChatChannel, targetId: string | null | undefined, cb: (msgs: ChatMessage[]) => void): () => void {
   if (!rtdb) {
-    cb(loadLocal());
-    localListeners.add(cb);
-    return () => localListeners.delete(cb);
+    const notifyLocal = () => cb(loadLocal(channel));
+    notifyLocal();
+    localListeners.add(notifyLocal);
+    return () => localListeners.delete(notifyLocal);
   }
   
   let path = 'chat/global';

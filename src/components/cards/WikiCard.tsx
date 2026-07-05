@@ -5,6 +5,8 @@ import { MONSTERS } from '../../game/monsters';
 import type { ItemDef, MonsterDef } from '../../game/types';
 import { RECIPES } from '../../game/crafting';
 import { GATHER_SKILLS } from '../../game/gathering';
+import ItemIcon from '../ItemIcon';
+import MonsterIcon from '../MonsterIcon';
 
 export default function WikiCard() {
   const p = useGame(s => s.player);
@@ -88,8 +90,8 @@ export default function WikiCard() {
         {tab === 'items' && itemsList.map(it => (
           <div key={it.id} className="rounded-lg bg-black/25 p-3">
             <div className="flex items-center gap-2">
-              <span className="font-bold" style={{ color: RARITY_COLOR[it.rarity] }}>
-                {it.icon} {it.name}
+              <span className="inline-flex items-center gap-1.5 font-bold" style={{ color: RARITY_COLOR[it.rarity] }}>
+                <ItemIcon id={it.id} size={18} /> {it.name}
               </span>
               {it.slot && <span className="text-[10px] bg-slate-800 px-1.5 rounded text-slate-300">{it.slot}</span>}
               <span className="text-xs text-amber-300 ml-auto">{it.value} Sol</span>
@@ -120,7 +122,7 @@ export default function WikiCard() {
             <div key={m.id} className="rounded-lg bg-black/25 p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">{m.emoji || '👿'}</span>
+                  <MonsterIcon id={m.id} emoji={m.emoji} size={28} title={m.name} />
                   <div className="flex flex-col">
                     <span className="font-bold text-rose-300">{m.name}</span>
                     <span className="text-[10px] text-slate-400">Vaincu : {k} fois</span>
@@ -149,8 +151,8 @@ export default function WikiCard() {
                     {m.loot && Object.entries(m.loot).map(([itemId, chance]) => {
                       const it = ITEMS[itemId];
                       return (
-                        <span key={itemId} className="bg-black/40 px-1.5 py-0.5 rounded" style={{ color: it ? RARITY_COLOR[it.rarity] : 'white' }}>
-                          {it ? `${it.icon} ${it.name}` : itemId} ({Math.round(chance * 100)}%)
+                        <span key={itemId} className="inline-flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded" style={{ color: it ? RARITY_COLOR[it.rarity] : 'white' }}>
+                          {it ? <><ItemIcon id={itemId} size={14} /> {it.name}</> : itemId} ({Math.round(chance * 100)}%)
                         </span>
                       );
                     })}

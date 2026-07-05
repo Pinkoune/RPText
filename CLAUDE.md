@@ -1,306 +1,198 @@
-# CLAUDE.md — caveman
+# CLAUDE.md — RPText
 
-## README is a product artifact
-
-README = product front door. Non-technical people read it to decide if caveman worth install. Treat like UI copy.
-
-**Rules for any README change:**
-
-- Readable by non-AI-agent users. If you write "SessionStart hook injects system context," invisible to most — translate it.
-- Keep Before/After examples first. That the pitch.
-- Install table always complete + accurate. One broken install command costs real user.
-- What You Get table must sync with actual code. Feature ships or removed → update table.
-- Preserve voice. Caveman speak in README on purpose. "Brain still big." "Cost go down forever." "One rock. That it." — intentional brand. Don't normalize.
-- Benchmark numbers from real runs in `benchmarks/` and `evals/`. Never invent or round. Re-run if doubt.
-- Adding new agent to install table → add detail block in `<details>` section below.
-- Readability check before any README commit: would non-programmer understand + install within 60 seconds?
+RPG textuel multijoueur web. **Vite + React + TypeScript + Tailwind + Zustand**, backend **Firebase** (Auth, Firestore, Realtime DB) avec **repli localStorage** complet (`isFirebaseConfigured`). Utilisateur FR. Vérif = `npm run build` (le preview live est bloqué par le popup OAuth).
 
 ---
 
-## Project overview
+## Plan pré-reset (contenu end-game) — en cours
 
-Caveman makes AI coding agents respond in compressed caveman-style prose — cuts ~65-75% output tokens, full technical accuracy. Ships as Claude Code plugin, Codex plugin, Gemini CLI extension, agent rule files for Cursor, Windsurf, Cline, Copilot, 40+ others via `npx skills`.
+Objectif : rendre le end-game (niv.22→50) attractif. 5 features :
+1. ✅ **FAIT (C)** — Courbe XP two-phase + **niveau max 50** (`classes.ts` xpToNext/xpToNextV3/MAX_LEVEL, `player.ts` migrate `curveVersion=4`).
+2. ✅ **FAIT (C)** — **Biome Volcanique 🌋 (niv.24)** : type `'volcano'`, biome, 5 monstres, 3 ressources (`lava_crystal`/`ember_stone`/`infernal_shard`), minage volcanique, events, icônes, position carte.
+3. ✅ **FAIT (C)** — **Forgeron Renold (niv.10)** : réparation/renforcement garanti/purification en or. **Ouvert vendredi 21h → dimanche 21h uniquement** (`blacksmith.ts` `isBlacksmithOpen`), écran « absent » + compte à rebours sinon (bypass admin `ignoreRestrictions`). Icônes matrice/kit via `ItemIcon` (plus d'emoji).
+4. ✅ **FAIT (C)** — **Commandes end-game** : `mercenaire`(25, CD 6h, boss volcanique), `prestige`(30, aura cosmétique → carte + affichage classement), `expedition`(35, familier 4h → ressources), `sanctuaire`(40, CD 24h, boss ultime → primordial_crown/boss_soul). Gating auto (help + level-up + autocomplete) + entrées MobileNav.
+5. ✅ **FAIT (C)** — **Recettes end-game (niv.30-45)** : lava_blade, infernal_bow, magma_staff (mage), **seraph_staff (healer)**, volcanic_armor, infernal_elixir, void_mantle, primordial_crown.
+
+**Toutes les features du plan pré-reset sont faites.** Reset global = déjà dans le panel Admin (ne pas retoucher).
+
+**Prestige / Rituel du Néant (C — fondation faite, feel à polir)** : commande **secrète** `prestige` (Nv.50, `hidden:true` → absente du help, « ??? » dans le tuto), **lançable uniquement depuis les Abysses** (`biome==='frozen'`). L'ancienne carte d'aura cosmétique est désormais la commande **`aura`** (Nv.30). Logique dans `game/ascension.ts` : `computeAscensionBoss(p)` calibre le boss « Le Néant Originel » sur un joueur idéal (talents max + meilleure arme q150/5★/runes + `void_mantle` + `primordial_crown` + familier légendaire, via un faux `deriveStats`). **Calibrage costaud** (`hp = idealAtk*36`, `atk = idealMaxHp/6 + idealDef*0.6`, `def = idealAtk*0.15`) — vrai mur de fin de jeu qui dépasse le sustain d'un moine/soigneur ; leviers à ajuster ici si trop dur/facile. `ascensionOutcome(bossHpFrac, won)` + `applyAscensionResult(draft, res)` : **victoire** = prestige (`prestigeLevel++`, **+1 jeton de changement de classe** `classChangeTokens` utilisable depuis le Profil via `changeBaseClass`, reset progression en gardant identité/familiers/titres, arme starter neuve, bonus permanent **+8% ATK/DEF/PV & +10% XP/Or par prestige, cap 5** appliqué dans `deriveStats`/`applyBonuses`, affiché dans ProfileCard) ; **échec** = perte de 1-3 niveaux selon PV restants du boss (>75%/>50%/>25%) + **cooldown 8h** (`ascensionCooldownUntil`), sauf <25% = aucun malus. Insigne `✦N` violet au classement (`prestigeLevel`). Fenêtre `ascension` (`AscensionCard.tsx`) = intro « Affronter le mal » → confirm « Je suis paré ! » (`.animate-shake`) → combat (réutilise `combatTurn`). **Reste à faire (workstream B, feel)** : plein écran noir sans UI (masquer Topbar+dock), trou noir animé + barre PV violette du boss, barre PV joueur + compétences en bas, ambiance sonore.
+
+**Bugfix sous-classes/starter (C)** : `starterWeapon` comparait la classe **littérale** au lieu de la classe de **base** (`CLASSES[classId].parent ?? classId`) → un moine/paladin/etc. tombait dans le mauvais cas et recevait l'épée rouillée au lieu de l'arme de sa vraie famille (mage/healer → baguette). Corrigé. **Garde-fou ajouté dans `migratePlayer`** : si `p.level < 20` et que la classe actuelle est une sous-classe (`CLASSES[p.classId].parent` existe), on la renvoie de force vers la classe de base (reset arbre + points rendus), quelle que soit l'origine du problème (admin, bug futur…) — tourne à chaque connexion. **Panel Admin** : nouveau sélecteur « Changer de classe » (`changeClass`) — reset l'arbre de talents + déséquipe tout le matériel (rendu au sac), fonctionne via le patch `write()` (donc reflète en live si l'admin s'édite lui-même, voir bugfix ci-dessous).
+
+**Bugfix Admin non-instantané (C)** : `AdminModal` écrivait direct sur Firestore (`updatePlayerAdmin`) sans jamais toucher la session locale (`player` du store, pas branché en live) → un admin qui s'auto-éditait devait recharger la page pour voir l'effet. Toutes les actions passent maintenant par un helper `write(patch)` qui écrit Firestore **et** applique le même patch via `mutate` si `editingPlayer.uid === player.uid`. Aussi : **Reset Cooldowns** oubliait `ascensionCooldownUntil`/`combatCooldowns` ; **CooldownCard** n'affichait ni mercenaire/sanctuaire/rituel du Néant (ajoutés) ; **`applyAscensionResult`** oubliait de reset `farmXp`/`gatherXp`/`craftXp`/`concoctionXp` à la victoire du prestige (ajouté).
+
+**Ajustements équilibrage/QoL (C)** : familiers non achetables si collection de la rareté complète (`ownsAllOfRarity`, FamiliarCard). Boss end-game (`miniboss`/`mercenary`/`sanctuary`) : `applyZonePenalty` (commands.ts) réduit XP/or ×0.3 + loot limité à la ressource du biome si invoqués dans une zone `minLevel < 24` (anti-farm). Casino machine 🔔 x5→x8. **Prestige** (`prestige.ts`) : chaque aura donne un **petit bonus passif** (atk/def/hp/xp/gold%) appliqué dans `deriveStats`+`applyBonuses` (plus juste cosmétique). Boss mondial : dégâts **quasi-plats** (`150 + level*3 + atk*0.05`) pour participation équitable. Équipe : bonus désactivé en solo (`getTeamBonus size<=1`), kick des membres **hors ligne** via présence (`PresenceTracker`, onDisconnect ≠ inactif), dissolution du dernier via `leaveTeam` au `logout`. **Résistances phys/mag** : `rune_shift` (Rune de Transmutation, Fate Shop) sertie sur l'arme inverse son `dmgType` (physique↔magique) → contourne la résistance ; lu dans `deriveStats` via `p.enchants[weaponKey]`.
+
+**8e biome — Nécropole de Cristal 🪦 (niv.30, C)** : constat que débloquer les 7 biomes ne demandait que ~2% de l'XP totale jusqu'au niveau 50 (niv.28→50 = 98% du temps de jeu sans nouvelle zone). Ajout d'un biome intermédiaire entre volcan(24) et Abysses, et **Abysses repoussé de niv.28 à niv.38** (`biomes.ts`, xpMult 2.5→2.6) pour rester le 8e et dernier biome — la porte du rituel de prestige (`commands.ts` `biome==='frozen'`) reste inchangée puisque frozen reste bien la zone finale. Contenu complet : type `'crypt'` (`types.ts`), biome + position carte (`MapCard.tsx` POS/ORDER), 5 monstres niv.30-32 dont un mini-boss `crypt_warden` (`monsters.ts` + `monsterIcons.ts`), 3 ressources (`crypt_shard`/`bone_dust`/`wraith_essence`, minage+cueillette dans `gathering.ts`), 6 équipements end-game niv.34-36 (`crypt_edge`/`crypt_bow`/`crypt_scepter`/`crypt_rod`/`crypt_plate`/`soul_ward`) qui comblent le trou de la courbe de craft entre le tier volcanique (30-32) et `void_mantle`/`primordial_crown` (42-45), icônes (`icons.ts`), décor (`Scenery.tsx` silhouettes cristaux/tombes + particules feux follets), événement régional (`events.ts`). Annexes mises à jour : `BIOME_RESOURCE`/`biomeRes` (commands.ts, x2) pour l'anti-farm et l'expédition, achievement Globe-trotteur (`achievements.ts`, goal 6→8, déjà périmé à 7 avant ce patch). **Non touché** (pré-existant, hors scope) : quelques recettes (`crystal_charm`, `divine_scepter`, `phoenix_elixir`, `crystal_staff`, `gambler_ring`) exigent `crystal`/`frost_lotus` (exclusifs à l'Abysse) à des `levelReq` bien inférieurs au niveau d'accès au biome — un écart déjà présent avant ce patch (contournable par le marché), juste élargi par le recul d'Abysses à niv.38.
 
 ---
 
-## What lives where
-
-Post-cleanup layout. Sources of truth at the top, distribution mirrors below, build outputs in `dist/`, human docs alongside each skill.
+## Architecture (où vit quoi)
 
 ```
-caveman/
-├── README.md                    # Front door (product pitch)
-├── INSTALL.md                   # Per-agent install commands
-├── CONTRIBUTING.md              # Dev guide
-├── CLAUDE.md                    # This file (maintainer instructions)
-├── AGENTS.md / GEMINI.md        # Autodiscovery files (must stay at root)
-│
-├── install.sh / install.ps1     # 30-line shims → bin/install.js
-│
-├── bin/                         # Unified installer
-│   ├── install.js               # Single source for all 30+ agents (PROVIDERS array)
-│   └── lib/settings.js          # JSONC-tolerant settings.json reader/writer
-│
-├── skills/                      # ALL skills, single source of truth
-│   ├── caveman/{SKILL.md, README.md}
-│   ├── caveman-commit/{SKILL.md, README.md}
-│   ├── caveman-review/{SKILL.md, README.md}
-│   ├── caveman-help/{SKILL.md, README.md}
-│   ├── caveman-stats/{SKILL.md, README.md}
-│   ├── caveman-compress/{SKILL.md, README.md, scripts/}
-│   └── cavecrew/{SKILL.md, README.md}
-│
-├── agents/                      # cavecrew subagents (single source — kept at root for plugin auto-discovery)
-├── commands/                    # Codex/Gemini TOML command stubs (root for plugin auto-discovery)
-│
-├── src/                         # Internal source — not auto-discovered by plugin
-│   ├── hooks/                   # Claude Code hooks (installer reads here)
-│   ├── rules/                   # Auto-activation rule body (single source)
-│   ├── tools/                   # caveman-init.js (per-repo rule writer)
-│   └── mcp-servers/             # caveman-shrink npm-published MCP middleware
-│
-├── .claude-plugin/              # Claude Code plugin manifest (REQUIRED at root)
-├── plugins/caveman/             # Claude Code plugin distribution (CI-mirrored)
-│   ├── skills/                  # ← from skills/
-│   └── agents/                  # ← from agents/
-│
-├── dist/                        # Build artifacts (gitignored)
-│   └── caveman.skill            # ZIP of skills/caveman/, rebuilt by CI
-│
-├── tests/                       # All tests (Node + Python)
-├── benchmarks/                  # Real token measurements through Claude API
-├── evals/                       # Three-arm eval harness
-├── docs/                        # User-facing docs site
-└── .github/workflows/           # CI sync
+src/
+├── game/            # Logique pure (pas de React). Cœur du jeu.
+│   ├── types.ts         # PlayerState, ItemDef, Stats, ClassId, BiomeId…  (⚠ fichier partagé)
+│   ├── player.ts        # deriveStats, migratePlayer, canEquip, grantXp, applyBonuses  (⚠ partagé)
+│   ├── classes.ts       # 4 classes de base + 12 sous-classes (ascensions), courbe XP
+│   ├── talents.ts       # arbre de talents + compétences actives (ActiveSkillDef) + CombatMods
+│   ├── combat.ts        # combatTurn (hunt/adventure), simulateCombat, CombatState (bouclier/états)
+│   ├── sets.ts          # procs de set en combat (feu=brûlure, givre=gel…)
+│   ├── items.ts         # ITEMS (registre d'objets), item()/getItem() (suffixe qualité :q120)
+│   ├── icons.ts         # registre id d'objet → icône react-icons/gi (fallback emoji)
+│   ├── crafting.ts      # RECIPES + minijeu (forge). getCraftLevel.
+│   ├── gathering.ts     # récolte (chop/mine/fish/forage), farmXp
+│   ├── dungeons.ts      # DUNGEONS (défs), DungeonReward
+│   ├── enchant.ts       # (Gemini) enchantements via gemmes/runes
+│   ├── endless.ts       # (Claude) abysses infinis — monstre/récompenses par étage
+│   ├── season.ts, daily.ts, achievements.ts, events.ts, quests.ts, biomes.ts, monsters.ts, familiars.ts, pvp.ts
+├── firebase/        # Services : playerService, groupsService (teams/guildes/boss guilde),
+│   │                #   dungeonService, bossService, pvpDuelService (Claude), cardjitsuService,
+│   │                #   socialService (leaderboard/présence), endlessService, chatService
+├── components/
+│   ├── ItemIcon.tsx     # <ItemIcon id size /> — icône teintée par rareté (fallback emoji)
+│   ├── MonsterIcon.tsx  # <MonsterIcon id emoji size /> — icône monstre (fallback emoji), registre monsterIcons.ts
+│   ├── MobileNav.tsx    # <640px : dock bas + menu grille (remplace CommandBar) — voir « Mobile »
+│   ├── cards/           # une carte = une fenêtre (Hunt, Craft, Equipment, Talent, Dungeon…)
+│   ├── WindowManager.tsx, Window.tsx (plein écran sur mobile), Topbar.tsx, App.tsx, modales
+└── store/
+    ├── gameStore.ts     # useGame : player, mutate (débounce save), toasts, dailyReward…
+    └── uiStore.ts       # useUi : fenêtres (WindowKind), open/close/focus
 ```
 
----
-
-## File structure and what owns what
-
-### Single source of truth files — edit only these
-
-| File | What it controls |
-|------|-----------------|
-| `skills/caveman/SKILL.md` | Caveman behavior: intensity levels, rules, wenyan mode, auto-clarity, persistence. Only file to edit for behavior changes. |
-| `src/rules/caveman-activate.md` | Always-on auto-activation rule body. Consumed by `src/tools/caveman-init.js` when a user runs `npx caveman --with-init` (per-repo IDE rule files). Edit here, not in any per-agent rule copy. |
-| `src/rules/caveman-openclaw-bootstrap.md` | Marker-fenced bootstrap snippet appended to `~/.openclaw/workspace/SOUL.md` by `bin/lib/openclaw.js`. Drives always-on caveman through the OpenClaw gateway. Must include the SENTINEL `Respond terse like smart caveman` and stay well under OpenClaw's 12K-per-bootstrap-file cap. |
-| `bin/lib/openclaw.js` | OpenClaw install/uninstall helper. Frontmatter merge (`version`, `always: true`), SOUL.md marker append/strip, idempotent. Shared by `bin/install.js` and `src/tools/caveman-init.js`. |
-| `skills/caveman-commit/SKILL.md` | Caveman commit message behavior. Fully independent skill. |
-| `skills/caveman-review/SKILL.md` | Caveman code review behavior. Fully independent skill. |
-| `skills/caveman-help/SKILL.md` | Quick-reference card. One-shot display, not a persistent mode. |
-| `skills/caveman-compress/SKILL.md` | Compress sub-skill behavior. |
-| `skills/cavecrew/SKILL.md` | Cavecrew decision guide — when to delegate to caveman subagents vs vanilla. Edit only here. |
-| `agents/cavecrew-investigator.md` | Read-only locator subagent (haiku). Output contract: `path:line — symbol — note`. |
-| `agents/cavecrew-builder.md` | Surgical 1-2 file editor subagent. Refuses 3+ file scope. |
-| `agents/cavecrew-reviewer.md` | Diff/file reviewer subagent (haiku). One-line findings with severity emoji. |
-| `src/plugins/opencode/plugin.js` | opencode native plugin. ESM Bun module — `session.created` writes flag, `tui.prompt.append` parses slash/natural-language activation and appends per-prompt reinforcement. Reuses `caveman-config.js` via `createRequire`. |
-| `src/plugins/opencode/commands/*.md` | Six opencode slash-command prompt templates (`/caveman`, `/caveman-{commit,review,compress,stats,help}`). |
-
-### Auto-generated / auto-synced — do not edit directly
-
-We removed the agent-specific dotdir mirrors at the repo root (`.cursor/`, `.windsurf/`, `.clinerules/`, `.github/copilot-instructions.md`, root `caveman/SKILL.md`). They were never read by the installer — only used to self-apply caveman to this repo when a maintainer opened it in Cursor/Windsurf/Cline. Devs who want caveman in their editor while editing this repo should run `npx caveman --with-init` once (writes per-repo rule files from `src/rules/caveman-activate.md` via `src/tools/caveman-init.js`). For per-user installs through the upstream skills CLI, `npx caveman --only <agent>` runs `npx skills add ... -a <profile>`.
-
-A handful of dotdir leftovers (`.junie/`, `.kiro/`, `.roo/`, `.agents/`) still hold a stale `cavecrew/SKILL.md` mirror from before the cleanup. They aren't read by anything in the current install path; remove on sight, no migration needed.
-
-What's left is the Claude Code plugin distribution (required by the plugin loader) and the release ZIP.
-
-| File | Synced from |
-|------|-------------|
-| `plugins/caveman/skills/caveman/SKILL.md` | `skills/caveman/SKILL.md` |
-| `plugins/caveman/skills/caveman-compress/SKILL.md` (+ `scripts/`) | `skills/caveman-compress/SKILL.md` (+ `scripts/`) |
-| `plugins/caveman/skills/cavecrew/SKILL.md` | `skills/cavecrew/SKILL.md` |
-| `plugins/caveman/agents/cavecrew-*.md` | `agents/cavecrew-*.md` |
-| `dist/caveman.skill` | ZIP of `skills/caveman/` directory (gitignored; rebuilt by CI on release) |
-
-Skills not in this table (`caveman-commit`, `caveman-review`, `caveman-help`, `caveman-stats`) are not mirrored into the Claude Code plugin distribution by CI. They reach Claude Code through the standalone hook + skill install path, and reach other agents via `npx skills add`. A `plugins/caveman/skills/caveman-stats/` directory is currently checked in as a hand-committed copy; the sync workflow does not touch it, so don't rely on edits there to propagate.
+**Patterns clés**
+- Ajouter un objet → `ITEMS` dans `items.ts` (+ recette dans `crafting.ts` si craftable, + entrée `icons.ts`). Toujours passer par `item(id)`, jamais `ITEMS[id]`.
+- Nouvelle fenêtre → `WindowKind` (uiStore) + `META` (WindowManager) + rendu + commande (`commands.ts`).
+- Migration de save → `migratePlayer()` avec un flag de version (ex : `TALENT_RESET_VERSION`).
+- Combat interactif (hunt/adventure) = `combatTurn` (pur, ne mute pas le joueur). Donjon multi = `dungeonService` (serveur, chemin séparé).
+- Synchro sans backend = fenêtres de temps déterministes (`Math.floor(Date.now()/ROTATION_MS)`), voir `events.ts`, `season.ts`.
 
 ---
 
-## CI sync workflow
+## Icônes (react-icons/gi = Game Icons)
 
-`.github/workflows/sync-skill.yml` triggers on main push when `skills/**/SKILL.md` or `agents/cavecrew-*.md` changes.
+`icons.ts` mappe `id d'objet → composant react-icons`. `<ItemIcon id size />` le rend **teinté par la couleur de rareté**, avec **repli sur l'emoji** de l'objet si non mappé. Migration progressive : remplacer `{it.icon}` par `<ItemIcon id={id} />` dans les cartes. **Fait partout** : Inventaire, Équipement, Forge, Boutique, Boutique du Destin, Récolte, Chasse (butin+HUD), Wiki (objets+bestiaire), Marché, Concoction (ingrédients), Donjon (picker potion), Profil (équipé), BaitTimer (appât actif). **Tous les objets d'`ITEMS` sont mappés dans `icons.ts` (0 fallback emoji).** Restes = emojis « propres » non-objets (classes, biomes, familiers, succès, paliers saison, événements). Labels texte : `SeasonCard`.
 
-What it does:
-1. Copies `skills/caveman/SKILL.md` and `skills/cavecrew/SKILL.md` into their `plugins/caveman/skills/<name>/` mirrors so the Claude Code plugin loader sees the latest behavior.
-2. Copies `skills/caveman-compress/SKILL.md` and its `scripts/` into `plugins/caveman/skills/caveman-compress/`.
-3. Copies `agents/cavecrew-*.md` into `plugins/caveman/agents/`.
-4. Rebuilds `dist/caveman.skill` (ZIP of `skills/caveman/`) for the release artifact.
-5. Commits and pushes with `[skip ci]` to avoid loops.
-
-CI bot commits as `github-actions[bot]`. After PR merge, wait for workflow before declaring release complete.
-
-The old steps that mirrored SKILL.md and rules into root dotdirs (`.cursor/`, `.windsurf/`, `.clinerules/`, `.github/copilot-instructions.md`) are gone — those mirrors no longer exist. The old `caveman-compress/` → `skills/compress/` rename-on-sync is also gone now that compress lives at `skills/caveman-compress/`.
+**Monstres** : registre séparé `monsterIcons.ts` (`MONSTER_ICONS: id monstre → icône gi`) + `<MonsterIcon id emoji size />` (repli sur l'emoji du `MonsterDef`). Utilisé dans Hunt (HUD) et Wiki (bestiaire). Endless garde son emoji brut (monstres générés sans id).
 
 ---
 
-## Hook system (Claude Code)
+## Mobile (< 640px) — fait (C)
 
-Three hooks in `src/hooks/` plus a `caveman-config.js` shared module and a `package.json` CommonJS marker. Communicate via flag file at `$CLAUDE_CONFIG_DIR/.caveman-active` (falls back to `~/.claude/.caveman-active`).
+`useIsMobile()` (`hooks/useIsMobile.ts`, matchMedia). Sous 640px l'app quitte le gestionnaire de fenêtres flottantes :
+- `Window.tsx` rend chaque carte **plein écran** (sous la Topbar, gap déterministe `top: 4.75rem`), **sans drag/cascade/minimize**, header + bouton fermer tactiles.
+- `App.tsx` : `MobileNav` remplace `CommandBar`. **Dock bas** = onglets des fenêtres ouvertes (focus/fermer) + bouton **☰ Menu** → **grille d'icônes** par catégorie. Catalogue dans `MobileNav.tsx` (`NAV`). **Gating** : chaque icône respecte le `reqLevel` de la commande homonyme (`REQ_LEVEL` dérivé de `COMMANDS`) → icônes **verrouillées** (🔒 + Nv.X, clic bloqué) tant que non débloquées ; bypass admin via `ignoreRestrictions`.
+- `Topbar.tsx` : **barres PV/XP compactes** en haut sur mobile (`sm:hidden`). Pastilles **événements cachées <Nv.3**, **Fate Coins cachés <Nv.10** (toujours gagnés, juste non affichés) — l'or reste visible.
+- `HelpCard.tsx` : refonte lisible (catégories à icône, tri par niveau, alias affiché). Commandes non débloquées **grisées + 🔒 Nv.X** (référence de ce qui arrive).
+- Desktop inchangé (fenêtres flottantes + CommandBar).
 
-```
-SessionStart hook ──writes "full"──▶ $CLAUDE_CONFIG_DIR/.caveman-active ◀──writes mode── UserPromptSubmit hook
-                                                       │
-                                                    reads
-                                                       ▼
-                                              caveman-statusline.sh
-                                            [CAVEMAN] / [CAVEMAN:ULTRA] / ...
-```
+## Chat — messagerie (fait, C)
 
-`src/hooks/package.json` pins the directory to `{"type": "commonjs"}` so the `.js` hooks resolve as CJS even when an ancestor `package.json` (e.g. `~/.claude/package.json` from another plugin) declares `"type": "module"`. Without this, `require()` blows up with `ReferenceError: require is not defined in ES module scope`.
-
-All hooks honor `CLAUDE_CONFIG_DIR` for non-default Claude Code config locations.
-
-### `src/hooks/caveman-config.js` — shared module
-
-Exports:
-- `getDefaultMode()` — resolves default mode in order: `CAVEMAN_DEFAULT_MODE` env var → repo-local config (`<cwd>/.caveman/config.json` or `<cwd>/.caveman.json`, walking up to the filesystem root) → user config (`$XDG_CONFIG_HOME/caveman/config.json` / `~/.config/caveman/config.json` / `%APPDATA%\caveman\config.json`) → `'full'`. The env var short-circuits before any cwd walk. Repo-local config lets a team check in a per-project default without polluting every contributor's env or user config.
-- `findRepoConfigPath(start)` — walks up from `start` (default `process.cwd()`) looking for the first `.caveman/config.json` or `.caveman.json`. Bounded to 64 ancestors. Refuses symlinked files (symmetric with `safeWriteFlag` / `readFlag`).
-- `safeWriteFlag(flagPath, content)` — symlink-safe flag write. Refuses if flag target or its immediate parent is a symlink. Opens with `O_NOFOLLOW` where supported. Atomic temp + rename. Creates with `0600`. Protects against local attackers replacing the predictable flag path with a symlink to clobber files writable by the user. Used by both write hooks. Silent-fails on all filesystem errors.
-
-### `src/hooks/caveman-activate.js` — SessionStart hook
-
-Runs once per Claude Code session start. Three things:
-1. Writes the active mode to `$CLAUDE_CONFIG_DIR/.caveman-active` via `safeWriteFlag` (creates if missing)
-2. Emits caveman ruleset as hidden stdout — Claude Code injects SessionStart hook stdout as system context, invisible to user
-3. Checks `settings.json` for statusline config; if missing, appends nudge to offer setup on first interaction
-
-Silent-fails on all filesystem errors — never blocks session start.
-
-### `src/hooks/caveman-mode-tracker.js` — UserPromptSubmit hook
-
-Reads JSON from stdin. Three responsibilities:
-
-**1. Slash-command activation.** If prompt starts with `/caveman`, writes mode to flag file via `safeWriteFlag`:
-- `/caveman` → configured default (see `caveman-config.js`, defaults to `full`)
-- `/caveman lite` → `lite`
-- `/caveman ultra` → `ultra`
-- `/caveman wenyan` or `/caveman wenyan-full` → `wenyan` (alias) / `wenyan-full`
-- `/caveman wenyan-lite` → `wenyan-lite`
-- `/caveman wenyan-ultra` → `wenyan-ultra`
-- `/caveman-commit` → `commit`
-- `/caveman-review` → `review`
-- `/caveman-compress` → `compress`
-
-**2. Natural-language activation/deactivation.** Matches phrases like "activate caveman", "turn on caveman mode", "talk like caveman" and writes the configured default mode. Matches "stop caveman", "disable caveman", "normal mode", "deactivate caveman" etc. and deletes the flag file. README promises these triggers, the hook enforces them.
-
-**3. Per-turn reinforcement.** When flag is set to a non-independent mode (i.e. not `commit`/`review`/`compress`), emits a small `hookSpecificOutput` JSON reminder so the model keeps caveman style after other plugins inject competing instructions mid-conversation. The full ruleset still comes from SessionStart — this is just an attention anchor.
-
-### `src/hooks/caveman-statusline.sh` — Statusline badge
-
-Reads flag file at `$CLAUDE_CONFIG_DIR/.caveman-active`. Outputs colored badge string for Claude Code statusline:
-- `full` or empty → `[CAVEMAN]` (orange)
-- anything else → `[CAVEMAN:<MODE_UPPERCASED>]` (orange)
-
-Then appends the lifetime-savings suffix (`⛏ 12.4k`) read from `$CLAUDE_CONFIG_DIR/.caveman-statusline-suffix` — written by `caveman-stats.js` on every `/caveman-stats` run. **Default on**; users opt out with `CAVEMAN_STATUSLINE_SAVINGS=0`. The suffix file is absent until `/caveman-stats` runs at least once, so fresh installs render no fake number.
-
-Configured in `settings.json` under `statusLine.command`. PowerShell counterpart at `src/hooks/caveman-statusline.ps1` for Windows. Both scripts symlink-refuse and whitelist-validate the flag/suffix file contents — never echo arbitrary bytes.
-
-### Hook installation
-
-**Plugin install** — hooks wired automatically by plugin system.
-
-**Standalone install** — `bin/install.js` (the unified Node installer) copies hook files into `$CLAUDE_CONFIG_DIR/hooks/` and merges SessionStart + UserPromptSubmit + statusline into `settings.json`. Uses the JSONC-tolerant helpers in `bin/lib/settings.js` so a commented `settings.json` no longer crashes the merge. Defensive `validateHookFields` runs before every write to prevent a single malformed hook from poisoning the entire file (Claude Code Zod silently discards the whole `settings.json` on schema mismatch).
-
-The `install.sh` / `install.ps1` shims at the repo root delegate to `bin/install.js` via `node` (local clone) or `npx -y github:JuliusBrussee/caveman` (curl|bash). No legacy fallback path remains — earlier `install.sh.legacy` / `install.ps1.legacy` files were removed.
-
-**Uninstall** — `npx -y github:JuliusBrussee/caveman -- --uninstall` (or `node bin/install.js --uninstall` from a clone). Strips caveman hook entries from `settings.json` via substring marker `caveman`, deletes hook files, and removes the Claude plugin / Gemini extension. Skill installs done via `npx skills add` must be removed via the IDE's skill manager (we don't track them).
+`ChatCard.tsx` : onglet **Privé** = vraie messagerie. Fils dérivés de `chat/inbox/<nom>` (regroupés par interlocuteur), **sélecteur de destinataire** parmi les joueurs en ligne (`trackPresence`), bulles gauche/droite. Clic sur un pseudo (n'importe quel canal) = ouvre le DM. `/w Nom Message` conservé en **raccourci optionnel** (plus jamais obligatoire).
 
 ---
 
-## Skill system
+## Mini-boss & Raid (fait, C)
 
-Skills = Markdown files with YAML frontmatter consumed by Claude Code's skill/plugin system and by `npx skills` for other agents.
+- **`miniboss`** (cmd, Nv.15, CD 12h via `cooldowns.miniboss`) : ouvre un combat `hunt` contre un monstre synthétisé très costaud, stats/récompenses ∝ niveau (loot : matrice, âme de boss…). CD posé à l'engagement (anti-farm).
+- **`raid`** (cmd, Nv.22) : 3 donjons enchaînés = def `raid_trials` (12 étages, stats ×1.4, boss final ×2.2) poussée dans `DUNGEONS` avec `raid:true`. Lobby raid = **pas de boutons Prêt/Lancer** (démarrage **auto uniquement** à :10 via l'hôte), compte à rebours, « Quitter » (rose) ferme la carte. L'**en-tête de fenêtre** passe dynamiquement à « 🔱 Raid » (jaune) via `useUi.setChrome('dungeon', {title,accent})` (override `GameWindow.title/accent`, lu par WindowManager). **Coffre à clé masqué** pour les raids. Aussi dans le tuto (Nv.22). **Réutilise tout le moteur donjon** (`dungeonService`). Fenêtres d'inscription déterministes (`raid.ts` : 10h00→10h10 et 20h00→20h10 locales) ; lobby **partagé** à id déterministe `raid-<key>` via `joinOrCreateRaid` (1er = hôte, illimité). `RaidBanner.tsx` = grosse notif pendant les inscriptions (Nv.25+), clic = `runCommand('raid')`. Les raids sont **exclus de la liste** DungeonCard (création hors fenêtre impossible).
+- **Limite 4 joueurs** sur les donjons normaux (`joinDungeon`), illimitée si `def.raid`.
+- **Lobby raid** (DungeonCard) : titre dédié, **compte à rebours** vers :10 (`session.raidStartsAt`) et **auto-start** à échéance (`startDungeon(id, force=true)` ignore le « tous prêts » pour les raids). Cooldown mini-boss listé dans CooldownCard.
+- **Admin** : bouton « Ouvrir une fenêtre de Raid » → `raidService.broadcastRaid()` (RTDB `world/raid`) ; `App` écoute via `listenRaidBroadcast` → `setForcedRaid` ; `getRaidWindow` honore la fenêtre forcée (10 min) en priorité. Debug + events.
+- **HP < 15 %** clignote (`animate-pulse`) : Topbar (mobile + desktop) et barres joueur en combat (Hunt/Dungeon/Endless).
+- 🐛 **Fix** : Topbar/ProfileCard affichaient `player.hp` **brut** (jamais clampé à `maxHp`) au lieu de `deriveStats().hp` (clampé) → barre PV/XP pouvait déborder (`999999/209`) si un admin changeait le niveau après un `full_heal` (qui écrivait un sentinel `hp:999999`). Corrigé : barres avec `overflow-hidden` + % clampés `[0,100]`, `AdminModal` calcule désormais le vrai `maxHp` via `deriveStats` (plus de sentinel) et clampe `hp` au save si le niveau change.
 
-Each skill has a human-facing `README.md` alongside the LLM-facing `SKILL.md`. The README explains what the skill does for users browsing GitHub; the SKILL.md is the prompt body the agent loads. Don't merge them — different audiences, different formats.
+## Équipe (fait, C) — synergie donjon
 
-### Intensity levels
+`TeamCard.tsx` / `groupsService.getTeamBonus` : buff passif +5%/membre XP+Or **désactivé si seul dans l'équipe** (`size<=1` → ×1.0, plus de bonus gratuit en solo) — appliqué aussi au **craft** désormais (`crafting.ts finishCraft` route l'XP via `applyBonuses`, comme récolte/combat ; avant : craftXp ignorait le bonus). En plus, **jonction rapide au donjon d'un coéquipier**, et **mini-chat d'équipe intégré** dans TeamCard (même canal RTDB `chat/team/<id>` que l'onglet Équipe de `ChatCard` — les deux restent synchronisés, aucune duplication de canal). `TEAM_MAX=4` matche exactement le cap 4 joueurs des donjons normaux. Quand un membre ouvre un donjon (`setTeamDungeon` déjà posé côté `DungeonCard`), `TeamCard` écoute la session (`listenDungeon(myTeam.dungeonId)`) et affiche un encart « ⚔️ *Nom du donjon* en attente (n/4) » + bouton **Rejoindre** (masqué si la session n'est plus en lobby ou si déjà dedans) — plus besoin de fouiller la liste des donjons ouverts dans DungeonCard.
 
-Defined in `skills/caveman/SKILL.md`. Six levels: `lite`, `full` (default), `ultra`, `wenyan-lite`, `wenyan-full`, `wenyan-ultra`. Persists until changed or session ends.
+## Duels PvP temps réel — 1v1 & 2v2 (fait, C)
 
-### Auto-clarity rule
+Remplace l'ancien duel instantané (pile/face Firestore, `pvp.ts simulateDuel`) par un **vrai combat au tour par tour avec compétences**, calqué sur `dungeonService`/`endlessService` : nouveau service RTDB `pvpDuelService.ts` (`pvpDuels/<id>`), deux camps symétriques `A`/`B` (au lieu d'un groupe vs monstre), même moteur de dégâts que la chasse (crit/critMult/armorPen/execute/lifesteal/doubleHit/berserk/regen via `CombatMods`, éléments arme vs armure via `getElementMult`/`getDmgTypeMult`).
+- **Modes** : `1v1` (1 vs 1) et `2v2` (jusqu'à 2 par camp — capacité par camp = `sideCapacity(mode)`). Lobby avec Prêt/Lancer (hôte), impossible de lancer tant qu'un camp n'est pas complet+prêt.
+- **2v2 via l'Équipe** : si en équipe, un bouton « 📣 Inviter mon équipe » poste un message dans le chat d'équipe (pas d'auto-fill magique — chacun rejoint via le lobby comme un adversaire normal).
+- **Ciblage** : 1v1 auto (un seul adversaire vivant) ; 2v2 cliquable sur la fiche adverse pendant son tour (repli sur une cible aléatoire si aucune sélection).
+- **Mise** : payée à la création/jonction (comme l'ancien système) ; le vainqueur double sa mise (`bet*2`) car les deux camps ont toujours le même effectif → pas de calcul de pot nécessaire. Points de saison PvP inchangés (`SEASON_POINTS.duelWin`).
+- **Repli hors-ligne** (`!pvpDuelsEnabled`, pas de RTDB) : combat fantôme instantané conservé tel quel (`pvp.ts`), aucune régression du mode local.
+- Champs joueur : `pvpDuelSessionId`/`settledPvpDuels` (migration `player.ts`), règle RTDB `pvpDuels` ajoutée à `database.rules.json`.
 
-Caveman drops to normal prose for: security warnings, irreversible action confirmations, multi-step sequences where fragment ambiguity risks misread, user confused or repeating question. Resumes after. Defined in skill — preserve in any SKILL.md edit.
+## Équilibrage arbres de talents (fait, C)
 
-### caveman-compress
+À Nv.50 le joueur gagne 49 points de talent (`level-1`). Un premier passage avait ajouté des passifs « absorbeurs » (2×5 rangs + 1×3 rang) pour les bases Guerrier/Mage/Archer/Soigneur + les sous-classes Moine/Druide/Prêtre de l'Aube, mais **oubliait 9 sous-classes** (Paladin/Berserker/Dark Knight/Pyromancer/Cryomancer/Arcanist/Rogue/Barde/Chasseur), qui plafonnaient à 35 rangs dépensables → **14 points gaspillés** à Nv.50. Corrigé (`talents.ts`) : mêmes gabarits ajoutés à ces 9 sous-classes → toutes à 48 rangs (1 point de marge, comme le Moine). Prêtre de l'Aube/Druide restent à 43 (6 de marge, non touché — pas cassé, juste un peu plus généreux).
 
-Sub-skill in `skills/caveman-compress/SKILL.md`. Takes file path, compresses prose to caveman style, writes to original path, saves backup at `<filename>.original.md`. Validates headings, code blocks, URLs, file paths, commands preserved. Retries up to 2 times on failure with targeted patches only. Requires Python 3.10+.
+## Combat — bouclier & états (fait)
 
-The slash command is `/caveman-compress` everywhere — same name in plugin and standalone install. CI no longer renames the directory on sync (the old `caveman-compress/` → `skills/compress/` sed rename is gone now that the source lives at `skills/caveman-compress/`).
-
-### caveman-commit / caveman-review
-
-Independent skills in `skills/caveman-commit/SKILL.md` and `skills/caveman-review/SKILL.md`. Both have own `description` and `name` frontmatter so they load independently. caveman-commit: Conventional Commits, ≤50 char subject. caveman-review: one-line comments in `L<line>: <severity> <problem>. <fix>.` format.
-
----
-
-## Agent distribution
-
-How caveman reaches each agent type:
-
-| Agent | Mechanism | Auto-activates? |
-|-------|-----------|----------------|
-| Claude Code | Plugin (hooks + skills) or standalone hooks | Yes — SessionStart hook injects rules |
-| Codex | Plugin in `plugins/caveman/` plus repo `.codex/hooks.json` and `.codex/config.toml` | Yes on macOS/Linux — SessionStart hook |
-| Gemini CLI | Extension with `GEMINI.md` context file | Yes — context file loads every session |
-| opencode | Native plugin (`src/plugins/opencode/`) copied into `~/.config/opencode/plugins/caveman/` + `AGENTS.md` ruleset + skills/agents/commands directories. Plugin uses `session.created` and `tui.prompt.append` lifecycle hooks. No statusline (opencode TUI exposes no plugin-writable badge). | Yes — `session.created` writes flag, `AGENTS.md` carries always-on ruleset |
-| OpenClaw | Workspace skill at `~/.openclaw/workspace/skills/caveman/SKILL.md` (frontmatter merged with `version` + `always: true`) plus a marker-fenced bootstrap block in `~/.openclaw/workspace/SOUL.md`. Both writes go through `bin/lib/openclaw.js`; workspace path is overridable via `OPENCLAW_WORKSPACE`. | Yes — SOUL.md is auto-injected each turn under "Project Context" (subject to OpenClaw's 12K-per-file / 60K-total bootstrap caps) |
-| Cursor | `npx skills add ... -a cursor` (default via `--only cursor`) writes the upstream skill profile; per-repo `.cursor/rules/caveman.mdc` via `--with-init` (calls `src/tools/caveman-init.js`) | Yes — always-on rule |
-| Windsurf | `npx skills add ... -a windsurf` (default via `--only windsurf`); per-repo `.windsurf/rules/caveman.md` via `--with-init` | Yes — always-on rule |
-| Cline | `npx skills add ... -a cline` (default via `--only cline`); per-repo `.clinerules/caveman.md` via `--with-init` | Yes — Cline auto-discovers `.clinerules/` |
-| Copilot | `npx skills add ... -a github-copilot` (soft probe — pass `--only copilot`); per-repo `.github/copilot-instructions.md` + `AGENTS.md` via `--with-init` | Yes — repo-wide instructions |
-| Others (Junie, Trae, Warp, Tabnine, Mistral, Qwen, Devin, Droid, ForgeCode, Bob, Crush, iFlow, OpenHands, Qoder, Rovo Dev, Replit, Antigravity, …) | `npx skills add JuliusBrussee/caveman -a <profile>` | No — user must say `/caveman` each session |
-
-opencode reaches Tier 1 minus the statusline (opencode's TUI has no plugin-writable badge). Mode flag lives at `~/.config/opencode/.caveman-active` for any external tooling that wants to surface it.
-
-For agents without hook systems, the always-on snippet lives in `INSTALL.md`'s "Want it always on?" section — keep current with `src/rules/caveman-activate.md`.
-
-**Adding a new agent.** Edit the `PROVIDERS` array in `bin/install.js` — single source of truth, no more bash/PS1 dual-source drift. Each entry has `id`, `label`, `mech`, `detect` (clause spec like `command:foo||dir:$HOME/x`), optional `profile` (vercel-labs/skills slug), optional `soft: true` (config-dir-only detection).
-
-1. The profile slug must exist in upstream [vercel-labs/skills](https://github.com/vercel-labs/skills). Verify against the README before merging — wrong slugs cause `npx skills add` to fail at runtime, not at install-script load.
-2. Run `node bin/install.js --list` to confirm the new row renders correctly.
-3. Soft probes (config-dir-only) are fine but tag them with `soft: true`. They render with `(soft)` in `--list` so users know detection is best-effort.
+`combat.ts` : `CombatState { shield, burn/burnPow, poison/poisonPow, chill }` threadé dans `combatTurn` (in/out via `TurnResult.state`). Compétences (`ActiveSkillDef.status`) et procs de set (`sets.ts`) posent brûlure/gel/poison/bouclier. **Uniquement hunt/adventure** — le donjon serveur n'a pas encore ces mécaniques.
 
 ---
 
-## Evals
+## Collaboration Claude ↔ Gemini (éviter les conflits)
 
-`evals/` has three-arm harness:
-- `__baseline__` — no system prompt
-- `__terse__` — `Answer concisely.`
-- `<skill>` — `Answer concisely.\n\n{SKILL.md}`
+L'utilisateur travaille avec **Claude** (création, rendu, ressenti, UI qui plaît) **et Gemini** (modifications mécaniques, données, logique). **Règle : ne jamais éditer les mêmes fichiers en parallèle.**
 
-Honest delta = **skill vs terse**, not skill vs baseline. Baseline comparison conflates skill with generic terseness — that cheating. Harness designed to prevent this.
-
-`llm_run.py` calls `claude -p --system-prompt ...` per (prompt, arm), saves to `evals/snapshots/results.json`. `measure.py` reads snapshot offline with tiktoken (OpenAI BPE — approximates Claude tokenizer, ratios meaningful, absolute numbers approximate).
-
-Add skill: drop `skills/<name>/SKILL.md`. Harness auto-discovers. Add prompt: append line to `evals/prompts/en.txt`.
-
-Snapshots committed to git. CI reads without API calls. Only regenerate when SKILL.md or prompts change.
+- **Claude possède** : rendu/UI/feel → `icons.ts`, `ItemIcon.tsx`, `sets.ts`, `combat.ts`, cartes visuelles existantes (Hunt, Talent, Equipment, Market, Endless UI…), refontes d'UI.
+- **Gemini possède** : données/logique isolées → nouveaux fichiers de features, `dungeons.ts`, `biomes.ts`, `monsters.ts`, `enchant.ts`, services firebase, et le **câblage** (`types.ts`, `player.ts`, `uiStore.ts`, `WindowManager.tsx`, `commands.ts`) — sauf indication contraire. **Exceptions : `endless.ts` + `endlessService.ts` (endless solo & multi) = Claude** (voir #12) ; **`pvpDuelService.ts` (duels 1v1/2v2 temps réel) = Claude** (voir #15), remplace l'ancien `duelService.ts` (supprimé, mort).
+- **Fichiers partagés à haut risque** (`types.ts`, `player.ts`, `items.ts`) : un seul owner à la fois par tâche ; annoncer avant d'éditer. Gemini ajoute en **append** dans `items.ts`.
+- Après chaque lot : `npx tsc -b` doit passer.
 
 ---
 
-## Benchmarks
+## Roadmap v2 (le plan d'équilibrage est déjà appliqué)
 
-`benchmarks/` runs real prompts through Claude API (not Claude Code CLI), records raw token counts. Results committed as JSON in `benchmarks/results/`. Benchmark table in README generated from results — update when regenerating.
+> ✅ **FAIT** (G) **RESET GLOBAL prévu** : bouton ajouté dans le Panel Admin qui déclenche la réinitialisation (en posant le flag `lastWipe` sur `system/config`). Dans `playerService.ts`, lors du chargement, si un joueur a été créé avant `lastWipe`, il est refusé (ce qui force l'app à le rediriger vers la création de perso).
+>
+> ✅ **FAIT** (C) **WIPE TOTAL** (`adminService.triggerFullWipe`) : en plus du `lastWipe`, vide `leaderboard`/`guilds`/`endlessScores(+Multi)` (Firestore) et `chat` entier (RTDB) — couvre classement, classement Abysses, saison PvP (dérivée de `leaderboard`), guildes, chat tous canaux. Stats/succès repartent à zéro car portés par le doc joueur, écrasé à la recréation. Statut **Vétéran**/**Admin** transféré via `localStorage` (`rptext.legacy.*`/`rptext.wasAdmin.*`) posé dans `playerService.loadPlayer()` **au moment où l'ancien doc est encore lisible** — d'où `cleanupOrphanedPlayers()` (bouton « 🧹 Purger comptes fantômes ») **volontairement séparé et manuel**, à lancer seulement après un délai de grâce : il supprime les docs `players/*` encore `createdAt < lastWipe` (= pas reconnectés depuis), et un doc supprimé trop tôt ferait perdre Vétéran/Admin à qui revient après coup.
 
-To reproduce: `uv run python benchmarks/run.py` (needs `ANTHROPIC_API_KEY` in `.env.local`).
+Répartition proposée (C = Claude / G = Gemini) :
+
+| # | Tâche | Owner | Fichiers |
+|---|-------|-------|----------|
+| 1 | ✅ **FAIT** (C) : profil public en cliquant un nom du classement (PlayerProfileModal + fetchPublicProfile) | — | LeaderboardCard, PlayerProfileModal, socialService |
+| 2 | Titres gagnés via succès, donnant de petites stats, **choisis** (plus modifiables) | G données + C UI | achievements.ts, types.ts, ProfileCard |
+| 3 | ✅ **FAIT** (G) : Abysses = biome **« vide » sombre** (pas neige), dur pour niv.28 | — | biomes.ts, monsters.ts, Background, Scenery |
+| 4 | ✅ **FAIT** (C/G) : Durabilité = montant fixe par **fin de combat** (hunt) / par **manche** (donjon) | C hunt + G donjon | combat/HuntCard, dungeonService, player.ts |
+| 5 | ✅ **FAIT** (C) : refonte UI carte **Enchantement** (style verre, ItemIcon, sélecteur de runes) | — | EnchantCard.tsx |
+| 6 | ✅ **FAIT** (Claude) : équip après ascension + retrait blocklist OP | — | player.ts |
+| 7 | ✅ **FAIT** (G) : Lier récompense quête journalière à la vraie récompense journalière | — | quests.ts, daily.ts, QuestsCard |
+| 8 | Succès plus durs, titres en récompense | G | achievements.ts |
+| 9 | ✅ **FAIT** (G) : `talents` dans le Help + **cooldowns de skills séparés selon puissance** (hunt+donjon) | G logique + C affichage | commands.ts, HuntCard, dungeonService |
+| 10 | ✅ **FAIT** (G) : Donjon : effets d'objets pris en compte, équilibrage, synchro niveau (haut niv. + fort), **init cooldown pour tous les participants**, clé → **popup coffre OUI/NON** en fin (au lieu de doubler) | G | dungeonService, DungeonCard |
+| 11 | ✅ **FAIT** (G) : Reset arbre → reset aussi la **sous-classe** (rechoisir) | — | talents.ts resetTalents, player.ts |
+| 12 | ✅ **FAIT** (C, tout) : Endless aligné sur le style des autres cartes + **Solo & Multi co-op RTDB** (calqué sur donjon : lobby/prêt/tour par tour, mais **étages infinis** jusqu'au wipe) + classements **Solo/Multi** (double collection Firestore). **C a repris la logique multi** (voir note ownership) | C (UI+logique) | EndlessCard, endlessService (RTDB `endlessSessions/`), endless.ts, types.ts/player.ts (`endlessSessionId`/`settledEndless`) |
+| 13 | ✅ **FAIT** (G) : Items du **Fate Shop** un peu plus chers | — | FateShopCard |
+| 14 | ✅ **FAIT** (C) : Marché multi-sélection de vente (grille A→Z + icônes, prix ×valeur) | — | MarketCard |
+| 15 | ✅ **FAIT** (C) — **vrai duel temps réel** tour par tour avec compétences (1v1 + 2v2, voir section dédiée) | — | pvpDuelService (new), DuelCard |
+| 16 | Niveaux de guilde plus clairs, **CD boss de guilde dans la carte Cooldown**, guildes sur **invitation** (pas ouvertes) | G | groupsService, GuildCard, CooldownCard |
+| 17 | ✅ **FAIT** (C) : Leaderboard blocs **EN LIGNE** / **INACTIF** séparés | — | LeaderboardCard |
+| 18 | ✅ **FAIT** (G) : Carte **« Concoction »** : potions d'appât de mobs, mini-jeu | G logique + C UI | concoction.ts (new), ConcoctionCard (new) |
+| 19 | ✅ **FAIT** (G) : Noms des **sous-classes en français** dans le jeu | — | classes.ts / UI |
+
+**Forge** : ✅ **FAIT** (C) — filtres par 4 classes (Guerrier/Archer/Mage/Soigneur) sur armes+armures, badges de poids d'armure (Tissu/Cuir/Plate/Universel), labels de classe précis. Grosses haches = warrior-only via `classes`. (Reste possible : nouvelles armes archer type dagues/petits arcs → **G** dans items.ts si voulu.)
+
+### Reste côté Claude
+- ✅ **#12** Endless complet — UI + **co-op multi RTDB** (Claude a repris la logique, cf. ci-dessous) · ✅ icônes partout (0 fallback) + registre monstres (`monsterIcons.ts`/`MonsterIcon`) · ✅ **Équipement** « Dans le sac » repliable · ✅ **Mobile** (dock+menu, plein écran) · ✅ **Chat** messagerie sans `/w` · ✅ **Inventaire** : popup de vente (quantité/validation), recherche+tri, **verrou anti-vente** (`lockedItems`) · ✅ durabilité ajoutée aux 5 gear qui en manquaient.
+- ✅ **Objets instanciés (fait)** : chaque pièce de gear a une **clé d'inventaire unique** `baseId[:qXXX]:i<iid>`. Le tag `:i<iid>` est purement identitaire — `getItem` et `id.split(':')[0]` l'ignorent (ni quality `q...` ni baseId), donc ItemIcon/lookups inchangés. Helpers dans `items.ts` : `isGearId`, `hasInstanceTag`, `mintInstanceId`, `addItemToInventory`. `addItem` frappe une clé unique par pièce de gear (jamais empilé) → étoiles/durabilité (`gearStars`/`gearDurability`, toujours keyées par la clé complète) **propres à l'exemplaire** et **conservées à la revente**. `marketService.Listing` transporte `stars`/`durability` ; MarketCard les retire au vendeur et les rend à l'acheteur (badge ★ affiché). Migration `migratePlayer` (flag `instancedGearVersion`) : éclate le gear empilé + instancie l'équipé. Sites de loot/récompense (loot combat, coffre donjon, lootbox, daily/achievements/season/quests) routés via `addItem`/`addItemToInventory`. **Runes/enchants aussi instanciés** : `p.enchants` re-keyé de slot → **clé d'instance** (`enchant.ts`, `deriveStats`, `EnchantCard`, migration flag `enchantsInstancedVersion`) → les runes suivent l'objet (déséquipement + revente marché, `Listing.enchants`). **Étoiles ★ affichées** à côté du nom dans l'inventaire et le sac de la carte Équipement ; icône `upgrade_matrix` (`ItemIcon`) dans le bouton Améliorer. ✅ **Verrou anti-vente** étendu au **marché** et au **craft** (matériau verrouillé bloque la recette).
+- **#4** (part hunt) durabilité par fin de combat côté client si **G** ne le prend pas.
+
+> ⚠️ **Ownership modifié (#12)** : à la demande de l'utilisateur, **Claude possède désormais l'endless multi** (logique + UI), y compris `endlessService.ts` (moteur RTDB `endlessSessions/`), calqué sur `dungeonService`. Gemini ne touche plus à endless multi.
+
+### Reste côté Gemini (voir prompts fournis)
+- **#2** titres (données) · **#3** biome vide · **#4** durabilité donjon · **#7** quête↔daily · **#8** succès durs+titres · **#9** cooldowns skills séparés (donjon) + `talents` dans Help · **#10** donjon (effets objets, équilibrage, sync niveau, cooldown participants, clé→coffre popup) · **#11** reset arbre = reset sous-classe · **#12** ✅ **repris par Claude** (ne plus toucher) · **#13** ✅ fait · **#15** ✅ fait (Claude) · **#16** guilde (niveaux clairs, CD boss dans Cooldown, invitations) · **#18** Concoction (logique) · **#19** noms sous-classes FR.
+- **RESET GLOBAL final** : flag `migratePlayer` → tous les joueurs au choix de classe (niveau 0).
 
 ---
 
-## Key rules for agents working here
+## Sécurité (repo public + GitHub Pages)
 
-- Edit `skills/<name>/SKILL.md` for behavior changes. Never edit synced copies under `plugins/caveman/skills/`.
-- Edit `src/rules/caveman-activate.md` for auto-activation rule changes. Never edit any per-agent rule copy a user has on their machine.
-- Edit `src/rules/caveman-openclaw-bootstrap.md` for the OpenClaw SOUL.md bootstrap snippet. Keep the `<!-- caveman-begin -->` / `<!-- caveman-end -->` markers and the `Respond terse like smart caveman` sentinel — `bin/lib/openclaw.js` keys idempotency off both. If you change the embedded fallback in `bin/lib/openclaw.js`, keep it byte-equivalent to the file.
-- Per-skill human docs live in `skills/<name>/README.md`. The LLM-facing body is in `SKILL.md`. Don't merge them — different audiences.
-- Build artifacts go in `dist/`. Never check files into `dist/` manually — CI rebuilds them on push, and `dist/` is gitignored.
-- README most important file for user-facing impact. Optimize for non-technical readers. Preserve caveman voice.
-- `INSTALL.md` is the per-agent install reference. Keep the install table in `README.md` short and link out to `INSTALL.md` for the full matrix.
-- Benchmark and eval numbers must be real. Never fabricate or estimate.
-- CI workflow commits back to main after merge. Account for when checking branch state.
-- Hook files must silent-fail on all filesystem errors. Never let hook crash block session start.
-- Any new flag file write must go through `safeWriteFlag()` in `caveman-config.js`. Direct `fs.writeFileSync` on predictable user-owned paths reopens the symlink-clobber attack surface.
-- Hooks must respect `CLAUDE_CONFIG_DIR` env var, not hardcode `~/.claude`. Same for `bin/install.js` / statusline scripts.
-- `bin/install.js` is the only installer source. `install.sh` / `install.ps1` at repo root are 30-line shims that delegate to it. Never re-add per-OS install logic to the shims — that's how we got the Windows quoting bug (#249).
-- Any settings.json read in installer or hooks must go through `bin/lib/settings.js` `readSettings()` so JSONC comments don't crash the merge. Any settings.json write must run through `validateHookFields()` first.
+- **Firebase apiKey/config = publics par design** (`import.meta.env.VITE_*`, `.env` gitignoré, seul `.env.example` versionné). La sécurité repose **entièrement sur les règles** (`firestore.rules`, `database.rules.json`), pas sur le secret des clés.
+- ⚠️ **NE JAMAIS** autoriser un joueur à écrire `isAdmin` sur son propre doc. `firestore.rules` : `players/{uid}` write = `isAdminUser()` OU (`auth.uid==uid` ET `adminFlagUntouched()`) → le flag `isAdmin` ne peut être introduit/modifié que par un admin déjà confirmé (ou la console). Sinon = **prise de contrôle totale** (wipe, écriture sur tous les comptes). Bootstrap du 1er admin = console Firebase. Le re-grant post-wipe marche car l'ancien doc admin (isAdmin=true) existe encore quand `isAdminUser()` le lit.
+- `system/*` write = admin only ; `teams`/`guilds` **delete** = host/owner ou admin ; `endlessScores*` write = son propre uid ou admin (pour le wipe).
+- **Risque résiduel accepté** = *jeu client-authoritative* : un client modifié peut falsifier ses propres stats/or (Firestore fait confiance au doc) et griefer les sessions RTDB partagées (chat/dungeons/endlessSessions/pvpDuels/world = `.write: auth != null`, les règles RTDB ne peuvent pas lire `isAdmin` de Firestore). Mitigation optionnelle = déplacer les actions à enjeu dans `functions/` (Cloud Functions, plan Blaze, non déployé). Ne pas prétendre que c'est « sécurisé » côté triche solo.
+
+## Règles pour agents
+
+- Toujours `item(id)` (jamais `ITEMS[id]`). Ajouter l'icône dans `icons.ts` en même temps qu'un nouvel objet.
+- Toute écriture de save passe par `mutate` (gameStore) ; migrations dans `migratePlayer`.
+- Restriction de classe : les objets listent les **classes de base** ; `canEquip` compare à la classe **de base** du joueur (ascension incluse).
+- `npx tsc -b` doit passer avant de conclure. Ne pas prétendre « vérifié en jeu » (preview OAuth bloqué) — dire « vérif build seulement ».
+- Respecter la répartition Claude/Gemini ci-dessus pour éviter les conflits de merge.

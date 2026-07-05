@@ -1,6 +1,6 @@
 import { useGame } from '../../store/gameStore';
 import {
-  FAMILIARS, familiarsByRarity, familiarProgress, rollFamiliar, familiarAbility,
+  FAMILIARS, familiarsByRarity, familiarProgress, rollFamiliar, familiarAbility, ownsAllOfRarity,
   RARITY_COLOR, RARITY_COST, MAX_FAMILIAR_LEVEL,
   type FamiliarRarity,
 } from '../../game/familiars';
@@ -23,6 +23,10 @@ export default function FamiliarCard() {
     const cost = RARITY_COST[rarity];
     if (cost <= 0) {
       toast('Les familiers légendaires ne s\'achètent pas — ils tombent (rarement) du boss mondial.', 'info');
+      return;
+    }
+    if (ownsAllOfRarity(p!, rarity)) {
+      toast(`Tu possèdes déjà tous les familiers ${RARITY_LABEL[rarity].toLowerCase()}s !`, 'info');
       return;
     }
     if (p!.gold < cost) { toast(`Il te faut ${cost} 🪙.`, 'bad'); return; }
@@ -94,17 +98,21 @@ export default function FamiliarCard() {
       <div>
         <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Adopter (or : {p.gold} 🪙)</div>
         <div className="grid grid-cols-3 gap-2">
-          {(['common', 'rare', 'epic'] as FamiliarRarity[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => adopt(r)}
-              disabled={p.gold < RARITY_COST[r]}
-              className="rounded-lg px-2 py-2 text-xs font-semibold hover:brightness-125 disabled:opacity-40"
-              style={{ background: `${RARITY_COLOR[r]}22`, color: RARITY_COLOR[r] }}
-            >
-              {RARITY_LABEL[r]}<br /><span className="text-[10px] opacity-80">{RARITY_COST[r]} 🪙</span>
-            </button>
-          ))}
+          {(['common', 'rare', 'epic'] as FamiliarRarity[]).map((r) => {
+            const complete = ownsAllOfRarity(p, r);
+            return (
+              <button
+                key={r}
+                onClick={() => adopt(r)}
+                disabled={complete || p.gold < RARITY_COST[r]}
+                title={complete ? 'Collection complète' : undefined}
+                className="rounded-lg px-2 py-2 text-xs font-semibold hover:brightness-125 disabled:opacity-40"
+                style={{ background: `${RARITY_COLOR[r]}22`, color: RARITY_COLOR[r] }}
+              >
+                {RARITY_LABEL[r]}<br /><span className="text-[10px] opacity-80">{complete ? '✅ complet' : `${RARITY_COST[r]} 🪙`}</span>
+              </button>
+            );
+          })}
         </div>
         <p className="mt-1.5 text-[11px] text-slate-500">🌠 Légendaire : chance rare au butin du boss mondial, pas en boutique.</p>
       </div>

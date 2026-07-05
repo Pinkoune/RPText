@@ -1,6 +1,6 @@
 import { item } from './items';
 import type { PlayerState } from './types';
-import { addItem, removeItem } from './player';
+import { addItem, removeItem, applyBonuses } from './player';
 import { addQuestMetric } from './quests';
 
 export interface Recipe {
@@ -97,9 +97,11 @@ export const RECIPES: Recipe[] = [
 
   // ── Bâtons & sceptres (magie) ──
   { output: 'arcane_staff', qty: 1, materials: { refined_wood: 6, magic_dust: 3 }, gold: 500, levelReq: 5, difficulty: 60, maxQuality: 250, durability: 50 },
+  { output: 'priest_crozier', qty: 1, materials: { iron_ingot: 4, magic_dust: 4, refined_wood: 4 }, gold: 600, levelReq: 8, difficulty: 80, maxQuality: 300, durability: 60 },
   { output: 'frost_scepter', qty: 1, materials: { refined_wood: 4, frost_shard: 10, magic_dust: 5 }, gold: 900, levelReq: 11, difficulty: 130, maxQuality: 500, durability: 60 },
+  { output: 'moon_staff', qty: 1, materials: { mithril_ingot: 2, magic_dust: 8, star_fragment: 2 }, gold: 1300, levelReq: 11, difficulty: 150, maxQuality: 600, durability: 60 },
   { output: 'crystal_staff', qty: 1, materials: { mithril_ingot: 4, crystal: 15, magic_dust: 8 }, gold: 5000, levelReq: 20, difficulty: 300, maxQuality: 1200, durability: 80 },
-
+  { output: 'divine_scepter', qty: 1, materials: { mithril_ingot: 10, sun_shard: 15, void_dust: 5, crystal: 5 }, gold: 5000, levelReq: 19, difficulty: 300, maxQuality: 1000, durability: 80 },
   // ── Sets d'Équipement ──
   { output: 'wind_blade', qty: 1, materials: { iron_ingot: 6, wildflower: 15 }, gold: 800, levelReq: 9, difficulty: 110, maxQuality: 400, durability: 60 },
   { output: 'wind_cloak', qty: 1, materials: { silk_thread: 10, sturdy_leather: 5 }, gold: 800, levelReq: 9, difficulty: 110, maxQuality: 400, durability: 60 },
@@ -147,6 +149,26 @@ export const RECIPES: Recipe[] = [
   { output: 'lucky_coin', qty: 1, materials: { void_dust: 4, mithril_ingot: 3 }, gold: 1000, levelReq: 24, difficulty: 400, maxQuality: 1500, durability: 80 },
   { output: 'gambler_ring', qty: 1, materials: { void_dust: 6, magic_dust: 10, crystal: 5 }, gold: 3000, levelReq: 25, difficulty: 500, maxQuality: 1800, durability: 90 },
   { output: 'void_reaver', qty: 1, materials: { void_dust: 12, mithril_ingot: 10, magic_dust: 10 }, gold: 12000, levelReq: 28, difficulty: 800, maxQuality: 3000, durability: 100 },
+  // Recettes manquantes (items sans source de drop)
+  { output: 'spirit_staff', qty: 1, materials: { refined_wood: 8, mana_bloom: 10, magic_dust: 4 }, gold: 2000, levelReq: 13, difficulty: 160, maxQuality: 650, durability: 70 },
+
+  // ── End-game (ressources volcaniques, niv.30-45) ──
+  { output: 'lava_blade', qty: 1, materials: { lava_crystal: 8, mithril_ingot: 6, ember_stone: 4 }, gold: 6000, levelReq: 30, difficulty: 500, maxQuality: 2000, durability: 100 },
+  { output: 'infernal_bow', qty: 1, materials: { lava_crystal: 6, ember_stone: 8, ironwood: 6 }, gold: 6000, levelReq: 30, difficulty: 500, maxQuality: 2000, durability: 100 },
+  { output: 'magma_staff', qty: 1, materials: { infernal_shard: 4, lava_crystal: 10, magic_dust: 8 }, gold: 7000, levelReq: 32, difficulty: 550, maxQuality: 2200, durability: 100 },
+  { output: 'seraph_staff', qty: 1, materials: { infernal_shard: 4, mana_bloom: 12, magic_dust: 8 }, gold: 7000, levelReq: 32, difficulty: 550, maxQuality: 2200, durability: 100 },
+  { output: 'volcanic_armor', qty: 1, materials: { ember_stone: 10, iron_ingot: 8, lava_crystal: 6 }, gold: 7000, levelReq: 32, difficulty: 550, maxQuality: 2200, durability: 120 },
+  { output: 'infernal_elixir', qty: 1, materials: { infernal_shard: 3, lava_crystal: 4, herb: 12 }, gold: 800, levelReq: 38, difficulty: 300, maxQuality: 1000, durability: 60 },
+  { output: 'void_mantle', qty: 1, materials: { void_dust: 15, infernal_shard: 8, mithril_ingot: 6 }, gold: 12000, levelReq: 42, difficulty: 700, maxQuality: 2600, durability: 130 },
+  { output: 'primordial_crown', qty: 1, materials: { boss_soul: 5, infernal_shard: 10, void_dust: 10 }, gold: 20000, levelReq: 45, difficulty: 900, maxQuality: 3200, durability: 100 },
+
+  // ── End-game (ressources de la Nécropole de Cristal, niv.34-36) ──
+  { output: 'crypt_edge', qty: 1, materials: { crypt_shard: 8, mithril_ingot: 6, bone_dust: 6 }, gold: 6500, levelReq: 34, difficulty: 520, maxQuality: 2100, durability: 100 },
+  { output: 'crypt_bow', qty: 1, materials: { crypt_shard: 6, wraith_essence: 4, ironwood: 6 }, gold: 6500, levelReq: 34, difficulty: 520, maxQuality: 2100, durability: 100 },
+  { output: 'crypt_scepter', qty: 1, materials: { wraith_essence: 6, crypt_shard: 8, magic_dust: 8 }, gold: 7200, levelReq: 36, difficulty: 560, maxQuality: 2250, durability: 100 },
+  { output: 'crypt_rod', qty: 1, materials: { wraith_essence: 6, bone_dust: 10, magic_dust: 8 }, gold: 7200, levelReq: 36, difficulty: 560, maxQuality: 2250, durability: 100 },
+  { output: 'crypt_plate', qty: 1, materials: { bone_dust: 14, crypt_shard: 10, iron_ingot: 10 }, gold: 7200, levelReq: 35, difficulty: 560, maxQuality: 2250, durability: 130 },
+  { output: 'soul_ward', qty: 1, materials: { wraith_essence: 8, crypt_shard: 6, magic_dust: 6 }, gold: 6000, levelReq: 36, difficulty: 500, maxQuality: 2000, durability: 90 },
 ];
 
 export function missingFor(p: PlayerState, r: Recipe): { materials: Record<string, number>; gold: number } {
@@ -192,16 +214,18 @@ export function consumeMaterials(p: PlayerState, r: Recipe): boolean {
 export function finishCraft(p: PlayerState, r: Recipe, qualityRatio: number, success: boolean): { id: string, qty: number } {
   if (!success) {
     addItem(p, 'craft_trash', 1);
-    // XP consolatoire
-    p.craftXp += Math.max(1, Math.floor(r.difficulty / 10));
+    // XP consolatoire (bénéficie aussi du bonus d'équipe/guilde)
+    const { xp: consolXp } = applyBonuses(p, { xp: Math.max(1, Math.floor(r.difficulty / 10)), gold: 0 });
+    p.craftXp += consolXp;
     return { id: 'craft_trash', qty: 1 };
   }
-  
+
   addQuestMetric(p, 'crafts', 1);
-  
+
   // XP basée sur la difficulté et la qualité atteinte, avec une base fixe pour
   // que même les crafts faciles fassent progresser correctement en début de jeu.
-  const xpGain = 20 + r.difficulty + Math.floor(r.difficulty * qualityRatio);
+  // Bénéficie du bonus d'équipe/guilde comme le combat et la récolte.
+  const { xp: xpGain } = applyBonuses(p, { xp: 20 + r.difficulty + Math.floor(r.difficulty * qualityRatio), gold: 0 });
   p.craftXp += xpGain;
   
   // Générer un ID dynamique basé sur la qualité si celle-ci a un impact (équipements).

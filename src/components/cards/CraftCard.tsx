@@ -4,6 +4,7 @@ import { RECIPES, canCraft, consumeMaterials, finishCraft, getCraftLevel, type R
 import { item, RARITY_COLOR } from '../../game/items';
 import type { ItemSlot } from '../../game/types';
 import { deriveStats } from '../../game/player';
+import ItemIcon from '../ItemIcon';
 
 type Group = ItemSlot | 'all' | 'profession';
 
@@ -17,12 +18,27 @@ const GROUPS: { slot: Group; label: string; icon: string }[] = [
   { slot: 'consumable', label: 'Consommables', icon: '🍲' },
 ];
 
-type ClassFilter = 'all' | 'melee' | 'caster';
+type ClassFilter = 'all' | 'warrior' | 'archer' | 'mage' | 'healer';
 const CLASS_FILTERS: { id: ClassFilter; label: string; icon: string }[] = [
-  { id: 'all', label: 'Toutes classes', icon: '👥' },
-  { id: 'melee', label: 'Guerrier / Archer', icon: '⚔️' },
-  { id: 'caster', label: 'Mage / Soigneur', icon: '🔮' },
+  { id: 'all', label: 'Toutes', icon: '👥' },
+  { id: 'warrior', label: 'Guerrier', icon: '⚔️' },
+  { id: 'archer', label: 'Archer', icon: '🏹' },
+  { id: 'mage', label: 'Mage', icon: '🔮' },
+  { id: 'healer', label: 'Soigneur', icon: '✨' },
 ];
+
+const CLASS_LABEL: Record<string, string> = { warrior: 'Guerrier', archer: 'Archer', mage: 'Mage', healer: 'Soigneur' };
+
+/** Poids d'armure déduit des classes autorisées (badge tissu/cuir/plate). */
+function armorWeight(it: { slot: string; classes?: string[] }): { label: string; cls: string } | null {
+  if (it.slot !== 'armor') return null;
+  const c = it.classes;
+  if (!c || c.length >= 4) return { label: 'Universel', cls: 'bg-slate-600/40 text-slate-200' };
+  if (c.includes('mage') || c.includes('healer')) return { label: 'Tissu', cls: 'bg-sky-500/20 text-sky-200' };
+  if (c.includes('archer')) return { label: 'Cuir', cls: 'bg-amber-600/25 text-amber-200' };
+  if (c.includes('warrior')) return { label: 'Plate', cls: 'bg-slate-400/25 text-slate-100' };
+  return null;
+}
 
 /** Identité visuelle de chaque set d'équipement, pour regrouper les objets qui vont ensemble. */
 const SET_INFO: Record<string, { name: string; icon: string; color: string }> = {
@@ -89,6 +105,11 @@ export default function CraftCard() {
   function startCraft(r: Recipe) {
     if (!canCraft(p!, r)) {
       toast('Matériaux ou or insuffisants.', 'bad');
+      return;
+    }
+    const lockedMat = Object.keys(r.materials).find((id) => p!.lockedItems?.includes(id));
+    if (lockedMat) {
+      toast(`${item(lockedMat)?.name ?? 'Un matériau'} est verrouillé 🔒 — déverrouille-le pour craft.`, 'bad');
       return;
     }
     let success = false;
@@ -184,7 +205,7 @@ export default function CraftCard() {
       <div className="space-y-4">
         <div className="text-center">
           <p className="text-sm font-bold text-sky-300">Artisanat en cours...</p>
-          <p className="text-lg" style={{ color: RARITY_COLOR[out.rarity] }}>{out.icon} {out.name}</p>
+          <p className="flex items-center justify-center gap-1.5 text-lg" style={{ color: RARITY_COLOR[out.rarity] }}><ItemIcon id={active.output} size={22} /> {out.name}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 rounded-lg bg-black/30 p-4 text-sm">
@@ -249,12 +270,12 @@ export default function CraftCard() {
     );
   }
 
+  const showClassFilter = group === 'weapon' || group === 'armor';
   const list = (byGroup[group] ?? []).filter((r) => {
-    if (group !== 'weapon' || classFilter === 'all') return true;
+    if (!showClassFilter || classFilter === 'all') return true;
     const cls = item(r.output)?.classes;
-    if (!cls) return true;
-    if (classFilter === 'melee') return cls.includes('warrior') || cls.includes('archer');
-    return cls.includes('mage') || cls.includes('healer');
+    if (!cls) return true; // universel (aucune restriction)
+    return cls.includes(classFilter);
   });
 
   return (
@@ -276,7 +297,7 @@ export default function CraftCard() {
           );
         })}
       </div>
-      {group === 'weapon' && (
+      {showClassFilter && (
         <div className="flex gap-1 overflow-x-auto pb-1">
           {CLASS_FILTERS.map((c) => (
             <button
@@ -296,6 +317,13 @@ export default function CraftCard() {
           🧠 CP = concentration (artisanat) &nbsp;·&nbsp; 🌾 GP = endurance (récolte). Ces objets ne boostent pas le combat.
         </p>
       )}
+      {group === 'armor' && (
+        <p className="text-[11px] text-slate-400 px-0.5 mt-1 leading-tight">
+          <b className="text-slate-300">Guerriers</b> : Armures en Plaque et Boucliers.<br/>
+          <b className="text-amber-300">Archers</b> : Armures en Cuir.<br/>
+          <b className="text-sky-300">Mages & Soigneurs</b> : Armures en Tissu.
+        </p>
+      )}
 
       <div className="max-h-[62vh] overflow-y-auto pr-1">
         <div className="grid grid-cols-2 gap-2">
@@ -307,9 +335,10 @@ export default function CraftCard() {
               const ok = canCraft(p, r);
               const levelOk = craftLvl >= r.levelReq;
               const badges = statBadges(out);
-              const classLabel = out.classes
-                ? (out.classes.includes('mage') || out.classes.includes('healer') ? '🔮 Mage/Soigneur' : '⚔️ Guerrier/Archer')
+              const classLabel = out.classes && out.classes.length < 4
+                ? out.classes.map((c) => CLASS_LABEL[c] ?? c).join(' / ')
                 : null;
+              const weight = armorWeight(out);
               const setInfo = out.setId ? SET_INFO[out.setId] : undefined;
               if (out.setId && out.setId !== lastSetId && setInfo) {
                 nodes.push(
@@ -328,7 +357,7 @@ export default function CraftCard() {
                   style={setInfo ? { boxShadow: `inset 3px 0 0 ${setInfo.color}` } : undefined}
                 >
                   <div className="flex items-start gap-2">
-                    <span className="text-xl leading-none mt-0.5">{out.icon}</span>
+                    <ItemIcon id={r.output} size={26} className="mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium truncate" style={{ color: RARITY_COLOR[out.rarity] }} title={out.name}>
                         {out.name}{r.qty > 1 ? ` x${r.qty}` : ''}
@@ -340,6 +369,9 @@ export default function CraftCard() {
                         {classLabel && (
                           <span className="rounded px-1 py-0.5 bg-slate-700/50 text-slate-300">{classLabel}</span>
                         )}
+                        {weight && (
+                          <span className={`rounded px-1 py-0.5 ${weight.cls}`}>{weight.label}</span>
+                        )}
                       </div>
 
                       <div className="mt-1.5 flex flex-wrap gap-1 text-[10px]">
@@ -349,9 +381,9 @@ export default function CraftCard() {
                             <span
                               key={id}
                               title={`${item(id)!.name} : ${have}/${need}`}
-                              className={`rounded px-1 py-0.5 ${have >= need ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'}`}
+                              className={`inline-flex items-center gap-1 rounded px-1 py-0.5 ${have >= need ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'}`}
                             >
-                              {item(id)!.icon} {have}/{need}
+                              <ItemIcon id={id} size={14} /> {have}/{need}
                             </span>
                           );
                         })}

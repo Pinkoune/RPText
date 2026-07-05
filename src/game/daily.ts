@@ -1,4 +1,5 @@
 import type { PlayerState } from './types';
+import { addItemToInventory } from './items';
 
 // ─── Récompense de connexion journalière ─────────────────────────────────────
 // Cycle de 7 jours. La série (streak) monte d'un cran chaque jour consécutif,
@@ -32,6 +33,10 @@ function dayKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
+export function canClaimDailyLogin(p: PlayerState, now = Date.now()): boolean {
+  return p.lastLoginDay !== dayKey(new Date(now));
+}
+
 /**
  * À appeler une fois au chargement. Si c'est un nouveau jour, incrémente la
  * série (ou la reset), crédite la récompense et la retourne (pour l'afficher).
@@ -53,7 +58,7 @@ export function claimDailyLogin(p: PlayerState, now = Date.now()): DailyReward |
   p.gold += r.gold;
   if (r.gems) p.gems += r.gems;
   if (r.fateCoins) p.fateCoins += r.fateCoins;
-  if (r.item) p.inventory[r.item.id] = (p.inventory[r.item.id] ?? 0) + r.item.qty;
+  if (r.item) addItemToInventory(p.inventory, r.item.id, r.item.qty);
 
   return { day: idx + 1, streak: p.loginStreak, ...r };
 }

@@ -12,6 +12,8 @@ export type BiomeId =
   | 'mountains'
   | 'desert'
   | 'swamp'
+  | 'volcano'
+  | 'crypt'
   | 'frozen';
 
 export type Phase = 'dawn' | 'day' | 'dusk' | 'night';
@@ -80,8 +82,7 @@ export interface EquippedGear {
 export interface PlayerState {
   uid: string;
   name: string;
-  /** Titre/devise personnalisable affiché sous le nom. */
-  title: string;
+
   photoURL: string | null;
   isAdmin?: boolean;
   classId: ClassId;
@@ -105,8 +106,12 @@ export interface PlayerState {
   biome: BiomeId;
   /** Biomes débloqués. */
   unlockedBiomes: BiomeId[];
-  /** Timestamps (ms) des derniers usages, pour les cooldowns. */
+  /** Timestamps (ms) des derniers usages, pour les cooldowns hors combat. */
   cooldowns: Record<string, number>;
+  /** Cooldowns en tours persistés entre les combats de chasse (skillId -> tours restants). */
+  combatCooldowns?: Record<string, number>;
+  /** Timestamp du dernier combat de chasse (pour reset les cooldowns après 1 minute). */
+  lastCombatAt?: number;
   /** Statistiques de jeu. */
   kills: number;
   deaths: number;
@@ -145,12 +150,19 @@ export interface PlayerState {
   /** Donjons (Multijoueur) */
   dungeonSessionId?: string | null;
   settledDungeons?: string[];
+  /** Abysses infinis (co-op multijoueur). */
+  endlessSessionId?: string | null;
+  settledEndless?: string[];
+  /** Duel PvP temps réel (1v1 / 2v2, avec compétences). */
+  pvpDuelSessionId?: string | null;
+  settledPvpDuels?: string[];
   /** Dons de ressources déjà encaissés (anti double-crédit). */
   settledGifts: string[];
   /** XP par métier de récolte (legacy, fusionné dans farmXp). */
   gatherXp: Record<string, number>;
   /** XP de farm global (niveau de récolte unique). */
   farmXp: number;
+  concoctionXp?: number;
   /** XP d'artisanat. */
   craftXp: number;
   /** Nombre de clears par donjon. */
@@ -165,6 +177,8 @@ export interface PlayerState {
   curveVersion?: number;
   /** Version du dernier reset forcé des talents (bug : points conservés après le rework). */
   talentResetVersion?: number;
+  /** Bypass les restrictions d'équipement (Admin). */
+  ignoreRestrictions?: boolean;
   /** Restauration one-time de l'XP perdue par le bug NaN (1 = déjà réclamée). */
   restoredXpV1?: number;
   /** Familiers possédés : id de définition -> XP accumulée. */
@@ -177,8 +191,36 @@ export interface PlayerState {
   lastLoginDay?: string;
   /** Succès dont la récompense a été réclamée. */
   claimedAchievements?: string[];
+  title?: string;
+  unlockedTitles?: string[];
+  /** Aura de prestige (cosmétique) affichée sur le classement. */
+  prestigeAura?: string;
+  /** Colore le pseudo selon l'aura équipée (classement/chat/donjon). Défaut true, désactivable (l'icône reste). */
+  auraColorOn?: boolean;
+  /** Nombre de prestiges accomplis (rituel des Abysses, Nv.50). Bonus permanent + insigne au classement. */
+  prestigeLevel?: number;
+  /** Cooldown (ms) avant nouvel essai du rituel de prestige après un échec. */
+  ascensionCooldownUntil?: number;
+  /** Jetons de changement de classe (gagnés au prestige), utilisables depuis le Profil. */
+  classChangeTokens?: number;
+  /** Expédition de familier en cours : fin (ms) + biome ciblé. */
+  expeditionEndsAt?: number;
+  expeditionBiome?: BiomeId;
+  activeBuffs?: { id: string; expiresAt: number }[];
+  /** Objets verrouillés (protégés contre la vente accidentelle). */
+  lockedItems?: string[];
+
+  // -- Social & Guilds
   /** Cadeau Mathieu (Heartsteel) déjà réclamé ? */
   claimedMathieuKdo?: boolean;
+  /** Progression dans le donjon sans fin (étage max atteint). */
+  endlessBest?: number;
+  /** Joueur vétéran d'avant la réinitialisation (donne droit au Médaillon de l'Ancien Monde) */
+  isLegacy?: boolean;
+  legacyCreatedAt?: number;
+  /** Enchants sertis par slot d'équipement (ex: { weapon: ['rune_atk_1'], armor: [] }) */
+  enchants?: Record<string, string[]>;
+  
   createdAt: number;
   lastSeen: number;
 }
@@ -198,7 +240,7 @@ export interface QuestState {
 }
 
 /** Métriques suivies par les quêtes. */
-export type QuestMetric = 'kills' | 'hunts' | 'gambleWins' | 'goldEarned' | 'bossHits' | 'crafts' | 'gathers';
+export type QuestMetric = 'kills' | 'hunts' | 'gambleWins' | 'goldEarned' | 'bossHits' | 'crafts' | 'gathers' | 'dungeons' | 'minibossKills' | 'pvpWins';
 
 export interface MonsterDef {
   id: string;

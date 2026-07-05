@@ -1,13 +1,47 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useGame } from '../store/gameStore';
 import { BASE_CLASSES } from '../game/classes';
 import type { ClassId } from '../game/types';
+import { isNameTaken } from '../firebase/playerService';
 
 export default function ClassSelect() {
   const user = useGame((s) => s.user);
   const chooseClass = useGame((s) => s.chooseClass);
   const [name, setName] = useState(user?.name ?? '');
   const [sel, setSel] = useState<ClassId | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [autoRenamed, setAutoRenamed] = useState(false);
+
+  // Si le pseudo par défaut (fourni par Google/GitHub/Microsoft) est déjà pris
+  // par un autre joueur, on en propose un temporaire distinct plutôt que de
+  // bloquer la connexion — l'utilisateur reste libre de le changer ensuite.
+  useEffect(() => {
+    if (!user?.name) return;
+    let alive = true;
+    isNameTaken(user.name, user.uid).then((taken) => {
+      if (!alive || !taken) return;
+      const temp = `${user.name.slice(0, 14)}${Math.floor(1000 + Math.random() * 9000)}`;
+      setName(temp);
+      setAutoRenamed(true);
+    });
+    return () => { alive = false; };
+  }, [user?.name, user?.uid]);
+
+  async function submit() {
+    if (!sel) return;
+    const clean = name.trim();
+    if (!clean) return;
+    setChecking(true);
+    setNameError(null);
+    try {
+      const taken = await isNameTaken(clean, user?.uid);
+      if (taken) { setNameError('Ce pseudo est déjà pris.'); return; }
+      chooseClass(sel, clean);
+    } finally {
+      setChecking(false);
+    }
+  }
 
   return (
     <div className="grid h-full place-items-center overflow-auto bg-gradient-to-b from-[#0b1020] to-[#1a2b52] px-4 py-8">
@@ -17,10 +51,14 @@ export default function ClassSelect() {
 
         <input
           value={name}
-          onChange={(e) => setName(e.target.value.slice(0, 18))}
+          onChange={(e) => { setName(e.target.value.slice(0, 18)); setNameError(null); setAutoRenamed(false); }}
           placeholder="Nom du héros"
-          className="mt-4 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 outline-none focus:border-sky-400/60"
+          className={`mt-4 w-full rounded-xl border bg-black/30 px-4 py-2.5 outline-none ${nameError ? 'border-rose-500/60 focus:border-rose-400' : 'border-white/10 focus:border-sky-400/60'}`}
         />
+        {nameError && <p className="mt-1 text-xs text-rose-400">{nameError}</p>}
+        {autoRenamed && !nameError && (
+          <p className="mt-1 text-xs text-amber-300">Ce pseudo était déjà pris, un nom temporaire t'a été attribué — tu peux le changer.</p>
+        )}
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {BASE_CLASSES.map((c) => (
@@ -45,11 +83,11 @@ export default function ClassSelect() {
         </div>
 
         <button
-          disabled={!sel || !name.trim()}
-          onClick={() => sel && chooseClass(sel, name.trim())}
+          disabled={!sel || !name.trim() || checking}
+          onClick={submit}
           className="mt-6 w-full rounded-xl bg-sky-500 px-4 py-3 font-semibold text-white transition enabled:hover:bg-sky-400 disabled:opacity-40"
         >
-          Commencer l'aventure
+          {checking ? 'Vérification…' : "Commencer l'aventure"}
         </button>
       </div>
     </div>

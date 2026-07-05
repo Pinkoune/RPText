@@ -1,6 +1,7 @@
 import {
   GoogleAuthProvider,
   GithubAuthProvider,
+  OAuthProvider,
   signInWithPopup,
   signOut as fbSignOut,
   onAuthStateChanged,
@@ -24,7 +25,7 @@ function toAppUser(u: User): AppUser {
   };
 }
 
-export type AuthProviderType = 'google' | 'github';
+export type AuthProviderType = 'google' | 'github' | 'microsoft';
 
 /** Connexion (ou utilisateur local simulé si Firebase non configuré). */
 export async function signInWithProvider(type: AuthProviderType): Promise<AppUser> {
@@ -40,6 +41,7 @@ export async function signInWithProvider(type: AuthProviderType): Promise<AppUse
   
   let provider;
   if (type === 'google') provider = new GoogleAuthProvider();
+  else if (type === 'microsoft') provider = new OAuthProvider('microsoft.com');
   else provider = new GithubAuthProvider();
 
   const res = await signInWithPopup(auth, provider);

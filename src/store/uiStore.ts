@@ -32,7 +32,17 @@ export type WindowKind =
   | 'events'
   | 'achievements'
   | 'fateshop'
-  | 'season';
+  | 'season'
+  | 'enchant'
+  | 'forgeron'
+  | 'prestige'
+  | 'ascension'
+  | 'endless'
+  | 'concoction'
+  | 'settings'
+  | 'tuto'
+  | 'levelup'
+  | 'veteran';
 
 export interface GameWindow {
   id: string;
@@ -42,6 +52,9 @@ export interface GameWindow {
   z: number;
   /** Disparition automatique après ce délai (ms) si défini. */
   ttl?: number;
+  /** Override dynamique du titre/couleur de l'en-tête (ex: donjon → raid). */
+  title?: string;
+  accent?: string;
 }
 
 export interface WindowPref {
@@ -58,6 +71,7 @@ interface UiState {
   close: (id: string) => void;
   closeAll: () => void;
   focus: (id: string) => void;
+  setChrome: (kind: WindowKind, chrome: { title?: string; accent?: string }) => void;
   savePref: (kind: WindowKind, pref: Partial<WindowPref>) => void;
   resetPrefs: () => void;
   saveLayout: () => void;
@@ -109,6 +123,11 @@ export const useUi = create<UiState>((set, get) => ({
     set((s) => ({
       topZ: z,
       windows: s.windows.map((w) => (w.id === id ? { ...w, z } : w)),
+    }));
+  },
+  setChrome: (kind, chrome) => {
+    set((s) => ({
+      windows: s.windows.map((w) => (w.kind === kind ? { ...w, title: chrome.title, accent: chrome.accent } : w)),
     }));
   },
   savePref: (kind, pref) => {

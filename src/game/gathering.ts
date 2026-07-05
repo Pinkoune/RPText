@@ -84,6 +84,16 @@ export const GATHER_SKILLS: Record<GatherSkillId, GatherSkill> = {
         { id: 'sun_shard', weight: 15, min: 1, max: 1 },
         { id: 'obsidian', weight: 10, min: 1, max: 1, minLvl: 10 },
       ],
+      volcano: [
+        { id: 'stone', weight: 35, min: 1, max: 2 },
+        { id: 'ember_stone', weight: 35, min: 1, max: 1 },
+        { id: 'lava_crystal', weight: 30, min: 1, max: 1 },
+      ],
+      crypt: [
+        { id: 'stone', weight: 30, min: 1, max: 2 },
+        { id: 'crypt_shard', weight: 40, min: 1, max: 1 },
+        { id: 'obsidian', weight: 30, min: 1, max: 1, minLvl: 10 },
+      ],
       frozen: [
         { id: 'stone', weight: 45, min: 1, max: 2 },
         { id: 'crystal', weight: 55, min: 1, max: 1, minLvl: 6 },
@@ -103,6 +113,12 @@ export const GATHER_SKILLS: Record<GatherSkillId, GatherSkill> = {
         { id: 'big_fish', weight: 20, min: 1, max: 1, minLvl: 3 },
         { id: 'mudfish', weight: 20, min: 1, max: 1 },
         { id: 'cave_fish', weight: 10, min: 1, max: 1, minLvl: 8 },
+      ],
+      // Pêche volcanique : poissons de lave dans les bassins de magma refroidi
+      volcano: [
+        { id: 'fish', weight: 55, min: 1, max: 2 },
+        { id: 'cave_fish', weight: 35, min: 1, max: 1, minLvl: 5 },
+        { id: 'big_fish', weight: 10, min: 1, max: 1, minLvl: 8 },
       ],
     },
   },
@@ -130,6 +146,19 @@ export const GATHER_SKILLS: Record<GatherSkillId, GatherSkill> = {
       desert: [
         { id: 'herb', weight: 60, min: 1, max: 1 },
         { id: 'cactus_pulp', weight: 40, min: 1, max: 2 },
+      ],
+      // Cueillette volcanique : herbes rares qui poussent dans les cendres
+      volcano: [
+        { id: 'herb', weight: 45, min: 1, max: 2 },
+        { id: 'ember_stone', weight: 30, min: 1, max: 1 },
+        { id: 'infernal_shard', weight: 15, min: 1, max: 1, minLvl: 8 },
+        { id: 'lava_crystal', weight: 10, min: 1, max: 1, minLvl: 5 },
+      ],
+      // Cueillette dans la nécropole : ossements et essences errantes
+      crypt: [
+        { id: 'bone_dust', weight: 55, min: 1, max: 2 },
+        { id: 'wraith_essence', weight: 20, min: 1, max: 1, minLvl: 15 },
+        { id: 'crypt_shard', weight: 25, min: 1, max: 1, minLvl: 8 },
       ],
       frozen: [
         { id: 'herb', weight: 50, min: 1, max: 1 },

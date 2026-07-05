@@ -2,6 +2,8 @@ import type { PlayerState, MonsterDef } from './types';
 import { deriveStats, grantXp, addItem, cooldownLeft, reduceDurability } from './player';
 import { simulateCombat } from './combat';
 import { talentMods } from './talents';
+import { addQuestMetric } from './quests';
+import { sendAutoAnnounce } from '../firebase/chatService';
 
 export interface DungeonReward {
   gold: number;
@@ -20,6 +22,8 @@ export interface DungeonDef {
   desc: string;
   stages: MonsterDef[];
   reward: DungeonReward;
+  /** Raid : pas de limite de joueurs, réservé aux fenêtres d'inscription. */
+  raid?: boolean;
 }
 
 function mob(id: string, name: string, emoji: string, hp: number, atk: number, def: number, xp: number): MonsterDef {
@@ -35,10 +39,10 @@ export const DUNGEONS: DungeonDef[] = [
     cooldownMs: 20 * 60 * 1000,
     desc: 'Un repaire grouillant. Idéal pour s\'aguerrir.',
     stages: [
-      mob('gob1', 'Gobelin', '👺', 50, 7, 2, 30),
-      mob('gob2', 'Gobelin', '👺', 60, 8, 3, 32),
-      mob('gob_arch', 'Gobelin archer', '🏹', 45, 10, 1, 38),
-      mob('gob_chief', 'Chef gobelin', '👹', 120, 14, 5, 120),
+      mob('gob1', 'Gobelin', '👺', 50, 7, 2, 22),
+      mob('gob2', 'Gobelin', '👺', 60, 8, 3, 24),
+      mob('gob_arch', 'Gobelin archer', '🏹', 45, 10, 1, 29),
+      mob('gob_chief', 'Chef gobelin', '👹', 120, 14, 5, 90),
     ],
     reward: { gold: 220, fateCoins: 3, gems: 0, loot: { iron_ore: 0.8, wood: 0.8, iron_blade: 0.2, iron_mail: 0.15 } },
   },
@@ -50,10 +54,10 @@ export const DUNGEONS: DungeonDef[] = [
     cooldownMs: 40 * 60 * 1000,
     desc: 'Les morts y refusent le repos.',
     stages: [
-      mob('skel1', 'Squelette', '💀', 135, 18, 7, 80),
-      mob('skel2', 'Garde squelette', '🦴', 165, 21, 10, 95),
-      mob('ghoul', 'Goule', '🧟', 180, 24, 9, 110),
-      mob('lich', 'Liche', '🪦', 450, 33, 15, 320),
+      mob('skel1', 'Squelette', '💀', 135, 18, 7, 60),
+      mob('skel2', 'Garde squelette', '🦴', 165, 21, 10, 72),
+      mob('ghoul', 'Goule', '🧟', 180, 24, 9, 82),
+      mob('lich', 'Liche', '🪦', 450, 33, 15, 240),
     ],
     reward: { gold: 480, fateCoins: 5, gems: 1, loot: { frost_shard: 0.7, void_dust: 0.4, steel_plate: 0.2, crystal: 0.3 } },
   },
@@ -65,14 +69,80 @@ export const DUNGEONS: DungeonDef[] = [
     cooldownMs: 90 * 60 * 1000,
     desc: 'L\'antre d\'un dragon ancestral. Réservé aux vétérans.',
     stages: [
-      mob('drakeling1', 'Dragonnet', '🦎', 270, 30, 13, 200),
-      mob('drakeling2', 'Garde drakonide', '🐲', 315, 34, 16, 230),
-      mob('wyrm', 'Wyrm de flamme', '🔥', 360, 39, 18, 280),
-      mob('dragon_lord', 'Seigneur Dragon', '🐉', 900, 56, 22, 1000),
+      mob('drakeling1', 'Dragonnet', '🦎', 270, 30, 13, 150),
+      mob('drakeling2', 'Garde drakonide', '🐲', 315, 34, 16, 172),
+      mob('wyrm', 'Wyrm de flamme', '🔥', 360, 39, 18, 210),
+      mob('dragon_lord', 'Seigneur Dragon', '🐉', 900, 56, 22, 750),
     ],
     reward: { gold: 1000, fateCoins: 10, gems: 2, loot: { mithril_ore: 0.8, crystal: 0.6, mithril_blade: 0.2, crystal_charm: 0.15, void_reaver: 0.05 } },
   },
+  {
+    id: 'infernal_forge',
+    name: 'Forge Infernale',
+    emoji: '🌋',
+    minLevel: 30,
+    cooldownMs: 120 * 60 * 1000,
+    desc: 'Les entrailles du volcan abritent des démons forgeurs. Équipement volcanique en récompense.',
+    stages: [
+      mob('flame_imp1', 'Diablotin de feu', '🔥', 800, 60, 25, 400),
+      mob('lava_golem', 'Golem de lave', '🌋', 1100, 75, 35, 550),
+      mob('infernal_guard', 'Garde infernal', '👹', 950, 80, 30, 500),
+      mob('forge_lord', 'Seigneur de la Forge', '🔥', 2800, 110, 50, 1800),
+    ],
+    reward: { gold: 3500, fateCoins: 15, gems: 3, loot: { lava_crystal: 0.9, ember_stone: 0.8, infernal_shard: 0.6, lava_blade: 0.15, volcanic_armor: 0.12, upgrade_matrix: 0.2 } },
+  },
+  {
+    id: 'abyssal_citadel',
+    name: 'Citadelle Abyssale',
+    emoji: '🏰',
+    minLevel: 40,
+    cooldownMs: 180 * 60 * 1000,
+    desc: 'Forteresse à la frontière du vide. Seuls les plus puissants en reviennent.',
+    stages: [
+      mob('void_sentinel1', 'Sentinelle du Vide', '💀', 1800, 130, 55, 900),
+      mob('void_sentinel2', 'Archonte du Vide', '🌑', 2200, 150, 65, 1100),
+      mob('abyssal_knight', 'Chevalier Abyssal', '🗡️', 2600, 165, 70, 1300),
+      mob('void_king', 'Roi Abyssal', '👑', 7000, 220, 90, 5000),
+    ],
+    reward: { gold: 6000, fateCoins: 25, gems: 5, loot: { void_dust: 0.9, infernal_shard: 0.8, boss_soul: 0.4, void_mantle: 0.2, primordial_crown: 0.08, upgrade_matrix: 0.35 } },
+  },
 ];
+
+// ── Raid : trois donjons enchaînés (12 étages), stats renforcées ×1.4, illimité
+// en joueurs, ouvert seulement pendant les fenêtres d'inscription (voir raid.ts).
+// Récompense généreuse mais bornée (le multiplicateur de groupe/niveau du
+// DungeonCard s'applique déjà par-dessus).
+(() => {
+  const src = ['goblin_cave', 'cursed_crypt', 'dragon_shrine']
+    .map((id) => DUNGEONS.find((d) => d.id === id)!)
+    .filter(Boolean);
+  const stages: MonsterDef[] = [];
+  src.forEach((d, di) => {
+    d.stages.forEach((m, mi) => {
+      const finalBoss = di === src.length - 1 && mi === d.stages.length - 1;
+      const mult = finalBoss ? 2.2 : 1.4;
+      stages.push({
+        ...m,
+        id: `raid_${d.id}_${m.id}`,
+        hp: Math.floor(m.hp * mult),
+        atk: Math.floor(m.atk * (finalBoss ? 1.6 : 1.3)),
+        def: Math.floor(m.def * 1.3),
+        xp: Math.floor(m.xp * 1.5),
+      });
+    });
+  });
+  DUNGEONS.push({
+    id: 'raid_trials',
+    name: 'Épreuves du Raid',
+    emoji: '🔱',
+    minLevel: 22,
+    cooldownMs: 0, // Le rythme est fixé par les fenêtres d'inscription, pas un CD perso.
+    desc: 'Trois donjons enchaînés sans répit. Réservé aux inscriptions de raid (10h / 20h).',
+    stages,
+    raid: true,
+    reward: { gold: 3200, fateCoins: 20, gems: 6, loot: { mithril_ore: 1, crystal: 0.9, void_dust: 0.7, mithril_blade: 0.35, crystal_charm: 0.3, void_reaver: 0.12, boss_soul: 0.1 } },
+  });
+})();
 
 export interface StageResult {
   monster: MonsterDef;
@@ -171,5 +241,11 @@ export function runDungeon(p: PlayerState, def: DungeonDef): DungeonRun | { erro
     }
   }
   p.dungeonClears[def.id] = (p.dungeonClears[def.id] ?? 0) + 1;
+  addQuestMetric(p, 'dungeons', 1);
+  // Annonce si premier donjon
+  const totalClears = Object.values(p.dungeonClears).reduce((s, n) => s + n, 0);
+  if (totalClears === 1) {
+    sendAutoAnnounce(`🏏 ${p.name} vient de terminer son premier donjon !`);
+  }
   return run;
 }

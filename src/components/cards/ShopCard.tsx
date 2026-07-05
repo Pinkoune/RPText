@@ -3,6 +3,7 @@ import { item, RARITY_COLOR } from '../../game/items';
 import { addItem, canEquip } from '../../game/player';
 import type { ItemDef } from '../../game/types';
 import { ensureQuestPeriods } from '../../game/quests';
+import ItemIcon from '../ItemIcon';
 
 // Stock de la boutique simplifié (façon EPIC RPG)
 const STOCK: Record<string, number> = {
@@ -86,9 +87,10 @@ export default function ShopCard() {
 
         return (
           <div key={id} className="flex items-center gap-2 rounded-lg border-l-2 bg-black/25 p-2" style={{ borderColor: RARITY_COLOR[it.rarity] }}>
+            <ItemIcon id={id} size={24} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="truncate font-medium" style={{ color: RARITY_COLOR[it.rarity] }}>{it.icon} {it.name}</span>
+                <span className="truncate font-medium" style={{ color: RARITY_COLOR[it.rarity] }}>{it.name}</span>
                 {limit !== undefined && (
                   <span className={`text-[10px] px-1.5 rounded ${maxReached ? 'bg-rose-500/20 text-rose-300' : 'bg-sky-500/20 text-sky-300'}`}>
                     {bought}/{limit}

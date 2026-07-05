@@ -2,6 +2,7 @@ import { useGame } from '../../store/gameStore';
 import { questViews, claimQuest, periodResetIn, type QuestReward, type QuestPeriod } from '../../game/quests';
 import { cooldownLeft } from '../../game/player';
 import { DAILY_COOLDOWN } from '../../game/commands';
+import { canClaimDailyLogin, claimDailyLogin } from '../../game/daily';
 
 import { ITEMS } from '../../game/items';
 
@@ -13,7 +14,7 @@ function rewardText(r: QuestReward): string {
   if (r.items) {
     for (const [id, qty] of Object.entries(r.items)) {
       const it = ITEMS[id];
-      if (it) parts.push(`${qty}x ${it.icon} ${it.name}`);
+      if (it) parts.push(`${qty}x ${it.icon || ''} ${it.name}`);
     }
   }
   return parts.join(' · ');
@@ -33,22 +34,25 @@ export default function QuestsCard() {
   if (!p) return null;
 
   const views = questViews(p);
-  const dailyReady = cooldownLeft(p, 'daily', DAILY_COOLDOWN) === 0;
+  const setDailyReward = useGame((s) => s.setDailyReward);
+  const dailyReady = canClaimDailyLogin(p!);
 
   function claim(id: string) {
-    let r: QuestReward | null = null;
+    let r: any = null;
     mutate((d) => { r = claimQuest(d, id); });
     if (r) toast(`Récompense : ${rewardText(r)} !`, 'gold');
   }
 
   function claimLogin() {
-    const gold = 50 + p!.level * 20;
+    let reward = null;
     mutate((d) => {
-      d.gold += gold;
-      d.fateCoins += 3;
-      d.cooldowns.daily = Date.now();
+      reward = claimDailyLogin(d);
     });
-    toast(`Connexion quotidienne : +${gold} 🪙, +3 🎲 !`, 'gold');
+    if (reward) {
+      setDailyReward(reward);
+    } else {
+      toast('Déjà réclamée !', 'bad');
+    }
   }
 
   const section = (period: QuestPeriod, title: string) => (
@@ -94,7 +98,7 @@ export default function QuestsCard() {
         disabled={!dailyReady}
         className="w-full rounded-xl bg-gradient-to-r from-amber-500/40 to-yellow-500/40 px-4 py-2.5 text-sm font-semibold transition hover:from-amber-500/60 hover:to-yellow-500/60 disabled:opacity-40"
       >
-        {dailyReady ? '🎁 Récompense de connexion quotidienne' : `🎁 Déjà réclamée — revient dans ${fmt(cooldownLeft(p, 'daily', DAILY_COOLDOWN))}`}
+        {dailyReady ? '🎁 Récompense de connexion quotidienne' : '🎁 Déjà réclamée — revient demain'}
       </button>
       {section('daily', 'Quêtes journalières')}
       {section('weekly', 'Quêtes hebdomadaires')}

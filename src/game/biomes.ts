@@ -13,6 +13,8 @@ export interface BiomeDef {
   fg?: Record<Phase, [string, string]>;
   /** Couleur d'accent de l'UI dans ce biome. */
   accent: string;
+  /** Multiplicateur d'XP pour les combats de chasse dans ce biome. */
+  xpMult: number;
 }
 
 export const BIOMES: Record<BiomeId, BiomeDef> = {
@@ -21,6 +23,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Forêt de Sylvebois',
     emoji: '🌲',
     minLevel: 1,
+    xpMult: 1.0,
     desc: 'Bois denses et clairières. Le fil de soie de ses araignées ne se trouve nulle part ailleurs.',
     accent: '#7bd88f',
     bg: {
@@ -41,6 +44,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Plaines de Vent-d\'Or',
     emoji: '🌾',
     minLevel: 3,
+    xpMult: 1.0,
     desc: 'Étendues herbeuses balayées par le vent. Ses fleurs sauvages ne poussent qu\'ici.',
     accent: '#e6d27a',
     bg: {
@@ -55,6 +59,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Pics de Givre-Cime',
     emoji: '🏔️',
     minLevel: 8,
+    xpMult: 1.3,
     desc: 'Sommets enneigés et air glacial. Seul son sous-sol recèle du mithril.',
     accent: '#9fd0ff',
     bg: {
@@ -69,6 +74,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Dunes de Braise',
     emoji: '🏜️',
     minLevel: 14,
+    xpMult: 1.5,
     desc: 'Sable brûlant le jour, glacial la nuit. Ses éclats solaires n\'existent que là.',
     accent: '#f0b46a',
     bg: {
@@ -83,6 +89,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Marais de Brume-Pâle',
     emoji: '🐸',
     minLevel: 20,
+    xpMult: 1.8,
     desc: 'Eaux stagnantes et brouillards toxiques. Racines et poissons des vases uniques au monde.',
     accent: '#8fd0a0',
     bg: {
@@ -92,18 +99,55 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
       night: ['#08100c', '#101c14', '#1c3024'],
     },
   },
+  volcano: {
+    id: 'volcano',
+    name: 'Caldeira de Braise',
+    emoji: '🌋',
+    minLevel: 24,
+    xpMult: 2.0,
+    desc: 'Un champ de lave à ciel ouvert où la roche fond et où rôdent démons et golems de magma.',
+    accent: '#f97316',
+    bg: {
+      dawn: ['#2b0a06', '#5a1608', '#9a2b0e'],
+      day: ['#2b0a06', '#5a1608', '#b3350f'],
+      dusk: ['#25060a', '#5a1608', '#8a2408'],
+      night: ['#180404', '#3a0d06', '#611806'],
+    },
+  },
+  crypt: {
+    id: 'crypt',
+    name: 'Nécropole de Cristal',
+    emoji: '🪦',
+    minLevel: 30,
+    xpMult: 2.2,
+    desc: 'Ruines englouties où poussent des cristaux noirs. Les morts n\'y reposent pas vraiment.',
+    accent: '#7dd3c8',
+    bg: {
+      dawn: ['#0e1a1c', '#1c3a38', '#2f5c54'],
+      day: ['#0e1a1c', '#1f4340', '#3a6b60'],
+      dusk: ['#0c1618', '#1a2f2e', '#2a4a44'],
+      night: ['#050b0c', '#0e1c1c', '#173330'],
+    },
+    fg: {
+      dawn: ['#0a1414', '#163028'],
+      day: ['#0a1414', '#163028'],
+      dusk: ['#0a1414', '#163028'],
+      night: ['#050b0c', '#0e1c1c'],
+    },
+  },
   frozen: {
     id: 'frozen',
-    name: 'Abysse Gelé',
-    emoji: '❄️',
-    minLevel: 28,
-    desc: 'Le bout du monde connu. Réservé aux vétérans — cristal et lotus des glaces n\'y poussent qu\'une fois par saison.',
-    accent: '#c0e8ff',
+    name: 'Abysses du Vide',
+    emoji: '🌌',
+    minLevel: 38,
+    xpMult: 2.6,
+    desc: 'Le néant absolu où la lumière s\'éteint. Réservé aux vétérans cherchant à affronter les ombres.',
+    accent: '#a855f7',
     bg: {
-      dawn: ['#3a4a6a', '#7a90c0', '#d0e4f7'],
-      day: ['#5a7ab0', '#a8c8ee', '#eef6ff'],
-      dusk: ['#2a3550', '#5a6a90', '#a0b0d0'],
-      night: ['#060c18', '#0e1830', '#1e3050'],
+      dawn: ['#0f0524', '#170b3b', '#2e1065'],
+      day: ['#0f0524', '#170b3b', '#2e1065'],
+      dusk: ['#0f0524', '#170b3b', '#2e1065'],
+      night: ['#0f0524', '#170b3b', '#2e1065'],
     },
   },
 };

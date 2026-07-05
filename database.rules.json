@@ -49,6 +49,14 @@
     "dungeons": {
       ".read": "auth != null",
       ".write": "auth != null"
+    },
+    "endlessSessions": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "pvpDuels": {
+      ".read": "auth != null",
+      ".write": "auth != null"
     }
   }
 }

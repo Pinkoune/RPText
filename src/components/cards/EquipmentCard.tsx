@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { item, RARITY_COLOR } from '../../game/items';
 import { deriveStats, equipItem, unequipItem, canEquip } from '../../game/player';
 import { RECIPES, getCraftLevel } from '../../game/crafting';
 import type { ItemDef, ItemSlot } from '../../game/types';
+import ItemIcon from '../ItemIcon';
 
 const SLOTS: { slot: 'weapon' | 'armor' | 'trinket' | 'tool' | 'profession_armor'; label: string; icon: string }[] = [
   { slot: 'weapon', label: 'Arme', icon: '⚔️' },
@@ -60,10 +62,13 @@ function typeBadges(it: ItemDef | null): { txt: string; cls: string }[] {
 
 const UPGRADE_CHANCE = ['100%', '90%', '75%', '60%', '40%'];
 
+type SlotKey = 'weapon' | 'armor' | 'trinket' | 'tool' | 'profession_armor';
+
 export default function EquipmentCard() {
   const p = useGame((s) => s.player);
   const mutate = useGame((s) => s.mutate);
   const toast = useGame((s) => s.toast);
+  const [openBag, setOpenBag] = useState<SlotKey | null>(null);
   if (!p) return null;
 
   const stats = deriveStats(p);
@@ -150,7 +155,7 @@ export default function EquipmentCard() {
             {eq ? (
               <>
                 <div className="mt-2 flex items-center gap-2 text-sm font-medium" style={{ color: RARITY_COLOR[eq.rarity] }}>
-                  <span className="text-lg leading-none">{eq.icon}</span>
+                  <ItemIcon id={equippedId!} size={24} />
                   <span className="truncate">{eq.name}</span>
                   {stars > 0 && <span className="text-yellow-400 text-xs">{'★'.repeat(stars)}</span>}
                 </div>
@@ -188,8 +193,8 @@ export default function EquipmentCard() {
                       <span className="ml-1 text-slate-400">(+{stars * 10}% stats)</span>
                     </span>
                     {stars < 5 ? (
-                      <button onClick={() => upgrade(equippedId!)} className="rounded bg-purple-500/30 px-2 py-0.5 text-[11px] hover:bg-purple-500/50">
-                        Améliorer {UPGRADE_CHANCE[stars]} ✨{p.inventory['upgrade_matrix'] || 0}
+                      <button onClick={() => upgrade(equippedId!)} className="inline-flex items-center gap-1 rounded bg-purple-500/30 px-2 py-0.5 text-[11px] hover:bg-purple-500/50">
+                        Améliorer {UPGRADE_CHANCE[stars]} <ItemIcon id="upgrade_matrix" size={13} />{p.inventory['upgrade_matrix'] || 0}
                       </button>
                     ) : (
                       <span className="text-[11px] font-bold text-yellow-400">MAX</span>
@@ -203,8 +208,14 @@ export default function EquipmentCard() {
 
             {candidates.length > 0 && (
               <div className="mt-4 space-y-1.5">
-                <div className="text-[10px] uppercase tracking-wide text-slate-500">Dans le sac</div>
-                {candidates.map(([id, q]) => {
+                <button
+                  onClick={() => setOpenBag(openBag === slot ? null : slot)}
+                  className="flex w-full items-center justify-between rounded-lg bg-black/30 px-3 py-2 text-[11px] font-semibold text-slate-300 hover:bg-black/40"
+                >
+                  <span className="uppercase tracking-wide text-slate-400">🎒 Dans l'inventaire ({candidates.length})</span>
+                  <span className="text-slate-500">{openBag === slot ? '▲ Masquer' : '▼ Changer'}</span>
+                </button>
+                {openBag === slot && candidates.map(([id, q]) => {
                   const it = item(id)!;
                   const cb = statBadges(it);
                   
@@ -221,8 +232,9 @@ export default function EquipmentCard() {
                     <div key={id} className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 ${reqReason ? 'bg-red-950/40 opacity-75' : 'bg-black/30'}`}>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 text-sm">
-                          <span className={`leading-none ${reqReason ? 'grayscale' : ''}`}>{it.icon}</span>
+                          <ItemIcon id={id} size={20} className={reqReason ? 'grayscale' : ''} />
                           <span className="truncate" style={{ color: reqReason ? '#7f1d1d' : RARITY_COLOR[it.rarity] }}>{it.name}</span>
+                          {(p.gearStars?.[id] || 0) > 0 && <span className="text-[10px] leading-none text-yellow-400" title={`${p.gearStars![id]}★`}>{'★'.repeat(p.gearStars![id])}</span>}
                           {q > 1 && <span className="text-[10px] text-slate-500">×{q}</span>}
                         </div>
                         {cb.length > 0 && (

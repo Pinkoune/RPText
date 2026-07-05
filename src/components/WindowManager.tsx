@@ -11,6 +11,7 @@ import ExperienceCard from './cards/ExperienceCard';
 import CasinoCard from './cards/CasinoCard';
 import ShopCard from './cards/ShopCard';
 import CraftCard from './cards/CraftCard';
+import ConcoctionCard from './cards/ConcoctionCard';
 import GatherCard from './cards/GatherCard';
 import MarketCard from './cards/MarketCard';
 import DungeonCard from './cards/DungeonCard';
@@ -32,6 +33,15 @@ import EventsCard from './cards/EventsCard';
 import AchievementsCard from './cards/AchievementsCard';
 import FateShopCard from './cards/FateShopCard';
 import SeasonCard from './cards/SeasonCard';
+import EnchantCard from './cards/EnchantCard';
+import ForgeronCard from './cards/ForgeronCard';
+import PrestigeCard from './cards/PrestigeCard';
+import AscensionCard from './cards/AscensionCard';
+import EndlessCard from './cards/EndlessCard';
+import SettingsCard from './cards/SettingsCard';
+import TutorialCard from './cards/TutorialCard';
+import LevelUpModal from './cards/LevelUpModal';
+import VeteranCard from './cards/VeteranCard';
 import { AdminModal } from './AdminModal';
 import type { HuntEncounter } from '../game/combat';
 
@@ -42,6 +52,12 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   map: { title: '🗺️ Carte du monde', accent: '#7bd88f' },
   inventory: { title: '🎒 Inventaire', accent: '#e6d27a' },
   equipment: { title: '🛡️ Équipement', accent: '#9fd0ff' },
+  enchant: { title: '✨ Enchantement', accent: '#a78bfa' },
+  forgeron: { title: '🧔‍♂️ Forgeron Renold', accent: '#f0b46a' },
+  prestige: { title: '✨ Aura de Prestige', accent: '#ffd45a' },
+  ascension: { title: '🕳️ Le Néant', accent: '#a855f7' },
+  endless: { title: '🕳️ Abysses Infinis', accent: '#dc2626' },
+  concoction: { title: '🧪 Concoction', accent: '#10b981' },
   cooldown: { title: '⏳ Récupérations', accent: '#ffce6a' },
   experience: { title: '📈 Expérience', accent: '#62d67a' },
   casino: { title: '🎰 Casino du Destin', accent: '#c46bff' },
@@ -68,9 +84,15 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   achievements: { title: '🏆 Succès', accent: '#ffd45a' },
   fateshop: { title: '🎲 Boutique du Destin', accent: '#e879f9' },
   season: { title: '🏅 Saison PvP', accent: '#7ad0ff' },
+  settings: { title: '⚙️ Paramètres', accent: '#94a3b8' },
+  tuto: { title: '🎓 Tutoriel', accent: '#4ade80' },
+  levelup: { title: '🌟 Niveau Supérieur', accent: '#fbbf24' },
+  veteran: { title: '👑 Vétéran', accent: '#f59e0b' },
 };
 
 const WIDE: Partial<Record<WindowKind, boolean>> = { news: true, craft: true, talents: true, admin: true };
+const MEDIUM: Partial<Record<WindowKind, boolean>> = { leaderboard: true, inventory: true };
+const SHORT: Partial<Record<WindowKind, boolean>> = { inventory: true };
 
 export default function WindowManager() {
   const windows = useUi((s) => s.windows);
@@ -81,7 +103,7 @@ export default function WindowManager() {
         {windows.map((w, i) => {
           const meta = META[w.kind];
           return (
-            <Window key={w.id} win={w} index={i} title={meta.title} accent={meta.accent} wide={WIDE[w.kind]}>
+            <Window key={w.id} win={w} index={i} title={w.title ?? meta.title} accent={w.accent ?? meta.accent} wide={WIDE[w.kind]} medium={MEDIUM[w.kind]} short={SHORT[w.kind]}>
               {w.kind === 'profile' && <ProfileCard />}
               {w.kind === 'hunt' && <HuntCard encounter={w.payload as HuntEncounter} />}
               {w.kind === 'map' && <MapCard />}
@@ -92,6 +114,7 @@ export default function WindowManager() {
               {w.kind === 'casino' && <CasinoCard />}
               {w.kind === 'shop' && <ShopCard />}
               {w.kind === 'craft' && <CraftCard />}
+              {w.kind === 'concoction' && <ConcoctionCard />}
               {w.kind === 'gather' && <GatherCard initialSkillId={w.payload as string} />}
               {w.kind === 'market' && <MarketCard />}
               {w.kind === 'dungeon' && <DungeonCard />}
@@ -103,7 +126,7 @@ export default function WindowManager() {
               {w.kind === 'guild' && <GuildCard />}
               {w.kind === 'familiar' && <FamiliarCard />}
               {w.kind === 'boss' && <BossCard />}
-              {w.kind === 'chat' && <ChatCard />}
+              {w.kind === 'chat' && <ChatCard initialDmPeer={w.payload as string | undefined} />}
               {w.kind === 'leaderboard' && <LeaderboardCard />}
               {w.kind === 'stats' && <StatsCard />}
               {w.kind === 'news' && <NewsCard />}
@@ -113,6 +136,15 @@ export default function WindowManager() {
               {w.kind === 'achievements' && <AchievementsCard />}
               {w.kind === 'fateshop' && <FateShopCard />}
               {w.kind === 'season' && <SeasonCard />}
+              {w.kind === 'enchant' && <EnchantCard />}
+              {w.kind === 'forgeron' && <ForgeronCard />}
+              {w.kind === 'prestige' && <PrestigeCard />}
+              {w.kind === 'ascension' && <AscensionCard />}
+              {w.kind === 'endless' && <EndlessCard />}
+              {w.kind === 'settings' && <SettingsCard />}
+              {w.kind === 'tuto' && <TutorialCard win={w} />}
+              {w.kind === 'levelup' && <LevelUpModal win={w} />}
+              {w.kind === 'veteran' && <VeteranCard />}
               {w.kind === 'admin' && <AdminModal />}
             </Window>
           );

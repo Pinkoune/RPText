@@ -1,4 +1,5 @@
 import type { PlayerState } from './types';
+import { addItemToInventory } from './items';
 
 // ─── Saisons PvP / Ladder ────────────────────────────────────────────────────
 // Une saison = un mois calendaire. Les points de saison se gagnent en PvP
@@ -78,7 +79,7 @@ export function grantSeasonReward(p: PlayerState, reward: SeasonReward): void {
   if (reward.gems) p.gems += reward.gems;
   if (reward.items) {
     for (const [id, qty] of Object.entries(reward.items)) {
-      p.inventory[id] = (p.inventory[id] ?? 0) + qty;
+      addItemToInventory(p.inventory, id, qty);
     }
   }
 }

@@ -103,6 +103,13 @@ export function rollFamiliar(p: PlayerState, rarity: FamiliarRarity): string {
   return list[Math.floor(Math.random() * list.length)].id;
 }
 
+/** Vrai si le joueur possède déjà TOUS les familiers de cette rareté. */
+export function ownsAllOfRarity(p: PlayerState, rarity: FamiliarRarity): boolean {
+  const pool = familiarsByRarity(rarity);
+  if (pool.length === 0) return true;
+  return pool.every((f) => f.id in (p.familiars ?? {}));
+}
+
 // ─── Capacité de combat du familier ─────────────────────────────────────────
 // Chaque familier a un petit passif qui se déclenche parfois en combat, selon
 // son thème : attaque = frappe bonus, défense = bouclier (soin), PV = soin.

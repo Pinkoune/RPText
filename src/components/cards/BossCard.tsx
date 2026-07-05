@@ -59,13 +59,7 @@ export default function BossCard() {
   }
 
   if (!p) return null;
-  if (!p.guildId) {
-    return (
-      <div className="rounded border border-amber-500/20 bg-amber-500/10 p-4 text-center text-sm text-amber-200">
-        Les World Boss sont des menaces colossales. Tu dois <strong>rejoindre ou créer une Guilde</strong> pour pouvoir les affronter.
-      </div>
-    );
-  }
+
 
   const cdLeft = cooldownLeft(p, 'boss', BOSS_ATTACK_CD);
 
@@ -73,8 +67,10 @@ export default function BossCard() {
     if (!boss || boss.hp <= 0) return;
     if (cooldownLeft(p!, 'boss', BOSS_ATTACK_CD) > 0) return;
     if (p!.hp <= 0) return toast('Tu es K.O. ! Soigne-toi avant de frapper.', 'bad');
+    // Boss mondial = effort communautaire : dégâts quasi-plats pour que tout le
+    // monde participe équitablement. Le niveau/ATK ne donne qu'un léger avantage.
     const atk = deriveStats(p!).atk;
-    const dmg = Math.round(atk * (12 + Math.random() * 8));
+    const dmg = Math.round((150 + p!.level * 3 + atk * 0.05) * (0.85 + Math.random() * 0.3));
     mutate((d) => {
       d.cooldowns.boss = Date.now();
       addQuestMetric(d, 'bossHits', dmg);

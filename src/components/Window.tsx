@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { motion, useDragControls, useMotionValue, animate } from 'framer-motion';
 import { useUi, type GameWindow } from '../store/uiStore';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface Props {
   win: GameWindow;
@@ -9,18 +10,22 @@ interface Props {
   accent?: string;
   /** Fenêtre plus large (ex: changelog complet). */
   wide?: boolean;
+  /** Fenêtre intermédiaire (ex: classement). */
+  medium?: boolean;
+  short?: boolean;
   children: React.ReactNode;
 }
 
 const SNAP_THRESHOLD = 20;
 
 /** Chrome d'une fenêtre flottante : drag par l'en-tête, focus, fermeture, TTL, snap, réduction. */
-export default function Window({ win, index, title, accent, wide, children }: Props) {
+export default function Window({ win, index, title, accent, wide, medium, short, children }: Props) {
   const close = useUi((s) => s.close);
   const focus = useUi((s) => s.focus);
   const savePref = useUi((s) => s.savePref);
   const pref = useUi((s) => s.prefs[win.kind]);
   const controls = useDragControls();
+  const isMobile = useIsMobile();
 
   // Cascade : léger décalage par fenêtre si pas de position sauvegardée.
   const offset = index * 22;
@@ -108,6 +113,42 @@ export default function Window({ win, index, title, accent, wide, children }: Pr
     savePref(win.kind, { x: finalX, y: finalY });
   }
 
+  // ── Mobile : plein écran, sans drag ni cascade. La fenêtre au z le plus
+  // élevé s'affiche par-dessus ; le dock bas sert à naviguer entre elles.
+  if (isMobile) {
+    return (
+      <div className="pointer-events-none fixed inset-0" style={{ zIndex: win.z }}>
+        {/* Démarre sous la Topbar (gap déterministe, pas de chevauchement) et
+            au-dessus du dock (le contenu réserve pb pour le dock). */}
+        <motion.div
+          id={win.id}
+          className="window-card glass pointer-events-auto absolute inset-x-0 bottom-0 flex flex-col overflow-hidden rounded-t-2xl"
+          style={{ top: 'calc(var(--topbar-h, 76px) + 0.5rem)' }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+          onPointerDown={() => focus(win.id)}
+        >
+          <div
+            className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3"
+            style={{ background: accent ? `${accent}22` : undefined }}
+          >
+            <span className="text-base font-semibold" style={{ color: accent }}>{title}</span>
+            <button
+              onClick={() => close(win.id)}
+              className="grid h-11 w-11 place-items-center rounded-lg text-lg text-slate-200 hover:bg-rose-500/40 active:bg-rose-500/50"
+              aria-label="Fermer"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex-1 overflow-auto p-4 pb-28">{children}</div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     // Conteneur : flex items-start permet que la fenêtre réduise sa taille
     // vers le haut (la barre reste fixe) plutôt que vers le centre.
@@ -117,7 +158,7 @@ export default function Window({ win, index, title, accent, wide, children }: Pr
     >
       <motion.div
         id={win.id}
-        className={`window-card pointer-events-auto flex flex-col overflow-hidden rounded-2xl glass ${wide ? 'w-[min(94vw,680px)]' : 'w-[min(94vw,440px)]'} ${minimized ? 'h-fit' : 'max-h-[82vh]'}`}
+        className={`window-card pointer-events-auto flex flex-col overflow-hidden rounded-2xl glass ${wide ? 'w-[min(94vw,680px)]' : medium ? 'w-[min(94vw,540px)]' : 'w-[min(94vw,440px)]'} ${minimized ? 'h-fit' : short ? 'max-h-[70vh]' : 'max-h-[82vh]'}`}
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.97 }}

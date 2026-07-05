@@ -18,6 +18,7 @@ function Bar({ label, level, into, need, color, sub }: { label: string; level: n
 }
 
 import { getCraftLevel } from '../../game/crafting';
+import { getConcoctionLevel } from '../../game/concoction';
 
 export default function ExperienceCard() {
   const p = useGame((s) => s.player);
@@ -31,10 +32,16 @@ export default function ExperienceCard() {
   const cInto = Math.floor(craftLvlData.into);
   const cNeed = Math.floor(craftLvlData.need);
 
+  // Logic for concoction xp
+  const concLvlData = getConcoctionLevel(p.concoctionXp ?? 0);
+  const concLevel = concLvlData.level;
+  const concInto = Math.floor(concLvlData.currentXp);
+  const concNeed = Math.floor(concLvlData.nextXp);
+
   return (
     <div className="space-y-3">
       <Bar
-        label={`${cls.emoji} Combat`}
+        label={`${cls.emoji} Global`}
         level={p.level}
         into={p.xp}
         need={xpToNext(p.level)}
@@ -56,6 +63,14 @@ export default function ExperienceCard() {
         need={Math.max(1, cNeed)}
         color="#d8a26a"
         sub={`XP d'artisanat total : ${Math.floor(p.craftXp)}`}
+      />
+      <Bar
+        label="🧪 Alchimie"
+        level={concLevel}
+        into={Math.max(0, concInto)}
+        need={Math.max(1, concNeed)}
+        color="#10b981"
+        sub={`XP d'alchimie totale : ${Math.floor(p.concoctionXp ?? 0)}`}
       />
     </div>
   );

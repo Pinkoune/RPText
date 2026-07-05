@@ -79,6 +79,16 @@ export const BIOME_EVENTS: Record<BiomeId, EventDef[]> = {
     { id: 'sw_bloom', name: 'Efflorescence', icon: '🍄', kind: 'buff', desc: '+10% XP au marais.', effect: { xpMult: 0.10 } },
     { id: 'sw_miasma', name: 'Miasmes toxiques', icon: '☠️', kind: 'debuff', desc: '-8% PV max au marais.', effect: { hpPct: -0.08 } },
   ],
+  volcano: [
+    { id: 'vo_calm', name: 'Chaleur pesante', icon: '🌋', kind: 'neutral', desc: 'Rien de particulier dans la caldeira.', effect: {} },
+    { id: 'vo_eruption', name: 'Éruption', icon: '🔥', kind: 'buff', desc: '+12% ATK dans la caldeira.', effect: { atkPct: 0.12 } },
+    { id: 'vo_ashfall', name: 'Pluie de cendres', icon: '🌫️', kind: 'debuff', desc: '-8% PV max dans la caldeira.', effect: { hpPct: -0.08 } },
+  ],
+  crypt: [
+    { id: 'cr_calm', name: 'Calme sépulcral', icon: '🪦', kind: 'neutral', desc: 'Rien de particulier dans la nécropole.', effect: {} },
+    { id: 'cr_whispers', name: 'Murmures errants', icon: '👻', kind: 'buff', desc: '+10% XP dans la nécropole.', effect: { xpMult: 0.10 } },
+    { id: 'cr_curse', name: 'Malédiction ancienne', icon: '💀', kind: 'debuff', desc: '-8% ATK dans la nécropole.', effect: { atkPct: -0.08 } },
+  ],
   frozen: [
     { id: 'fr_calm', name: 'Silence glacé', icon: '❄️', kind: 'neutral', desc: 'Rien de particulier dans l\'Abysse.', effect: {} },
     { id: 'fr_aurora', name: 'Aurore boréale', icon: '🌌', kind: 'buff', desc: '+10% ATK dans l\'Abysse.', effect: { atkPct: 0.10 } },

@@ -18,10 +18,12 @@ export interface DungeonPlayer {
   def: number;
   isDead: boolean;
   mods: CombatMods;
-  abilityCd: number;
-  weaponElement?: string;
-  weaponDmgType?: string;
-  armorElement?: string;
+  skillCds: Record<string, number>;
+  weaponElement?: string | null;
+  weaponDmgType?: string | null;
+  armorElement?: string | null;
+  aura?: string | null;
+  auraColorOn?: boolean;
 }
 
 export type DungeonAffix = 'vampiric' | 'armored' | 'agile' | 'none';
@@ -62,6 +64,8 @@ export interface DungeonSession {
   roundCount: number;
   log: TurnEvent[];
   startedAt: number;
+  /** Raid : timestamp de démarrage automatique (fin des inscriptions, :10). */
+  raidStartsAt?: number;
 }
 
 const ABILITY_CD = 4;
@@ -71,23 +75,24 @@ export function listenDungeon(id: string, cb: (ds: DungeonSession | null) => voi
   return onValue(ref(rtdb, `dungeons/${id}`), (snap) => cb(snap.val() as DungeonSession | null));
 }
 
-export async function createDungeonLobby(hostUid: string, hostName: string, hostClass: ClassId, dungeonId: string, pStats: any, pMods: any, pLevel: number): Promise<string> {
+export async function createDungeonLobby(hostUid: string, hostName: string, hostClass: ClassId, dungeonId: string, pStats: any, pMods: any, pLevel: number, aura?: string | null, auraColorOn?: boolean): Promise<string> {
   if (!rtdb) throw new Error('Firebase offline');
   const id = 'dgn-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   await runTransaction(ref(rtdb, `dungeons/${id}`), () => {
     const def = DUNGEONS.find(d => d.id === dungeonId);
-    const ratio = def ? Math.pow(def.minLevel / Math.max(1, pLevel), 0.85) : 1;
+    const ratio = (def && pLevel > def.minLevel) ? Math.pow(def.minLevel / pLevel, 0.4) : 1;
     const ds: DungeonSession = {
       id, host: hostUid, dungeonId, state: 'lobby',
       players: {
         [hostUid]: {
           uid: hostUid, name: hostName, classId: hostClass, ready: true, level: pLevel,
-          hp: Math.floor(pStats.maxHp * ratio), maxHp: Math.floor(pStats.maxHp * ratio), 
+          hp: Math.floor(pStats.maxHp * ratio), maxHp: Math.floor(pStats.maxHp * ratio),
           atk: Math.floor(pStats.atk * ratio), def: Math.floor(pStats.def * ratio),
-          isDead: false, mods: pMods, abilityCd: 0,
-          weaponElement: pStats.weaponElement,
-          weaponDmgType: pStats.weaponDmgType,
-          armorElement: pStats.armorElement
+          isDead: false, mods: pMods, skillCds: {},
+          weaponElement: pStats.weaponElement || null,
+          weaponDmgType: pStats.weaponDmgType || null,
+          armorElement: pStats.armorElement || null,
+          aura: aura || null, auraColorOn: auraColorOn ?? true,
         }
       },
       turnOrder: [], turnIdx: 0, turnStartAt: 0, roundCount: 1, log: [], startedAt: 0
@@ -97,21 +102,58 @@ export async function createDungeonLobby(hostUid: string, hostName: string, host
   return id;
 }
 
-export async function joinDungeon(id: string, uid: string, name: string, classId: ClassId, pStats: any, pMods: any, pLevel: number): Promise<void> {
+/**
+ * Rejoint (ou crée si absente) la session de raid partagée du jour à un id
+ * déterministe (`raid-<key>`), afin que tous les inscrits tombent dans le même
+ * lobby. Le 1er arrivé devient hôte. Illimité en joueurs (def raid).
+ */
+export async function joinOrCreateRaid(sessionId: string, dungeonId: string, startsAt: number, uid: string, name: string, classId: ClassId, pStats: any, pMods: any, pLevel: number, aura?: string | null, auraColorOn?: boolean): Promise<void> {
+  if (!rtdb) throw new Error('Firebase offline');
+  await runTransaction(ref(rtdb, `dungeons/${sessionId}`), (cur: DungeonSession | null) => {
+    const def = DUNGEONS.find(d => d.id === dungeonId);
+    const ratio = (def && pLevel > def.minLevel) ? Math.pow(def.minLevel / pLevel, 0.4) : 1;
+    const player = {
+      uid, name, classId, ready: false, level: pLevel,
+      hp: Math.floor(pStats.maxHp * ratio), maxHp: Math.floor(pStats.maxHp * ratio),
+      atk: Math.floor(pStats.atk * ratio), def: Math.floor(pStats.def * ratio),
+      isDead: false, mods: pMods, skillCds: {},
+      weaponElement: pStats.weaponElement || null,
+      weaponDmgType: pStats.weaponDmgType || null,
+      armorElement: pStats.armorElement || null,
+      aura: aura || null, auraColorOn: auraColorOn ?? true,
+    };
+    if (!cur) {
+      return {
+        id: sessionId, host: uid, dungeonId, state: 'lobby',
+        players: { [uid]: { ...player, ready: true } },
+        turnOrder: [], turnIdx: 0, turnStartAt: 0, roundCount: 1, log: [], startedAt: 0,
+        raidStartsAt: startsAt,
+      } as DungeonSession;
+    }
+    if (cur.state === 'lobby' && !cur.players[uid]) cur.players[uid] = player;
+    return cur;
+  });
+}
+
+export async function joinDungeon(id: string, uid: string, name: string, classId: ClassId, pStats: any, pMods: any, pLevel: number, aura?: string | null, auraColorOn?: boolean): Promise<void> {
   if (!rtdb) return;
   await runTransaction(ref(rtdb, `dungeons/${id}`), (cur: DungeonSession | null) => {
     if (!cur || cur.state !== 'lobby') return cur;
     if (!cur.players[uid]) {
       const def = DUNGEONS.find(d => d.id === cur.dungeonId);
-      const ratio = def ? Math.pow(def.minLevel / Math.max(1, pLevel), 0.85) : 1;
+      // Limite de 4 joueurs pour les donjons ; illimité pour les raids.
+      const limit = def?.raid ? Infinity : 4;
+      if (Object.keys(cur.players).length >= limit) return cur;
+      const ratio = (def && pLevel > def.minLevel) ? Math.pow(def.minLevel / pLevel, 0.4) : 1;
       cur.players[uid] = {
         uid, name, classId, ready: false, level: pLevel,
-        hp: Math.floor(pStats.maxHp * ratio), maxHp: Math.floor(pStats.maxHp * ratio), 
+        hp: Math.floor(pStats.maxHp * ratio), maxHp: Math.floor(pStats.maxHp * ratio),
         atk: Math.floor(pStats.atk * ratio), def: Math.floor(pStats.def * ratio),
-        isDead: false, mods: pMods, abilityCd: 0,
-        weaponElement: pStats.weaponElement,
-        weaponDmgType: pStats.weaponDmgType,
-        armorElement: pStats.armorElement
+        isDead: false, mods: pMods, skillCds: {},
+        weaponElement: pStats.weaponElement || null,
+        weaponDmgType: pStats.weaponDmgType || null,
+        armorElement: pStats.armorElement || null,
+        aura: aura || null, auraColorOn: auraColorOn ?? true,
       };
     }
     return cur;
@@ -141,12 +183,11 @@ export async function leaveDungeon(id: string, uid: string): Promise<void> {
 function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1, avgLevel: number = 1): DungeonMonster {
   const m = def.stages[idx];
   
-  // NOUVEAU SCALING : PV montent vite, ATK modéré, DEF léger
-  // Ajustement pour les joueurs haut niveau
+  // Scaling renforcé : les monstres résistent mieux aux groupes nombreux
   const lvlMult = Math.pow(1 + Math.max(0, avgLevel - 1) / 30, avgLevel >= 20 ? 1.8 : 1.4);
-  const hpMult = Math.pow(numPlayers, 1.2) * (1 + (numPlayers - 1) * 0.1) * lvlMult; 
-  const atkMult = (1 + (numPlayers - 1) * 0.3) * lvlMult; 
-  const defMult = (1 + (numPlayers - 1) * 0.15) * lvlMult; 
+  const hpMult  = Math.pow(numPlayers, 1.4) * (1 + (numPlayers - 1) * 0.1) * lvlMult; // HP +
+  const atkMult = (1 + (numPlayers - 1) * 0.5) * lvlMult; // ATK 0.3→0.5
+  const defMult = (1 + (numPlayers - 1) * 0.25) * lvlMult; // DEF 0.15→0.25 
 
   const hp = Math.floor(m.hp * hpMult);
   const atk = Math.floor(m.atk * atkMult);
@@ -164,15 +205,15 @@ function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1, avgLe
   };
 }
 
-export async function startDungeon(id: string): Promise<void> {
+export async function startDungeon(id: string, force = false): Promise<void> {
   if (!rtdb) return;
   await runTransaction(ref(rtdb, `dungeons/${id}`), (cur: DungeonSession | null) => {
     if (!cur || cur.state !== 'lobby') return cur;
-    const allReady = Object.values(cur.players).every(p => p.ready);
-    if (!allReady) return cur; // Can't start
-    
     const def = DUNGEONS.find(d => d.id === cur.dungeonId);
     if (!def) return cur;
+    // Raids ou démarrage forcé (auto-start à :10) : on ignore le « tous prêts ».
+    const allReady = force || def.raid || Object.values(cur.players).every(p => p.ready);
+    if (!allReady) return cur; // Can't start
 
     cur.state = 'combat';
     cur.startedAt = Date.now();
@@ -221,7 +262,7 @@ function executeMonsterTurn(cur: DungeonSession) {
     return;
   }
 
-  const isEnraged = cur.roundCount > 15;
+  const isEnraged = cur.roundCount > 10; // Enrage plus tôt (15→10)
   const enrageMult = isEnraged ? 1.5 : 1;
   const isAoE = cur.roundCount > 0 && cur.roundCount % 4 === 0;
 
@@ -322,6 +363,8 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
     const pUid = cur.turnOrder[cur.turnIdx];
     const p = cur.players[pUid];
     const m = cur.monster!;
+    
+    p.skillCds = p.skillCds || {};
 
     if (p.isDead) {
       advanceTurn(cur);
@@ -332,7 +375,7 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
     const hopeMult = isLastHope ? 1.5 : 1.0;
     
     const pAtk = p.atk || 10;
-    const elemMult = getElementMult(p.weaponElement, m.element) * getDmgTypeMult(p.weaponDmgType, m as any);
+    const elemMult = getElementMult(p.weaponElement || undefined, m.element) * getDmgTypeMult(p.weaponDmgType || undefined, m as any);
     const finalAtk = pAtk * hopeMult * elemMult;
 
     if (action === 'timeout') {
@@ -346,11 +389,14 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
       const heal = potionHeal ?? 180;
       p.hp = Math.min(p.maxHp, p.hp + heal);
       cur.log.push({ text: `${p.name} boit une potion (+${heal} PV).`, side: 'you' });
-    } else if (action !== 'attack' && action !== 'timeout' && action !== 'flee' && action !== 'potion' && action !== 'revive' && p.abilityCd <= 0) {
+    } else if (action !== 'attack' && action !== 'timeout' && action !== 'flee' && action !== 'potion' && action !== 'revive') {
       // Action is a skill ID
-      p.abilityCd = ABILITY_CD;
-      const skill = getAllActiveSkills().find(s => s.id === action);
+      const skillId = action;
+      if ((p.skillCds[skillId] || 0) > 0) return cur; // Skill is on cooldown
+
+      const skill = getAllActiveSkills().find(s => s.id === skillId);
       if (skill) {
+        p.skillCds[skillId] = Math.max(1, Math.ceil(skill.cooldownMs / 4000));
         if (skill.type === 'attack' || skill.type === 'shield' || skill.type === 'heal' || skill.type === 'buff') {
           if (skill.mult) {
             const dmg = Math.max(1, Math.round(finalAtk * skill.mult - (m.def || 0)));
@@ -363,7 +409,7 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
           }
           if (skill.healFrac) {
             const pMaxHp = p.maxHp || 100;
-            const heal = Math.round(pAtk * 2.0 + pMaxHp * skill.healFrac);
+            const heal = Math.round(pAtk * 1.0 + pMaxHp * skill.healFrac);
             // AoE Heal for Healer/Dawn Priest/Druid
             if (p.classId === 'healer' || p.classId === 'dawn_priest' || p.classId === 'druid') {
               Object.values(cur.players).forEach(ally => {
@@ -417,8 +463,10 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
       }
     }
 
-    if (action !== 'timeout' && p.abilityCd > 0 && action !== 'ability') {
-      p.abilityCd -= 1;
+    if (action !== 'timeout') {
+      for (const sId of Object.keys(p.skillCds)) {
+        if (p.skillCds[sId] > 0) p.skillCds[sId] -= 1;
+      }
     }
 
     if (p.mods.regen > 0 && p.hp > 0 && p.hp < p.maxHp) {

@@ -17,6 +17,8 @@ export const socialEnabled = isFirebaseConfigured && !!db;
 export interface Member {
   name: string;
   level: number;
+  aura?: string | null;
+  auraColorOn?: boolean;
 }
 
 export interface Team {
@@ -50,6 +52,7 @@ export interface Guild {
   xp: number;
   createdAt: number;
   boss?: GuildBoss;
+  applications?: Record<string, Member>;
 }
 
 export interface Gift {
@@ -73,18 +76,18 @@ export function guildLevel(xp: number): { level: number; into: number; need: num
 }
 
 // ─── Équipes ────────────────────────────────────────────────────────────────
-export async function createTeam(host: { uid: string; name: string; level: number }, name: string): Promise<string> {
+export async function createTeam(host: { uid: string; name: string; level: number; aura?: string | null; auraColorOn?: boolean }, name: string): Promise<string> {
   if (!db) throw new Error('offline');
   const ref = await addDoc(collection(db, 'teams'), {
     name: name.slice(0, 24) || 'Équipe',
     hostUid: host.uid,
-    members: { [host.uid]: { name: host.name, level: host.level } },
+    members: { [host.uid]: { name: host.name, level: host.level, aura: host.aura ?? null, auraColorOn: host.auraColorOn ?? true } },
     createdAt: Date.now(),
   });
   return ref.id;
 }
 
-export async function joinTeam(teamId: string, me: { uid: string; name: string; level: number }): Promise<void> {
+export async function joinTeam(teamId: string, me: { uid: string; name: string; level: number; aura?: string | null; auraColorOn?: boolean }): Promise<void> {
   if (!db) throw new Error('offline');
   const ref = doc(db, 'teams', teamId);
   await runTransaction(db, async (tx) => {
@@ -92,7 +95,7 @@ export async function joinTeam(teamId: string, me: { uid: string; name: string; 
     if (!snap.exists()) throw new Error('introuvable');
     const data = snap.data() as Omit<Team, 'id'>;
     if (Object.keys(data.members).length >= TEAM_MAX) throw new Error('équipe pleine');
-    tx.update(ref, { [`members.${me.uid}`]: { name: me.name, level: me.level } });
+    tx.update(ref, { [`members.${me.uid}`]: { name: me.name, level: me.level, aura: me.aura ?? null, auraColorOn: me.auraColorOn ?? true } });
   });
 }
 
@@ -130,21 +133,21 @@ export function listenTeams(cb: (t: Team[]) => void): () => void {
 }
 
 // ─── Guildes ──────────────────────────────────────────────────────────────
-export async function createGuild(owner: { uid: string; name: string; level: number }, name: string, tag: string): Promise<string> {
+export async function createGuild(owner: { uid: string; name: string; level: number; aura?: string | null; auraColorOn?: boolean }, name: string, tag: string): Promise<string> {
   if (!db) throw new Error('offline');
   const ref = await addDoc(collection(db, 'guilds'), {
     name: name.slice(0, 24) || 'Guilde',
     tag: (tag || 'GLD').slice(0, 4).toUpperCase(),
     ownerUid: owner.uid,
     ownerName: owner.name,
-    members: { [owner.uid]: { name: owner.name, level: owner.level } },
+    members: { [owner.uid]: { name: owner.name, level: owner.level, aura: owner.aura ?? null, auraColorOn: owner.auraColorOn ?? true } },
     xp: 0,
     createdAt: Date.now(),
   });
   return ref.id;
 }
 
-export async function joinGuild(guildId: string, me: { uid: string; name: string; level: number }): Promise<void> {
+export async function applyGuild(guildId: string, me: { uid: string; name: string; level: number; aura?: string | null; auraColorOn?: boolean }): Promise<void> {
   if (!db) throw new Error('offline');
   const ref = doc(db, 'guilds', guildId);
   await runTransaction(db, async (tx) => {
@@ -152,7 +155,34 @@ export async function joinGuild(guildId: string, me: { uid: string; name: string
     if (!snap.exists()) throw new Error('introuvable');
     const data = snap.data() as Omit<Guild, 'id'>;
     if (Object.keys(data.members).length >= GUILD_MAX) throw new Error('guilde pleine');
-    tx.update(ref, { [`members.${me.uid}`]: { name: me.name, level: me.level } });
+    tx.update(ref, { [`applications.${me.uid}`]: { name: me.name, level: me.level, aura: me.aura ?? null, auraColorOn: me.auraColorOn ?? true } });
+  });
+}
+
+export async function acceptApplication(guildId: string, targetUid: string): Promise<void> {
+  if (!db) throw new Error('offline');
+  const ref = doc(db, 'guilds', guildId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('introuvable');
+    const data = snap.data() as Omit<Guild, 'id'>;
+    const applicant = data.applications?.[targetUid];
+    if (!applicant) throw new Error('Candidature introuvable');
+    if (Object.keys(data.members).length >= GUILD_MAX) throw new Error('Guilde pleine');
+    tx.update(ref, { 
+      [`members.${targetUid}`]: applicant,
+      [`applications.${targetUid}`]: deleteField()
+    });
+  });
+}
+
+export async function rejectApplication(guildId: string, targetUid: string): Promise<void> {
+  if (!db) throw new Error('offline');
+  const ref = doc(db, 'guilds', guildId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('introuvable');
+    tx.update(ref, { [`applications.${targetUid}`]: deleteField() });
   });
 }
 
@@ -224,6 +254,7 @@ export async function attackGuildBoss(guildId: string, uid: string, dmg: number)
     if (!snap.exists()) return null;
     const data = snap.data() as Omit<Guild, 'id'>;
     const members = data.members ?? {};
+    if (!(uid in members)) return null; // pas membre de cette guilde : pas d'attaque possible
     const memberCount = Object.keys(members).length || 1;
     const avgLevel = Object.values(members).reduce((s, m) => s + (m.level || 1), 0) / memberCount;
 
@@ -272,6 +303,7 @@ export function safeGuildXp(xp: number): number {
 export function getTeamBonus(teamId: string | null): number {
   if (!teamId || !cachedTeams[teamId]) return 1.0;
   const size = Object.keys(cachedTeams[teamId].members).length;
+  if (size <= 1) return 1.0; // seul dans son équipe : aucun bonus
   // +5% par membre
   return 1.0 + (size * 0.05);
 }

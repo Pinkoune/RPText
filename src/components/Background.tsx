@@ -25,6 +25,9 @@ export default function Background({ biome, phase }: Props) {
     [],
   );
 
+  const isVoid = biome === 'frozen';
+  const isVolcano = biome === 'volcano';
+
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden transition-colors duration-[2000ms]">
       <div
@@ -33,25 +36,44 @@ export default function Background({ biome, phase }: Props) {
       />
 
       {/* Astre : soleil le jour, lune la nuit */}
-      <div
-        className="absolute rounded-full transition-all duration-[2000ms]"
-        style={{
-          width: 120,
-          height: 120,
-          left: phase === 'dawn' ? '12%' : phase === 'day' ? '70%' : dusk ? '78%' : '20%',
-          top: phase === 'day' ? '12%' : dusk || phase === 'dawn' ? '34%' : '16%',
-          background: night
-            ? 'radial-gradient(circle at 38% 38%, #f4f6ff, #c6cee0 60%, transparent 72%)'
-            : dusk
-            ? 'radial-gradient(circle, #ffd28a, #ff9a5a 60%, transparent 72%)'
-            : 'radial-gradient(circle, #fff7d6, #ffe08a 55%, transparent 72%)',
-          boxShadow: night ? '0 0 60px 10px rgba(200,210,255,0.25)' : '0 0 90px 30px rgba(255,220,140,0.35)',
-          filter: 'blur(0.5px)',
-        }}
-      />
+      {!isVoid && (
+        <div
+          className="absolute rounded-full transition-all duration-[2000ms]"
+          style={{
+            width: 120,
+            height: 120,
+            left: phase === 'dawn' ? '12%' : phase === 'day' ? '70%' : dusk ? '78%' : '20%',
+            top: phase === 'day' ? '12%' : dusk || phase === 'dawn' ? '34%' : '16%',
+            background: night
+              ? 'radial-gradient(circle at 38% 38%, #f4f6ff, #c6cee0 60%, transparent 72%)'
+              : dusk
+              ? 'radial-gradient(circle, #ffd28a, #ff9a5a 60%, transparent 72%)'
+              : 'radial-gradient(circle, #fff7d6, #ffe08a 55%, transparent 72%)',
+            boxShadow: night ? '0 0 60px 10px rgba(200,210,255,0.25)' : '0 0 90px 30px rgba(255,220,140,0.35)',
+            filter: 'blur(0.5px)',
+          }}
+        />
+      )}
+
+      {/* Trou noir abyssal */}
+      {isVoid && (
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: 250,
+            height: 250,
+            left: '50%',
+            top: '25%',
+            transform: 'translate(-50%, -50%)',
+            background: 'radial-gradient(circle, #02000a 35%, #2e1065 65%, transparent 80%)',
+            boxShadow: '0 0 100px 30px rgba(168, 85, 247, 0.4)',
+            filter: 'blur(2px)',
+          }}
+        />
+      )}
 
       {/* Étoiles la nuit */}
-      {night &&
+      {night && !isVoid &&
         stars.map((st, i) => (
           <span
             key={i}
@@ -66,6 +88,16 @@ export default function Background({ biome, phase }: Props) {
             }}
           />
         ))}
+
+      {/* Lueur de lave montant de l'horizon (Caldeira de Braise) */}
+      {isVolcano && (
+        <div
+          className="absolute inset-x-0 bottom-0 h-[40vh] animate-pulse"
+          style={{
+            background: 'radial-gradient(120% 100% at 50% 100%, rgba(255,90,20,0.45) 0%, rgba(255,60,10,0.15) 40%, transparent 75%)',
+          }}
+        />
+      )}
 
       {/* Décor du biome : silhouettes + particules */}
       <Scenery biome={biome} phase={phase} />

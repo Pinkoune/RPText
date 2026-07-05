@@ -1,15 +1,50 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Chaque joueur ne peut lire/écrire que son propre document.
+
+    // Vrai si l'appelant est un admin confirmé (flag isAdmin sur SON doc joueur,
+    // qui ne peut être posé que par un admin existant ou la console Firebase).
+    function isAdminUser() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/players/$(request.auth.uid))
+        && get(/databases/$(database)/documents/players/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Empêche un joueur de s'auto-octroyer / modifier le flag isAdmin.
+    // Autorisé seulement si : le champ est absent, explicitement false, ou
+    // inchangé par rapport au doc existant.
+    function adminFlagUntouched() {
+      return !('isAdmin' in request.resource.data)
+        || request.resource.data.isAdmin == false
+        || (resource != null && request.resource.data.isAdmin == resource.data.isAdmin);
+    }
+
+    match /system/{document=**} {
+      allow read: if true;
+      // Seul un admin peut déclencher/écrire la config système (ex: wipe global).
+      allow write: if isAdminUser();
+    }
+    match /endlessScores/{scoreId} {
+      allow read: if true;
+      // Chacun n'écrit que son propre score ; l'admin peut purger (wipe total).
+      allow write: if (request.auth != null && request.auth.uid == scoreId) || isAdminUser();
+    }
+    match /endlessScoresMulti/{scoreId} {
+      allow read: if true;
+      allow write: if (request.auth != null && request.auth.uid == scoreId) || isAdminUser();
+    }
+
+    // Chaque joueur écrit son propre document — mais NE PEUT PAS se déclarer
+    // admin (privilege escalation). Un admin peut écrire n'importe quel doc.
     match /players/{uid} {
       allow read: if request.auth != null;            // profils lisibles (classement, PvP)
-      allow write: if request.auth != null && (request.auth.uid == uid || get(/databases/$(database)/documents/players/$(request.auth.uid)).data.isAdmin == true);
+      allow write: if isAdminUser()
+        || (request.auth != null && request.auth.uid == uid && adminFlagUntouched());
     }
     // Classement public en lecture, écriture via le doc joueur seulement.
     match /leaderboard/{uid} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && (request.auth.uid == uid || get(/databases/$(database)/documents/players/$(request.auth.uid)).data.isAdmin == true);
+      allow write: if request.auth != null && (request.auth.uid == uid || isAdminUser());
     }
     // Duels coinflip : créés par un joueur, rejoignables par un autre.
     match /duels/{duelId} {
@@ -30,16 +65,20 @@ service cloud.firestore {
       allow update: if request.auth != null;
     }
     // Équipes : créées par l'hôte, rejoignables/quittables par les joueurs.
+    // Suppression réservée à l'hôte (ou admin) pour éviter le griefing.
     match /teams/{teamId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.resource.data.hostUid == request.auth.uid;
-      allow update, delete: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null && (resource.data.hostUid == request.auth.uid || isAdminUser());
     }
     // Guildes : fondées par l'owner, rejoignables/contributions par les joueurs.
+    // Suppression réservée à l'owner (ou admin).
     match /guilds/{guildId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
-      allow update, delete: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null && (resource.data.ownerUid == request.auth.uid || isAdminUser());
     }
     // Dons de ressources : créés par l'expéditeur, encaissés (supprimés) par le destinataire.
     match /gifts/{giftId} {

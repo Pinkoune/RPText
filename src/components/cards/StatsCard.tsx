@@ -1,5 +1,7 @@
 import { useGame } from '../../store/gameStore';
 import { MONSTERS } from '../../game/monsters';
+import { farmProgress } from '../../game/gathering';
+import { getCraftLevel } from '../../game/crafting';
 
 export default function StatsCard() {
   const player = useGame((s) => s.player);
@@ -7,6 +9,10 @@ export default function StatsCard() {
 
   const stats = player.statistics;
   if (!stats) return <div className="p-4">Ancienne sauvegarde : relance le jeu pour activer les statistiques.</div>;
+
+  const dungeonClears = Object.values(player.dungeonClears ?? {}).reduce((s, n) => s + n, 0);
+  const farmLvl = farmProgress(player).level;
+  const craftLvl = getCraftLevel(player.craftXp ?? 0).level;
 
   return (
     <div className="flex flex-col gap-4 text-sm text-slate-300">
@@ -45,6 +51,44 @@ export default function StatsCard() {
         <div className="flex justify-between">
           <span>Morts</span>
           <span className="font-mono text-red-400">{player.deaths}</span>
+        </div>
+      </div>
+
+      <div className="rounded bg-black/20 p-3">
+        <h3 className="mb-2 font-bold text-white">🏆 Progression</h3>
+        <div className="flex justify-between">
+          <span>Donjons complétés</span>
+          <span className="font-mono">{dungeonClears}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Record Abysses infinis</span>
+          <span className="font-mono text-purple-300">Étage {player.endlessBest ?? 0}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Victoires Card-Jitsu</span>
+          <span className="font-mono">{player.cjWins ?? 0}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Série de connexion</span>
+          <span className="font-mono text-orange-300">{player.loginStreak ?? 0} 🔥</span>
+        </div>
+        {(player.prestigeLevel ?? 0) > 0 && (
+          <div className="flex justify-between">
+            <span>Rituel du Néant</span>
+            <span className="font-mono text-purple-300">✦{player.prestigeLevel}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded bg-black/20 p-3">
+        <h3 className="mb-2 font-bold text-white">🪓 Métiers</h3>
+        <div className="flex justify-between">
+          <span>Niveau de récolte</span>
+          <span className="font-mono">{farmLvl}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Niveau d'artisanat</span>
+          <span className="font-mono">{craftLvl}</span>
         </div>
       </div>
 

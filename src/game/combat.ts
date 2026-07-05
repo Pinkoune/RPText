@@ -1,5 +1,6 @@
 import type { PlayerState, MonsterDef } from './types';
 import { deriveStats, grantXp, addItem, applyBonuses } from './player';
+import { BIOMES } from './biomes';
 import { item } from './items';
 import { PHASE_MODIFIERS, currentPhase } from './daynight';
 import { addQuestMetric } from './quests';
@@ -195,6 +196,7 @@ export interface HuntEncounter {
   monster: MonsterDef;
   id: number;
   isAdventure?: boolean;
+  isMiniboss?: boolean;
 }
 
 export interface HuntRewards {
@@ -216,7 +218,11 @@ export function combatTurn(
   php0: number,
   mhp0: number,
   action: HuntAction,
-  opts: { activeSkill?: ActiveSkillDef; potionHeal?: number } = {},
+  opts: {
+    activeSkill?: ActiveSkillDef;
+    potionHeal?: number;
+    setProc?: { setId: string; name: string; icon: string; chance: number; kind: 'burn' | 'chill' | 'heal' | 'shield' | 'extra'; power: number };
+  } = {},
   state: CombatState = freshCombatState(),
 ): TurnResult {
   let php = php0;
@@ -295,6 +301,31 @@ export function combatTurn(
     }
   }
 
+  // ── Proc de set (3 pièces équipées) : se déclenche sur une action offensive ──
+  if (opts.setProc && action !== 'flee' && action !== 'potion' && Math.random() < opts.setProc.chance) {
+    const sp = opts.setProc;
+    if (sp.kind === 'burn') {
+      state.burn = Math.max(state.burn, 2);
+      state.burnPow = Math.max(state.burnPow, Math.max(1, Math.round(stats.atk * sp.power)));
+      if (mhp > 0) events.push({ text: `${sp.icon} ${sp.name} : ${monster.name} prend feu !`, side: 'you' });
+    } else if (sp.kind === 'chill') {
+      state.chill = Math.max(state.chill, 2);
+      if (mhp > 0) events.push({ text: `${sp.icon} ${sp.name} : ${monster.name} est gelé !`, side: 'you' });
+    } else if (sp.kind === 'heal') {
+      const heal = Math.max(1, Math.round(maxHp * sp.power));
+      php = Math.min(maxHp, php + heal);
+      events.push({ text: `${sp.icon} ${sp.name} : +${heal} PV.`, side: 'info' });
+    } else if (sp.kind === 'shield') {
+      const amt = Math.max(1, Math.round(maxHp * sp.power));
+      state.shield += amt;
+      events.push({ text: `${sp.icon} ${sp.name} : bouclier +${amt} PV.`, side: 'info' });
+    } else if (sp.kind === 'extra' && mhp > 0) {
+      const dmg = Math.max(1, Math.round(stats.atk * sp.power));
+      mhp = Math.max(0, mhp - dmg);
+      events.push({ text: `${sp.icon} ${sp.name} : +${dmg} dégâts !`, side: 'you' });
+    }
+  }
+
   if (mhp <= 0) return { events, php, mhp: 0, fled, abilityUsed, hitsDealt, hitsTaken, state };
 
   // ── Phase monstre (plus dangereux : la défense ne mitige qu'à 80%) ──
@@ -361,8 +392,10 @@ export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRe
   const phase = currentPhase();
   const mod = PHASE_MODIFIERS[phase];
   
+  const biome = BIOMES[p.biome];
+  const biomeXpMult = biome?.xpMult ?? 1.0;
   const base = {
-    xp: Math.round(monster.xp * mod.xp),
+    xp: Math.round(monster.xp * mod.xp * biomeXpMult),
     gold: Math.round(roll(monster.gold[0], monster.gold[1]) * mod.gold)
   };
   const { xp, gold } = applyBonuses(p, base);

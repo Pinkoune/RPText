@@ -18,6 +18,10 @@ export interface Listing {
   buyerUid?: string;
   createdAt: number;
   soldAt?: number;
+  /** Instance d'équipement : étoiles/durabilité/runes voyagent avec l'objet. */
+  stars?: number;
+  durability?: number;
+  enchants?: string[];
 }
 
 // ── Garde-fous anti-abus ─────────────────────────────────────────────────
@@ -32,16 +36,22 @@ export async function listItem(
   seller: { uid: string; name: string },
   itemId: string,
   price: number,
+  extra?: { stars?: number; durability?: number; enchants?: string[] },
 ): Promise<void> {
   if (!db) throw new Error('offline');
-  await addDoc(collection(db, 'market'), {
+  const doc: Record<string, unknown> = {
     sellerUid: seller.uid,
     sellerName: seller.name,
     itemId,
     price,
     status: 'active',
     createdAt: Date.now(),
-  });
+  };
+  // Firestore refuse `undefined` : on n'ajoute les champs que s'ils existent.
+  if (extra?.stars !== undefined) doc.stars = extra.stars;
+  if (extra?.durability !== undefined) doc.durability = extra.durability;
+  if (extra?.enchants && extra.enchants.length) doc.enchants = extra.enchants;
+  await addDoc(collection(db, 'market'), doc);
 }
 
 export function listenMarket(cb: (listings: Listing[]) => void): () => void {

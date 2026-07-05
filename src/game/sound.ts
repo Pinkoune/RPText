@@ -79,18 +79,83 @@ const BIOME_WAVE: Partial<Record<BiomeId, OscillatorType>> = {
   desert: 'sawtooth',
   swamp: 'sine',
   frozen: 'triangle',
+  volcano: 'sawtooth',
 };
+
+// Tempo de l'arpège (ms entre deux notes), une ambiance par biome.
+const BIOME_TEMPO: Partial<Record<BiomeId, number>> = {
+  forest: 900,
+  plains: 800,
+  mountains: 1000,
+  desert: 850,
+  swamp: 1300,
+  frozen: 1700,
+  volcano: 550,
+};
+
+// Motif d'arpège : indices dans l'accord, monte puis redescend (mélodique,
+// pas une note aléatoire isolée comme avant).
+const ARP_PATTERN = [0, 1, 2, 3, 2, 1];
+
+interface ArpHandle {
+  stop: () => void;
+}
 
 interface Ambient {
   oscs: OscillatorNode[];
   gains: GainNode[];
   master: GainNode;
-  arp: ReturnType<typeof setInterval>;
+  arp: ArpHandle;
+  biome: BiomeId;
 }
 
 let ambient: Ambient | null = null;
 let lastAmbient: { phase: Phase; biome: BiomeId } | null = null;
 let gestureHooked = false;
+let arpStep = 0;
+
+/**
+ * (Re)démarre l'arpège au tempo du biome courant. Humanisé plutôt que
+ * métronomique : tempo qui varie légèrement, silences occasionnels, note
+ * parfois écourtée/allongée — évite l'effet "boucle qui tourne en rond".
+ */
+function scheduleArp(biome: BiomeId): ArpHandle {
+  const tempo = BIOME_TEMPO[biome] ?? 900;
+  const wave = BIOME_WAVE[biome] ?? 'sine';
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let stopped = false;
+
+  function tick() {
+    if (stopped) return;
+    if (!muted && ambient && lastAmbient) {
+      const c = CHORDS[lastAmbient.phase];
+      const phraseEnd = arpStep > 0 && arpStep % ARP_PATTERN.length === 0;
+      // ~1 battement sur 4 est un silence : la ligne respire au lieu de tourner en boucle.
+      if (Math.random() > 0.25) {
+        const idx = ARP_PATTERN[arpStep % ARP_PATTERN.length];
+        const f = c[idx] * 2; // une octave plus haut que l'accord tenu
+        const gain = 0.024 + Math.random() * 0.018;
+        const dur = tempo * (0.55 + Math.random() * 0.35);
+        beep(f, dur, wave, 0, gain);
+      }
+      arpStep++;
+      // Petite pause supplémentaire à chaque fin de phrase (montée+descente complète).
+      const jitter = 0.8 + Math.random() * 0.4;
+      const gap = tempo * jitter * (phraseEnd ? 1.7 : 1);
+      timeoutId = setTimeout(tick, gap);
+    } else {
+      timeoutId = setTimeout(tick, tempo);
+    }
+  }
+
+  timeoutId = setTimeout(tick, tempo);
+  return {
+    stop: () => {
+      stopped = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    },
+  };
+}
 
 function startAmbient(phase: Phase, biome: BiomeId) {
   lastAmbient = { phase, biome };
@@ -129,15 +194,10 @@ function startAmbient(phase: Phase, biome: BiomeId) {
     gains.push(g);
   });
 
-  // Arpège doux occasionnel (note tenue une octave plus haut).
-  const arp = setInterval(() => {
-    if (muted || !ambient) return;
-    const c = CHORDS[lastAmbient!.phase];
-    const f = c[Math.floor(Math.random() * c.length)] * 2;
-    beep(f, 900, 'sine', 0, 0.03);
-  }, 4200);
+  arpStep = 0;
+  const arp = scheduleArp(biome);
 
-  ambient = { oscs, gains, master, arp };
+  ambient = { oscs, gains, master, arp, biome };
 }
 
 function updateAmbient(phase: Phase, biome: BiomeId) {
@@ -150,6 +210,12 @@ function updateAmbient(phase: Phase, biome: BiomeId) {
     osc.type = wave;
     if (chord[i] != null) osc.frequency.exponentialRampToValueAtTime(chord[i], ac.currentTime + 2.5);
   });
+  // Nouveau biome = nouveau tempo/timbre d'arpège : on relance la boucle.
+  if (ambient.biome !== biome) {
+    ambient.arp.stop();
+    ambient.arp = scheduleArp(biome);
+    ambient.biome = biome;
+  }
 }
 
 function stopAmbient() {
@@ -157,7 +223,7 @@ function stopAmbient() {
   const ac = getCtx();
   const a = ambient;
   ambient = null;
-  clearInterval(a.arp);
+  a.arp.stop();
   try {
     if (ac) a.master.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 1);
     a.oscs.forEach((o) => o.stop((ac?.currentTime ?? 0) + 1.2));

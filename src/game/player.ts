@@ -1,33 +1,55 @@
 import type { PlayerState, ClassId, Stats, QuestState, ItemDef } from './types';
-import { CLASSES, xpToNext } from './classes';
+import { CLASSES, xpToNext, xpToNextV3, MAX_LEVEL } from './classes';
 import { getTeamBonus, getGuildBonus } from '../firebase/groupsService';
-import { item } from './items';
+import { item, isGearId, hasInstanceTag, mintInstanceId, addItemToInventory } from './items';
 import { RECIPES, getCraftLevel } from './crafting';
 import { BIOMES, BIOME_LIST } from './biomes';
 import { familiarBonus, familiarAbility } from './familiars';
 import { talentMods } from './talents';
 import { activeEventEffect } from './events';
 import { ensureSeason, seasonId } from './season';
+import { prestigeBonus } from './prestige';
 
 /** Incrémenter force un reset unique des talents de tous les joueurs (bugfix). */
 export const TALENT_RESET_VERSION = 3;
 
-/** Arme de départ selon la classe. */
+/** Arme de départ selon la classe (compare à la classe DE BASE, pas la sous-classe). */
 export function starterWeapon(classId: ClassId): string {
-  return classId === 'mage' || classId === 'healer' ? 'apprentice_wand' : 'rusty_sword';
+  const base = CLASSES[classId]?.parent ?? classId;
+  return base === 'mage' || base === 'healer' ? 'apprentice_wand' : 'rusty_sword';
+}
+
+export function getEquipError(p: PlayerState, it: ItemDef): string | null {
+  if (p.ignoreRestrictions) return null;
+  
+  if (it.id === 'void_reaver') return "Cette arme semble brisée...";
+
+  const ALLOWED_SLOTS = ['weapon', 'armor', 'trinket', 'tool', 'profession_armor'];
+  if (!ALLOWED_SLOTS.includes(it.slot)) return "Cet objet ne peut pas être équipé.";
+
+  // Restriction de classe : les objets listent les classes de BASE. Après une
+  // ascension, on compare donc à la classe parente (paladin → warrior, etc.).
+  if (it.classes) {
+    const family = CLASSES[p.classId]?.parent ?? p.classId;
+    if (!it.classes.includes(p.classId) && !it.classes.includes(family)) {
+      return `Ta classe (${CLASSES[p.classId]?.name ?? p.classId}) ne peut pas équiper ${it.name}.`;
+    }
+  }
+  
+  const r = RECIPES.find(x => x.output === it.id);
+  if (r) {
+    const craftLvl = getCraftLevel(p.craftXp || 0).level;
+    if (craftLvl < r.levelReq) return `Niveau d'artisanat ${r.levelReq} requis.`;
+  } else if (it.reqLevel && p.level < it.reqLevel) {
+    return `Niveau ${it.reqLevel} requis.`;
+  }
+  
+  return null;
 }
 
 /** Le joueur peut-il équiper cet objet (restriction de classe sur les armes) ? */
 export function canEquip(p: PlayerState, it: ItemDef): boolean {
-  // Invalider l'ancienne faucheuse du vide (sans suffixe de qualité)
-  if (it.id === 'void_reaver') return false;
-  // Invalider les objets cheatés de l'ancienne boutique s'ils n'ont pas été craftés (pas de suffixe de qualité)
-  const OP_SHOP_ITEMS = ['frost_glaive', 'frost_scepter', 'steel_plate', 'frost_plate', 'lucky_coin', 'gambler_ring', 'iron_spear', 'crystal_staff', 'ember_axe'];
-  if (OP_SHOP_ITEMS.includes(it.id)) return false;
-  const ALLOWED_SLOTS = ['weapon', 'armor', 'trinket', 'tool', 'profession_armor'];
-  if (!ALLOWED_SLOTS.includes(it.slot)) return false;
-  if (it.classes && !it.classes.includes(p.classId)) return false;
-  return true;
+  return getEquipError(p, it) === null;
 }
 
 export function freshQuestState(now = Date.now()): QuestState {
@@ -39,9 +61,20 @@ export function freshQuestState(now = Date.now()): QuestState {
 
 /** Complète les champs manquants des anciennes sauvegardes (migration douce). */
 export function migratePlayer(p: PlayerState): PlayerState {
-  // (v2) on utilisait l'ancienne courbe, mais maintenant tout a migré
-  if (p.curveVersion !== 2) {
-    p.curveVersion = 2;
+  // Courbe v4 (niveau max 50) : reconstitue l'XP totale sous l'ancienne courbe (v3,
+  // plafond 30) puis re-nivelle sous la nouvelle. Une seule fois par joueur.
+  if (p.curveVersion !== 4) {
+    let totalXp = Math.max(0, p.xp || 0);
+    for (let l = 1; l < (p.level || 1); l++) {
+      const step = xpToNextV3(l);
+      if (Number.isFinite(step)) totalXp += step;
+    }
+    let lvl = 1;
+    let rem = totalXp;
+    while (lvl < MAX_LEVEL && rem >= xpToNext(lvl)) { rem -= xpToNext(lvl); lvl += 1; }
+    p.level = lvl;
+    p.xp = Math.max(0, Math.floor(rem));
+    p.curveVersion = 4;
   }
   if (!p.quests) p.quests = freshQuestState();
   if (!p.settledDuels) p.settledDuels = [];
@@ -49,8 +82,17 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (!p.settledSales) p.settledSales = [];
   if (!p.settledCJDuels) p.settledCJDuels = [];
   if (!p.settledDungeons) p.settledDungeons = [];
+  if (!p.lockedItems) p.lockedItems = [];
+  if (!p.settledEndless) p.settledEndless = [];
+  if (p.endlessSessionId === undefined) p.endlessSessionId = null;
+  if (!p.settledPvpDuels) p.settledPvpDuels = [];
+  if (p.pvpDuelSessionId === undefined) p.pvpDuelSessionId = null;
+  if (p.prestigeLevel === undefined) p.prestigeLevel = 0;
+  if (p.classChangeTokens === undefined) p.classChangeTokens = 0;
   if (p.cjWins == null) p.cjWins = 0;
   if (p.teamId === undefined) p.teamId = null;
+  if (p.endlessBest === undefined) p.endlessBest = 0;
+  if (!p.enchants) p.enchants = { weapon: [], armor: [], trinket: [] };
   
   // -- V2 Équipement --
   if (!p.gearDurability) {
@@ -76,7 +118,63 @@ export function migratePlayer(p: PlayerState): PlayerState {
       delete p.gearStars[slot as string];
     }
   }
-  
+
+  // -- Instanciation des équipements (une passe unique) --
+  // Chaque pièce de gear reçoit une clé d'instance `:i<iid>` (fini le partage
+  // d'étoiles/durabilité entre copies ; les stats voyagent à la revente).
+  if (!(p as any).instancedGearVersion) {
+    const gs = { ...p.gearStars };
+    const gd = { ...p.gearDurability };
+    // 1) Éclater le gear empilé de l'inventaire en exemplaires uniques.
+    for (const [key, qty] of Object.entries({ ...p.inventory })) {
+      if (!isGearId(key) || hasInstanceTag(key)) continue;
+      delete p.inventory[key];
+      for (let i = 0; i < (qty as number); i++) {
+        const iid = mintInstanceId(key);
+        p.inventory[iid] = 1;
+        if (gs[key] !== undefined) p.gearStars[iid] = gs[key];
+        if (gd[key] !== undefined) p.gearDurability[iid] = gd[key];
+      }
+      delete p.gearStars[key];
+      delete p.gearDurability[key];
+    }
+    // 2) Instancier le gear équipé (référence par clé d'instance).
+    for (const slot of ['weapon', 'armor', 'trinket', 'tool', 'profession_armor'] as const) {
+      const key = p.equipped[slot];
+      if (!key || hasInstanceTag(key)) continue;
+      const iid = mintInstanceId(key);
+      p.equipped[slot] = iid;
+      const def = item(key);
+      if (gs[key] !== undefined) p.gearStars[iid] = gs[key];
+      if (gd[key] !== undefined) p.gearDurability[iid] = gd[key];
+      else if (def?.maxDurability) p.gearDurability[iid] = def.maxDurability;
+      delete p.gearStars[key];
+      delete p.gearDurability[key];
+    }
+    (p as any).instancedGearVersion = 1;
+  }
+
+  // Enchants : migrer les runes keyées par slot vers la clé d'instance équipée
+  // (elles suivent désormais l'objet). Passe unique, après l'instanciation.
+  if (!(p as any).enchantsInstancedVersion) {
+    if (p.enchants) {
+      for (const slot of ['weapon', 'armor', 'trinket'] as const) {
+        const arr = p.enchants[slot];
+        if (!arr || arr.length === 0) { delete p.enchants[slot]; continue; }
+        const key = p.equipped[slot];
+        if (key && key !== slot) {
+          p.enchants[key] = [...(p.enchants[key] ?? []), ...arr];
+          delete p.enchants[slot];
+        } else {
+          // Aucun objet équipé : on rend les runes au sac pour ne pas les perdre.
+          for (const runeId of arr) p.inventory[runeId] = (p.inventory[runeId] ?? 0) + 1;
+          delete p.enchants[slot];
+        }
+      }
+    }
+    (p as any).enchantsInstancedVersion = 1;
+  }
+
   // -- V3 Normalisation anti-carry --
   // Certains joueurs bas niveau ont reçu énormément d'XP en se faisant "carry" dans des donjons HL.
   // On recalcule une "XP max légitime" basée sur leurs faits d'armes pour corriger les niveaux absurdes.
@@ -118,6 +216,17 @@ export function migratePlayer(p: PlayerState): PlayerState {
     }
     
     (p as any).levelNormalizedVersion = 2;
+  }
+
+  // Garde-fou : une sous-classe (ascension) exige le niveau 20. Si le joueur se
+  // retrouve sous ce seuil (baisse de niveau via admin, bug, etc.) alors qu'il a
+  // une sous-classe, on le renvoie de force sur sa classe de BASE et on rend les
+  // points investis dans l'arbre (reset complet, comme un ascendPlayer inversé).
+  if (p.level < 20 && CLASSES[p.classId]?.parent) {
+    p.classId = CLASSES[p.classId].parent!;
+    p.talents = {};
+    p.talentPoints = Math.max(0, p.level - 1);
+    p.equippedSkills = [];
   }
 
   if (p.equipped.tool === undefined) p.equipped.tool = null;
@@ -258,12 +367,7 @@ export function migratePlayer(p: PlayerState): PlayerState {
       continue;
     }
     
-    let isInvalid = !canEquip(p, it);
-    if (!isInvalid) {
-      const r = RECIPES.find(x => x.output === it.id);
-      if (r && craftLvl < r.levelReq) isInvalid = true;
-      if (!r && it.reqLevel && p.level < it.reqLevel) isInvalid = true;
-    }
+    let isInvalid = getEquipError(p, it) !== null;
     
     if (isInvalid) {
       addItem(p, eqId, 1);
@@ -272,10 +376,18 @@ export function migratePlayer(p: PlayerState): PlayerState {
   }
 
   if (!p.equipped.weapon) {
+    // Instancing-aware : on frappe une instance neuve de l'arme de départ et on
+    // l'équipe directement. (L'ancien addItem+removeItem laissait une instance
+    // parasite dans le sac car addItem mint une clé unique `:iXXX` que removeItem
+    // sur la clé base ne retirait pas → duplication de l'épée rouillée.)
     const start = starterWeapon(p.classId);
-    if ((p.inventory[start] ?? 0) <= 0) addItem(p, start, 1);
-    removeItem(p, start, 1);
-    p.equipped.weapon = start;
+    const key = mintInstanceId(start);
+    p.equipped.weapon = key;
+    const def = item(start);
+    if (def?.maxDurability) {
+      if (!p.gearDurability) p.gearDurability = {};
+      p.gearDurability[key] = def.maxDurability;
+    }
   }
   return p;
 }
@@ -287,13 +399,12 @@ export function createPlayer(
   classId: ClassId,
 ): PlayerState {
   const cls = CLASSES[classId];
-  const now = Date.now();
   const weapon = starterWeapon(classId);
-  return {
+  const p: PlayerState = {
     uid,
     name,
     title: 'Aventurier débutant',
-    photoURL,
+    photoURL: photoURL ?? null,
     classId,
     level: 1,
     xp: 0,
@@ -303,6 +414,12 @@ export function createPlayer(
     hp: cls.base.maxHp,
     inventory: { potion: 2 },
     equipped: { weapon, armor: null, trinket: null, tool: null, profession_armor: null },
+    endlessBest: 0,
+    endlessSessionId: null,
+    settledEndless: [],
+    pvpDuelSessionId: null,
+    settledPvpDuels: [],
+    enchants: { weapon: [], armor: [], trinket: [] },
     biome: 'forest',
     unlockedBiomes: ['forest'],
     cooldowns: {},
@@ -316,7 +433,7 @@ export function createPlayer(
       mobsKilled: {},
       mobsEncountered: {},
     },
-    quests: freshQuestState(now),
+    quests: freshQuestState(Date.now()),
     settledDuels: [],
     settledCJDuels: [],
     settledDungeons: [],
@@ -343,12 +460,25 @@ export function createPlayer(
     seasonPoints: 0,
     gearDurability: { [weapon]: item(weapon)?.maxDurability ?? 0 },
     gearStars: {},
-    createdAt: now,
-    lastSeen: now,
+    createdAt: Date.now(),
+    lastSeen: Date.now(),
   };
+
+  if (typeof localStorage !== 'undefined') {
+    const isLegacy = localStorage.getItem(`rptext.legacy.${uid}`) === 'true';
+    if (isLegacy) {
+      p.isLegacy = true;
+      p.title = 'Pionnier';
+      p.unlockedTitles = ['Pionnier'];
+      p.inventory['pioneer_medallion'] = 1;
+      localStorage.removeItem(`rptext.legacy.${uid}`);
+    }
+  }
+
+  return p;
 }
 
-export function deriveStats(p: PlayerState): Stats {
+export function deriveStats(p: PlayerState, skipEquipCheck = false): Stats {
   const cls = CLASSES[p.classId];
   const lv = p.level - 1;
   let maxHp = cls.base.maxHp + cls.growth.maxHp * lv;
@@ -372,10 +502,15 @@ export function deriveStats(p: PlayerState): Stats {
       if (it) {
         const dur = p.gearDurability ? (p.gearDurability[id] ?? it.maxDurability ?? 1) : 1;
         const broken = it.maxDurability && dur <= 0;
-        if (!broken && canEquip(p, it)) {
+        if (!broken && (skipEquipCheck || canEquip(p, it))) {
           if (slot === 'weapon') {
             weaponElement = it.element;
             weaponDmgType = it.dmgType;
+            // Rune de Transmutation : inverse le type de dégâts (physique ↔ magique)
+            // → contourne les résistances physiques/magiques d'un monstre.
+            if (weaponDmgType && p.enchants?.[id]?.includes('rune_shift')) {
+              weaponDmgType = weaponDmgType === 'physical' ? 'magical' : 'physical';
+            }
           }
           if (slot === 'armor') {
             armorElement = it.element;
@@ -434,9 +569,34 @@ export function deriveStats(p: PlayerState): Stats {
     }
   }
 
-  atk = Math.round(atk * (1 + mods.atkPct + evt.atkPct + setAtkPct));
-  def = Math.round(def * (1 + mods.defPct + evt.defPct + setDefPct));
-  maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct + setHpPct));
+  // Bonus des enchantements
+  let enchAtkPct = 0;
+  let enchDefPct = 0;
+  let enchHpPct = 0;
+  if (p.enchants) {
+    for (const slot of ['weapon', 'armor', 'trinket'] as const) {
+      const key = p.equipped[slot];
+      if (key && p.enchants[key]) {
+        for (const runeId of p.enchants[key]) {
+          if (runeId === 'rune_atk_1') enchAtkPct += 0.05;
+          if (runeId === 'rune_atk_2') enchAtkPct += 0.10;
+          if (runeId === 'rune_def_1') enchDefPct += 0.05;
+          if (runeId === 'rune_def_2') enchDefPct += 0.10;
+          if (runeId === 'rune_hp_1') enchHpPct += 0.05;
+          if (runeId === 'rune_hp_2') enchHpPct += 0.10;
+        }
+      }
+    }
+  }
+
+  const prestige = prestigeBonus(p.prestigeAura);
+  // Bonus permanent de prestige (rituel Nv.50) : +8% ATK/DEF/PV par prestige,
+  // plafonné à 5 (voir ascension.ts PRESTIGE_BONUS_PER_LEVEL / MAX_PRESTIGE_STACK).
+  const presMult = 1 + Math.min(p.prestigeLevel ?? 0, 5) * 0.08;
+  atk = Math.round(atk * (1 + mods.atkPct + evt.atkPct + setAtkPct + enchAtkPct + prestige.atkPct) * presMult);
+  def = Math.round(def * (1 + mods.defPct + evt.defPct + setDefPct + enchDefPct + prestige.defPct) * presMult);
+  maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct + setHpPct + enchHpPct + prestige.hpPct) * presMult);
+
 
   return { level: p.level, maxHp, atk, def, hp: Math.min(p.hp, maxHp), maxCp, maxGp, weaponElement,
     weaponDmgType,
@@ -468,6 +628,26 @@ export function equipItem(p: PlayerState, id: string): boolean {
   return true;
 }
 
+/** Classes de base (non-ascensions) — options d'un jeton de changement de classe. */
+export const BASE_CLASSES: ClassId[] = (Object.keys(CLASSES) as ClassId[]).filter((id) => !CLASSES[id].parent);
+
+/**
+ * Change la classe de BASE du joueur (via jeton de prestige). Reset des talents
+ * et compétences, arme de départ de la nouvelle classe (l'ancienne arme retourne
+ * au sac). Ne touche pas au niveau/XP.
+ */
+export function changeBaseClass(p: PlayerState, newClassId: ClassId): void {
+  if (!BASE_CLASSES.includes(newClassId)) return;
+  p.classId = newClassId;
+  p.talents = {};
+  p.talentPoints = Math.max(0, p.level - 1);
+  p.equippedSkills = [];
+  const prev = p.equipped.weapon;
+  if (prev) addItem(p, prev, 1);
+  const key = mintInstanceId(starterWeapon(newClassId));
+  p.equipped.weapon = key;
+}
+
 /** Déséquipe un slot (remet l'objet dans le sac). */
 export function unequipItem(p: PlayerState, slot: 'weapon' | 'armor' | 'trinket' | 'tool' | 'profession_armor'): void {
   const prev = p.equipped[slot];
@@ -484,12 +664,15 @@ export function applyBonuses(p: PlayerState, base: { xp: number; gold: number })
   const teamMult = fin(getTeamBonus(p.teamId), 1);
   const guildMult = fin(getGuildBonus(p.guildId), 1);
   const evt = activeEventEffect(p.biome);
+  const prestige = prestigeBonus(p.prestigeAura);
+  // +10% XP/Or par prestige (plafonné à 5) — voir ascension.ts.
+  const presMult = 1 + Math.min(p.prestigeLevel ?? 0, 5) * 0.10;
   const baseXp = fin(base.xp, 0);
   const baseGold = fin(base.gold, 0);
   // Seule l'XP bénéficie du bonus de guilde
   return {
-    xp: Math.floor(baseXp * teamMult * guildMult * (1 + fin(evt.xpMult, 0))),
-    gold: Math.floor(baseGold * teamMult * (1 + fin(evt.goldMult, 0))),
+    xp: Math.floor(baseXp * teamMult * guildMult * (1 + fin(evt.xpMult, 0) + prestige.xpPct) * presMult),
+    gold: Math.floor(baseGold * teamMult * (1 + fin(evt.goldMult, 0) + prestige.goldPct) * presMult),
   };
 }
 
@@ -511,7 +694,10 @@ export function grantXp(p: PlayerState, amount: number): number {
 }
 
 export function addItem(p: PlayerState, id: string, qty = 1) {
-  p.inventory[id] = (p.inventory[id] ?? 0) + qty;
+  // Équipement : chaque exemplaire reçoit une clé d'instance unique (jamais
+  // empilé) → étoiles/durabilité propres à la pièce, conservées à la revente.
+  // Une clé déjà instanciée (ex: retour d'équipement, achat marché) est gardée.
+  addItemToInventory(p.inventory, id, qty);
 }
 
 export function removeItem(p: PlayerState, id: string, qty = 1): boolean {
@@ -531,15 +717,18 @@ export function cooldownLeft(p: PlayerState, key: string, durationMs: number): n
 /** Réduit la durabilité des équipements. Appelée après un combat (chasse, donjon). */
 export function reduceDurability(p: PlayerState, hitsTaken: number, hitsDealt: number) {
   if (!p.gearDurability) return;
+
+  const weaponLoss = hitsDealt > 0 ? Math.max(1, Math.floor(hitsDealt / 3)) : 0;
+  const armorLoss = hitsTaken > 0 ? Math.max(1, Math.floor(hitsTaken / 3)) : 0;
   
   if (p.equipped.weapon && (p.gearDurability[p.equipped.weapon] ?? 0) > 0) {
-    p.gearDurability[p.equipped.weapon] = Math.max(0, p.gearDurability[p.equipped.weapon] - hitsDealt);
+    p.gearDurability[p.equipped.weapon] = Math.max(0, p.gearDurability[p.equipped.weapon] - weaponLoss);
   }
   if (p.equipped.armor && (p.gearDurability[p.equipped.armor] ?? 0) > 0) {
-    p.gearDurability[p.equipped.armor] = Math.max(0, p.gearDurability[p.equipped.armor] - hitsTaken);
+    p.gearDurability[p.equipped.armor] = Math.max(0, p.gearDurability[p.equipped.armor] - armorLoss);
   }
   if (p.equipped.trinket && (p.gearDurability[p.equipped.trinket] ?? 0) > 0) {
-    p.gearDurability[p.equipped.trinket] = Math.max(0, p.gearDurability[p.equipped.trinket] - hitsTaken);
+    p.gearDurability[p.equipped.trinket] = Math.max(0, p.gearDurability[p.equipped.trinket] - armorLoss);
   }
 }
 

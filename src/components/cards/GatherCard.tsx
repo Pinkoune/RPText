@@ -5,6 +5,7 @@ import { BIOMES } from '../../game/biomes';
 import { item } from '../../game/items';
 import { playSound } from '../../game/sound';
 import { deriveStats } from '../../game/player';
+import ItemIcon from '../ItemIcon';
 
 export default function GatherCard({ initialSkillId }: { initialSkillId?: string }) {
   const p = useGame((s) => s.player);
@@ -15,7 +16,7 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
   const [active, setActive] = useState<GatherSkill | null>(null);
   const [integrity, setIntegrity] = useState(0);
   const [gp, setGp] = useState(0);
-  const [lootLog, setLootLog] = useState<{ id: string; qty: number; emoji: string }[]>([]);
+  const [lootLog, setLootLog] = useState<{ id: string; qty: number }[]>([]);
 
   const didInit = useRef(false);
 
@@ -87,7 +88,7 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
 
       if (resId) {
         playSound(leveled ? 'levelup' : 'coin');
-        setLootLog((prev) => [...prev, { id: resId, qty: resQty, emoji: item(resId)!.icon }]);
+        setLootLog((prev) => [...prev, { id: resId, qty: resQty }]);
         if (leveled) toast(`⬆️ Niveau de farm ${newLvl} !`, 'gold');
       }
     } else {
@@ -175,7 +176,9 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
             <p className="mb-1 text-slate-400 text-xs">Butin extrait :</p>
             <div className="flex flex-wrap justify-center gap-2">
               {lootLog.map((l, i) => (
-                <span key={i} className="rounded bg-black/40 px-2 py-1">{l.emoji} +{l.qty}</span>
+                <span key={i} className="inline-flex items-center gap-1 rounded bg-black/40 px-2 py-1">
+                  <ItemIcon id={l.id} size={14} /> +{l.qty}
+                </span>
               ))}
             </div>
           </div>
@@ -227,8 +230,8 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
                 {drops.map((d) => {
                   const locked = d.minLvl != null && farm.level < d.minLvl;
                   return (
-                    <span key={d.id} className={`rounded px-1.5 py-0.5 ${locked ? 'bg-black/40 text-slate-600' : 'bg-black/30 text-slate-300'}`}>
-                      {locked ? '🔒' : item(d.id)!.icon} {item(d.id)!.name}{locked ? ` (farm ${d.minLvl})` : ''}
+                    <span key={d.id} className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${locked ? 'bg-black/40 text-slate-600' : 'bg-black/30 text-slate-300'}`}>
+                      {locked ? '🔒' : <ItemIcon id={d.id} size={14} />} {item(d.id)!.name}{locked ? ` (farm ${d.minLvl})` : ''}
                     </span>
                   );
                 })}

@@ -27,7 +27,10 @@ export default function CooldownCard() {
   const entries: { icon: string; label: string; left: number }[] = [
     { icon: '⚔️', label: 'Chasse', left: cooldownLeft(p, 'hunt', HUNT_COOLDOWN) },
     { icon: '🔥', label: 'Aventure', left: cooldownLeft(p, 'adventure', 15 * 60 * 1000) },
-    { icon: '🏰', label: 'Donjon', left: cooldownLeft(p, 'dungeon', 60 * 60 * 1000) },
+    { icon: '👹', label: 'Mini-boss', left: cooldownLeft(p, 'miniboss', 12 * 60 * 60 * 1000) },
+    { icon: '🎯', label: 'Contrat (mercenaire)', left: cooldownLeft(p, 'mercenaire', 6 * 60 * 60 * 1000) },
+    { icon: '🗿', label: 'Sanctuaire', left: cooldownLeft(p, 'sanctuaire', 24 * 60 * 60 * 1000) },
+    { icon: '🕳️', label: 'Rituel du Néant', left: Math.max(0, (p.ascensionCooldownUntil ?? 0) - Date.now()) },
     { icon: '🐲', label: 'Attaque du boss', left: cooldownLeft(p, 'boss', BOSS_ATTACK_CD) },
     { icon: '🌾', label: 'Récolte', left: cooldownLeft(p, 'gather', GATHER_COOLDOWN) },
     { icon: '🎁', label: 'Récompense quotidienne', left: cooldownLeft(p, 'daily', DAILY_COOLDOWN) },
@@ -35,6 +38,7 @@ export default function CooldownCard() {
   for (const d of DUNGEONS) {
     entries.push({ icon: d.emoji, label: d.name, left: cooldownLeft(p, `dungeon:${d.id}`, d.cooldownMs) });
   }
+  entries.push({ icon: '🏰', label: 'Boss de guilde', left: cooldownLeft(p, 'guildboss', 30 * 60 * 1000) });
 
   const active = entries.filter((e) => e.left > 0).sort((a, b) => a.left - b.left);
 

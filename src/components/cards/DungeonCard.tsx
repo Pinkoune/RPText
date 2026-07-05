@@ -1,7 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { useGame } from '../../store/gameStore';
+import { useUi } from '../../store/uiStore';
 import { DUNGEONS, dungeonCooldownLeft, type DungeonDef } from '../../game/dungeons';
 import { item, RARITY_COLOR } from '../../game/items';
+import { CLASSES } from '../../game/classes';
+import { auraColor } from '../../game/prestige';
+import ItemIcon from '../ItemIcon';
 import { playSound } from '../../game/sound';
 import { deriveStats, applyBonuses, grantXp, addItem } from '../../game/player';
 import { talentMods, getAllActiveSkills } from '../../game/talents';
@@ -27,6 +31,7 @@ export default function DungeonCard() {
   const [session, setSession] = useState<DungeonSession | null>(null);
   const [allSessions, setAllSessions] = useState<DungeonSession[]>([]);
   const [showPotions, setShowPotions] = useState(false);
+  const [chestOpened, setChestOpened] = useState(false);
   const [, tick] = useState(0);
   const logEnd = useRef<HTMLDivElement>(null);
 
@@ -37,6 +42,30 @@ export default function DungeonCard() {
     const t = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // Auto-start du raid à l'échéance : TOUS les inscrits tentent (la transaction
+  // ne laisse qu'un seul vrai démarrage). Robuste même si l'hôte a fermé sa carte.
+  useEffect(() => {
+    if (!session || session.state !== 'lobby' || !session.raidStartsAt) return;
+    const def = DUNGEONS.find(d => d.id === session.dungeonId);
+    if (!def?.raid) return;
+    const iv = setInterval(() => {
+      if (Date.now() >= (session.raidStartsAt ?? 0)) {
+        void startDungeon(session.id, true);
+        clearInterval(iv);
+      }
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [session?.id, session?.state, session?.raidStartsAt, session?.dungeonId]);
+
+  // En-tête de fenêtre dynamique : « 🔱 Raid » (jaune) pendant un raid.
+  const inRaid = session?.dungeonId === 'raid_trials';
+  useEffect(() => {
+    const setChrome = useUi.getState().setChrome;
+    if (inRaid) setChrome('dungeon', { title: '🔱 Raid', accent: '#facc15' });
+    else setChrome('dungeon', {});
+    return () => useUi.getState().setChrome('dungeon', {});
+  }, [inRaid]);
 
   // Sync session
   useEffect(() => {
@@ -92,27 +121,27 @@ export default function DungeonCard() {
           d.settledDungeons = d.settledDungeons || [];
           d.settledDungeons.push(session.id);
           d.kills += def.stages.length;
-          // Clé de donjon : consommée pour doubler les récompenses de fin.
-          const useKey = (d.inventory['dungeon_key'] ?? 0) > 0;
-          const mult = useKey ? 2 : 1;
-          if (useKey) {
-            d.inventory['dungeon_key'] -= 1;
-            if (d.inventory['dungeon_key'] <= 0) delete d.inventory['dungeon_key'];
-          }
-          d.gold += gold * mult;
-          d.fateCoins += def.reward.fateCoins * mult;
-          d.gems += def.reward.gems * mult;
-          if (useKey) toast('🗝️ Clé de donjon utilisée : récompenses doublées !', 'gold');
-          toast(`Donjon terminé ! +${(gold * mult).toLocaleString()} 🪙 · +${xp.toLocaleString()} XP`, 'gold');
-          if (def.reward.fateCoins) toast(`+${def.reward.fateCoins * mult} 🎲`, 'gold');
-          if (def.reward.gems) toast(`+${def.reward.gems * mult} 💎`, 'gold');
-          // Le donjon le plus dur lâche une Âme de Boss (pour l'ascension de classe).
+          
+          d.gold += gold;
+          d.fateCoins += def.reward.fateCoins;
+          d.gems += def.reward.gems;
+          toast(`Donjon terminé ! +${gold.toLocaleString()} 🪙 · +${xp.toLocaleString()} XP`, 'gold');
+          if (def.reward.fateCoins) toast(`+${def.reward.fateCoins} 🎲`, 'gold');
+          if (def.reward.gems) toast(`+${def.reward.gems} 💎`, 'gold');
+          
           if (def.id === 'dragon_shrine') {
-            const souls = 1 * mult;
+            const souls = 1;
             d.inventory['boss_soul'] = (d.inventory['boss_soul'] ?? 0) + souls;
             toast(`+${souls} 💎 Âme de Boss !`, 'gold');
           }
           d.dungeonClears[def.id] = (d.dungeonClears[def.id] ?? 0) + 1;
+          
+          if (d.gearDurability) {
+            const loss = Math.max(1, Math.floor((session.roundCount || 1) / 3));
+            if (d.equipped.weapon && (d.gearDurability[d.equipped.weapon] ?? 0) > 0) d.gearDurability[d.equipped.weapon] = Math.max(0, d.gearDurability[d.equipped.weapon] - loss);
+            if (d.equipped.armor && (d.gearDurability[d.equipped.armor] ?? 0) > 0) d.gearDurability[d.equipped.armor] = Math.max(0, d.gearDurability[d.equipped.armor] - loss);
+            if (d.equipped.trinket && (d.gearDurability[d.equipped.trinket] ?? 0) > 0) d.gearDurability[d.equipped.trinket] = Math.max(0, d.gearDurability[d.equipped.trinket] - loss);
+          }
         });
         const levels = grantXp(useGame.getState().player!, xp);
         if (levels > 0) {
@@ -126,6 +155,12 @@ export default function DungeonCard() {
       mutate(d => {
         d.settledDungeons = d.settledDungeons || [];
         d.settledDungeons.push(session.id);
+        if (d.gearDurability) {
+          const loss = Math.max(1, Math.floor((session.roundCount || 1) / 3));
+          if (d.equipped.weapon && (d.gearDurability[d.equipped.weapon] ?? 0) > 0) d.gearDurability[d.equipped.weapon] = Math.max(0, d.gearDurability[d.equipped.weapon] - loss);
+          if (d.equipped.armor && (d.gearDurability[d.equipped.armor] ?? 0) > 0) d.gearDurability[d.equipped.armor] = Math.max(0, d.gearDurability[d.equipped.armor] - loss);
+          if (d.equipped.trinket && (d.gearDurability[d.equipped.trinket] ?? 0) > 0) d.gearDurability[d.equipped.trinket] = Math.max(0, d.gearDurability[d.equipped.trinket] - loss);
+        }
       });
       playSound('lose');
     }
@@ -142,7 +177,7 @@ export default function DungeonCard() {
     const stats = deriveStats(p!);
     const mods = talentMods(p!);
     try {
-      const id = await createDungeonLobby(p!.uid, p!.name, p!.classId, def.id, stats, mods, p!.level);
+      const id = await createDungeonLobby(p!.uid, p!.name, p!.classId, def.id, stats, mods, p!.level, p!.prestigeAura, p!.auraColorOn);
       mutate(d => { d.dungeonSessionId = id; });
       if (myTeam) await setTeamDungeon(myTeam.id, id);
     } catch (e: any) {
@@ -152,22 +187,34 @@ export default function DungeonCard() {
 
   async function joinLobby(id: string) {
     if (p!.hp <= 0) return toast('Soigne-toi d\'abord.', 'bad');
+    const targetSession = allSessions.find(s => s.id === id);
+    if (targetSession) {
+      const def = DUNGEONS.find(d => d.id === targetSession.dungeonId);
+      if (def && p!.level < def.minLevel) {
+        return toast(`Niveau ${def.minLevel} requis pour ce donjon.`, 'bad');
+      }
+    }
     const stats = deriveStats(p!);
     const mods = talentMods(p!);
     try {
-      await joinDungeon(id, p!.uid, p!.name, p!.classId, stats, mods, p!.level);
+      await joinDungeon(id, p!.uid, p!.name, p!.classId, stats, mods, p!.level, p!.prestigeAura, p!.auraColorOn);
       mutate(d => { d.dungeonSessionId = id; });
     } catch (e: any) {
       toast(e.message, 'bad');
     }
   }
 
-  async function leave() {
+  async function leave(closeCard = false) {
     if (session) {
       await leaveDungeon(session.id, p!.uid);
       if (myTeam && session.host === p!.uid) await setTeamDungeon(myTeam.id, null);
     }
     mutate(d => { d.dungeonSessionId = null; });
+    // Quitter un raid ferme la carte (ne pas retomber sur la liste des donjons).
+    if (closeCard) {
+      const w = useUi.getState().windows.find((x) => x.kind === 'dungeon');
+      if (w) useUi.getState().close(w.id);
+    }
   }
 
   async function act(action: 'attack' | 'ability' | 'potion' | 'flee' | 'revive', selectedPotionId?: string, targetUid?: string) {
@@ -187,6 +234,35 @@ export default function DungeonCard() {
     await submitDungeonAction(session.id, p!.uid, action, potHeal, targetUid);
   }
 
+  function openChest() {
+    if (!p || !session || chestOpened || (p.inventory['dungeon_key'] ?? 0) <= 0) return;
+    const def = DUNGEONS.find(d => d.id === session.dungeonId);
+    if (!def) return;
+
+    mutate(d => {
+      d.inventory['dungeon_key']--;
+      if (d.inventory['dungeon_key'] <= 0) delete d.inventory['dungeon_key'];
+      
+      let gotLoot = false;
+      if (def.reward.loot) {
+        for (const [itemId, prob] of Object.entries(def.reward.loot)) {
+          // Avec la clé, on augmente un peu les probas (x1.5 par exemple) ou on tire plusieurs fois.
+          if (Math.random() < prob * 1.5) {
+            addItem(d, itemId, 1);
+            toast(`Coffre : +1 ${item(itemId)?.name} !`, 'good');
+            gotLoot = true;
+          }
+        }
+      }
+      if (!gotLoot) {
+        // Fallback si rien ne proc
+        d.fateCoins += 3;
+        toast(`Le coffre contenait 3 🎲`, 'good');
+      }
+    });
+    setChestOpened(true);
+  }
+
   // Timeout check
   if (session && session.state === 'combat') {
     if (session.startedAt && Date.now() - session.startedAt > 20 * 60 * 1000) {
@@ -204,37 +280,58 @@ export default function DungeonCard() {
     const def = DUNGEONS.find(d => d.id === session.dungeonId);
     const amHost = session.host === p.uid;
     const allReady = Object.values(session.players).every(pl => pl.ready);
+    const isRaid = !!def?.raid;
+    const startsAt = session.raidStartsAt ?? 0;
+    const raidLeft = isRaid && startsAt ? Math.max(0, startsAt - Date.now()) : 0;
+    const rm = Math.floor(raidLeft / 60000);
+    const rs = Math.floor((raidLeft % 60000) / 1000);
+
     return (
       <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <div className="text-lg font-bold">{def?.emoji} {def?.name} (Lobby)</div>
-          <button onClick={leave} className="bg-rose-500/30 hover:bg-rose-500/50 rounded px-2 py-1 text-xs">Quitter</button>
+          <div className="text-lg font-bold">{isRaid ? '🔱 Raid' : `${def?.emoji} ${def?.name}`} <span className="text-sm text-slate-400">(Lobby)</span></div>
+          <button onClick={() => leave(isRaid)} className="bg-rose-500/30 hover:bg-rose-500/50 rounded px-2 py-1 text-xs">Quitter</button>
         </div>
-        <div className="space-y-2">
+
+        {isRaid && (
+          <div className="rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-3 text-center">
+            <div className="text-xs text-amber-200/80">{def?.name} — {Object.keys(session.players).length} inscrit(s)</div>
+            <div className="mt-1 text-2xl font-bold tabular-nums text-amber-300">
+              {raidLeft > 0 ? `${rm}:${rs.toString().padStart(2, '0')}` : 'Le raid commence !'}
+            </div>
+            <div className="text-[11px] text-amber-200/60">{raidLeft > 0 ? 'Démarrage automatique' : ''}</div>
+          </div>
+        )}
+
+        <div className="space-y-2 max-h-48 overflow-y-auto">
           {Object.values(session.players).map(pl => (
             <div key={pl.uid} className="flex justify-between items-center bg-black/25 p-2 rounded-lg text-sm">
-              <span>{pl.uid === session.host ? '👑 ' : ''}{pl.name} ({pl.classId})</span>
-              <span className={pl.ready ? 'text-emerald-400' : 'text-amber-400'}>{pl.ready ? 'Prêt' : 'Attente...'}</span>
+              <span>{pl.uid === session.host ? '👑 ' : ''}<span style={{ color: auraColor(pl.aura, pl.auraColorOn ?? true) }}>{pl.name}</span> ({CLASSES[pl.classId]?.name ?? pl.classId})</span>
+              {!isRaid && <span className={pl.ready ? 'text-emerald-400' : 'text-amber-400'}>{pl.ready ? 'Prêt' : 'Attente...'}</span>}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-2 mt-2">
-          <button 
-            onClick={() => toggleReady(session.id, p.uid)} 
-            className="rounded-lg bg-sky-500/40 py-2 hover:bg-sky-500/60 font-semibold"
-          >
-            {session.players[p.uid]?.ready ? 'Pas Prêt' : 'Prêt'}
-          </button>
-          {amHost && (
-            <button 
-              onClick={() => startDungeon(session.id)}
-              disabled={!allReady}
-              className="rounded-lg bg-emerald-500/40 py-2 hover:bg-emerald-500/60 font-semibold disabled:opacity-40"
+
+        {/* Donjons normaux : Prêt / Lancer. Raid : démarrage auto seulement. */}
+        {!isRaid && (
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button
+              onClick={() => toggleReady(session.id, p.uid)}
+              className="rounded-lg bg-sky-500/40 py-2 hover:bg-sky-500/60 font-semibold"
             >
-              Lancer le Donjon
+              {session.players[p.uid]?.ready ? 'Pas Prêt' : 'Prêt'}
             </button>
-          )}
-        </div>
+            {amHost && (
+              <button
+                onClick={() => startDungeon(session.id)}
+                disabled={!allReady}
+                className="rounded-lg bg-emerald-500/40 py-2 hover:bg-emerald-500/60 font-semibold disabled:opacity-40"
+              >
+                Lancer le Donjon
+              </button>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -291,7 +388,7 @@ export default function DungeonCard() {
               <div key={pl.uid} className={`rounded-lg p-2 text-xs border ${isTurn ? 'border-sky-400/50 bg-sky-500/10' : 'border-transparent bg-black/20'}`}>
                 <div className="flex justify-between items-center mb-1">
                   <span className={`font-semibold flex gap-1 items-center ${pl.isDead ? 'text-slate-500 line-through' : ''}`}>
-                    {pl.name} {isTurn && !pl.isDead && <span className="animate-pulse">⏳</span>}
+                    <span style={{ color: pl.isDead ? undefined : auraColor(pl.aura, pl.auraColorOn ?? true) }}>{pl.name}</span> {isTurn && !pl.isDead && <span className="animate-pulse">⏳</span>}
                     {pl.isDead && myTurn && !me.isDead && (p.inventory['phoenix_feather'] ?? 0) > 0 && (
                       <button onClick={() => act('revive', undefined, pl.uid)} className="text-[10px] bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 px-1.5 py-0.5 rounded ml-2">🪶 Réanimer</button>
                     )}
@@ -299,7 +396,7 @@ export default function DungeonCard() {
                   <span className="tabular-nums text-slate-400">{Math.round(pl.hp)}/{pl.maxHp}</span>
                 </div>
                 <div className="h-1.5 rounded bg-black/40">
-                  <div className={`h-1.5 rounded transition-all duration-300 ${phpPct < 30 ? 'bg-rose-500' : 'bg-emerald-400'}`} style={{ width: `${phpPct}%` }} />
+                  <div className={`h-1.5 rounded transition-all duration-300 ${phpPct < 30 ? 'bg-rose-500' : 'bg-emerald-400'} ${phpPct < 15 ? 'animate-pulse' : ''}`} style={{ width: `${phpPct}%` }} />
                 </div>
               </div>
             );
@@ -329,7 +426,7 @@ export default function DungeonCard() {
                     onClick={() => { setShowPotions(false); act('potion', id); }}
                     className="rounded-lg bg-emerald-500/30 py-2 text-xs font-bold hover:bg-emerald-500/50 flex flex-col items-center justify-center gap-1"
                   >
-                    <span>{item(id)!.icon} {item(id)!.name}</span>
+                    <span className="inline-flex items-center gap-1"><ItemIcon id={id} size={16} /> {item(id)!.name}</span>
                     <span className="text-[10px] font-normal text-slate-300">({(p.inventory[id] ?? 0)} en stock)</span>
                   </button>
                 ))}
@@ -339,17 +436,20 @@ export default function DungeonCard() {
           ) : (
             <>
               <button onClick={() => act('attack')} className="col-span-1 rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
-              {getAllActiveSkills().filter(s => p.equippedSkills.includes(s.id)).map(skill => (
-                <button
-                  key={skill.id}
-                  onClick={() => act(skill.id as any)}
-                  disabled={me.abilityCd > 0}
-                  title={skill.desc}
-                  className="col-span-1 rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
-                >
-                  {me.abilityCd > 0 ? `${skill.icon} ${skill.name} (${me.abilityCd})` : `${skill.icon} ${skill.name}`}
-                </button>
-              ))}
+              {getAllActiveSkills().filter(s => p.equippedSkills.includes(s.id)).map(skill => {
+                const cd = me.skillCds?.[skill.id] || 0;
+                return (
+                  <button
+                    key={skill.id}
+                    onClick={() => act(skill.id as any)}
+                    disabled={cd > 0}
+                    title={skill.desc}
+                    className="col-span-1 rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
+                  >
+                    {cd > 0 ? `${skill.icon} ${skill.name} (${cd})` : `${skill.icon} ${skill.name}`}
+                  </button>
+                );
+              })}
               <button
                 onClick={() => {
                   const available = POTIONS.filter(id => (p.inventory[id] ?? 0) > 0);
@@ -379,6 +479,7 @@ export default function DungeonCard() {
   // ── Vue Fin ──
   if (session && (session.state === 'victory' || session.state === 'defeat')) {
     const def = DUNGEONS.find(d => d.id === session.dungeonId)!;
+    const hasKey = (p.inventory['dungeon_key'] ?? 0) > 0;
     return (
       <div className="space-y-3">
         {session.state === 'victory' ? (
@@ -392,6 +493,16 @@ export default function DungeonCard() {
               {def.reward.fateCoins > 0 && <span className="rounded bg-fuchsia-500/20 px-2 py-0.5 text-fuchsia-200">+{def.reward.fateCoins} 🎲</span>}
               {def.reward.gems > 0 && <span className="rounded bg-sky-500/20 px-2 py-0.5 text-sky-200">+{def.reward.gems} 💎</span>}
             </div>
+            {hasKey && !chestOpened && !def.raid && (
+              <div className="mt-4 border-t border-amber-500/20 pt-4">
+                <button onClick={openChest} className="w-full rounded-lg bg-amber-500/30 py-2.5 font-bold hover:bg-amber-500/50 flex items-center justify-center gap-2">
+                  <span>🗝️ Ouvrir le coffre bonus (1 clé)</span>
+                </button>
+              </div>
+            )}
+            {chestOpened && (
+              <div className="mt-4 text-xs text-amber-400">Le coffre a été pillé.</div>
+            )}
           </div>
         ) : (
           <div className="rounded-xl border border-rose-400/40 bg-rose-500/15 p-4 text-center">
@@ -400,7 +511,7 @@ export default function DungeonCard() {
             <div className="text-sm mt-2 text-slate-300">Toute l'équipe a péri dans le donjon.</div>
           </div>
         )}
-        <button onClick={leave} className="w-full rounded-lg bg-white/10 py-2 text-sm hover:bg-white/20">Fermer</button>
+        <button onClick={() => leave(false)} className="w-full rounded-lg bg-white/10 py-2 text-sm hover:bg-white/20">Fermer</button>
       </div>
     );
   }
@@ -433,7 +544,7 @@ export default function DungeonCard() {
         </div>
       )}
 
-      {DUNGEONS.map((def) => {
+      {DUNGEONS.filter((def) => !def.raid).map((def) => {
         const locked = p.level < def.minLevel;
         const left = dungeonCooldownLeft(p, def);
         const clears = p.dungeonClears?.[def.id] ?? 0;

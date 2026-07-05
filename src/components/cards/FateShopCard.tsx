@@ -2,6 +2,7 @@ import { useGame } from '../../store/gameStore';
 import { item, RARITY_COLOR } from '../../game/items';
 import { addItem } from '../../game/player';
 import { ensureQuestPeriods } from '../../game/quests';
+import ItemIcon from '../ItemIcon';
 
 // Boutique du Destin : seul l'or ne suffit pas ici. On y dépense les Fate Coins,
 // gagnés en donjon/boss/quêtes/casino, contre des objets rares et utilitaires.
@@ -14,11 +15,12 @@ interface Offer {
 }
 
 const OFFERS: Offer[] = [
-  { id: 'upgrade_matrix', price: 25, weekly: 3 },
-  { id: 'dungeon_key', price: 15, weekly: 5 },
-  { id: 'lootbox', price: 8 },
-  { id: 'phoenix_elixir', price: 12, weekly: 10 },
-  { id: 'repair_kit', price: 3 },
+  { id: 'upgrade_matrix', price: 40, weekly: 3 },
+  { id: 'rune_shift', price: 35, weekly: 2 },
+  { id: 'dungeon_key', price: 25, weekly: 5 },
+  { id: 'lootbox', price: 12 },
+  { id: 'phoenix_elixir', price: 18, weekly: 10 },
+  { id: 'repair_kit', price: 5 },
 ];
 
 export default function FateShopCard() {
@@ -56,7 +58,7 @@ export default function FateShopCard() {
         const maxed = o.weekly !== undefined && bought >= o.weekly;
         return (
           <div key={o.id} className="flex items-center gap-2 rounded-lg border-l-2 bg-black/25 p-2.5" style={{ borderColor: RARITY_COLOR[it.rarity] }}>
-            <span className="text-xl leading-none">{it.icon}</span>
+            <ItemIcon id={o.id} size={24} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="truncate font-medium" style={{ color: RARITY_COLOR[it.rarity] }}>{it.name}</span>

@@ -7,7 +7,9 @@ import Login from './components/Login';
 import ClassSelect from './components/ClassSelect';
 import Topbar from './components/Topbar';
 import CommandBar from './components/CommandBar';
+import MobileNav from './components/MobileNav';
 import WindowManager from './components/WindowManager';
+import { useIsMobile } from './hooks/useIsMobile';
 import Toasts from './components/Toasts';
 import ChatNotifs from './components/ChatNotifs';
 import LevelUpFx from './components/LevelUpFx';
@@ -15,14 +17,19 @@ import PatchNotesModal from './components/PatchNotesModal';
 import DailyRewardModal from './components/DailyRewardModal';
 import SeasonRewardModal from './components/SeasonRewardModal';
 import { setAmbient, stopAmbientMusic } from './game/sound';
+import { listenRaidBroadcast } from './firebase/raidService';
+import { setForcedRaid } from './game/raid';
 
 import PresenceTracker from './components/PresenceTracker';
+import BaitTimer from './components/BaitTimer';
+import RaidBanner from './components/RaidBanner';
 
 export default function App() {
   const status = useGame((s) => s.status);
   const player = useGame((s) => s.player);
   const initAuth = useGame((s) => s.initAuth);
   const { phase } = useClock();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     initAuth();
@@ -35,6 +42,9 @@ export default function App() {
   }, [status, phase, player?.biome]);
 
   useEffect(() => () => stopAmbientMusic(), []);
+
+  // Fenêtre de raid forcée par un admin (debug / event).
+  useEffect(() => listenRaidBroadcast((b) => setForcedRaid(b)), []);
 
   // Notifications de chat multi-canaux
   useEffect(() => {
@@ -71,13 +81,15 @@ export default function App() {
       <Background biome={player?.biome ?? 'forest'} phase={phase} />
       <Topbar />
       <WindowManager />
-      <CommandBar />
+      {isMobile ? <MobileNav /> : <CommandBar />}
       <Toasts />
       <ChatNotifs />
       <LevelUpFx />
       <PatchNotesModal />
       <DailyRewardModal />
       <SeasonRewardModal />
+      <BaitTimer />
+      <RaidBanner />
     </div>
   );
 }
