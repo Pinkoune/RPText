@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useGame } from '../store/gameStore';
 import type { PlayerState } from '../game/types';
-import { getAllPlayers, updatePlayerAdmin, triggerGlobalWipe, triggerFullWipe, cleanupOrphanedPlayers } from '../firebase/adminService';
+import { getAllPlayers, updatePlayerAdmin, wipeAllChats, wipeEndlessScores, resetPvpSeason, triggerFullWipe, cleanupOrphanedPlayers } from '../firebase/adminService';
 import { broadcastRaid } from '../firebase/raidService';
 import { ITEMS, getItem } from '../game/items';
 import { farmProgress } from '../game/gathering';
@@ -398,22 +398,52 @@ export function AdminModal() {
       ) : (
         <>
           <div className="p-2 border-b border-red-500/30 bg-red-900/10 flex justify-end gap-2 mb-4">
-            <button 
+            <button
               onClick={async () => {
-                if (window.confirm("ATTENTION : CELA VA RÉINITIALISER TOUS LES COMPTES AU NIVEAU 1. Es-tu sûr ?") && window.confirm("Es-tu VRAIMENT sûr ? Cette action est irréversible !")) {
+                if (window.confirm("Vider tous les chats (global, équipes, guildes, messagerie privée) ? Irréversible.")) {
                   try {
-                    await triggerGlobalWipe();
-                    toast("Wipe global (Joueurs uniquement) déclenché.", "good");
+                    await wipeAllChats();
+                    toast("Chats vidés.", "good");
                   } catch (e: any) {
-                    toast("Erreur wipe global: " + e.message, "bad");
+                    toast("Erreur nettoyage chat: " + e.message, "bad");
                   }
                 }
               }}
               className="px-3 py-1 bg-red-700/50 hover:bg-red-600/80 text-red-100 text-xs font-bold rounded border border-red-500/50"
             >
-              🚨 WIPE JOUEURS SEULS
+              🧹 VIDER LES CHATS
             </button>
-            <button 
+            <button
+              onClick={async () => {
+                if (window.confirm("Vider le classement des Abysses Infinis (solo + multi) ? Irréversible.")) {
+                  try {
+                    await wipeEndlessScores();
+                    toast("Classement Abysses vidé.", "good");
+                  } catch (e: any) {
+                    toast("Erreur nettoyage Abysses: " + e.message, "bad");
+                  }
+                }
+              }}
+              className="px-3 py-1 bg-red-700/50 hover:bg-red-600/80 text-red-100 text-xs font-bold rounded border border-red-500/50"
+            >
+              🌌 VIDER CLASSEMENT ABYSSES
+            </button>
+            <button
+              onClick={async () => {
+                if (window.confirm("Remettre à 0 les points de saison PvP de TOUS les joueurs (le ladder repart de zéro immédiatement, la saison en cours continue) ? Irréversible.")) {
+                  try {
+                    const n = await resetPvpSeason();
+                    toast(`Saison PvP réinitialisée (${n} joueur(s)).`, "good");
+                  } catch (e: any) {
+                    toast("Erreur reset saison: " + e.message, "bad");
+                  }
+                }
+              }}
+              className="px-3 py-1 bg-red-700/50 hover:bg-red-600/80 text-red-100 text-xs font-bold rounded border border-red-500/50"
+            >
+              🏆 RESET SAISON PVP
+            </button>
+            <button
               onClick={async () => {
                 if (window.confirm("DANGER : WIPE COMPLET —\n• Tous les joueurs renvoyés à la sélection de classe\n• Chat (global/équipe/guilde/privé) vidé\n• Classement (& saison PvP) vidé\n• Classement Abysses (solo+multi) vidé\n• Guildes supprimées\n• Stats/succès des joueurs repartent à zéro (nouveaux persos)\n\nEs-tu ABSOLUMENT certain ?") && window.confirm("C'EST LA PURGE FINALE. Confirmer ?")) {
                   try {

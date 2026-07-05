@@ -1,5 +1,6 @@
 import { AnimatePresence } from 'framer-motion';
 import { useUi, type WindowKind } from '../store/uiStore';
+import type { ChatChannel } from '../firebase/chatService';
 import Window from './Window';
 import ProfileCard from './cards/ProfileCard';
 import HuntCard from './cards/HuntCard';
@@ -126,7 +127,7 @@ export default function WindowManager() {
               {w.kind === 'guild' && <GuildCard />}
               {w.kind === 'familiar' && <FamiliarCard />}
               {w.kind === 'boss' && <BossCard />}
-              {w.kind === 'chat' && <ChatCard initialDmPeer={w.payload as string | undefined} />}
+              {w.kind === 'chat' && <ChatCard initialPayload={w.payload as { tab?: ChatChannel; dmPeer?: string } | undefined} />}
               {w.kind === 'leaderboard' && <LeaderboardCard />}
               {w.kind === 'stats' && <StatsCard />}
               {w.kind === 'news' && <NewsCard />}

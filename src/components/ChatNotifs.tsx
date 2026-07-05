@@ -23,7 +23,11 @@ export default function ChatNotifs() {
         return (
           <button
             key={n.id}
-            onClick={() => { open('chat', undefined, { singleton: true }); dismiss(n.id); }}
+            onClick={() => {
+              const payload = n.channel === 'private' ? { dmPeer: n.name } : { tab: n.channel };
+              open('chat', payload, { singleton: true });
+              dismiss(n.id);
+            }}
             className={`pointer-events-auto animate-floatIn rounded-xl border px-3 py-2 text-left backdrop-blur transition hover:brightness-110 ${st.cls}`}
           >
             <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide opacity-80">

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGame } from '../../store/gameStore';
+import { useUi } from '../../store/uiStore';
 import { watchChat, sendChat, chatOnline, type ChatMessage, type ChatChannel } from '../../firebase/chatService';
 import { trackPresence, type OnlinePlayer } from '../../firebase/socialService';
 import { item, addItemToInventory } from '../../game/items';
@@ -14,12 +15,12 @@ const CHANNELS: { id: ChatChannel; label: string }[] = [
   { id: 'private', label: 'Privé' },
 ];
 
-export default function ChatCard({ initialDmPeer }: { initialDmPeer?: string } = {}) {
+export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: ChatChannel; dmPeer?: string } } = {}) {
   const p = useGame((s) => s.player);
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
-  const [activeTab, setActiveTab] = useState<ChatChannel>(initialDmPeer ? 'private' : 'global');
-  const [dmPeer, setDmPeer] = useState<string | null>(initialDmPeer ?? null); // conversation privée ouverte
+  const [activeTab, setActiveTab] = useState<ChatChannel>(initialPayload?.dmPeer ? 'private' : initialPayload?.tab ?? 'global');
+  const [dmPeer, setDmPeer] = useState<string | null>(initialPayload?.dmPeer ?? null); // conversation privée ouverte
   const [showNewDm, setShowNewDm] = useState(false);
   const [online, setOnline] = useState<OnlinePlayer[]>([]);
   const [viewingProfile, setViewingProfile] = useState<ProfileSeed | null>(null);
@@ -27,8 +28,13 @@ export default function ChatCard({ initialDmPeer }: { initialDmPeer?: string } =
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (initialDmPeer) { setActiveTab('private'); setDmPeer(initialDmPeer); }
-  }, [initialDmPeer]);
+    useGame.getState().markChatRead();
+  }, []);
+
+  useEffect(() => {
+    if (initialPayload?.dmPeer) { setActiveTab('private'); setDmPeer(initialPayload.dmPeer); }
+    else if (initialPayload?.tab) { setActiveTab(initialPayload.tab); }
+  }, [initialPayload]);
 
   useEffect(() => {
     if (!p) return;
@@ -175,8 +181,20 @@ export default function ChatCard({ initialDmPeer }: { initialDmPeer?: string } =
         <p className="mb-2 rounded bg-amber-500/15 px-2 py-1 text-[11px] text-amber-200">Mode local : messages visibles seulement sur cet appareil.</p>
       )}
 
-      {/* ═══ Onglet Privé : messagerie ═══ */}
-      {activeTab === 'private' ? (
+      {/* ═══ Pas d'équipe/guilde : rien à écouter, on propose d'en rejoindre une ═══ */}
+      {(activeTab === 'team' && !p.teamId) || (activeTab === 'guild' && !p.guildId) ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg bg-black/25 p-4 text-center">
+          <p className="text-sm text-slate-400">
+            {activeTab === 'team' ? "Tu n'es dans aucune équipe." : "Tu n'es dans aucune guilde."}
+          </p>
+          <button
+            onClick={() => useUi.getState().open(activeTab === 'team' ? 'team' : 'guild', undefined, { singleton: true })}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${activeTab === 'team' ? 'bg-emerald-500/30 hover:bg-emerald-500/50' : 'bg-purple-500/30 hover:bg-purple-500/50'}`}
+          >
+            {activeTab === 'team' ? '👥 Rejoindre / créer une équipe' : '🏰 Rejoindre / créer une guilde'}
+          </button>
+        </div>
+      ) : activeTab === 'private' ? (
         !dmPeer ? (
           // Liste des conversations + nouveau message
           <div className="flex-1 space-y-2 overflow-auto rounded-lg bg-black/25 p-2">
@@ -306,8 +324,8 @@ export default function ChatCard({ initialDmPeer }: { initialDmPeer?: string } =
         </div>
       )}
 
-      {/* Saisie — masquée dans la liste des fils privés (rien à envoyer sans destinataire) */}
-      {!(activeTab === 'private' && !dmPeer) && (
+      {/* Saisie — masquée dans la liste des fils privés et sans équipe/guilde (rien à envoyer) */}
+      {!(activeTab === 'private' && !dmPeer) && !(activeTab === 'team' && !p.teamId) && !(activeTab === 'guild' && !p.guildId) && (
         <div className="mt-2 flex gap-2">
           <input
             value={text}

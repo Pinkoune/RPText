@@ -111,7 +111,7 @@ export default function LeaderboardCard() {
         <PlayerProfileModal
           row={viewing}
           onClose={() => setViewing(null)}
-          onMessage={viewing.uid === p?.uid ? undefined : () => { useUi.getState().open('chat', viewing.name, { singleton: true }); setViewing(null); }}
+          onMessage={viewing.uid === p?.uid ? undefined : () => { useUi.getState().open('chat', { dmPeer: viewing.name }, { singleton: true }); setViewing(null); }}
         />
       )}
     </div>

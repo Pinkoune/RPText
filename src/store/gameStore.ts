@@ -42,7 +42,7 @@ interface GameState {
   /** Récompense de fin de saison PvP à afficher (null = rien). */
   seasonReward: { tierName: string; reward: SeasonReward } | null;
   clearSeasonReward: () => void;
-  initAuth: () => void;
+  initAuth: () => () => void;
   signIn: (provider: AuthProviderType) => Promise<void>;
   logout: () => Promise<void>;
   chooseClass: (cls: ClassId, name?: string) => Promise<void>;
@@ -54,6 +54,9 @@ interface GameState {
   chatNotifs: ChatNotif[];
   pushChatNotif: (n: Omit<ChatNotif, 'id'>) => void;
   dismissChatNotif: (id: number) => void;
+  /** Pastille rouge persistante tant que le chat n'a pas été ouvert (les toasts s'effacent trop vite pour être fiables). */
+  hasUnreadChat: boolean;
+  markChatRead: () => void;
   inCombat: boolean;
   setInCombat: (val: boolean) => void;
 }
@@ -83,7 +86,7 @@ export const useGame = create<GameState>((set, get) => ({
   clearSeasonReward: () => set({ seasonReward: null }),
 
   initAuth: () => {
-    watchAuth(async (user) => {
+    return watchAuth(async (user) => {
       wipeUnsub?.();
       wipeUnsub = null;
       if (!user) {
@@ -238,8 +241,11 @@ export const useGame = create<GameState>((set, get) => ({
   chatNotifs: [],
   pushChatNotif: (n) => {
     const id = ++chatNotifId;
-    set((s) => ({ chatNotifs: [...s.chatNotifs, { id, ...n }] }));
+    set((s) => ({ chatNotifs: [...s.chatNotifs, { id, ...n }], hasUnreadChat: true }));
     setTimeout(() => get().dismissChatNotif(id), 5000);
   },
   dismissChatNotif: (id) => set((s) => ({ chatNotifs: s.chatNotifs.filter((n) => n.id !== id) })),
+
+  hasUnreadChat: false,
+  markChatRead: () => set({ hasUnreadChat: false }),
 }));

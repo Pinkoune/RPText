@@ -75,6 +75,12 @@ export function sendAutoAnnounce(text: string): void {
 }
 
 export function watchChat(channel: ChatChannel, targetId: string | null | undefined, cb: (msgs: ChatMessage[]) => void): () => void {
+  // Pas d'équipe/guilde : pas de canal à écouter, surtout pas un repli sur le
+  // chat global (sinon les onglets Équipe/Guilde affichent le chat de tout le monde).
+  if ((channel === 'team' || channel === 'guild') && !targetId) {
+    cb([]);
+    return () => {};
+  }
   if (!rtdb) {
     const notifyLocal = () => cb(loadLocal(channel));
     notifyLocal();

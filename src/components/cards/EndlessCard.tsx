@@ -178,7 +178,10 @@ export default function EndlessCard() {
         accumulatedGems: prev.accumulatedGems + rewards.gems,
         skillCds: nextCds,
       } : null);
-      if (nextFloor > (player.endlessBest || 0)) mutate(p => { p.endlessBest = nextFloor; });
+      // endlessBest = étage RÉELLEMENT vaincu (run.floor), pas l'étage suivant
+      // qu'on s'apprête juste à affronter — sinon un joueur qui meurt aussitôt
+      // entré dans l'étage N se voit quand même crédité de l'étage N.
+      if (run.floor > (player.endlessBest || 0)) mutate(p => { p.endlessBest = run.floor; });
       return;
     }
     setRun(prev => prev ? { ...prev, php: res.php, mhp: res.mhp, combat: res.state, logs: newLogs, skillCds: nextCds } : null);

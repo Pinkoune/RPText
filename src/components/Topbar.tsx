@@ -48,6 +48,7 @@ function EventPill({ e, onClick }: { e: EventDef; onClick: () => void }) {
 export default function Topbar() {
   const player = useGame((s) => s.player);
   const logout = useGame((s) => s.logout);
+  const hasUnreadChat = useGame((s) => s.hasUnreadChat);
   const open = useUi((s) => s.open);
   const { now, phase } = useClock();
   const [muted, setMuted] = useState(isMuted());
@@ -161,6 +162,16 @@ export default function Topbar() {
           )}
           <Pill icon={PHASE_EMOJI[phase]} value={now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} title={PHASE_LABEL[phase]} />
           <Pill icon={biome.emoji} value={biome.name.split(' ')[0]} title={biome.name} />
+          <button
+            onClick={() => open('chat', undefined, { singleton: true })}
+            title="Chat"
+            className="relative rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
+          >
+            💬
+            {hasUnreadChat && (
+              <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-[#0b1020] animate-pulse" />
+            )}
+          </button>
           <button
             onClick={() => setMuted(toggleMute())}
             title={muted ? 'Activer le son' : 'Couper le son'}

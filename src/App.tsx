@@ -32,7 +32,11 @@ export default function App() {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    initAuth();
+    // initAuth() renvoie le désabonnement onAuthStateChanged : sans ce cleanup,
+    // React.StrictMode (dev) monte l'effet deux fois et laisse DEUX listeners
+    // actifs en permanence, qui se marchent dessus sur l'état partagé (ex: le
+    // watchGlobalWipe de gameStore, l'un annulant l'abonnement de l'autre).
+    return initAuth();
   }, [initAuth]);
 
   // Musique d'ambiance : suit le biome et la phase une fois en jeu.
