@@ -7,6 +7,10 @@ import { item, addItemToInventory } from '../../game/items';
 import { auraColor } from '../../game/prestige';
 import { fetchPublicProfile } from '../../firebase/socialService';
 import PlayerProfileModal, { type ProfileSeed } from '../PlayerProfileModal';
+import { COMMANDS } from '../../game/commands';
+
+const TEAM_REQ_LEVEL = COMMANDS.find((c) => c.name === 'team')?.reqLevel ?? 1;
+const GUILD_REQ_LEVEL = COMMANDS.find((c) => c.name === 'guild')?.reqLevel ?? 1;
 
 const CHANNELS: { id: ChatChannel; label: string }[] = [
   { id: 'global', label: 'Global' },
@@ -29,7 +33,16 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
 
   useEffect(() => {
     useGame.getState().markChatRead();
+    return () => useGame.getState().setActiveChatView(null);
   }, []);
+
+  // Onglet/conversation actuellement affiché : sert à ne pas notifier une
+  // conversation déjà sous les yeux (voir App.tsx watchNotifications).
+  useEffect(() => {
+    useGame.getState().setActiveChatView(
+      activeTab === 'private' ? (dmPeer ? { tab: 'private' as const, dmPeer } : null) : { tab: activeTab }
+    );
+  }, [activeTab, dmPeer]);
 
   useEffect(() => {
     if (initialPayload?.dmPeer) { setActiveTab('private'); setDmPeer(initialPayload.dmPeer); }
@@ -165,13 +178,17 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
           if (c.id === 'team') activeBg = 'bg-emerald-900/60 border border-emerald-400/50 text-white';
           else if (c.id === 'guild') activeBg = 'bg-purple-900/60 border border-purple-400/50 text-white';
           else if (c.id === 'private') activeBg = 'bg-rose-900/60 border border-rose-400/50 text-white';
+          const reqLevel = c.id === 'team' ? TEAM_REQ_LEVEL : c.id === 'guild' ? GUILD_REQ_LEVEL : 1;
+          const locked = p.level < reqLevel;
           return (
             <button
               key={c.id}
+              disabled={locked}
               onClick={() => { setActiveTab(c.id); if (c.id !== 'private') setShowNewDm(false); }}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${activeTab === c.id ? activeBg : 'bg-black/20 text-slate-400 hover:bg-white/10'}`}
+              title={locked ? `Débloqué au niveau ${reqLevel}` : undefined}
+              className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${locked ? 'cursor-not-allowed bg-black/10 text-slate-600' : activeTab === c.id ? activeBg : 'bg-black/20 text-slate-400 hover:bg-white/10'}`}
             >
-              {c.label}
+              {locked ? `🔒 ${c.label} Nv.${reqLevel}` : c.label}
             </button>
           );
         })}

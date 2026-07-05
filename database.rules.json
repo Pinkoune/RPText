@@ -7,6 +7,7 @@
       }
     },
     "chat": {
+      ".write": "auth != null",
       "global": {
         ".read": "auth != null",
         ".write": "auth != null",

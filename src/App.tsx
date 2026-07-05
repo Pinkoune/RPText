@@ -61,6 +61,13 @@ export default function App() {
         const channel = (msg.channel ?? 'global') as 'global' | 'team' | 'guild' | 'private';
         // Pas de notif pour le chat global (trop bruyant) — seulement équipe/guilde/privé.
         if (channel === 'global') return;
+        // Pas de notif si on a déjà cette conversation sous les yeux (Chat ouvert sur le bon onglet/DM).
+        const view = useGame.getState().activeChatView;
+        const alreadyViewing = view && (
+          (channel === 'private' && view.tab === 'private' && view.dmPeer === msg.name) ||
+          (channel !== 'private' && view.tab === channel)
+        );
+        if (alreadyViewing) return;
         useGame.getState().pushChatNotif({ channel, name: msg.name, text: msg.text });
       }
     );

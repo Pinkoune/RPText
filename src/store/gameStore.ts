@@ -57,6 +57,9 @@ interface GameState {
   /** Pastille rouge persistante tant que le chat n'a pas été ouvert (les toasts s'effacent trop vite pour être fiables). */
   hasUnreadChat: boolean;
   markChatRead: () => void;
+  /** Onglet/conversation actuellement affiché dans ChatCard (si ouvert) — évite de notifier une conversation déjà sous les yeux. */
+  activeChatView: { tab: ChatChannelKind; dmPeer?: string } | null;
+  setActiveChatView: (v: { tab: ChatChannelKind; dmPeer?: string } | null) => void;
   inCombat: boolean;
   setInCombat: (val: boolean) => void;
 }
@@ -248,4 +251,7 @@ export const useGame = create<GameState>((set, get) => ({
 
   hasUnreadChat: false,
   markChatRead: () => set({ hasUnreadChat: false }),
+
+  activeChatView: null,
+  setActiveChatView: (v) => set({ activeChatView: v }),
 }));

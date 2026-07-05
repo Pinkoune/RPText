@@ -93,6 +93,10 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (p.teamId === undefined) p.teamId = null;
   if (p.endlessBest === undefined) p.endlessBest = 0;
   if (!p.enchants) p.enchants = { weapon: [], armor: [], trinket: [] };
+  // Titre par défaut retiré : les nouveaux joueurs n'ont plus aucun titre tant
+  // qu'ils n'en débloquent pas un — nettoie ceux qui l'ont encore.
+  if (p.title === 'Aventurier débutant') p.title = undefined;
+  if (p.unlockedTitles) p.unlockedTitles = p.unlockedTitles.filter((t) => t !== 'Aventurier débutant');
   
   // -- V2 Équipement --
   if (!p.gearDurability) {
@@ -403,7 +407,6 @@ export function createPlayer(
   const p: PlayerState = {
     uid,
     name,
-    title: 'Aventurier débutant',
     photoURL: photoURL ?? null,
     classId,
     level: 1,
