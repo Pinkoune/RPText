@@ -17,6 +17,7 @@ import PatchNotesModal from './components/PatchNotesModal';
 import DailyRewardModal from './components/DailyRewardModal';
 import SeasonRewardModal from './components/SeasonRewardModal';
 import { setAmbient, stopAmbientMusic } from './game/sound';
+import { deriveStats } from './game/player';
 import { listenRaidBroadcast } from './firebase/raidService';
 import { setForcedRaid } from './game/raid';
 
@@ -46,6 +47,25 @@ export default function App() {
   }, [status, phase, player?.biome]);
 
   useEffect(() => () => stopAmbientMusic(), []);
+
+  // Régén passive hors-combat pour les débutants (Nv.<15) : +2.5% PV max / 10s,
+  // sans bouton ni interaction — évite le coup de bouton répété toutes les 30s.
+  useEffect(() => {
+    if (status !== 'ready' || !player) return;
+    const REGEN_LEVEL_CAP = 15;
+    const REGEN_PCT = 0.025;
+    const id = setInterval(() => {
+      const cur = useGame.getState().player;
+      if (!cur || cur.level >= REGEN_LEVEL_CAP || cur.hp <= 0) return;
+      if (useGame.getState().inCombat) return;
+      const maxHp = deriveStats(cur).maxHp;
+      if (cur.hp >= maxHp) return;
+      useGame.getState().mutate((d) => {
+        d.hp = Math.min(maxHp, d.hp + Math.max(1, Math.ceil(maxHp * REGEN_PCT)));
+      });
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [status, player?.uid]);
 
   // Fenêtre de raid forcée par un admin (debug / event).
   useEffect(() => listenRaidBroadcast((b) => setForcedRaid(b)), []);
