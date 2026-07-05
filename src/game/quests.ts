@@ -18,6 +18,8 @@ export interface QuestDef {
   metric: QuestMetric;
   target: number;
   reward: QuestReward;
+  /** Niveau requis pour que la quête apparaisse (celui de la commande liée à la métrique). Absent = 1. */
+  minLevel?: number;
 }
 
 export const DAILY_MS = 24 * 60 * 60 * 1000;
@@ -27,17 +29,17 @@ export const QUESTS: QuestDef[] = [
   // Journalières
   { id: 'd_hunt', period: 'daily', label: 'Chasser 10 fois', metric: 'hunts', target: 10, reward: { gold: 120, fateCoins: 2 } },
   { id: 'd_kill', period: 'daily', label: 'Vaincre 8 monstres', metric: 'kills', target: 8, reward: { gold: 100 } },
-  { id: 'd_gamble', period: 'daily', label: 'Gagner 3 paris au casino', metric: 'gambleWins', target: 3, reward: { fateCoins: 3 } },
-  { id: 'd_gather', period: 'daily', label: 'Récolter 8 fois', metric: 'gathers', target: 8, reward: { gold: 90, items: { repair_kit: 1 } } },
-  { id: 'd_dungeon', period: 'daily', label: 'Terminer 1 donjon', metric: 'dungeons', target: 1, reward: { gold: 200, items: { dungeon_key: 1 } } },
-  { id: 'd_pvp', period: 'daily', label: 'Gagner 1 duel PvP ou Card-Jitsu', metric: 'pvpWins', target: 1, reward: { fateCoins: 4 } },
+  { id: 'd_gamble', period: 'daily', label: 'Gagner 3 paris au casino', metric: 'gambleWins', target: 3, reward: { fateCoins: 3 }, minLevel: 10 },
+  { id: 'd_gather', period: 'daily', label: 'Récolter 8 fois', metric: 'gathers', target: 8, reward: { gold: 90, items: { repair_kit: 1 } }, minLevel: 2 },
+  { id: 'd_dungeon', period: 'daily', label: 'Terminer 1 donjon', metric: 'dungeons', target: 1, reward: { gold: 200, items: { dungeon_key: 1 } }, minLevel: 5 },
+  { id: 'd_pvp', period: 'daily', label: 'Gagner 1 duel PvP ou Card-Jitsu', metric: 'pvpWins', target: 1, reward: { fateCoins: 4 }, minLevel: 8 },
   // Hebdomadaires
   { id: 'w_kill', period: 'weekly', label: 'Vaincre 100 monstres', metric: 'kills', target: 100, reward: { gold: 1000, gems: 1, items: { repair_kit: 3, upgrade_matrix: 1 } } },
-  { id: 'w_boss', period: 'weekly', label: 'Infliger 500 dégâts au boss mondial', metric: 'bossHits', target: 500, reward: { fateCoins: 10, items: { upgrade_matrix: 1 } } },
-  { id: 'w_craft', period: 'weekly', label: 'Forger 5 objets', metric: 'crafts', target: 5, reward: { gold: 800, gems: 1, items: { repair_kit: 2, upgrade_matrix: 1 } } },
-  { id: 'w_gather', period: 'weekly', label: 'Récolter 60 ressources', metric: 'gathers', target: 60, reward: { gold: 700, gems: 1 } },
-  { id: 'w_contract', period: 'weekly', label: 'Contrat Aventurier : 3 donjons + 20 récoltes + 2 crafts', metric: 'dungeons', target: 3, reward: { gold: 1500, gems: 2, items: { upgrade_matrix: 2, lootbox: 1 } } },
-  { id: 'w_miniboss', period: 'weekly', label: 'Vaincre 1 mini-boss', metric: 'minibossKills', target: 1, reward: { gold: 600, gems: 1, items: { boss_soul: 1 } } },
+  { id: 'w_boss', period: 'weekly', label: 'Infliger 500 dégâts au boss mondial', metric: 'bossHits', target: 500, reward: { fateCoins: 10, items: { upgrade_matrix: 1 } }, minLevel: 6 },
+  { id: 'w_craft', period: 'weekly', label: 'Forger 5 objets', metric: 'crafts', target: 5, reward: { gold: 800, gems: 1, items: { repair_kit: 2, upgrade_matrix: 1 } }, minLevel: 3 },
+  { id: 'w_gather', period: 'weekly', label: 'Récolter 60 ressources', metric: 'gathers', target: 60, reward: { gold: 700, gems: 1 }, minLevel: 2 },
+  { id: 'w_contract', period: 'weekly', label: 'Contrat Aventurier : 3 donjons + 20 récoltes + 2 crafts', metric: 'dungeons', target: 3, reward: { gold: 1500, gems: 2, items: { upgrade_matrix: 2, lootbox: 1 } }, minLevel: 5 },
+  { id: 'w_miniboss', period: 'weekly', label: 'Vaincre 1 mini-boss', metric: 'minibossKills', target: 1, reward: { gold: 600, gems: 1, items: { boss_soul: 1 } }, minLevel: 15 },
 ];
 
 /** Réinitialise les périodes expirées. Retourne true si quelque chose a changé. */
@@ -76,7 +78,7 @@ export interface QuestView {
 
 export function questViews(p: PlayerState): QuestView[] {
   ensureQuestPeriods(p);
-  return QUESTS.map((def) => {
+  return QUESTS.filter((def) => p.level >= (def.minLevel ?? 1)).map((def) => {
     const ps: QuestPeriodState = p.quests[def.period];
     const progress = Math.min(def.target, ps.counters[def.metric] ?? 0);
     return {

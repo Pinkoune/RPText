@@ -75,7 +75,7 @@ interface UiState {
   savePref: (kind: WindowKind, pref: Partial<WindowPref>) => void;
   resetPrefs: () => void;
   saveLayout: () => void;
-  loadLayout: () => void;
+  loadLayout: (isAllowed?: (kind: WindowKind) => boolean) => void;
 }
 
 let counter = 0;
@@ -147,12 +147,16 @@ export const useUi = create<UiState>((set, get) => ({
     const layout = s.windows.filter(w => !w.payload).map(w => w.kind);
     localStorage.setItem('rptext.savedLayout', JSON.stringify(layout));
   },
-  loadLayout: () => {
+  // `isAllowed` filtre les fenêtres restaurées par le niveau ACTUEL du joueur
+  // (voir commands.ts case 'reload') : une disposition sauvegardée avant un
+  // reset global (perso recréé à Nv.1) ne doit pas rouvrir des fenêtres
+  // réservées à un niveau plus élevé (marché, guilde, donjon…).
+  loadLayout: (isAllowed) => {
     try {
       const raw = localStorage.getItem('rptext.savedLayout');
       if (raw) {
         const layout: WindowKind[] = JSON.parse(raw);
-        layout.forEach(kind => get().open(kind, undefined, { singleton: true }));
+        layout.filter(kind => !isAllowed || isAllowed(kind)).forEach(kind => get().open(kind, undefined, { singleton: true }));
       }
     } catch {}
   }

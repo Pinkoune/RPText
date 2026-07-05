@@ -8,7 +8,7 @@ import { item, ITEMS } from './items';
 import { deriveStats, removeItem } from './player';
 import { currentPhase } from './daynight';
 import { addQuestMetric } from './quests';
-import { GATHER_SKILLS, type GatherSkillId } from './gathering';
+import { GATHER_SKILLS, gatherCooldownLeft, type GatherSkillId } from './gathering';
 import { talentMods } from './talents';
 import { BIOMES } from './biomes';
 
@@ -240,7 +240,14 @@ export function runCommand(input: string, ctx: CommandCtx): void {
     case 'reload':
       import('../store/uiStore').then(({ useUi }) => {
         useUi.getState().closeAll();
-        useUi.getState().loadLayout();
+        // Filtre par niveau ACTUEL : une disposition sauvegardée avant un reset
+        // global ne doit pas rouvrir des fenêtres au-delà du niveau du perso
+        // (recréé à Nv.1) — voir uiStore.loadLayout.
+        const lvl = p!.level;
+        useUi.getState().loadLayout((kind) => {
+          const reqLevel = COMMANDS.find((c) => c.name === kind)?.reqLevel ?? 1;
+          return lvl >= reqLevel;
+        });
         ctx.toast('Disposition chargée.', 'good');
       });
       break;
@@ -325,8 +332,21 @@ export function runCommand(input: string, ctx: CommandCtx): void {
     case 'mine':
     case 'fish':
     case 'forage': {
-      const skill = cmd as GatherSkillId;
-      ctx.open('gather', skill, { singleton: true });
+      const skillId = cmd as GatherSkillId;
+      const skillDef = GATHER_SKILLS[skillId];
+      if (!skillDef.byBiome[p!.biome]) {
+        ctx.toast(`${skillDef.name} indisponible dans ce biome.`, 'bad');
+        break;
+      }
+      const left = gatherCooldownLeft(p!);
+      if (left > 0) {
+        ctx.toast(`Récolte en récupération (${Math.ceil(left / 1000)}s).`, 'bad');
+        break;
+      }
+      // nonce : force GatherCard à relancer la récolte même si la fenêtre est déjà
+      // ouverte sur le même skill (sinon retaper la commande ne faisait rien de
+      // visible — payload identique => l'effet de démarrage ne se redéclenchait pas).
+      ctx.open('gather', { skill: skillId, nonce: Date.now() }, { singleton: true });
       break;
     }
 

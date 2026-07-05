@@ -7,7 +7,7 @@ import { playSound } from '../../game/sound';
 import { deriveStats } from '../../game/player';
 import ItemIcon from '../ItemIcon';
 
-export default function GatherCard({ initialSkillId }: { initialSkillId?: string }) {
+export default function GatherCard({ initialPayload }: { initialPayload?: { skill: string; nonce: number } }) {
   const p = useGame((s) => s.player);
   const mutate = useGame((s) => s.mutate);
   const toast = useGame((s) => s.toast);
@@ -18,7 +18,7 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
   const [gp, setGp] = useState(0);
   const [lootLog, setLootLog] = useState<{ id: string; qty: number }[]>([]);
 
-  const didInit = useRef(false);
+  const lastNonce = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 1000);
@@ -45,19 +45,22 @@ export default function GatherCard({ initialSkillId }: { initialSkillId?: string
   }
 
   useEffect(() => {
-    if (!didInit.current && initialSkillId) {
-      didInit.current = true;
-      const skill = GATHER_SKILLS[initialSkillId as keyof typeof GATHER_SKILLS];
-      if (skill) {
-        // verify it's available in biome
-        if (skill.byBiome[p!.biome]) {
-          startGather(skill);
-        } else {
-          toast(`${skill.name} indisponible ici.`, 'bad');
-        }
+    // Keyé sur `nonce` (pas juste l'id du skill) : retaper la même commande
+    // (ex: /chop deux fois) doit relancer la récolte même si la fenêtre était
+    // déjà ouverte sur ce skill — sinon la 2e commande ne faisait rien de visible.
+    if (!initialPayload || initialPayload.nonce === lastNonce.current) return;
+    lastNonce.current = initialPayload.nonce;
+    const skill = GATHER_SKILLS[initialPayload.skill as keyof typeof GATHER_SKILLS];
+    if (skill) {
+      // verify it's available in biome
+      if (skill.byBiome[p!.biome]) {
+        startGather(skill);
+      } else {
+        toast(`${skill.name} indisponible ici.`, 'bad');
       }
     }
-  }, [initialSkillId, p, maxGp, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPayload]);
 
   if (!p) return null;
   const skills = skillsForBiome(p.biome);
