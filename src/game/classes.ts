@@ -10,6 +10,8 @@ export interface ClassDef {
   growth: { maxHp: number; atk: number; def: number };
   /** Classe parente (si ascension) */
   parent?: ClassId;
+  /** Paragraphe détaillé (style de jeu, arbre de talents) affiché dans le Wiki. */
+  playstyle: string;
 }
 
 export const CLASSES: Record<ClassId, ClassDef> = {
@@ -21,6 +23,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     desc: 'Tank : gros PV/DEF et -10% de dégâts subis (inné).',
     base: { maxHp: 130, atk: 13, def: 9 },
     growth: { maxHp: 18, atk: 3, def: 3 }, // DEF +2→+3 (tank principal)
+    playstyle: 'Tank pur, sans détour. Meilleure DEF innée du jeu (-10% dégâts subis dès la création) et la plus grosse réserve de PV. Son arbre mélange réduction de dégâts, PV max et un peu de critique pour ne pas taper mou, avec un unique gros coup (Coup héroïque, ×1.8) à sortir au bon moment. Pas de soin, pas de contrôle : il encaisse, tape régulièrement, et dure.',
   },
   paladin: {
     id: 'paladin',
@@ -30,6 +33,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 130, atk: 13, def: 9 },
     growth: { maxHp: 22, atk: 4, def: 3 },
     parent: 'warrior',
+    playstyle: 'Le tank le plus increvable du jeu. Rempart pose un vrai bouclier (+20% PV max en absorption), Lumière ajoute une grosse régénération passive, et Châtiment (×2.0 + petit soin) lui permet de tenir indéfiniment sans potion. Aucun burst impressionnant, mais une durabilité quasi infinie — l\'archétype "je ne meurs jamais" plutôt que "je frappe fort".',
   },
   berserker: {
     id: 'berserker',
@@ -39,6 +43,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 130, atk: 13, def: 9 },
     growth: { maxHp: 20, atk: 6, def: 1 },
     parent: 'warrior',
+    playstyle: 'Tank offensif qui sacrifie la DEF pour la puissance brute. Fureur (×2.5) puis Exécution (×2.8, 30s de CD) sont parmi les plus gros multiplicateurs du jeu, et le vol de vie (jusqu\'à +15%) compense l\'absence de vraie défense. Pas de contrôle ni de soin externe : sa survie vient entièrement des dégâts qu\'il inflige, pas de ceux qu\'il évite.',
   },
   dark_knight: {
     id: 'dark_knight',
@@ -48,6 +53,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 130, atk: 13, def: 9 },
     growth: { maxHp: 25, atk: 5, def: 2 },
     parent: 'warrior',
+    playstyle: 'Tank à risque croissant : Douleur donne jusqu\'à +30% dégâts quand il passe sous 30% PV, donc il devient plus dangereux à l\'agonie. Drain Noir (×2.0 + 15% soin) et le vol de vie passif lui permettent de se maintenir juste assez pour rester dans cette zone dangereuse volontairement. Un style "plus je saigne, plus je frappe fort" — demande de bien gérer sa santé au lieu de la maximiser.',
   },
 
   // ── Mage ──
@@ -58,6 +64,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     desc: 'Burst magique : ATK élevée et +6% critique (inné), mais fragile.',
     base: { maxHp: 85, atk: 17, def: 3 },
     growth: { maxHp: 11, atk: 4, def: 1 },
+    playstyle: 'DPS magique pur, le plus fragile du jeu (le moins de PV base). Compense par une ATK élevée, +6% critique inné et de la pénétration d\'armure, avec Météore (×2.2) comme finisher. Aucune capacité défensive ou de soin dans son tronc de base : c\'est du glass cannon classique, tout dans les dégâts, rien dans la survie.',
   },
   pyromancer: {
     id: 'pyromancer',
@@ -67,6 +74,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 85, atk: 17, def: 3 },
     growth: { maxHp: 12, atk: 7, def: 1 },
     parent: 'mage',
+    playstyle: 'Le mage offensif par excellence, plus fragile encore que le mage de base mais avec la plus forte croissance d\'ATK du jeu. Boule de feu (×2.5 + brûlure 3 tours) puis Enfer (×3.2 + brûlure renforcée 4 tours) empilent les dégâts sur la durée en plus du burst direct. Dégâts sur la durée + nuke, zéro défense : il doit tuer avant de se faire tuer.',
   },
   cryomancer: {
     id: 'cryomancer',
@@ -76,6 +84,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 85, atk: 17, def: 3 },
     growth: { maxHp: 15, atk: 5, def: 2 },
     parent: 'mage',
+    playstyle: 'Le mage le plus solide, un vrai hybride contrôle/tank pour l\'archétype. Éclat de glace et Blizzard infligent du Gel (ralentit/désavantage l\'ennemi) tout en offrant Armure de givre (réduction de dégâts) et un bouclier (15% PV sur Blizzard) — des outils défensifs rares chez un mage. Moins de burst pur qu\'un Pyromancien, mais bien plus difficile à tuer.',
   },
   arcanist: {
     id: 'arcanist',
@@ -85,6 +94,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 85, atk: 17, def: 3 },
     growth: { maxHp: 13, atk: 6, def: 1 },
     parent: 'mage',
+    playstyle: 'Le mage au tempo le plus rapide : Missile arcanique n\'a que 8s de recharge (le plus court de toutes les compétences du jeu), ce qui permet de spammer bien plus souvent qu\'ailleurs, complété par Distorsion (×2.4) pour le gros coup occasionnel. Plus de double-lancer que les autres mages. Moins de dégâts par coup individuel, mais une cadence largement supérieure — DPS constant plutôt que pics de burst.',
   },
 
   // ── Archer ──
@@ -95,6 +105,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     desc: 'Polyvalent : dégâts réguliers et +6% de double frappe (inné).',
     base: { maxHp: 100, atk: 15, def: 5 },
     growth: { maxHp: 14, atk: 4, def: 1 },
+    playstyle: 'Le DPS physique équilibré : stats pile au milieu (ni tanky comme le guerrier, ni fragile comme le mage), +6% de double frappe inné qui double occasionnellement les dégâts d\'un coup normal. Son arbre mélange critique, double frappe et esquive — Pluie de flèches (×1.9) comme finisher. Pas de spécialité extrême, juste une bonne polyvalence offensive/défensive.',
   },
   rogue: {
     id: 'rogue',
@@ -104,6 +115,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 100, atk: 15, def: 5 },
     growth: { maxHp: 15, atk: 6, def: 1 },
     parent: 'archer',
+    playstyle: 'Assassin évasif : Poignard (×2.2 + poison 2 tours) empoisonne avant le vrai finisher, Assassinat (×2.8, un des plus hauts multiplicateurs du jeu). L\'esquive est sa seule vraie défense (jusqu\'à +18% via Fantôme/Voile d\'ombre), pas de PV ni DEF particuliers — il compte sur le fait de ne pas se faire toucher plutôt que d\'encaisser.',
   },
   bard: {
     id: 'bard',
@@ -113,6 +125,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 100, atk: 15, def: 5 },
     growth: { maxHp: 16, atk: 4, def: 2 },
     parent: 'archer',
+    playstyle: 'DPS hybride auto-suffisant : Chant (×1.5 + 10% soin) le maintient en vie tout en tapant, Inspiration ajoute de l\'ATK ET de la DEF à la fois (rare de cumuler les deux), Crescendo (×2.8) sert de finisher. Contrairement à son nom "soutien", il n\'y a pas de buff d\'équipe actif dans le combat solo — c\'est un DPS qui se soigne un peu, pas un vrai support de groupe.',
   },
   hunter: {
     id: 'hunter',
@@ -122,6 +135,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 100, atk: 15, def: 5 },
     growth: { maxHp: 17, atk: 5, def: 2 },
     parent: 'archer',
+    playstyle: 'DPS régulier spécialisé en pénétration d\'armure : Perce-cœur et Concentration cumulent jusqu\'à +21% de pénétration, rendant Morsure (×2.0) et Tir de précision (×2.5) très efficaces contre les cibles bien blindées. Pas de burst extrême ni d\'esquive/soin particuliers — sa force est de rester efficace même face aux monstres résistants là où les autres archers perdent en dégâts.',
   },
 
   // ── Soigneur ──
@@ -132,6 +146,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     desc: 'Sustain : +5 PV régénérés par tour (inné), increvable.',
     base: { maxHp: 120, atk: 12, def: 7 },
     growth: { maxHp: 18, atk: 3, def: 1 }, // DEF +2→+1, HP +16→+18 (compensation)
+    playstyle: 'Le sustain le plus simple et le plus fiable : +5 PV régénérés par tour rien qu\'en existant, plus PV max, DEF et réduction de dégâts en talents. Châtiment (×1.5 + 10% soin) et Soin (20% PV instantané) donnent un peu d\'offense et un vrai bouton de soin d\'urgence. Pas de gimmick particulier — juste très difficile à tuer, tour après tour.',
   },
   dawn_priest: {
     id: 'dawn_priest',
@@ -141,6 +156,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 120, atk: 12, def: 7 },
     growth: { maxHp: 22, atk: 4, def: 1 }, // DEF +3→+1 (était plus défensif que le warrior !), HP +20→+22
     parent: 'healer',
+    playstyle: 'Le vrai healer de la famille Soigneur, celui avec les plus gros chiffres de soin : Lumière sacrée (22% PV instantané) puis Nova sacrée (×1.6 + 20% soin) — deux fois plus de soin actif que le Soigneur de base. Défense complémentaire via Foi et Sanctuaire (+DEF et réduction de dégâts). Le moins offensif des quatre sous-classes Soigneur, mais celui qui se soigne (et encaisse) le mieux.',
   },
   druid: {
     id: 'druid',
@@ -150,6 +166,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 120, atk: 12, def: 7 },
     growth: { maxHp: 22, atk: 5, def: 1 }, // DEF +2→+1
     parent: 'healer',
+    playstyle: 'Hybride tank/DoT autosuffisant, pas un vrai soigneur de groupe. Épines renvoie une partie des dégâts subis (passif), Colère (×2.0 + poison 3 tours) saigne l\'ennemi sur la durée plutôt qu\'en un coup, et Floraison est son unique soin : un gros heal instantané (25% PV) plutôt qu\'un soin continu. Plus d\'ATK que le Soigneur de base au prix d\'un peu de sustain passif — pense "combattant de la nature qui encaisse et empoisonne" plutôt que "prêtre qui soigne en continu".',
   },
   monk: {
     id: 'monk',
@@ -159,6 +176,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 120, atk: 12, def: 7 },
     growth: { maxHp: 18, atk: 6, def: 1 }, // DEF +2→+1 (moine = DPS soigneur, pas tank)
     parent: 'healer',
+    playstyle: 'Le plus offensif des Soigneurs, un vrai DPS déguisé. Chi donne du vol de vie (se soigne en tapant, pas via un sort), Poing de fer (×1.8) puis Coup du Dragon (×2.0) enchaînent les coups, et Zenith ajoute encore de la régén passive en fin d\'arbre. Pas de bouton de soin dédié comme les autres Soigneurs — sa survie vient entièrement de l\'agressivité (vol de vie + régén), pas d\'un sort de soin.',
   },
 };
 

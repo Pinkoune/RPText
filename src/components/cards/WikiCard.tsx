@@ -5,12 +5,13 @@ import { MONSTERS } from '../../game/monsters';
 import type { ItemDef, MonsterDef } from '../../game/types';
 import { RECIPES } from '../../game/crafting';
 import { GATHER_SKILLS } from '../../game/gathering';
+import { BASE_CLASSES, getAscensions } from '../../game/classes';
 import ItemIcon from '../ItemIcon';
 import MonsterIcon from '../MonsterIcon';
 
 export default function WikiCard() {
   const p = useGame(s => s.player);
-  const [tab, setTab] = useState<'items' | 'bestiary'>('items');
+  const [tab, setTab] = useState<'items' | 'bestiary' | 'classes'>('items');
   const [search, setSearch] = useState('');
 
   const sourcesByItem = useMemo(() => {
@@ -76,14 +77,17 @@ export default function WikiCard() {
         <div className="flex gap-2">
           <button onClick={() => setTab('items')} className={`flex-1 rounded p-2 text-sm font-bold transition ${tab === 'items' ? 'bg-sky-500/40 text-white' : 'bg-black/25 text-slate-300 hover:bg-white/10'}`}>Objets</button>
           <button onClick={() => setTab('bestiary')} className={`flex-1 rounded p-2 text-sm font-bold transition ${tab === 'bestiary' ? 'bg-sky-500/40 text-white' : 'bg-black/25 text-slate-300 hover:bg-white/10'}`}>Bestiaire</button>
+          <button onClick={() => setTab('classes')} className={`flex-1 rounded p-2 text-sm font-bold transition ${tab === 'classes' ? 'bg-sky-500/40 text-white' : 'bg-black/25 text-slate-300 hover:bg-white/10'}`}>Classes</button>
         </div>
-        <input 
-          type="text" 
-          placeholder="Rechercher..." 
-          value={search} 
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded bg-black/40 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none focus:ring-1 focus:ring-sky-500"
-        />
+        {tab !== 'classes' && (
+          <input
+            type="text"
+            placeholder="Rechercher..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded bg-black/40 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none focus:ring-1 focus:ring-sky-500"
+          />
+        )}
       </div>
 
       <div className="overflow-y-auto space-y-2 pr-1">
@@ -166,6 +170,35 @@ export default function WikiCard() {
             </div>
           );
         })}
+
+        {tab === 'classes' && BASE_CLASSES.map((base) => (
+          <div key={base.id} className="space-y-2">
+            <div className="rounded-lg bg-black/25 p-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl leading-none">{base.emoji}</span>
+                <span className="font-bold text-sky-300">{base.name}</span>
+                <span className="text-[10px] text-slate-500 ml-auto">
+                  ❤️ {base.base.maxHp}+{base.growth.maxHp}/nv · 🗡️ {base.base.atk}+{base.growth.atk}/nv · 🛡️ {base.base.def}+{base.growth.def}/nv
+                </span>
+              </div>
+              <p className="text-xs text-amber-200/90 mt-1">{base.desc}</p>
+              <p className="text-xs text-slate-300 mt-2 leading-relaxed">{base.playstyle}</p>
+            </div>
+            {getAscensions(base.id).map((sub) => (
+              <div key={sub.id} className="rounded-lg bg-black/15 p-3 ml-3 border-l-2 border-sky-500/30">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg leading-none">{sub.emoji}</span>
+                  <span className="font-bold text-emerald-300">{sub.name}</span>
+                  <span className="text-[10px] text-slate-500 ml-auto">
+                    ❤️ {sub.base.maxHp}+{sub.growth.maxHp}/nv · 🗡️ {sub.base.atk}+{sub.growth.atk}/nv · 🛡️ {sub.base.def}+{sub.growth.def}/nv
+                  </span>
+                </div>
+                <p className="text-xs text-amber-200/90 mt-1">{sub.desc}</p>
+                <p className="text-xs text-slate-300 mt-2 leading-relaxed">{sub.playstyle}</p>
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     </div>
   );
