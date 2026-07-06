@@ -660,6 +660,11 @@ export function unequipItem(p: PlayerState, slot: 'weapon' | 'armor' | 'trinket'
   }
 }
 
+/** Cœur chanceux (objet passif admin-only) : +50% de chance de drop relative, juste en le possédant. */
+export function luckyDropMult(p: PlayerState): number {
+  return (p.inventory['coeur_chanceux'] ?? 0) > 0 ? 1.5 : 1;
+}
+
 /** Applique les multiplicateurs globaux (équipe, guilde) à l'XP et à l'Or. */
 export function applyBonuses(p: PlayerState, base: { xp: number; gold: number }): { xp: number; gold: number } {
   // Garde-fous : un multiplicateur non fini empoisonnerait durablement l'XP/Or du joueur.

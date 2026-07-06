@@ -9,7 +9,7 @@ import {
   // Consommables
   GiTeapot, GiHealthPotion, GiPotionBall, GiCauldron, GiFishCooked, GiMeal, GiKey,
   GiPresent, GiHammerNails, GiUpgrade, GiHoneyJar, GiWaterFlask, GiFireDash, GiFeather,
-  GiMeat, GiHamShank,
+  GiMeat, GiHamShank, GiHearts,
   // Trinkets
   GiHeartInside, GiFlowerEmblem, GiPrimitiveNecklace, GiRing, GiClover, GiDiceSixFacesFive,
   GiNecklace, GiGemChain, GiRock, GiPearlNecklace, GiLightBulb, GiEyeShield, GiCheckedShield,
@@ -50,6 +50,7 @@ export const ITEM_ICONS: Record<string, IconType> = {
   repair_kit: GiHammerNails, upgrade_matrix: GiUpgrade, honey_mead: GiHoneyJar,
   cactus_water: GiWaterFlask, phoenix_elixir: GiFireDash, phoenix_feather: GiFeather,
   bait_slime: GiSlime, bait_wolf: GiMeat, bait_yeti: GiHamShank, bait_efreet: GiFire, bait_voidling: GiVortex,
+  coeur_chanceux: GiHearts,
 
   // ── Trinkets ──
   heartsteel: GiHeartInside, flower_crown: GiFlowerEmblem, bone_necklace: GiPrimitiveNecklace,

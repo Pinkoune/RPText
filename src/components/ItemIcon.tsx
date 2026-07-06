@@ -23,7 +23,8 @@ export default function ItemIcon({
   const baseId = id.split(':')[0];
   const it = getItem(id);
   const Comp = ITEM_ICONS[baseId];
-  const tint = color ?? (it ? RARITY_COLOR[it.rarity] : '#b8c0cf');
+  // Le Cœur chanceux garde son rose peu importe la rareté (identité visuelle du porte-bonheur).
+  const tint = color ?? (baseId === 'coeur_chanceux' ? '#ff6fa5' : it ? RARITY_COLOR[it.rarity] : '#b8c0cf');
   const label = title ?? it?.name;
 
   if (Comp) {

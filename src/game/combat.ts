@@ -1,5 +1,5 @@
 import type { PlayerState, MonsterDef } from './types';
-import { deriveStats, grantXp, addItem, applyBonuses } from './player';
+import { deriveStats, grantXp, addItem, applyBonuses, luckyDropMult } from './player';
 import { BIOMES } from './biomes';
 import { item } from './items';
 import { PHASE_MODIFIERS, currentPhase } from './daynight';
@@ -411,7 +411,7 @@ export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRe
   const levelsGained = grantXp(p, xp);
   grantFamiliarXp(p, Math.ceil(xp * 0.15));
   const loot: string[] = [];
-  const lootMult = phase === 'night' ? 2 : 1;
+  const lootMult = (phase === 'night' ? 2 : 1) * luckyDropMult(p);
   for (const [id, chance] of Object.entries(monster.loot)) {
     if (Math.random() < chance * lootMult && item(id)!) {
       addItem(p, id, 1);

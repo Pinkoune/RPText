@@ -1,5 +1,5 @@
 import type { PlayerState, MonsterDef } from './types';
-import { deriveStats, grantXp, addItem, cooldownLeft, reduceDurability } from './player';
+import { deriveStats, grantXp, addItem, cooldownLeft, reduceDurability, luckyDropMult } from './player';
 import { simulateCombat } from './combat';
 import { talentMods } from './talents';
 import { addQuestMetric } from './quests';
@@ -234,8 +234,9 @@ export function runDungeon(p: PlayerState, def: DungeonDef): DungeonRun | { erro
   p.gold += run.gold;
   p.fateCoins += run.fateCoins;
   p.gems += run.gems;
+  const lucky = luckyDropMult(p);
   for (const [id, chance] of Object.entries(def.reward.loot)) {
-    if (Math.random() < chance) {
+    if (Math.random() < chance * lucky) {
       addItem(p, id, mult);
       for (let k = 0; k < mult; k++) run.loot.push(id);
     }

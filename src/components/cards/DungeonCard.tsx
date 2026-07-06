@@ -7,7 +7,7 @@ import { CLASSES } from '../../game/classes';
 import { auraColor } from '../../game/prestige';
 import ItemIcon from '../ItemIcon';
 import { playSound } from '../../game/sound';
-import { deriveStats, applyBonuses, grantXp, addItem } from '../../game/player';
+import { deriveStats, applyBonuses, grantXp, addItem, luckyDropMult } from '../../game/player';
 import { talentMods, getAllActiveSkills } from '../../game/talents';
 import { activeSetProc } from '../../game/sets';
 import { addQuestMetric } from '../../game/quests';
@@ -256,7 +256,7 @@ export default function DungeonCard() {
       if (def.reward.loot) {
         for (const [itemId, prob] of Object.entries(def.reward.loot)) {
           // Avec la clé, on augmente un peu les probas (x1.5 par exemple) ou on tire plusieurs fois.
-          if (Math.random() < prob * 1.5) {
+          if (Math.random() < prob * 1.5 * luckyDropMult(d)) {
             addItem(d, itemId, 1);
             toast(`Coffre : +1 ${item(itemId)?.name} !`, 'good');
             gotLoot = true;
