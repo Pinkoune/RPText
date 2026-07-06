@@ -20,7 +20,7 @@ export interface SetProc {
   power: number;
 }
 
-const SET_PROCS: Record<string, Omit<SetProc, 'setId'>> = {
+export const SET_PROCS: Record<string, Omit<SetProc, 'setId'>> = {
   fire_set:     { name: 'Embrasement',            icon: '🔥', color: '#ff8a4a', chance: 0.35, kind: 'burn',   power: 0.35 },
   frost_set:    { name: 'Gel runique',            icon: '❄️', color: '#7ad0ff', chance: 0.35, kind: 'chill',  power: 0 },
   water_set:    { name: 'Ressac vital',           icon: '🌊', color: '#5aa6ff', chance: 0.30, kind: 'heal',   power: 0.08 },
@@ -44,6 +44,21 @@ export function equippedSetCounts(p: PlayerState): Record<string, number> {
     counts[it.setId] = (counts[it.setId] ?? 0) + 1;
   }
   return counts;
+}
+
+/** Description lisible de l'effet 3-pièces d'un set (pour Wiki/Forge). */
+export function setProcDesc(setId: string): string | null {
+  const proc = SET_PROCS[setId];
+  if (!proc) return null;
+  const pct = Math.round(proc.chance * 100);
+  switch (proc.kind) {
+    case 'burn': return `${pct}% de chance d'infliger Brûlure (${Math.round(proc.power * 100)}% ATK/tour) à chaque attaque.`;
+    case 'chill': return `${pct}% de chance de Geler l'ennemi (rate son tour) à chaque attaque.`;
+    case 'heal': return `${pct}% de chance de se soigner de ${Math.round(proc.power * 100)}% des PV max à chaque attaque.`;
+    case 'shield': return `${pct}% de chance de gagner un bouclier (${Math.round(proc.power * 100)}% des PV max) à chaque attaque.`;
+    case 'extra': return `${pct}% de chance d'infliger un coup supplémentaire (${Math.round(proc.power * 100)}% ATK) à chaque attaque.`;
+    default: return null;
+  }
 }
 
 /** Proc de set actif (le premier set complet à 3 pièces), ou null. */

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { CONCOCTION_RECIPES, canConcoct, getConcoctionLevel, type ConcoctionRecipe } from '../../game/concoction';
 import { item, RARITY_COLOR } from '../../game/items';
+import { deriveStats } from '../../game/player';
 import ItemIcon from '../ItemIcon';
 
 export default function ConcoctionCard() {
@@ -20,7 +21,7 @@ export default function ConcoctionCard() {
   const lvlData = getConcoctionLevel(p.concoctionXp ?? 0);
   const lvl = lvlData.level;
   
-  const maxCp = 50 + lvl * 10;
+  const maxCp = 50 + lvl * 10 + (deriveStats(p).maxCp || 0);
   const progGain = Math.floor(10 + lvl * 1.5);
   const qualGain = Math.floor(15 + lvl * 2);
   const touchCost = Math.max(5, 15 - Math.floor(lvl / 2));

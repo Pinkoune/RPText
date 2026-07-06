@@ -7,6 +7,7 @@ import { RECIPES } from '../../game/crafting';
 import { GATHER_SKILLS } from '../../game/gathering';
 import { BIOMES } from '../../game/biomes';
 import { BASE_CLASSES, getAscensions } from '../../game/classes';
+import { setProcDesc } from '../../game/sets';
 import ItemIcon from '../ItemIcon';
 import MonsterIcon from '../MonsterIcon';
 
@@ -108,6 +109,9 @@ export default function WikiCard() {
             </div>
             <p className="text-xs text-slate-300 mt-1">{it.desc}</p>
             {getStatsStr(it) && <div className="text-[10px] bg-black/40 px-1.5 py-0.5 rounded text-amber-200 mt-1 w-fit">{getStatsStr(it)}</div>}
+            {it.setId && setProcDesc(it.setId) && (
+              <p className="text-[10px] text-purple-300 mt-1">⚔️ Bonus 3 pièces ({it.setId.replace('_set', '')}) : {setProcDesc(it.setId)}</p>
+            )}
             {sourcesByItem[it.id] && sourcesByItem[it.id].length > 0 && (
               <div className="mt-2 text-[10px] text-slate-400">
                 <span className="font-semibold">Obtention :</span> {sourcesByItem[it.id].join(' · ')}

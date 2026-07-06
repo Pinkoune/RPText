@@ -29,8 +29,8 @@ export default function CommandBar() {
       const el = document.activeElement as HTMLElement | null;
       const tag = el?.tagName;
       if (el === inputRef.current) return;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
-      if (el?.isContentEditable) return;
+      // Exception : les champs de saisie du chat/équipe gardent l'Entrée pour eux.
+      if (el?.closest('[data-keep-enter]')) return;
       inputRef.current?.focus();
     }
     window.addEventListener('keydown', onGlobalKey);

@@ -4,6 +4,7 @@ import { RECIPES, canCraft, consumeMaterials, finishCraft, getCraftLevel, type R
 import { item, RARITY_COLOR } from '../../game/items';
 import type { ItemSlot } from '../../game/types';
 import { deriveStats } from '../../game/player';
+import { setProcDesc } from '../../game/sets';
 import ItemIcon from '../ItemIcon';
 
 type Group = ItemSlot | 'all' | 'profession';
@@ -346,6 +347,14 @@ export default function CraftCard() {
                     <span>{setInfo.icon}</span>
                     <span>Ensemble {setInfo.name}</span>
                     <span className="h-px flex-1 opacity-30" style={{ background: setInfo.color }} />
+                    {out.setId && setProcDesc(out.setId) && (
+                      <span
+                        className="shrink-0 cursor-help rounded-full bg-black/30 px-1.5 text-[10px] font-normal text-slate-300"
+                        title={`Bonus 3 pièces : ${setProcDesc(out.setId)}`}
+                      >
+                        ⓘ
+                      </span>
+                    )}
                   </div>,
                 );
               }

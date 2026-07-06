@@ -88,6 +88,13 @@ export default function InventoryCard() {
       return;
     }
     const it = item(id)!;
+    if (id.startsWith('bait_')) {
+      const activeBait = p!.activeBuffs?.find((b) => b.id.startsWith('bait_') && b.expiresAt > Date.now());
+      if (activeBait) {
+        toast(`Un appât (${item(activeBait.id)?.name}) est déjà actif.`, 'bad');
+        return;
+      }
+    }
     mutate((d) => {
       removeItem(d, id);
       if (id === 'lootbox') {
@@ -97,9 +104,6 @@ export default function InventoryCard() {
         toast(`Lootbox ouverte ! Obtenu : ${item(lootId)!.name}.`, 'good');
       } else if (id.startsWith('bait_')) {
         if (!d.activeBuffs) d.activeBuffs = [];
-        // Remove existing bait buff if any
-        d.activeBuffs = d.activeBuffs.filter(b => !b.id.startsWith('bait_'));
-        // Add new bait for 10 minutes
         d.activeBuffs.push({ id, expiresAt: Date.now() + 10 * 60 * 1000 });
         toast(`${it.name} utilisé ! Attire des monstres spécifiques pendant 10min.`, 'good');
       } else {

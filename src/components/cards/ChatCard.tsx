@@ -345,6 +345,7 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
       {!(activeTab === 'private' && !dmPeer) && !(activeTab === 'team' && !p.teamId) && !(activeTab === 'guild' && !p.guildId) && (
         <div className="mt-2 flex gap-2">
           <input
+            data-keep-enter
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && send()}

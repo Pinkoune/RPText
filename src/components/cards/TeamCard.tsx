@@ -136,6 +136,7 @@ export default function TeamCard() {
           </div>
           <div className="flex gap-1.5">
             <input
+              data-keep-enter
               value={chatText}
               onChange={(e) => setChatText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendTeamChat()}
