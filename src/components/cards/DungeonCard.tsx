@@ -9,6 +9,7 @@ import ItemIcon from '../ItemIcon';
 import { playSound } from '../../game/sound';
 import { deriveStats, applyBonuses, grantXp, addItem } from '../../game/player';
 import { talentMods, getAllActiveSkills } from '../../game/talents';
+import { activeSetProc } from '../../game/sets';
 import { addQuestMetric } from '../../game/quests';
 import { listenTeams, setTeamDungeon, type Team } from '../../firebase/groupsService';
 import {
@@ -179,7 +180,7 @@ export default function DungeonCard() {
     const stats = deriveStats(p!);
     const mods = talentMods(p!);
     try {
-      const id = await createDungeonLobby(p!.uid, p!.name, p!.classId, def.id, stats, mods, p!.level, p!.prestigeAura, p!.auraColorOn);
+      const id = await createDungeonLobby(p!.uid, p!.name, p!.classId, def.id, stats, mods, p!.level, p!.prestigeAura, p!.auraColorOn, activeSetProc(p!));
       mutate(d => { d.dungeonSessionId = id; });
       if (myTeam) await setTeamDungeon(myTeam.id, id);
     } catch (e: any) {
@@ -199,7 +200,7 @@ export default function DungeonCard() {
     const stats = deriveStats(p!);
     const mods = talentMods(p!);
     try {
-      await joinDungeon(id, p!.uid, p!.name, p!.classId, stats, mods, p!.level, p!.prestigeAura, p!.auraColorOn);
+      await joinDungeon(id, p!.uid, p!.name, p!.classId, stats, mods, p!.level, p!.prestigeAura, p!.auraColorOn, activeSetProc(p!));
       mutate(d => { d.dungeonSessionId = id; });
     } catch (e: any) {
       toast(e.message, 'bad');
@@ -230,10 +231,16 @@ export default function DungeonCard() {
       potHeal = item(potUse)!.hp ?? 0;
       mutate(d => { d.inventory[potUse]--; });
     }
+    let reviveFrac: number | undefined;
     if (action === 'revive') {
-      mutate(d => { d.inventory['phoenix_feather']--; });
+      const useFeather = (p!.inventory['phoenix_feather'] ?? 0) > 0;
+      const reviveItem = useFeather ? 'phoenix_feather' : 'phoenix_elixir';
+      if ((p!.inventory[reviveItem] ?? 0) <= 0) return toast('Aucun objet de résurrection.', 'bad');
+      mutate(d => { d.inventory[reviveItem]--; if (d.inventory[reviveItem] <= 0) delete d.inventory[reviveItem]; });
+      // La Plume (rare, Boutique du Destin 1/sem.) ramène presque à plein PV ; l'Élixir (plus commun) ramène moins.
+      reviveFrac = useFeather ? 0.7 : 0.3;
     }
-    await submitDungeonAction(session.id, p!.uid, action, potHeal, targetUid);
+    await submitDungeonAction(session.id, p!.uid, action, potHeal, targetUid, reviveFrac);
   }
 
   function openChest() {
@@ -391,8 +398,12 @@ export default function DungeonCard() {
                 <div className="flex justify-between items-center mb-1">
                   <span className={`font-semibold flex gap-1 items-center ${pl.isDead ? 'text-slate-500 line-through' : ''}`}>
                     <span style={{ color: pl.isDead ? undefined : auraColor(pl.aura, pl.auraColorOn ?? true) }}>{pl.name}</span> {isTurn && !pl.isDead && <span className="animate-pulse">⏳</span>}
-                    {pl.isDead && myTurn && !me.isDead && (p.inventory['phoenix_feather'] ?? 0) > 0 && (
-                      <button onClick={() => act('revive', undefined, pl.uid)} className="text-[10px] bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 px-1.5 py-0.5 rounded ml-2">🪶 Réanimer</button>
+                    {pl.setProc && <span title={`Set actif : ${pl.setProc.name} (${Math.round(pl.setProc.chance * 100)}%/attaque)`} style={{ color: pl.setProc.color }}>{pl.setProc.icon}</span>}
+                    {(pl.shield ?? 0) > 0 && <span title={`Bouclier : ${pl.shield} PV`}>🛡️<span className="text-[9px] text-sky-300">{pl.shield}</span></span>}
+                    {pl.isDead && myTurn && !me.isDead && ((p.inventory['phoenix_feather'] ?? 0) > 0 || (p.inventory['phoenix_elixir'] ?? 0) > 0) && (
+                      <button onClick={() => act('revive', undefined, pl.uid)} className="text-[10px] bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 px-1.5 py-0.5 rounded ml-2">
+                        {(p.inventory['phoenix_feather'] ?? 0) > 0 ? '🪶 Réanimer' : '🧊 Réanimer'}
+                      </button>
                     )}
                   </span>
                   <span className="tabular-nums text-slate-400">{Math.round(pl.hp)}/{pl.maxHp}</span>

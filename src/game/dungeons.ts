@@ -104,7 +104,7 @@ export const DUNGEONS: DungeonDef[] = [
       mob('abyssal_knight', 'Chevalier Abyssal', '🗡️', 2600, 165, 70, 1300),
       mob('void_king', 'Roi Abyssal', '👑', 7000, 220, 90, 5000),
     ],
-    reward: { gold: 6000, fateCoins: 25, gems: 5, loot: { void_dust: 0.9, infernal_shard: 0.8, boss_soul: 0.4, void_mantle: 0.2, primordial_crown: 0.08, upgrade_matrix: 0.35 } },
+    reward: { gold: 6000, fateCoins: 25, gems: 5, loot: { void_dust: 0.9, infernal_shard: 0.8, boss_soul: 0.4, void_mantle: 0.2, primordial_crown: 0.08, upgrade_matrix: 0.35, phoenix_feather: 0.05 } },
   },
 ];
 

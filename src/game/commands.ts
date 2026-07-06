@@ -38,6 +38,7 @@ function applyZonePenalty(p: PlayerState, monster: any): void {
 }
 import { getRaidWindow } from './raid';
 import { joinOrCreateRaid } from '../firebase/dungeonService';
+import { activeSetProc } from './sets';
 
 export interface CommandCtx {
   getPlayer: () => PlayerState | null;
@@ -654,7 +655,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       const sessionId = `raid-${w.key}`;
       const stats = deriveStats(p!);
       const mods = talentMods(p!);
-      joinOrCreateRaid(sessionId, 'raid_trials', w.startsAt, p!.uid, p!.name, p!.classId, stats, mods, p!.level, p!.prestigeAura, p!.auraColorOn)
+      joinOrCreateRaid(sessionId, 'raid_trials', w.startsAt, p!.uid, p!.name, p!.classId, stats, mods, p!.level, p!.prestigeAura, p!.auraColorOn, activeSetProc(p!))
         .catch(() => ctx.toast('Impossible de rejoindre le raid (hors ligne ?).', 'bad'));
       ctx.mutate((d) => { d.dungeonSessionId = sessionId; });
       ctx.open('dungeon', undefined, { singleton: true });

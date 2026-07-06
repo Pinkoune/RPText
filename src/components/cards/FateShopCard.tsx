@@ -20,6 +20,7 @@ const OFFERS: Offer[] = [
   { id: 'dungeon_key', price: 25, weekly: 5 },
   { id: 'lootbox', price: 12 },
   { id: 'phoenix_elixir', price: 18, weekly: 10 },
+  { id: 'phoenix_feather', price: 60, weekly: 1 },
   { id: 'repair_kit', price: 5 },
 ];
 
@@ -60,13 +61,13 @@ export default function FateShopCard() {
           <div key={o.id} className="flex items-center gap-2 rounded-lg border-l-2 bg-black/25 p-2.5" style={{ borderColor: RARITY_COLOR[it.rarity] }}>
             <ItemIcon id={o.id} size={24} />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="truncate font-medium" style={{ color: RARITY_COLOR[it.rarity] }}>{it.name}</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium" style={{ color: RARITY_COLOR[it.rarity] }}>{it.name}</span>
                 {o.weekly !== undefined && (
                   <span className={`shrink-0 rounded px-1.5 text-[10px] ${maxed ? 'bg-rose-500/20 text-rose-300' : 'bg-sky-500/20 text-sky-300'}`}>{bought}/{o.weekly} / sem.</span>
                 )}
               </div>
-              <div className="truncate text-[11px] text-slate-400">{it.desc}</div>
+              <div className="text-[11px] text-slate-400 leading-snug">{it.desc}</div>
             </div>
             <button
               onClick={() => buy(o)}

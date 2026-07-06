@@ -1,7 +1,7 @@
 import type { IconType } from 'react-icons';
 import {
   // Matériaux
-  GiWolfHead, GiSlime, GiBoarTusks, GiSnowflake1, GiFire, GiVortex, GiSoulVessel,
+  GiWolfHead, GiSlime, GiBoarTusks, GiSnowflake1, GiFire, GiVortex, GiCrownedSkull,
   GiFallingLeaf, GiWaterDrop, GiSun, GiVoodooDoll, GiWoodPile, GiWoodBeam, GiLogging,
   GiStoneBlock, GiOre, GiMinerals, GiCrystalize, GiFishingHook, GiFishScales, GiFishbone,
   GiFishEggs, GiHerbsBundle, GiFlowerPot, GiCrystalGrowth, GiMetalBar, GiSparkles,
@@ -33,7 +33,7 @@ import {
 export const ITEM_ICONS: Record<string, IconType> = {
   // ── Matériaux ──
   wolf_pelt: GiWolfHead, slime_gel: GiSlime, boar_tusk: GiBoarTusks, frost_shard: GiSnowflake1,
-  ember_core: GiFire, void_dust: GiVortex, boss_soul: GiSoulVessel, dryad_leaf: GiFallingLeaf,
+  ember_core: GiFire, void_dust: GiVortex, boss_soul: GiCrownedSkull, dryad_leaf: GiFallingLeaf,
   pure_water: GiWaterDrop, sun_orb: GiSun, voodoo_charm: GiVoodooDoll,
   wood: GiWoodPile, hardwood: GiWoodBeam, ironwood: GiLogging, stone: GiStoneBlock,
   iron_ore: GiOre, mithril_ore: GiMinerals, obsidian: GiCrystalize,

@@ -17,6 +17,7 @@ export const socialEnabled = isFirebaseConfigured && !!db;
 export interface Member {
   name: string;
   level: number;
+  title?: string | null;
   aura?: string | null;
   auraColorOn?: boolean;
 }
@@ -186,6 +187,26 @@ export async function rejectApplication(guildId: string, targetUid: string): Pro
   });
 }
 
+/**
+ * Synchronise ses propres infos (niveau, titre, aura) dans sa fiche membre de
+ * guilde. Appelé à chaque sauvegarde (`savePlayer`) pour que la liste des
+ * membres ne reste pas figée sur le niveau qu'on avait en rejoignant.
+ */
+export async function syncGuildMember(guildId: string, uid: string, me: Member): Promise<void> {
+  if (!db) return;
+  try {
+    await updateDoc(doc(db, 'guilds', guildId), {
+      [`members.${uid}.name`]: me.name,
+      [`members.${uid}.level`]: me.level,
+      [`members.${uid}.title`]: me.title ?? null,
+      [`members.${uid}.aura`]: me.aura ?? null,
+      [`members.${uid}.auraColorOn`]: me.auraColorOn ?? true,
+    });
+  } catch {
+    // best-effort : pas grave si ça échoue (ex: pas encore membre, guilde supprimée)
+  }
+}
+
 export async function leaveGuild(guildId: string, uid: string): Promise<void> {
   if (!db) return;
   const ref = doc(db, 'guilds', guildId);
@@ -229,10 +250,11 @@ export function guildBossWeekId(now = Date.now()): string {
   return String(Math.floor(now / (7 * 24 * 60 * 60 * 1000)));
 }
 
-function freshBoss(weekId: string, memberCount: number, avgLevel: number): GuildBoss {
+function freshBoss(weekId: string, memberCount: number, avgLevel: number, guildLvl: number): GuildBoss {
   const idx = (parseInt(weekId, 10) % GUILD_BOSS_ROSTER.length + GUILD_BOSS_ROSTER.length) % GUILD_BOSS_ROSTER.length;
   const pick = GUILD_BOSS_ROSTER[idx];
-  const maxHp = Math.round(8000 + memberCount * 6000 + avgLevel * 400);
+  // Une guilde plus développée (plus d'XP contribuée) affronte un boss plus corsé.
+  const maxHp = Math.round(8000 + memberCount * 6000 + avgLevel * 400 + guildLvl * 1500);
   return { weekId, name: pick.name, emoji: pick.emoji, hp: maxHp, maxHp, contributors: {} };
 }
 
@@ -259,7 +281,7 @@ export async function attackGuildBoss(guildId: string, uid: string, dmg: number)
     const avgLevel = Object.values(members).reduce((s, m) => s + (m.level || 1), 0) / memberCount;
 
     let boss = data.boss;
-    if (!boss || boss.weekId !== wid) boss = freshBoss(wid, memberCount, avgLevel);
+    if (!boss || boss.weekId !== wid) boss = freshBoss(wid, memberCount, avgLevel, guildLevel(data.xp).level);
 
     const justDefeated = boss.hp > 0 && boss.hp - safeDmg <= 0;
     boss.hp = Math.max(0, boss.hp - safeDmg);
@@ -283,12 +305,36 @@ export function listenGuilds(cb: (g: Guild[]) => void): () => void {
   });
 }
 
+/** Niveaux de guilde requis pour débloquer chaque palier de bonus/perk. */
+export const GUILD_PERK_TIERS = { gold: 3, bossLoot: 6, bossCd: 10 } as const;
+
 /** Renvoie le multiplicateur d'XP basé sur le niveau de la guilde (1.0 + 0.02 par niveau). */
 export function getGuildBonus(guildId: string | null): number {
   if (!guildId || !cachedGuilds[guildId]) return 1.0;
   const xp = cachedGuilds[guildId].xp ?? 0;
   const lvl = guildLevel(xp).level;
   return 1.0 + (lvl * 0.02);
+}
+
+/** Palier Nv.3 : le bonus de guilde s'étend aussi à l'Or (avant : XP uniquement). */
+export function getGuildGoldBonus(guildId: string | null): number {
+  if (!guildId || !cachedGuilds[guildId]) return 1.0;
+  const lvl = guildLevel(cachedGuilds[guildId].xp ?? 0).level;
+  if (lvl < GUILD_PERK_TIERS.gold) return 1.0;
+  return 1.0 + (lvl * 0.02);
+}
+
+/** Palier Nv.10 : le cooldown d'attaque du boss de guilde est réduit de 33%. */
+export function getGuildBossCdMult(guildId: string | null): number {
+  if (!guildId || !cachedGuilds[guildId]) return 1.0;
+  const lvl = guildLevel(cachedGuilds[guildId].xp ?? 0).level;
+  return lvl >= GUILD_PERK_TIERS.bossCd ? 0.67 : 1.0;
+}
+
+/** Palier Nv.6 : un slot de loot bonus (matériau rare) au butin du boss de guilde. */
+export function hasGuildBossLootBonus(guildId: string | null): boolean {
+  if (!guildId || !cachedGuilds[guildId]) return false;
+  return guildLevel(cachedGuilds[guildId].xp ?? 0).level >= GUILD_PERK_TIERS.bossLoot;
 }
 
 /** Répare une valeur d'XP de guilde corrompue (NaN/undefined) pour l'affichage. */

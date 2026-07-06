@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc, collection, query, where, limit, getDocs, onSnapshot } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
 import type { PlayerState } from '../game/types';
+import { syncGuildMember } from './groupsService';
 
 const localKey = (uid: string) => `rptext.player.${uid}`;
 
@@ -106,4 +107,14 @@ export async function savePlayer(p: PlayerState): Promise<void> {
     prestigeLevel: p.prestigeLevel ?? 0,
     auraColorOn: p.auraColorOn ?? true,
   });
+  // Garde la fiche membre de guilde à jour (niveau/titre figés sinon depuis l'entrée dans la guilde).
+  if (p.guildId) {
+    void syncGuildMember(p.guildId, p.uid, {
+      name: p.name,
+      level: p.level,
+      title: p.title ?? null,
+      aura: p.prestigeAura ?? null,
+      auraColorOn: p.auraColorOn ?? true,
+    });
+  }
 }

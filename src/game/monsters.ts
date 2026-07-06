@@ -43,7 +43,7 @@ export const MONSTERS: MonsterDef[] = [
   // ── Abysses du Vide (frozen) ──
   { id: 'voidling', name: 'Rejeton du vide', hp: 1300, atk: 140, def: 40, xp: 650, gold: [200, 380], biomes: ['frozen'], loot: { void_dust: 0.6, void_reaver: 0.03, hi_potion: 0.2 , repair_kit: 0.05 , upgrade_matrix: 0.01 }, emoji: '🕳️', element: 'dark', dmgType: 'magical', resistances: ['magical'], weaknesses: ['physical'] },
   { id: 'shadow_stalker', name: "Traqueur d'Ombres", hp: 1150, atk: 160, def: 25, xp: 700, gold: [260, 430], biomes: ['frozen'], phases: ['night', 'dusk'], loot: { void_dust: 0.8, repair_kit: 0.05, upgrade_matrix: 0.05 }, emoji: '🌑', element: 'dark', dmgType: 'physical', resistances: ['physical'], weaknesses: ['magical'] },
-  { id: 'abyssal_horror', name: 'Horreur Abyssale', hp: 1700, atk: 130, def: 55, xp: 850, gold: [320, 600], biomes: ['frozen'], loot: { void_dust: 0.9, void_reaver: 0.05, upgrade_matrix: 0.08 }, emoji: '👁️‍🗨️', element: 'dark', dmgType: 'magical', resistances: ['magical'], weaknesses: ['physical'] },
+  { id: 'abyssal_horror', name: 'Horreur Abyssale', hp: 1700, atk: 130, def: 55, xp: 850, gold: [320, 600], biomes: ['frozen'], loot: { void_dust: 0.9, void_reaver: 0.05, upgrade_matrix: 0.08, phoenix_feather: 0.02 }, emoji: '👁️‍🗨️', element: 'dark', dmgType: 'magical', resistances: ['magical'], weaknesses: ['physical'] },
 ];
 
 /** Map of bait items to the monster they attract */

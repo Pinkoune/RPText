@@ -5,9 +5,10 @@ import { talentMods } from '../../game/talents';
 import { auraColor } from '../../game/prestige';
 import {
   listenGuilds, createGuild, applyGuild, acceptApplication, rejectApplication, leaveGuild, contributeGuild, guildLevel,
-  attackGuildBoss, guildBossWeekId,
+  attackGuildBoss, guildBossWeekId, getGuildBossCdMult, hasGuildBossLootBonus, GUILD_PERK_TIERS,
   socialEnabled, GUILD_MAX, GUILD_CREATE_COST, type Guild,
 } from '../../firebase/groupsService';
+import { item } from '../../game/items';
 
 const GUILD_BOSS_CD = 30 * 60 * 1000; // 30 min entre deux attaques
 
@@ -27,7 +28,8 @@ export default function GuildCard() {
   async function attackBoss() {
     if (!myGuild) return;
     const last = p!.cooldowns['guildboss'] ?? 0;
-    const left = GUILD_BOSS_CD - (Date.now() - last);
+    const cd = GUILD_BOSS_CD * getGuildBossCdMult(myGuild.id);
+    const left = cd - (Date.now() - last);
     if (left > 0) return toast(`Attaque de boss en récupération (${Math.ceil(left / 60000)} min).`, 'bad');
     const stats = deriveStats(p!);
     const mods = talentMods(p!);
@@ -62,7 +64,13 @@ export default function GuildCard() {
       d.gold += gold;
       d.fateCoins += 8;
       d.gems += 1;
-      toast(`🏆 Butin de guilde : +${gold} 🪙, +8 🎲, +1 💎`, 'gold');
+      let msg = `🏆 Butin de guilde : +${gold} 🪙, +8 🎲, +1 💎`;
+      // Palier Nv.6 : slot de loot bonus (Âme de Boss supplémentaire).
+      if (hasGuildBossLootBonus(myGuild!.id)) {
+        d.inventory['boss_soul'] = (d.inventory['boss_soul'] ?? 0) + 1;
+        msg += `, +1 ${item('boss_soul')!.name}`;
+      }
+      toast(msg, 'gold');
     });
     void contributeGuild(myGuild.id, 300); // la victoire fait aussi progresser la guilde
   }
@@ -109,6 +117,12 @@ export default function GuildCard() {
             <span className="text-[10px] tabular-nums text-slate-500">{lvl.into}/{lvl.need}</span>
           </div>
           <div className="mt-1.5 h-2 rounded bg-black/40"><div className="h-2 rounded bg-amber-400" style={{ width: `${(lvl.into / lvl.need) * 100}%` }} /></div>
+          <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+            <span className={`rounded px-1.5 py-0.5 ${lvl.level >= 1 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/40 text-slate-500'}`}>+{lvl.level * 2}% XP</span>
+            <span className={`rounded px-1.5 py-0.5 ${lvl.level >= GUILD_PERK_TIERS.gold ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/40 text-slate-500'}`}>Nv.{GUILD_PERK_TIERS.gold} : Or aussi bonus</span>
+            <span className={`rounded px-1.5 py-0.5 ${lvl.level >= GUILD_PERK_TIERS.bossLoot ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/40 text-slate-500'}`}>Nv.{GUILD_PERK_TIERS.bossLoot} : Loot boss bonus</span>
+            <span className={`rounded px-1.5 py-0.5 ${lvl.level >= GUILD_PERK_TIERS.bossCd ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/40 text-slate-500'}`}>Nv.{GUILD_PERK_TIERS.bossCd} : CD boss -33%</span>
+          </div>
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <span>Contribuer :</span>
@@ -125,7 +139,8 @@ export default function GuildCard() {
           const claimKey = `${myGuild.id}:${wid}`;
           const claimed = (p.guildBossClaims ?? []).includes(claimKey);
           const myDmg = boss?.contributors?.[p.uid] ?? 0;
-          const cdLeft = GUILD_BOSS_CD - (Date.now() - (p.cooldowns['guildboss'] ?? 0));
+          const cd = GUILD_BOSS_CD * getGuildBossCdMult(myGuild.id);
+          const cdLeft = cd - (Date.now() - (p.cooldowns['guildboss'] ?? 0));
           return (
             <div className="rounded-xl bg-black/25 p-3">
               <div className="flex items-center justify-between">
@@ -173,8 +188,12 @@ export default function GuildCard() {
           <div className="space-y-1">
             {members.map(([uid, m]) => (
               <div key={uid} className="flex justify-between rounded-lg bg-black/25 px-3 py-1.5 text-sm">
-                <span>{uid === myGuild.ownerUid ? '👑 ' : ''}{uid === p.uid ? '⭐ ' : ''}<span style={{ color: auraColor(m.aura, m.auraColorOn ?? true) }}>{m.name}</span></span>
-                <span className="text-xs text-slate-400">Nv.{m.level}</span>
+                <span className="min-w-0 truncate">
+                  {uid === myGuild.ownerUid ? '👑 ' : ''}{uid === p.uid ? '⭐ ' : ''}
+                  <span style={{ color: auraColor(m.aura, m.auraColorOn ?? true) }}>{m.name}</span>
+                  {m.title && <span className="ml-1.5 text-[10px] text-amber-300/80">« {m.title} »</span>}
+                </span>
+                <span className="shrink-0 text-xs text-slate-400">Nv.{m.level}</span>
               </div>
             ))}
           </div>

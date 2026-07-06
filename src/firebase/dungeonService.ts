@@ -5,6 +5,7 @@ import type { CombatMods } from '../game/talents';
 import { getAllActiveSkills } from '../game/talents';
 import { DUNGEONS, type DungeonDef } from '../game/dungeons';
 import { getElementMult, getDmgTypeMult } from '../game/combat';
+import type { SetProc } from '../game/sets';
 
 export interface DungeonPlayer {
   uid: string;
@@ -24,6 +25,10 @@ export interface DungeonPlayer {
   armorElement?: string | null;
   aura?: string | null;
   auraColorOn?: boolean;
+  /** Proc de set (3 pièces équipées), calculé côté client à l'entrée en donjon. */
+  setProc?: SetProc | null;
+  /** Bouclier temporaire posé par un proc de set (absorbe les dégâts avant les PV). */
+  shield?: number;
 }
 
 export type DungeonAffix = 'vampiric' | 'armored' | 'agile' | 'none';
@@ -44,6 +49,10 @@ export interface DungeonMonster {
   staggerHits: number;
   staggered: boolean;
   affix: DungeonAffix;
+  /** Brûlure/gel posés par un proc de set d'un joueur (affectent le monstre). */
+  burn?: number;
+  burnPow?: number;
+  chill?: number;
 }
 
 export interface TurnEvent {
@@ -75,7 +84,7 @@ export function listenDungeon(id: string, cb: (ds: DungeonSession | null) => voi
   return onValue(ref(rtdb, `dungeons/${id}`), (snap) => cb(snap.val() as DungeonSession | null));
 }
 
-export async function createDungeonLobby(hostUid: string, hostName: string, hostClass: ClassId, dungeonId: string, pStats: any, pMods: any, pLevel: number, aura?: string | null, auraColorOn?: boolean): Promise<string> {
+export async function createDungeonLobby(hostUid: string, hostName: string, hostClass: ClassId, dungeonId: string, pStats: any, pMods: any, pLevel: number, aura?: string | null, auraColorOn?: boolean, setProc?: SetProc | null): Promise<string> {
   if (!rtdb) throw new Error('Firebase offline');
   const id = 'dgn-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   await runTransaction(ref(rtdb, `dungeons/${id}`), () => {
@@ -93,6 +102,7 @@ export async function createDungeonLobby(hostUid: string, hostName: string, host
           weaponDmgType: pStats.weaponDmgType || null,
           armorElement: pStats.armorElement || null,
           aura: aura || null, auraColorOn: auraColorOn ?? true,
+          setProc: setProc || null,
         }
       },
       turnOrder: [], turnIdx: 0, turnStartAt: 0, roundCount: 1, log: [], startedAt: 0
@@ -107,7 +117,7 @@ export async function createDungeonLobby(hostUid: string, hostName: string, host
  * déterministe (`raid-<key>`), afin que tous les inscrits tombent dans le même
  * lobby. Le 1er arrivé devient hôte. Illimité en joueurs (def raid).
  */
-export async function joinOrCreateRaid(sessionId: string, dungeonId: string, startsAt: number, uid: string, name: string, classId: ClassId, pStats: any, pMods: any, pLevel: number, aura?: string | null, auraColorOn?: boolean): Promise<void> {
+export async function joinOrCreateRaid(sessionId: string, dungeonId: string, startsAt: number, uid: string, name: string, classId: ClassId, pStats: any, pMods: any, pLevel: number, aura?: string | null, auraColorOn?: boolean, setProc?: SetProc | null): Promise<void> {
   if (!rtdb) throw new Error('Firebase offline');
   await runTransaction(ref(rtdb, `dungeons/${sessionId}`), (cur: DungeonSession | null) => {
     const def = DUNGEONS.find(d => d.id === dungeonId);
@@ -121,6 +131,7 @@ export async function joinOrCreateRaid(sessionId: string, dungeonId: string, sta
       weaponDmgType: pStats.weaponDmgType || null,
       armorElement: pStats.armorElement || null,
       aura: aura || null, auraColorOn: auraColorOn ?? true,
+      setProc: setProc || null,
     };
     if (!cur) {
       return {
@@ -135,7 +146,7 @@ export async function joinOrCreateRaid(sessionId: string, dungeonId: string, sta
   });
 }
 
-export async function joinDungeon(id: string, uid: string, name: string, classId: ClassId, pStats: any, pMods: any, pLevel: number, aura?: string | null, auraColorOn?: boolean): Promise<void> {
+export async function joinDungeon(id: string, uid: string, name: string, classId: ClassId, pStats: any, pMods: any, pLevel: number, aura?: string | null, auraColorOn?: boolean, setProc?: SetProc | null): Promise<void> {
   if (!rtdb) return;
   await runTransaction(ref(rtdb, `dungeons/${id}`), (cur: DungeonSession | null) => {
     if (!cur || cur.state !== 'lobby') return cur;
@@ -154,6 +165,7 @@ export async function joinDungeon(id: string, uid: string, name: string, classId
         weaponDmgType: pStats.weaponDmgType || null,
         armorElement: pStats.armorElement || null,
         aura: aura || null, auraColorOn: auraColorOn ?? true,
+        setProc: setProc || null,
       };
     }
     return cur;
@@ -302,24 +314,33 @@ function executeMonsterTurn(cur: DungeonSession) {
   }
 
   let totalHeal = 0;
+  const chilled = (m.chill || 0) > 0;
 
   for (const target of targets) {
     const roll = m.atk - 2 + Math.random() * 4;
     const tDef = target.def || 5;
     const dmgRed = target.mods?.dmgReduction || 0;
     const dodge = target.mods?.dodge || 0;
-    
+
     let dmg = Math.max(1, Math.round(roll - tDef * 0.6));
     dmg = Math.max(1, Math.round(dmg * enrageMult * (1 - dmgRed)));
     if (m.affix === 'agile' && Math.random() < 0.2) dmg = Math.round(dmg * 1.2);
+    if (chilled) dmg = Math.max(1, Math.round(dmg * 0.6)); // gel (proc de set) : dégâts réduits
 
     if (Math.random() < dodge) {
       cur.log.push({ text: `L'attaque de ${m.name} sur ${target.name} échoue (Esquive) !`, side: 'info' });
     } else {
+      // Bouclier posé par un proc de set : absorbe avant les PV.
+      if ((target.shield || 0) > 0) {
+        const absorbed = Math.min(target.shield!, dmg);
+        target.shield = target.shield! - absorbed;
+        dmg -= absorbed;
+        if (absorbed > 0) cur.log.push({ text: `🛡️ Le bouclier de ${target.name} absorbe ${absorbed} dégâts.`, side: 'info' });
+      }
       target.hp = (target.hp || 0) - dmg;
       if (m.affix === 'vampiric') totalHeal += Math.round(dmg * 0.2);
-      cur.log.push({ text: `${m.name} attaque ${target.name} et inflige ${dmg} dégâts !`, side: 'enemy' });
-      
+      if (dmg > 0) cur.log.push({ text: `${m.name} attaque ${target.name} et inflige ${dmg} dégâts !`, side: 'enemy' });
+
       if (target.hp <= 0) {
         target.hp = 0;
         target.isDead = true;
@@ -327,6 +348,8 @@ function executeMonsterTurn(cur: DungeonSession) {
       }
     }
   }
+
+  if (chilled) m.chill = (m.chill || 0) - 1;
 
   if (totalHeal > 0) {
     m.hp = Math.min(m.maxHp, m.hp + totalHeal);
@@ -344,7 +367,7 @@ function executeMonsterTurn(cur: DungeonSession) {
   }
 }
 
-export async function submitDungeonAction(id: string, uid: string, action: string, potionHeal?: number, targetUid?: string): Promise<void> {
+export async function submitDungeonAction(id: string, uid: string, action: string, potionHeal?: number, targetUid?: string, reviveFrac?: number): Promise<void> {
   if (!rtdb) return;
   await runTransaction(ref(rtdb, `dungeons/${id}`), (cur: DungeonSession | null) => {
     if (!cur || cur.state !== 'combat') return cur;
@@ -389,7 +412,7 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
     } else if (action === 'revive' && targetUid && cur.players[targetUid]?.isDead) {
       const t = cur.players[targetUid];
       t.isDead = false;
-      t.hp = Math.floor(t.maxHp * 0.5);
+      t.hp = Math.floor(t.maxHp * (reviveFrac ?? 0.5));
       cur.log.push({ text: `🪶 ${p.name} ressuscite ${t.name} !`, side: 'info' });
     } else if (action === 'potion') {
       const heal = potionHeal ?? 180;
@@ -478,6 +501,39 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
     if (p.mods.regen > 0 && p.hp > 0 && p.hp < p.maxHp) {
       p.hp = Math.min(p.maxHp, p.hp + p.mods.regen);
     }
+
+    // ── Proc de set (3 pièces équipées) : se déclenche sur une action offensive ──
+    const offensive = action !== 'timeout' && action !== 'flee' && action !== 'potion' && action !== 'revive';
+    if (p.setProc && offensive && !p.isDead && (m.hp || 0) > 0 && Math.random() < p.setProc.chance) {
+      const sp = p.setProc;
+      if (sp.kind === 'burn') {
+        m.burn = Math.max(m.burn || 0, 2);
+        m.burnPow = Math.max(m.burnPow || 0, Math.max(1, Math.round(p.atk * sp.power)));
+        cur.log.push({ text: `${sp.icon} ${sp.name} : ${m.name} prend feu !`, side: 'you' });
+      } else if (sp.kind === 'chill') {
+        m.chill = Math.max(m.chill || 0, 2);
+        cur.log.push({ text: `${sp.icon} ${sp.name} : ${m.name} est gelé !`, side: 'you' });
+      } else if (sp.kind === 'heal') {
+        const heal = Math.max(1, Math.round(p.maxHp * sp.power));
+        p.hp = Math.min(p.maxHp, p.hp + heal);
+        cur.log.push({ text: `${sp.icon} ${sp.name} : ${p.name} +${heal} PV.`, side: 'info' });
+      } else if (sp.kind === 'shield') {
+        const amt = Math.max(1, Math.round(p.maxHp * sp.power));
+        p.shield = (p.shield || 0) + amt;
+        cur.log.push({ text: `${sp.icon} ${sp.name} : bouclier +${amt} PV pour ${p.name}.`, side: 'info' });
+      } else if (sp.kind === 'extra') {
+        const dmg = Math.max(1, Math.round(p.atk * sp.power));
+        m.hp = Math.max(0, (m.hp || 0) - dmg);
+        cur.log.push({ text: `${sp.icon} ${sp.name} : +${dmg} dégâts !`, side: 'you' });
+      }
+    }
+
+    // Brûlure en cours sur le monstre : tick de fin de tour.
+    if ((m.hp || 0) > 0 && (m.burn || 0) > 0 && (m.burnPow || 0) > 0) {
+      m.hp = Math.max(0, (m.hp || 0) - m.burnPow!);
+      cur.log.push({ text: `🔥 Brûlure : ${m.name} perd ${m.burnPow} PV.`, side: 'you' });
+    }
+    if ((m.burn || 0) > 0) m.burn = (m.burn || 0) - 1;
 
     if (cur.log.length > 40) cur.log = cur.log.slice(cur.log.length - 40);
 

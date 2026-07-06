@@ -1,6 +1,6 @@
 import type { PlayerState, ClassId, Stats, QuestState, ItemDef } from './types';
 import { CLASSES, xpToNext, xpToNextV3, MAX_LEVEL } from './classes';
-import { getTeamBonus, getGuildBonus } from '../firebase/groupsService';
+import { getTeamBonus, getGuildBonus, getGuildGoldBonus } from '../firebase/groupsService';
 import { item, isGearId, hasInstanceTag, mintInstanceId, addItemToInventory } from './items';
 import { RECIPES, getCraftLevel } from './crafting';
 import { BIOMES, BIOME_LIST } from './biomes';
@@ -666,16 +666,17 @@ export function applyBonuses(p: PlayerState, base: { xp: number; gold: number })
   const fin = (v: number, fallback: number) => (Number.isFinite(v) ? v : fallback);
   const teamMult = fin(getTeamBonus(p.teamId), 1);
   const guildMult = fin(getGuildBonus(p.guildId), 1);
+  // Palier Nv.3 de guilde : le bonus s'étend à l'Or (avant, XP uniquement).
+  const guildGoldMult = fin(getGuildGoldBonus(p.guildId), 1);
   const evt = activeEventEffect(p.biome);
   const prestige = prestigeBonus(p.prestigeAura);
   // +10% XP/Or par prestige (plafonné à 5) — voir ascension.ts.
   const presMult = 1 + Math.min(p.prestigeLevel ?? 0, 5) * 0.10;
   const baseXp = fin(base.xp, 0);
   const baseGold = fin(base.gold, 0);
-  // Seule l'XP bénéficie du bonus de guilde
   return {
     xp: Math.floor(baseXp * teamMult * guildMult * (1 + fin(evt.xpMult, 0) + prestige.xpPct) * presMult),
-    gold: Math.floor(baseGold * teamMult * (1 + fin(evt.goldMult, 0) + prestige.goldPct) * presMult),
+    gold: Math.floor(baseGold * teamMult * guildGoldMult * (1 + fin(evt.goldMult, 0) + prestige.goldPct) * presMult),
   };
 }
 
