@@ -48,11 +48,18 @@ export function AdminModal() {
   // Give item state
   const [giveItemId, setGiveItemId] = useState('potion');
   const [giveItemQty, setGiveItemQty] = useState(1);
+  const [giveItemSearch, setGiveItemSearch] = useState('');
   const [pickClassId, setPickClassId] = useState<ClassId>('warrior');
 
   const sortedItems = useMemo(() => {
     return Object.values(ITEMS).sort((a, b) => a.name.localeCompare(b.name));
   }, []);
+
+  const filteredItems = useMemo(() => {
+    const q = giveItemSearch.trim().toLowerCase();
+    if (!q) return sortedItems;
+    return sortedItems.filter((it) => it.name.toLowerCase().includes(q) || it.id.toLowerCase().includes(q));
+  }, [sortedItems, giveItemSearch]);
 
   useEffect(() => {
     loadPlayers();
@@ -289,37 +296,46 @@ export function AdminModal() {
           
           <div className="mt-6 border-t border-green-500/30 pt-4">
             <h3 className="text-green-300 font-bold mb-2">Donner un objet</h3>
-            <div className="flex gap-2 mb-4">
-              <select 
-                value={giveItemId} 
+            <div className="flex flex-col gap-2 mb-4">
+              <input
+                type="text"
+                value={giveItemSearch}
+                onChange={e => setGiveItemSearch(e.target.value)}
+                placeholder="Rechercher un objet (nom ou id)..."
+                className="w-full min-w-0 bg-gray-900 border border-green-500/50 p-2 text-white rounded placeholder-gray-500"
+              />
+              <select
+                value={giveItemId}
                 onChange={e => setGiveItemId(e.target.value)}
-                className="flex-1 bg-gray-900 border border-green-500/50 p-2 text-white rounded"
+                className="w-full min-w-0 bg-gray-900 border border-green-500/50 p-2 text-white rounded"
               >
-                {sortedItems.map(item => (
+                {filteredItems.map(item => (
                   <option key={item.id} value={item.id}>
                     {item.icon} {item.name} ({item.id})
                   </option>
                 ))}
               </select>
-              <input 
-                type="number" 
-                min="1"
-                value={giveItemQty} 
-                onChange={e => setGiveItemQty(Number(e.target.value) || 1)}
-                className="w-20 bg-gray-900 border border-green-500/50 p-2 text-white rounded"
-              />
-              <button
-                className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-blue-100 rounded"
-                onClick={() => handleAction('give_item')}
-              >
-                Donner
-              </button>
-              <button
-                className="px-4 py-2 bg-rose-900 hover:bg-rose-800 text-rose-100 rounded"
-                onClick={() => handleAction('remove_item')}
-              >
-                Retirer
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  value={giveItemQty}
+                  onChange={e => setGiveItemQty(Number(e.target.value) || 1)}
+                  className="w-20 min-w-0 bg-gray-900 border border-green-500/50 p-2 text-white rounded"
+                />
+                <button
+                  className="flex-1 min-w-[6rem] px-4 py-2 bg-blue-900 hover:bg-blue-800 text-blue-100 rounded"
+                  onClick={() => handleAction('give_item')}
+                >
+                  Donner
+                </button>
+                <button
+                  className="flex-1 min-w-[6rem] px-4 py-2 bg-rose-900 hover:bg-rose-800 text-rose-100 rounded"
+                  onClick={() => handleAction('remove_item')}
+                >
+                  Retirer
+                </button>
+              </div>
             </div>
 
             <h3 className="text-green-300 font-bold mb-2">Actions Rapides</h3>
