@@ -5,6 +5,9 @@ import { syncGuildMember } from './groupsService';
 
 const localKey = (uid: string) => `rptext.player.${uid}`;
 
+/** Signature du dernier sync de guilde par joueur (évite les écritures Firestore redondantes). */
+const lastGuildSyncSig = new Map<string, string>();
+
 /** Vrai si un autre joueur porte déjà ce pseudo (exact, sensible à la casse). */
 export async function isNameTaken(name: string, excludeUid?: string): Promise<boolean> {
   const clean = name.trim();
@@ -108,13 +111,20 @@ export async function savePlayer(p: PlayerState): Promise<void> {
     auraColorOn: p.auraColorOn ?? true,
   });
   // Garde la fiche membre de guilde à jour (niveau/titre figés sinon depuis l'entrée dans la guilde).
+  // `savePlayer` est appelé très souvent (mutate débounced à 800ms) : ne réécrit
+  // le doc guilde que si quelque chose de pertinent a réellement changé, pour
+  // ne pas tripler le volume d'écritures Firestore à chaque sauvegarde (quota).
   if (p.guildId) {
-    void syncGuildMember(p.guildId, p.uid, {
-      name: p.name,
-      level: p.level,
-      title: p.title ?? null,
-      aura: p.prestigeAura ?? null,
-      auraColorOn: p.auraColorOn ?? true,
-    });
+    const sig = `${p.guildId}:${p.level}:${p.title ?? ''}:${p.name}:${p.prestigeAura ?? ''}:${p.auraColorOn ?? true}`;
+    if (lastGuildSyncSig.get(p.uid) !== sig) {
+      lastGuildSyncSig.set(p.uid, sig);
+      void syncGuildMember(p.guildId, p.uid, {
+        name: p.name,
+        level: p.level,
+        title: p.title ?? null,
+        aura: p.prestigeAura ?? null,
+        auraColorOn: p.auraColorOn ?? true,
+      });
+    }
   }
 }

@@ -545,6 +545,10 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         loot: { upgrade_matrix: 0.2, hi_potion: 0.6, void_dust: 0.5, mithril_ore: 0.4, boss_soul: 0.06 },
       };
       applyZonePenalty(p!, monster);
+      // Dérogation : même pénalisé en zone faible, le miniboss garde une petite
+      // chance d'Âme de Boss (sinon l'ascension Nv.20 est infarmable avant le
+      // Volcan Nv.24, voir applyZonePenalty).
+      monster.loot.boss_soul = 0.05;
       ctx.mutate((d) => {
         d.cooldowns.miniboss = Date.now();
         if (!d.statistics.mobsEncountered) d.statistics.mobsEncountered = {};
