@@ -20,10 +20,12 @@ export default function MarketCard() {
   const mutate = useGame((s) => s.mutate);
   const toast = useGame((s) => s.toast);
   const [listings, setListings] = useState<Listing[]>([]);
-  // Objets vendables, triés par ordre alphabétique.
+  // Objets vendables : uniquement les équipements (arme/armure/bijou/outil/tenue de métier),
+  // triés par ordre alphabétique. Consommables/matériaux non listables sur le marché.
+  const SELLABLE_SLOTS = ['weapon', 'armor', 'trinket', 'tool', 'profession_armor'];
   const sellable = useMemo(
     () => (p ? Object.entries(p.inventory)
-      .filter(([id, q]) => item(id) && q > 0)
+      .filter(([id, q]) => item(id) && q > 0 && SELLABLE_SLOTS.includes(item(id)!.slot))
       .sort((a, b) => item(a[0])!.name.localeCompare(item(b[0])!.name)) : []),
     [p?.inventory],
   );

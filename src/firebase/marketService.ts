@@ -7,6 +7,7 @@ import {
   runTransaction,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
+import { item } from '../game/items';
 
 export interface Listing {
   id: string;
@@ -31,6 +32,9 @@ export const MARKET_MIN_LEVEL = 5; // niveau requis pour commercer
 
 export const marketEnabled = isFirebaseConfigured && !!db;
 
+/** Seuls les équipements sont vendables sur le marché (pas de consommables/matériaux). */
+const SELLABLE_SLOTS = ['weapon', 'armor', 'trinket', 'tool', 'profession_armor'];
+
 /** Met un objet en vente (l'objet a déjà été mis en séquestre côté joueur). */
 export async function listItem(
   seller: { uid: string; name: string },
@@ -39,6 +43,9 @@ export async function listItem(
   extra?: { stars?: number; durability?: number; enchants?: string[] },
 ): Promise<void> {
   if (!db) throw new Error('offline');
+  const it = item(itemId);
+  if (!it || !SELLABLE_SLOTS.includes(it.slot)) throw new Error('Seuls les équipements peuvent être vendus.');
+  if (price < it.value) throw new Error(`Prix minimum : ${it.value} 🪙.`);
   const doc: Record<string, unknown> = {
     sellerUid: seller.uid,
     sellerName: seller.name,
