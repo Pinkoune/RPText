@@ -57,12 +57,16 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', onVis);
   }, []);
 
-  // Régén passive hors-combat pour les débutants (Nv.<15) : +2.5% PV max / 10s,
-  // sans bouton ni interaction — évite le coup de bouton répété toutes les 30s.
+  // Régén passive hors-combat pour les débutants (Nv.<15) : +15% PV max / 60s,
+  // sans bouton ni interaction. Tick à 60s (pas 10s) : chaque tick redéclenche
+  // une sauvegarde Firestore via mutate() — à 10s, un joueur bas-niveau qui
+  // laisse l'onglet ouvert (même sans carte ouverte) spamme des écritures en
+  // continu et peut épuiser le quota Firestore. Même total de soin/minute
+  // (2.5%×6 = 15%), juste moins de sauvegardes.
   useEffect(() => {
     if (status !== 'ready' || !player) return;
     const REGEN_LEVEL_CAP = 15;
-    const REGEN_PCT = 0.025;
+    const REGEN_PCT = 0.15;
     const id = setInterval(() => {
       const cur = useGame.getState().player;
       if (!cur || cur.level >= REGEN_LEVEL_CAP || cur.hp <= 0) return;
@@ -72,7 +76,7 @@ export default function App() {
       useGame.getState().mutate((d) => {
         d.hp = Math.min(maxHp, d.hp + Math.max(1, Math.ceil(maxHp * REGEN_PCT)));
       });
-    }, 10_000);
+    }, 60_000);
     return () => clearInterval(id);
   }, [status, player?.uid]);
 
