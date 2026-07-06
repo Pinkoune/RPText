@@ -111,9 +111,10 @@ export const useGame = create<GameState>((set, get) => ({
           // Resync identité Google (avatar/nom peuvent changer).
           existing.name = existing.name || user.name;
           existing.photoURL = user.photoURL;
-          // Récompense de connexion journalière : n'est plus automatique.
-          // Le joueur doit la réclamer via l'onglet Quêtes.
-          const reward = null;
+          // Récompense de connexion journalière : créditée automatiquement au
+          // démarrage (nouveau jour). La modale s'affiche pour la montrer ; le
+          // bouton de l'onglet Quêtes sert seulement à la ré-afficher ensuite.
+          const reward = claimDailyLogin(existing);
           // Récompense de fin de saison (créditée par migratePlayer si rotation).
           let seasonReward: { tierName: string; reward: SeasonReward } | null = null;
           if (existing.lastSeasonReward) {

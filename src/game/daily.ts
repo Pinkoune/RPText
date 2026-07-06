@@ -38,6 +38,16 @@ export function canClaimDailyLogin(p: PlayerState, now = Date.now()): boolean {
 }
 
 /**
+ * Récompense du jour SANS créditer — pour ré-afficher ce qui a déjà été gagné
+ * (le crédit se fait automatiquement au démarrage via claimDailyLogin).
+ */
+export function currentDailyReward(p: PlayerState): DailyReward {
+  const streak = Math.max(1, p.loginStreak ?? 1);
+  const idx = (streak - 1) % DAILY_CYCLE.length;
+  return { day: idx + 1, streak, ...DAILY_CYCLE[idx] };
+}
+
+/**
  * À appeler une fois au chargement. Si c'est un nouveau jour, incrémente la
  * série (ou la reset), crédite la récompense et la retourne (pour l'afficher).
  * Retourne null si la récompense du jour a déjà été prise.

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGame } from '../../store/gameStore';
 import { combatTurn, freshCombatState, type CombatState } from '../../game/combat';
-import { deriveStats, grantXp } from '../../game/player';
+import { deriveStats, grantXp, removeItem } from '../../game/player';
 import { talentMods, getAllActiveSkills } from '../../game/talents';
 import { CLASSES } from '../../game/classes';
 import { item } from '../../game/items';
@@ -142,14 +142,24 @@ export default function EndlessCard() {
   const handleAction = (action: string) => {
     if (!run) return;
     if (action === 'flee') { endRun('flee'); return; }
-    
+
     let skill = undefined;
     if (action !== 'attack' && action !== 'potion' && action !== 'flee') {
       skill = getAllActiveSkills().find(s => s.id === action);
       if (skill && (run.skillCds[skill.id] || 0) > 0) return;
     }
 
-    const res = combatTurn(stats, mods, run.monster, run.php, run.mhp, action, { potionHeal: action === 'potion' ? 50 : 0, activeSkill: skill }, run.combat);
+    // Bug corrigé : la potion n'était jamais retirée de l'inventaire (spammable
+    // à l'infini) et le soin était fixé à 50 quelle que soit la potion réelle.
+    let potionHeal = 0;
+    if (action === 'potion') {
+      const potionId = POTIONS.find((id) => (player.inventory[id] ?? 0) > 0);
+      if (!potionId) return;
+      potionHeal = item(potionId)?.hp ?? 0;
+      mutate((d) => removeItem(d, potionId, 1));
+    }
+
+    const res = combatTurn(stats, mods, run.monster, run.php, run.mhp, action, { potionHeal, activeSkill: skill }, run.combat);
     const newLogs = [...run.logs, ...res.events.map(l => l.text)];
     if (newLogs.length > 10) newLogs.splice(0, newLogs.length - 10);
     
@@ -391,6 +401,8 @@ export default function EndlessCard() {
   // ── Vue combat solo ──
   if (run) {
     const isBoss = run.monster.isBoss;
+    const soloPotionId = POTIONS.find((id) => (player.inventory[id] ?? 0) > 0);
+    const soloPotionCount = POTIONS.reduce((n, id) => n + (player.inventory[id] ?? 0), 0);
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between rounded-xl bg-black/25 px-3 py-2">
@@ -429,8 +441,8 @@ export default function EndlessCard() {
               </button>
             );
           })}
-          <button onClick={() => handleAction('potion')} disabled={(player.inventory['potion'] || 0) <= 0} className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500/30 py-2.5 text-sm font-bold hover:bg-emerald-500/50 disabled:opacity-40">
-            <ItemIcon id="potion" size={16} /> ({player.inventory['potion'] || 0})
+          <button onClick={() => handleAction('potion')} disabled={soloPotionCount <= 0} className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500/30 py-2.5 text-sm font-bold hover:bg-emerald-500/50 disabled:opacity-40">
+            <ItemIcon id={soloPotionId ?? 'potion'} size={16} /> ({soloPotionCount})
           </button>
           <button onClick={() => handleAction('flee')} className="rounded-lg bg-slate-500/30 py-2.5 text-sm font-bold hover:bg-slate-500/50">🏃 Fuir</button>
         </div>

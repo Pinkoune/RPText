@@ -9,6 +9,7 @@ import ItemIcon from '../ItemIcon';
 import { playSound } from '../../game/sound';
 import { deriveStats, applyBonuses, grantXp, addItem } from '../../game/player';
 import { talentMods, getAllActiveSkills } from '../../game/talents';
+import { addQuestMetric } from '../../game/quests';
 import { listenTeams, setTeamDungeon, type Team } from '../../firebase/groupsService';
 import {
   listenDungeon, listenAllDungeons, createDungeonLobby, joinDungeon, toggleReady, leaveDungeon,
@@ -135,6 +136,7 @@ export default function DungeonCard() {
             toast(`+${souls} 💎 Âme de Boss !`, 'gold');
           }
           d.dungeonClears[def.id] = (d.dungeonClears[def.id] ?? 0) + 1;
+          addQuestMetric(d, 'dungeons', 1); // quêtes « Terminer 1 donjon » / contrat hebdo
           
           if (d.gearDurability) {
             const loss = Math.max(1, Math.floor((session.roundCount || 1) / 3));

@@ -2,7 +2,7 @@ import { useGame } from '../../store/gameStore';
 import { questViews, claimQuest, periodResetIn, type QuestReward, type QuestPeriod } from '../../game/quests';
 import { cooldownLeft } from '../../game/player';
 import { DAILY_COOLDOWN } from '../../game/commands';
-import { canClaimDailyLogin, claimDailyLogin } from '../../game/daily';
+import { currentDailyReward } from '../../game/daily';
 
 import { ITEMS } from '../../game/items';
 
@@ -35,7 +35,6 @@ export default function QuestsCard() {
 
   const views = questViews(p);
   const setDailyReward = useGame((s) => s.setDailyReward);
-  const dailyReady = canClaimDailyLogin(p!);
 
   function claim(id: string) {
     let r: any = null;
@@ -43,16 +42,10 @@ export default function QuestsCard() {
     if (r) toast(`Récompense : ${rewardText(r)} !`, 'gold');
   }
 
-  function claimLogin() {
-    let reward = null;
-    mutate((d) => {
-      reward = claimDailyLogin(d);
-    });
-    if (reward) {
-      setDailyReward(reward);
-    } else {
-      toast('Déjà réclamée !', 'bad');
-    }
+  // La récompense de connexion est déjà créditée automatiquement au démarrage ;
+  // ce bouton sert juste à ré-afficher ce qui a été gagné aujourd'hui.
+  function showDaily() {
+    setDailyReward(currentDailyReward(p!));
   }
 
   const section = (period: QuestPeriod, title: string) => (
@@ -94,11 +87,10 @@ export default function QuestsCard() {
   return (
     <div className="space-y-4">
       <button
-        onClick={claimLogin}
-        disabled={!dailyReady}
-        className="w-full rounded-xl bg-gradient-to-r from-amber-500/40 to-yellow-500/40 px-4 py-2.5 text-sm font-semibold transition hover:from-amber-500/60 hover:to-yellow-500/60 disabled:opacity-40"
+        onClick={showDaily}
+        className="w-full rounded-xl bg-gradient-to-r from-amber-500/40 to-yellow-500/40 px-4 py-2.5 text-sm font-semibold transition hover:from-amber-500/60 hover:to-yellow-500/60"
       >
-        {dailyReady ? '🎁 Récompense de connexion quotidienne' : '🎁 Déjà réclamée — revient demain'}
+        🎁 Voir la récompense du jour (série {p.loginStreak ?? 1})
       </button>
       {section('daily', 'Quêtes journalières')}
       {section('weekly', 'Quêtes hebdomadaires')}

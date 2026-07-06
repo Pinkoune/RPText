@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { BiomeId, Phase } from '../game/types';
 import { BIOMES } from '../game/biomes';
+import { useFx } from '../store/fxStore';
 import Scenery from './Scenery';
 
 interface Props {
@@ -10,13 +11,15 @@ interface Props {
 
 /** Fond d'écran animé : dégradé du biome modulé par la phase jour/nuit. */
 export default function Background({ biome, phase }: Props) {
+  const reduced = useFx((s) => s.reduced);
   const [c1, c2, c3] = BIOMES[biome].bg[phase];
   const night = phase === 'night';
   const dusk = phase === 'dusk';
 
+  // Moins d'étoiles de base (40 au lieu de 60) ; aucune en mode réduit.
   const stars = useMemo(
     () =>
-      Array.from({ length: 60 }, () => ({
+      Array.from({ length: 40 }, () => ({
         x: Math.random() * 100,
         y: Math.random() * 60,
         s: Math.random() * 2 + 1,
@@ -72,8 +75,8 @@ export default function Background({ biome, phase }: Props) {
         />
       )}
 
-      {/* Étoiles la nuit */}
-      {night && !isVoid &&
+      {/* Étoiles la nuit (coupées en mode réduit : animation GPU permanente) */}
+      {night && !isVoid && !reduced &&
         stars.map((st, i) => (
           <span
             key={i}
@@ -89,10 +92,10 @@ export default function Background({ biome, phase }: Props) {
           />
         ))}
 
-      {/* Lueur de lave montant de l'horizon (Caldeira de Braise) */}
+      {/* Lueur de lave montant de l'horizon (Caldeira de Braise) — pulse coupé en mode réduit */}
       {isVolcano && (
         <div
-          className="absolute inset-x-0 bottom-0 h-[40vh] animate-pulse"
+          className={`absolute inset-x-0 bottom-0 h-[40vh] ${reduced ? '' : 'animate-pulse'}`}
           style={{
             background: 'radial-gradient(120% 100% at 50% 100%, rgba(255,90,20,0.45) 0%, rgba(255,60,10,0.15) 40%, transparent 75%)',
           }}

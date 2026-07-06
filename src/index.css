@@ -7,6 +7,14 @@
   color-scheme: dark;
 }
 
+/* Onglet en arrière-plan : on gèle toutes les animations CSS (fond, particules,
+   pulses) pour ne pas chauffer/vider la batterie quand le jeu n'est pas visible. */
+body.tab-hidden *,
+body.tab-hidden *::before,
+body.tab-hidden *::after {
+  animation-play-state: paused !important;
+}
+
 html,
 body,
 #root {

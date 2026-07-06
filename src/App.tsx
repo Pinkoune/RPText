@@ -48,6 +48,15 @@ export default function App() {
 
   useEffect(() => () => stopAmbientMusic(), []);
 
+  // Gèle les animations CSS quand l'onglet passe en arrière-plan (voir index.css
+  // .tab-hidden) : évite de chauffer le PC pour un fond animé que personne ne voit.
+  useEffect(() => {
+    const onVis = () => document.body.classList.toggle('tab-hidden', document.hidden);
+    document.addEventListener('visibilitychange', onVis);
+    onVis();
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
   // Régén passive hors-combat pour les débutants (Nv.<15) : +2.5% PV max / 10s,
   // sans bouton ni interaction — évite le coup de bouton répété toutes les 30s.
   useEffect(() => {

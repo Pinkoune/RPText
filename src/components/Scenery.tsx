@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { BiomeId, Phase } from '../game/types';
 import { BIOMES } from '../game/biomes';
+import { useFx } from '../store/fxStore';
 
 interface Props {
   biome: BiomeId;
@@ -49,10 +50,14 @@ function particleFx(biome: BiomeId, phase: Phase): PFX | null {
 }
 
 function Particles({ biome, phase }: Props) {
+  const reduced = useFx((s) => s.reduced);
   const fx = particleFx(biome, phase);
+  // Mode réduit : ~40% des particules (arrondi), sinon le plein. Ces particules
+  // animées en boucle sont un gros contributeur à la charge GPU permanente.
+  const count = fx ? (reduced ? Math.ceil(fx.count * 0.4) : fx.count) : 0;
   const items = useMemo(() => {
-    if (!fx) return [];
-    return Array.from({ length: fx.count }, () => ({
+    if (!fx || count === 0) return [];
+    return Array.from({ length: count }, () => ({
       left: Math.random() * 100,
       top: Math.random() * 100,
       size: fx.min + Math.random() * (fx.max - fx.min),
@@ -60,9 +65,9 @@ function Particles({ biome, phase }: Props) {
       delay: -Math.random() * fx.durMax,
       drift: (Math.random() * 2 - 1) * 8,
     }));
-  }, [fx?.anim, fx?.count, biome, phase]);
+  }, [fx?.anim, count, biome, phase]);
 
-  if (!fx) return null;
+  if (!fx || count === 0) return null;
   return (
     <div className="absolute inset-0 overflow-hidden">
       {items.map((p, i) => (
