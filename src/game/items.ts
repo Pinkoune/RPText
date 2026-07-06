@@ -77,7 +77,7 @@ export const ITEMS: Record<string, ItemDef> = {
   phoenix_elixir: { id: 'phoenix_elixir', name: 'Élixir du phénix', icon: '🧊', rarity: 'epic', slot: 'consumable', hp: 600, value: 200, desc: 'Rend 600 PV. Le remède le plus puissant du monde connu.' },
   phoenix_feather: { id: 'phoenix_feather', name: 'Plume de Phénix', icon: '🪶', rarity: 'legendary', slot: 'consumable', value: 1000, desc: 'Peut être utilisée en combat de donjon pour ramener un allié à la vie.' },
   // Objet passif admin-only (jamais en drop/craft) : +50% de chance de drop relative sur tout, juste en le possédant.
-  coeur_chanceux: { id: 'coeur_chanceux', name: 'Cœur chanceux', icon: '💗', rarity: 'legendary', slot: 'material', value: 1, desc: "Porte-bonheur passif : +50% de chance de drop sur tous les objets, juste en le possédant dans l'inventaire (pas besoin de l'équiper)." },
+  coeur_chanceux: { id: 'coeur_chanceux', name: 'Cœur chanceux', icon: '💗', rarity: 'legendary', slot: 'material', value: 1, desc: "Porte-bonheur passif : +550% de chance de drop sur tous les objets, juste en le possédant dans l'inventaire (pas besoin de l'équiper)." },
 
   // ── Appâts (Concoction) ──
   bait_slime: { id: 'bait_slime', name: 'Appât pour Slime', icon: '🟢', rarity: 'common', slot: 'consumable', value: 10, desc: 'Augmente fortement les chances de rencontrer un Slime en chasse.' },

@@ -7,6 +7,7 @@ import { RECIPES } from '../../game/crafting';
 import { GATHER_SKILLS } from '../../game/gathering';
 import { DUNGEONS } from '../../game/dungeons';
 import { BIOMES } from '../../game/biomes';
+import { PHASE_LABEL } from '../../game/daynight';
 import { BASE_CLASSES, getAscensions } from '../../game/classes';
 import { setProcDesc } from '../../game/sets';
 import ItemIcon from '../ItemIcon';
@@ -175,6 +176,14 @@ export default function WikiCard() {
                 )}
                 {m.resistances && m.resistances.length > 0 && (
                   <span className="text-[10px] bg-rose-900/40 text-rose-300 px-1.5 rounded">Résistance : {m.resistances.join(', ')}</span>
+                )}
+              </div>
+
+              <div className="mt-2 text-[10px] text-slate-400">
+                <span className="font-semibold">Provenance :</span>{' '}
+                {m.biomes.length > 0 ? m.biomes.map((b) => BIOMES[b]?.name ?? b).join(', ') : 'Inconnue'}
+                {m.phases && m.phases.length > 0 && (
+                  <> · <span className="font-semibold">Uniquement :</span> {m.phases.map((ph) => PHASE_LABEL[ph]).join(', ')}</>
                 )}
               </div>
 
