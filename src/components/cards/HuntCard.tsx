@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { item, RARITY_COLOR } from '../../game/items';
+import { item, RARITY_COLOR, HP_CONSUMABLES } from '../../game/items';
 import { playSound } from '../../game/sound';
 import ItemIcon from '../ItemIcon';
 import MonsterIcon from '../MonsterIcon';
@@ -23,7 +23,7 @@ import {
 
 import { useUi } from '../../store/uiStore';
 
-const POTIONS = ['herb_tea', 'potion', 'hi_potion', 'grilled_fish', 'hearty_stew'];
+const POTIONS = HP_CONSUMABLES;
 const ABILITY_TURNS = 5;
 
 // Thème d'arène par type de boss (id du monstre synthétisé dans commands.ts).

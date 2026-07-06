@@ -4,7 +4,7 @@ import { combatTurn, freshCombatState, type CombatState } from '../../game/comba
 import { deriveStats, grantXp, removeItem } from '../../game/player';
 import { talentMods, getAllActiveSkills } from '../../game/talents';
 import { CLASSES } from '../../game/classes';
-import { item } from '../../game/items';
+import { item, HP_CONSUMABLES } from '../../game/items';
 import { playSound } from '../../game/sound';
 import { generateEndlessMonster, getEndlessRewards } from '../../game/endless';
 import {
@@ -14,7 +14,7 @@ import {
 } from '../../firebase/endlessService';
 import ItemIcon from '../ItemIcon';
 
-const POTIONS = ['herb_tea', 'potion', 'hi_potion', 'grilled_fish', 'hearty_stew'];
+const POTIONS = HP_CONSUMABLES;
 
 function Bar({ current, max, color, blink }: { current: number; max: number; color: string; blink?: boolean }) {
   const pct = Math.max(0, Math.min(100, (current / max) * 100));

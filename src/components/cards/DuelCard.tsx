@@ -4,7 +4,7 @@ import { deriveStats } from '../../game/player';
 import { talentMods, getAllActiveSkills } from '../../game/talents';
 import { simulateDuel } from '../../game/pvp';
 import { addSeasonPoints, SEASON_POINTS } from '../../game/season';
-import { item, RARITY_COLOR } from '../../game/items';
+import { item, RARITY_COLOR, HP_CONSUMABLES } from '../../game/items';
 import { auraColor } from '../../game/prestige';
 import { sendChat } from '../../firebase/chatService';
 import ItemIcon from '../ItemIcon';
@@ -14,7 +14,7 @@ import {
   type PvpDuelSession, type DuelMode, type DuelSide,
 } from '../../firebase/pvpDuelService';
 
-const POTIONS = ['herb_tea', 'potion', 'hi_potion', 'grilled_fish', 'hearty_stew'];
+const POTIONS = HP_CONSUMABLES;
 
 export default function DuelCard() {
   const p = useGame((s) => s.player);

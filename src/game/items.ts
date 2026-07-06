@@ -219,6 +219,18 @@ export const ITEMS: Record<string, ItemDef> = {
   crypt_plate: { id: 'crypt_plate', name: 'Armure Ossuaire', icon: '🛡️', rarity: 'legendary', slot: 'armor', def: 46, hp: 220, value: 3300, desc: 'Forgée à partir d\'ossements pétrifiés en cristal.', element: 'dark', maxDurability: 1200, reqLevel: 35 },
   soul_ward: { id: 'soul_ward', name: 'Talisman des Âmes', icon: '🔮', rarity: 'legendary', slot: 'trinket', atk: 8, def: 8, hp: 90, value: 2800, desc: 'Retient une part d\'essence spectrale captive.', element: 'dark', maxDurability: 500, reqLevel: 36 },
 };
+/**
+ * Tous les consommables de soin (slot consumable + hp défini), triés du moins
+ * puissant au plus puissant. Source unique pour les pickers de potion en
+ * combat (hunt/donjon/duel/abysses/ascension) — avant, chaque carte avait sa
+ * propre liste codée en dur et elles divergeaient (cave_potion/honey_mead/
+ * cactus_water/phoenix_elixir/infernal_elixir manquaient de plusieurs endroits).
+ */
+export const HP_CONSUMABLES = Object.values(ITEMS)
+  .filter((it) => it.slot === 'consumable' && (it.hp ?? 0) > 0)
+  .sort((a, b) => (a.hp ?? 0) - (b.hp ?? 0))
+  .map((it) => it.id);
+
 export const RARITY_COLOR: Record<ItemDef['rarity'], string> = {
   common: '#b8c0cf',
   uncommon: '#62d67a',

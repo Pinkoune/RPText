@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useGame } from '../../store/gameStore';
 import { useUi } from '../../store/uiStore';
 import { DUNGEONS, dungeonCooldownLeft, type DungeonDef } from '../../game/dungeons';
-import { item, RARITY_COLOR } from '../../game/items';
+import { item, RARITY_COLOR, HP_CONSUMABLES } from '../../game/items';
 import { CLASSES } from '../../game/classes';
 import { auraColor } from '../../game/prestige';
 import ItemIcon from '../ItemIcon';
@@ -16,7 +16,7 @@ import {
   startDungeon, submitDungeonAction, cleanupDungeon, type DungeonSession
 } from '../../firebase/dungeonService';
 
-const POTIONS = ['herb_tea', 'potion', 'hi_potion', 'grilled_fish', 'hearty_stew'];
+const POTIONS = HP_CONSUMABLES;
 
 function fmt(ms: number): string {
   const m = Math.ceil(ms / 60000);

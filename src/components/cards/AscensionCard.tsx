@@ -6,14 +6,14 @@ import { combatTurn, freshCombatState, type CombatState } from '../../game/comba
 import { deriveStats } from '../../game/player';
 import { talentMods, getAllActiveSkills } from '../../game/talents';
 import { computeAscensionBoss, ascensionOutcome, applyAscensionResult, type AscensionBoss } from '../../game/ascension';
-import { item } from '../../game/items';
+import { item, HP_CONSUMABLES } from '../../game/items';
 import { playSound, stopAmbientMusic, setAmbient } from '../../game/sound';
 import { currentPhase } from '../../game/daynight';
 import ItemIcon from '../ItemIcon';
 
 type Transition = 'enter' | 'none' | 'win' | 'dead';
 
-const POTIONS = ['herb_tea', 'potion', 'hi_potion', 'cave_potion', 'grilled_fish', 'hearty_stew', 'infernal_elixir'];
+const POTIONS = HP_CONSUMABLES;
 
 type Phase = 'intro' | 'confirm' | 'fight' | 'result';
 

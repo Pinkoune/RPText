@@ -5,6 +5,7 @@ import { MONSTERS } from '../../game/monsters';
 import type { ItemDef, MonsterDef } from '../../game/types';
 import { RECIPES } from '../../game/crafting';
 import { GATHER_SKILLS } from '../../game/gathering';
+import { BIOMES } from '../../game/biomes';
 import { BASE_CLASSES, getAscensions } from '../../game/classes';
 import ItemIcon from '../ItemIcon';
 import MonsterIcon from '../MonsterIcon';
@@ -33,13 +34,18 @@ export default function WikiCard() {
       }
     }
 
-    // Gathering
+    // Récolte : taux calculé sur le poids relatif du pool du biome (celui
+    // réellement utilisé par extractResource/pickDrop).
     for (const skill of Object.values(GATHER_SKILLS)) {
       if (skill.byBiome) {
         for (const [biomeId, drops] of Object.entries(skill.byBiome)) {
+          const total = drops.reduce((s, d) => s + d.weight, 0);
+          const biomeName = BIOMES[biomeId as keyof typeof BIOMES]?.name ?? biomeId;
           for (const drop of drops) {
             if (!map[drop.id]) map[drop.id] = [];
-            map[drop.id].push(`Récolte: ${skill.name} (${biomeId})`);
+            const pct = Math.round((drop.weight / total) * 1000) / 10;
+            const lvlTag = drop.minLvl ? ` · récolte nv.${drop.minLvl}+` : '';
+            map[drop.id].push(`Récolte: ${skill.name} — ${biomeName} (${pct}%${lvlTag})`);
           }
         }
       }
