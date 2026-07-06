@@ -47,6 +47,26 @@ export default function PresenceTracker() {
     return () => events.forEach((ev) => window.removeEventListener(ev, onActivity));
   }, [status, player?.uid]);
 
+  // Notif quand un coéquipier quitte l'équipe — visible partout (pas seulement
+  // en ayant la carte Équipe ouverte), plus longue que les notifs de chat (5s)
+  // pour bien la remarquer.
+  const prevTeamMembers = useRef<Record<string, string>>({});
+  useEffect(() => {
+    if (!player) return;
+    const myTeam = teams.find((t) => player.uid in (t.members ?? {}));
+    const prev = prevTeamMembers.current;
+    if (myTeam) {
+      for (const [uid, name] of Object.entries(prev)) {
+        if (uid !== player.uid && !(uid in myTeam.members)) {
+          useGame.getState().toast(`👋 ${name} a quitté l'équipe.`, 'good', 7000);
+        }
+      }
+      prevTeamMembers.current = Object.fromEntries(Object.entries(myTeam.members).map(([uid, m]) => [uid, m.name]));
+    } else {
+      prevTeamMembers.current = {};
+    }
+  }, [teams, player?.uid]);
+
   // Nettoyage automatique des équipes en fonction de la présence
   useEffect(() => {
     if (!player || teams.length === 0 || onlinePlayers.length === 0) return;

@@ -48,7 +48,7 @@ interface GameState {
   chooseClass: (cls: ClassId, name?: string) => Promise<void>;
   /** Mute le joueur via un brouillon puis sauvegarde (debounce). */
   mutate: (fn: (p: PlayerState) => void) => void;
-  toast: (text: string, tone?: Toast['tone']) => void;
+  toast: (text: string, tone?: Toast['tone'], durationMs?: number) => void;
   dismissToast: (id: number) => void;
   /** Notifications de chat (haut-droite, colorées par canal). */
   chatNotifs: ChatNotif[];
@@ -234,10 +234,10 @@ export const useGame = create<GameState>((set, get) => ({
     }, 800);
   },
 
-  toast: (text, tone = 'info') => {
+  toast: (text, tone = 'info', durationMs = 3800) => {
     const id = ++toastId;
     set((s) => ({ toasts: [...s.toasts, { id, text, tone }] }));
-    setTimeout(() => get().dismissToast(id), 3800);
+    setTimeout(() => get().dismissToast(id), durationMs);
   },
 
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
