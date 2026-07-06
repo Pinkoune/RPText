@@ -93,6 +93,7 @@ export async function savePlayer(p: PlayerState): Promise<void> {
     name: p.name,
     photoURL: p.photoURL,
     level: p.level,
+    xp: p.xp,
     classId: p.classId,
     kills: p.kills,
     gold: p.gold,

@@ -19,6 +19,7 @@ export interface LeaderRow {
   name: string;
   photoURL: string | null;
   level: number;
+  xp?: number;
   classId: ClassId;
   kills: number;
   gold: number;
@@ -40,12 +41,22 @@ export interface OnlinePlayer {
   lastActive?: number;
 }
 
+/**
+ * Départage à niveau égal par l'XP brute : comme le seuil pour passer au
+ * niveau suivant ne dépend que du niveau (pas du joueur), comparer l'XP brute
+ * entre deux joueurs du même niveau revient à comparer leur % de progression.
+ */
+function byLevelThenXp(a: LeaderRow, b: LeaderRow): number {
+  if (b.level !== a.level) return b.level - a.level;
+  return (b.xp ?? 0) - (a.xp ?? 0);
+}
+
 /** Top joueurs par niveau. Vide en mode local. */
 export async function fetchLeaderboard(max = 20): Promise<LeaderRow[]> {
   if (!isFirebaseConfigured || !db) return [];
   const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as LeaderRow);
+  return snap.docs.map((d) => d.data() as LeaderRow).sort(byLevelThenXp);
 }
 
 export function watchLeaderboard(max: number, onChange: (rows: LeaderRow[]) => void): () => void {
@@ -55,7 +66,7 @@ export function watchLeaderboard(max: number, onChange: (rows: LeaderRow[]) => v
   }
   const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max));
   return onSnapshot(q, (snap) => {
-    onChange(snap.docs.map((d) => d.data() as LeaderRow));
+    onChange(snap.docs.map((d) => d.data() as LeaderRow).sort(byLevelThenXp));
   });
 }
 

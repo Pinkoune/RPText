@@ -348,11 +348,11 @@ export default function CraftCard() {
                     <span>Ensemble {setInfo.name}</span>
                     <span className="h-px flex-1 opacity-30" style={{ background: setInfo.color }} />
                     {out.setId && setProcDesc(out.setId) && (
-                      <span
-                        className="shrink-0 cursor-help rounded-full bg-black/30 px-1.5 text-[10px] font-normal text-slate-300"
-                        title={`Bonus 3 pièces : ${setProcDesc(out.setId)}`}
-                      >
-                        ⓘ
+                      <span className="group relative shrink-0">
+                        <span className="cursor-help rounded-full bg-black/30 px-1.5 text-[10px] font-normal text-slate-300">ⓘ</span>
+                        <div className="pointer-events-none absolute right-0 top-full z-20 mt-1 hidden w-56 rounded-lg border border-white/10 bg-slate-900 p-2 text-[10px] font-normal normal-case leading-snug text-slate-200 shadow-xl group-hover:block">
+                          Bonus 3 pièces : {setProcDesc(out.setId)}
+                        </div>
                       </span>
                     )}
                   </div>,

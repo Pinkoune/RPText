@@ -28,9 +28,10 @@ export default function WikiCard() {
     // Monsters
     for (const m of Object.values(MONSTERS)) {
       if (m.loot) {
-        for (const drop of Object.keys(m.loot)) {
+        for (const [drop, chance] of Object.entries(m.loot)) {
           if (!map[drop]) map[drop] = [];
-          map[drop].push(`Drop: ${m.name}`);
+          const pct = Math.round(chance * 1000) / 10;
+          map[drop].push(`Drop: ${m.name} (${pct}%)`);
         }
       }
     }
