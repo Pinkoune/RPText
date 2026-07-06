@@ -48,6 +48,7 @@ export const MONSTERS: MonsterDef[] = [
 
 /** Map of bait items to the monster they attract */
 export const BAIT_TARGETS: Record<string, string> = {
+  bait_slime: 'slime',
   bait_wolf: 'wolf',
   bait_yeti: 'yeti',
   bait_efreet: 'efreet',

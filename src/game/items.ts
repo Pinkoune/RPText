@@ -78,6 +78,7 @@ export const ITEMS: Record<string, ItemDef> = {
   phoenix_feather: { id: 'phoenix_feather', name: 'Plume de Phénix', icon: '🪶', rarity: 'legendary', slot: 'consumable', value: 1000, desc: 'Peut être utilisée en combat de donjon pour ramener un allié à la vie.' },
 
   // ── Appâts (Concoction) ──
+  bait_slime: { id: 'bait_slime', name: 'Appât pour Slime', icon: '🟢', rarity: 'common', slot: 'consumable', value: 10, desc: 'Augmente fortement les chances de rencontrer un Slime en chasse.' },
   bait_wolf: { id: 'bait_wolf', name: 'Appât pour Loup', icon: '🥩', rarity: 'uncommon', slot: 'consumable', value: 30, desc: 'Augmente fortement les chances de rencontrer un Loup gris en chasse.' },
   bait_yeti: { id: 'bait_yeti', name: 'Appât pour Yéti', icon: '🍖', rarity: 'rare', slot: 'consumable', value: 80, desc: 'Augmente fortement les chances de rencontrer un Yéti en chasse.' },
   bait_efreet: { id: 'bait_efreet', name: 'Appât pour Éfrit', icon: '🔥', rarity: 'epic', slot: 'consumable', value: 150, desc: 'Augmente fortement les chances de rencontrer un Éfrit en chasse.' },

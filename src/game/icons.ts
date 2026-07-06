@@ -49,7 +49,7 @@ export const ITEM_ICONS: Record<string, IconType> = {
   grilled_fish: GiFishCooked, hearty_stew: GiMeal, dungeon_key: GiKey, lootbox: GiPresent,
   repair_kit: GiHammerNails, upgrade_matrix: GiUpgrade, honey_mead: GiHoneyJar,
   cactus_water: GiWaterFlask, phoenix_elixir: GiFireDash, phoenix_feather: GiFeather,
-  bait_wolf: GiMeat, bait_yeti: GiHamShank, bait_efreet: GiFire, bait_voidling: GiVortex,
+  bait_slime: GiSlime, bait_wolf: GiMeat, bait_yeti: GiHamShank, bait_efreet: GiFire, bait_voidling: GiVortex,
 
   // ── Trinkets ──
   heartsteel: GiHeartInside, flower_crown: GiFlowerEmblem, bone_necklace: GiPrimitiveNecklace,

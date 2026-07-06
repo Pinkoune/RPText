@@ -15,6 +15,15 @@ export interface ConcoctionRecipe {
 
 export const CONCOCTION_RECIPES: ConcoctionRecipe[] = [
   {
+    id: 'bait_slime',
+    name: 'Appât pour Slime',
+    icon: '🟢',
+    reqLevel: 1,
+    ingredients: [{ id: 'slime_gel', qty: 2 }, { id: 'herb', qty: 2 }],
+    xp: 5,
+    difficulty: 15, durability: 30, maxQuality: 40,
+  },
+  {
     id: 'bait_wolf',
     name: 'Appât pour Loup',
     icon: '🥩',
