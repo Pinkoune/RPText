@@ -8,7 +8,7 @@ export const ITEMS: Record<string, ItemDef> = {
   frost_shard: { id: 'frost_shard', name: 'Éclat de givre', icon: '🧊', rarity: 'rare', slot: 'material', value: 25, desc: 'Froid qui ne fond jamais.' },
   ember_core: { id: 'ember_core', name: 'Cœur de braise', icon: '🔥', rarity: 'rare', slot: 'material', value: 30, desc: 'Pulse d\'une chaleur ardente.' },
   void_dust: { id: 'void_dust', name: 'Poussière du vide', icon: '🌌', rarity: 'epic', slot: 'material', value: 80, desc: 'Aspire la lumière alentour.' },
-  boss_soul: { id: 'boss_soul', name: 'Âme de Boss', icon: '💎', rarity: 'legendary', slot: 'material', value: 500, desc: 'Une âme surpuissante, nécessaire pour l\'ascension.' },
+  boss_soul: { id: 'boss_soul', name: 'Âme de Boss', icon: '💀', rarity: 'legendary', slot: 'material', value: 500, desc: 'Une âme surpuissante, nécessaire pour l\'ascension.' },
   dryad_leaf: { id: 'dryad_leaf', name: 'Feuille de dryade', icon: '🍂', rarity: 'uncommon', slot: 'material', value: 12, desc: 'Pleine de sève magique.' },
   pure_water: { id: 'pure_water', name: 'Eau pure', icon: '💧', rarity: 'uncommon', slot: 'material', value: 15, desc: 'Une eau qui ne se corrompt jamais.' },
   sun_orb: { id: 'sun_orb', name: 'Orbe solaire', icon: '☀️', rarity: 'rare', slot: 'material', value: 35, desc: 'Chaude au toucher, brille dans le noir.' },

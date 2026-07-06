@@ -51,12 +51,17 @@ function byLevelThenXp(a: LeaderRow, b: LeaderRow): number {
   return (b.xp ?? 0) - (a.xp ?? 0);
 }
 
+/** Comptes admin de service (nommés "admin") : masqués de tous les classements/recherches publics. */
+function isHiddenName(name: string | undefined): boolean {
+  return (name ?? '').trim().toLowerCase() === 'admin';
+}
+
 /** Top joueurs par niveau. Vide en mode local. */
 export async function fetchLeaderboard(max = 20): Promise<LeaderRow[]> {
   if (!isFirebaseConfigured || !db) return [];
   const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as LeaderRow).sort(byLevelThenXp);
+  return snap.docs.map((d) => d.data() as LeaderRow).filter((r) => !isHiddenName(r.name)).sort(byLevelThenXp);
 }
 
 export function watchLeaderboard(max: number, onChange: (rows: LeaderRow[]) => void): () => void {
@@ -66,7 +71,7 @@ export function watchLeaderboard(max: number, onChange: (rows: LeaderRow[]) => v
   }
   const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max));
   return onSnapshot(q, (snap) => {
-    onChange(snap.docs.map((d) => d.data() as LeaderRow).sort(byLevelThenXp));
+    onChange(snap.docs.map((d) => d.data() as LeaderRow).filter((r) => !isHiddenName(r.name)).sort(byLevelThenXp));
   });
 }
 
@@ -84,7 +89,7 @@ export function watchSeasonLadder(currentSeasonId: string, max: number, onChange
   return onSnapshot(q, (snap) => {
     const rows = snap.docs
       .map((d) => d.data() as LeaderRow)
-      .filter((r) => r.seasonId === currentSeasonId && (r.seasonPoints ?? 0) > 0)
+      .filter((r) => r.seasonId === currentSeasonId && (r.seasonPoints ?? 0) > 0 && !isHiddenName(r.name))
       .slice(0, max);
     onChange(rows);
   });
@@ -115,7 +120,7 @@ export function trackPresence(
   const listRef = ref(rtdb, 'presence');
   const unsub = onValue(listRef, (snap) => {
     const val = (snap.val() ?? {}) as Record<string, OnlinePlayer>;
-    onChange(Object.values(val));
+    onChange(Object.values(val).filter((o) => !isHiddenName(o.name)));
   });
   return () => {
     myPresenceRef = null;

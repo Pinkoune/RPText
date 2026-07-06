@@ -40,7 +40,8 @@ export async function getTopEndlessScores(mode: EndlessMode = 'solo'): Promise<E
   try {
     const q = query(collection(db, collectionFor(mode)), orderBy('floor', 'desc'), limit(50));
     const snap = await getDocs(q);
-    return snap.docs.map(d => d.data() as EndlessScore);
+    // Comptes admin de service (nommés "admin") : masqués du classement.
+    return snap.docs.map(d => d.data() as EndlessScore).filter(s => s.name.trim().toLowerCase() !== 'admin');
   } catch (err) {
     console.error('getTopEndlessScores error', err);
     return [];

@@ -4,6 +4,7 @@ import { CLASSES } from '../../game/classes';
 import { ascendPlayer } from '../../game/player';
 import { playSound } from '../../game/sound';
 import type { ClassId } from '../../game/types';
+import ItemIcon from '../ItemIcon';
 
 export default function TalentCard() {
   const p = useGame((s) => s.player);
@@ -45,7 +46,7 @@ export default function TalentCard() {
   };
   const ascend = (id: ClassId) => {
     if (p.level < 20) return toast('Niveau 20 requis.', 'bad');
-    if ((p.inventory['boss_soul'] ?? 0) < 1) return toast('Il te faut 1 Âme de Boss 💎.', 'bad');
+    if ((p.inventory['boss_soul'] ?? 0) < 1) return toast('Il te faut 1 Âme de Boss 💀.', 'bad');
     if (!confirm(`Ascension vers ${CLASSES[id].name} ? Tes talents seront réinitialisés (points rendus).`)) return;
     mutate((d) => {
       d.inventory['boss_soul'] -= 1;
@@ -207,8 +208,10 @@ export default function TalentCard() {
       {/* Ascension */}
       {isBaseClass && ascensions.length > 0 && (
         <div className={`rounded-xl border p-3 ${p.level >= 20 ? 'border-amber-500/40 bg-amber-500/10' : 'border-slate-700 bg-black/20'}`}>
-          <div className="mb-2 text-xs font-bold text-amber-300">
-            🌟 Ascension {p.level >= 20 ? '(1 Âme de Boss 💎 requise)' : `(niveau 20 requis — tu es niv.${p.level})`}
+          <div className="mb-2 flex items-center gap-1 text-xs font-bold text-amber-300">
+            🌟 Ascension {p.level >= 20 ? (
+              <span className="inline-flex items-center gap-1">(1 <ItemIcon id="boss_soul" size={14} /> Âme de Boss requise)</span>
+            ) : `(niveau 20 requis — tu es niv.${p.level})`}
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {ascensions.map(([id, c]) => (

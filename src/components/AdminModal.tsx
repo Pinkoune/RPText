@@ -177,6 +177,14 @@ export function AdminModal() {
         const newInv = { ...editingPlayer.inventory, [giveItemId]: (editingPlayer.inventory[giveItemId] || 0) + giveItemQty };
         await write({ inventory: newInv });
         toast(`Donné ${giveItemQty}x ${ITEMS[giveItemId]?.name || giveItemId}.`, 'good');
+      } else if (action === 'remove_item') {
+        if (giveItemQty <= 0) return;
+        const current = editingPlayer.inventory[giveItemId] || 0;
+        const next = Math.max(0, current - giveItemQty);
+        const newInv = { ...editingPlayer.inventory };
+        if (next === 0) delete newInv[giveItemId]; else newInv[giveItemId] = next;
+        await write({ inventory: newInv });
+        toast(`Retiré ${Math.min(giveItemQty, current)}x ${ITEMS[giveItemId]?.name || giveItemId}.`, 'good');
       } else if (action === 'full_heal') {
         const maxHp = deriveStats(editingPlayer).maxHp;
         await write({ hp: maxHp });
@@ -300,11 +308,17 @@ export function AdminModal() {
                 onChange={e => setGiveItemQty(Number(e.target.value) || 1)}
                 className="w-20 bg-gray-900 border border-green-500/50 p-2 text-white rounded"
               />
-              <button 
-                className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-blue-100 rounded" 
+              <button
+                className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-blue-100 rounded"
                 onClick={() => handleAction('give_item')}
               >
                 Donner
+              </button>
+              <button
+                className="px-4 py-2 bg-rose-900 hover:bg-rose-800 text-rose-100 rounded"
+                onClick={() => handleAction('remove_item')}
+              >
+                Retirer
               </button>
             </div>
 
