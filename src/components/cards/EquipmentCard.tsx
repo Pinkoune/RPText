@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useGame } from '../../store/gameStore';
 import { item, RARITY_COLOR } from '../../game/items';
 import { deriveStats, equipItem, unequipItem, canEquip } from '../../game/player';
@@ -36,15 +36,23 @@ const ELEMENTS: Record<string, { icon: string; label: string }> = {
   neutral: { icon: '⚪', label: 'Neutre' },
 };
 
-/** Badges de stats/type d'un objet (icône + mot, fond coloré) — même langage visuel que la forge. */
-function statBadges(it: ItemDef | null): { txt: string; cls: string }[] {
+/** Petit chip jaune "+X" : bonus de stat apporté par les étoiles d'amélioration. */
+function starBonusChip(bonus: number) {
+  if (bonus <= 0) return null;
+  return <span className="ml-1 rounded bg-yellow-400 px-1 text-[9px] font-bold text-black" title={`+${bonus} grâce aux étoiles d'amélioration`}>+{bonus}</span>;
+}
+
+/** Badges de stats/type d'un objet (icône + mot, fond coloré) — même langage visuel que la forge.
+ *  `stars` (0-5) affiche en plus le bonus d'amélioration (+10%/étoile) via un chip jaune. */
+function statBadges(it: ItemDef | null, stars = 0): { txt: ReactNode; cls: string }[] {
   if (!it) return [];
-  const b: { txt: string; cls: string }[] = [];
-  if (it.atk) b.push({ txt: `🗡️ ${it.atk} ATK`, cls: 'bg-rose-500/15 text-rose-200' });
-  if (it.def) b.push({ txt: `🛡️ ${it.def} DEF`, cls: 'bg-sky-500/15 text-sky-200' });
-  if (it.hp) b.push({ txt: `${it.hp > 0 ? '❤️' : '💔'} ${it.hp > 0 ? '+' : ''}${it.hp} PV`, cls: it.hp > 0 ? 'bg-emerald-500/15 text-emerald-200' : 'bg-rose-500/15 text-rose-200' });
-  if (it.maxCp) b.push({ txt: `🧠 +${it.maxCp} CP`, cls: 'bg-indigo-500/15 text-indigo-200' });
-  if (it.maxGp) b.push({ txt: `🌾 +${it.maxGp} GP`, cls: 'bg-lime-500/15 text-lime-200' });
+  const b: { txt: ReactNode; cls: string }[] = [];
+  const bonus = (base: number) => Math.floor(base * stars * 0.1);
+  if (it.atk) b.push({ txt: <>🗡️ {it.atk} ATK{starBonusChip(bonus(it.atk))}</>, cls: 'bg-rose-500/15 text-rose-200' });
+  if (it.def) b.push({ txt: <>🛡️ {it.def} DEF{starBonusChip(bonus(it.def))}</>, cls: 'bg-sky-500/15 text-sky-200' });
+  if (it.hp) b.push({ txt: <>{it.hp > 0 ? '❤️' : '💔'} {it.hp > 0 ? '+' : ''}{it.hp} PV{it.hp > 0 && starBonusChip(bonus(it.hp))}</>, cls: it.hp > 0 ? 'bg-emerald-500/15 text-emerald-200' : 'bg-rose-500/15 text-rose-200' });
+  if (it.maxCp) b.push({ txt: <>🧠 +{it.maxCp} CP{starBonusChip(bonus(it.maxCp))}</>, cls: 'bg-indigo-500/15 text-indigo-200' });
+  if (it.maxGp) b.push({ txt: <>🌾 +{it.maxGp} GP{starBonusChip(bonus(it.maxGp))}</>, cls: 'bg-lime-500/15 text-lime-200' });
   return b;
 }
 
@@ -142,7 +150,7 @@ export default function EquipmentCard() {
         const durMax = eq?.maxDurability ?? 0;
         const durRatio = durMax ? dur / durMax : 1;
         const durColor = durRatio <= 0 ? '#ef4444' : durRatio < 0.25 ? '#f97316' : durRatio < 0.6 ? '#eab308' : '#22c55e';
-        const badges = [...statBadges(eq), ...typeBadges(eq)];
+        const badges = [...statBadges(eq, stars), ...typeBadges(eq)];
         return (
           <div key={slot} className="rounded-xl bg-black/25 p-4">
             <div className="flex items-center justify-between">
@@ -217,7 +225,7 @@ export default function EquipmentCard() {
                 </button>
                 {openBag === slot && candidates.map(([id, q]) => {
                   const it = item(id)!;
-                  const cb = statBadges(it);
+                  const cb = statBadges(it, p.gearStars?.[id] || 0);
                   
                   let reqReason: string | null = null;
                   const craftLvl = getCraftLevel(p.craftXp).level;

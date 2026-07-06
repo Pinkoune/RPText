@@ -298,7 +298,7 @@ function nextEndlessFloor(cur: EndlessSession) {
   cur.log.push({ text: `✅ Étage ${cur.clearedFloors} vaincu ! Étage ${cur.floor} : ${cur.monster.name}.`, side: 'info' });
 }
 
-export async function submitEndlessAction(id: string, uid: string, action: string, potionHeal?: number): Promise<void> {
+export async function submitEndlessAction(id: string, uid: string, action: string, potionHeal?: number, targetUid?: string, reviveFrac?: number): Promise<void> {
   if (!rtdb) return;
   await runTransaction(ref(rtdb, `endlessSessions/${id}`), (cur: EndlessSession | null) => {
     if (!cur || cur.state !== 'combat') return cur;
@@ -328,6 +328,11 @@ export async function submitEndlessAction(id: string, uid: string, action: strin
 
     if (action === 'timeout') {
       cur.log.push({ text: `⌛ Tour de ${p.name} passé (inactif).`, side: 'info' });
+    } else if (action === 'revive' && targetUid && cur.players[targetUid]?.isDead) {
+      const t = cur.players[targetUid];
+      t.isDead = false;
+      t.hp = Math.floor(t.maxHp * (reviveFrac ?? 0.5));
+      cur.log.push({ text: `🪶 ${p.name} ressuscite ${t.name} !`, side: 'info' });
     } else if (action === 'potion') {
       const heal = potionHeal ?? 120;
       p.hp = Math.min(p.maxHp, p.hp + heal);

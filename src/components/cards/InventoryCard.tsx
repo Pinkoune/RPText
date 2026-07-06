@@ -215,8 +215,10 @@ export default function InventoryCard() {
                     </span>
                   </div>
                   {(it.atk || it.def || it.hp) && (
-                    <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
-                      {it.atk ? `ATK+${it.atk} ` : ''}{it.def ? `DEF+${it.def} ` : ''}{it.hp ? `PV+${it.hp} ` : ''}
+                    <div className="text-[11px] text-slate-400 leading-tight mt-0.5 flex flex-wrap items-center gap-x-1">
+                      {it.atk ? <span>ATK+{it.atk}{stars > 0 && <span className="ml-0.5 rounded bg-yellow-400 px-1 text-[9px] font-bold text-black">+{Math.floor(it.atk * stars * 0.1)}</span>}</span> : ''}
+                      {it.def ? <span>DEF+{it.def}{stars > 0 && <span className="ml-0.5 rounded bg-yellow-400 px-1 text-[9px] font-bold text-black">+{Math.floor(it.def * stars * 0.1)}</span>}</span> : ''}
+                      {it.hp ? <span>PV+{it.hp}{stars > 0 && <span className="ml-0.5 rounded bg-yellow-400 px-1 text-[9px] font-bold text-black">+{Math.floor(it.hp * stars * 0.1)}</span>}</span> : ''}
                     </div>
                   )}
                 </div>

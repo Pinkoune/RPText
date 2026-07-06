@@ -52,6 +52,7 @@ export default function EndlessCard() {
   const [session, setSession] = useState<EndlessSession | null>(null);
   const [allSessions, setAllSessions] = useState<EndlessSession[]>([]);
   const [showPotions, setShowPotions] = useState(false);
+  const [showSoloPotions, setShowSoloPotions] = useState(false);
   const [, tick] = useState(0);
   const logEnd = useRef<HTMLDivElement>(null);
 
@@ -139,7 +140,7 @@ export default function EndlessCard() {
     });
   };
 
-  const handleAction = (action: string) => {
+  const handleAction = (action: string, selectedPotionId?: string) => {
     if (!run) return;
     if (action === 'flee') { endRun('flee'); return; }
 
@@ -153,7 +154,7 @@ export default function EndlessCard() {
     // à l'infini) et le soin était fixé à 50 quelle que soit la potion réelle.
     let potionHeal = 0;
     if (action === 'potion') {
-      const potionId = POTIONS.find((id) => (player.inventory[id] ?? 0) > 0);
+      const potionId = selectedPotionId ?? POTIONS.find((id) => (player.inventory[id] ?? 0) > 0);
       if (!potionId) return;
       potionHeal = item(potionId)?.hp ?? 0;
       mutate((d) => removeItem(d, potionId, 1));
@@ -239,15 +240,23 @@ export default function EndlessCard() {
     mutate(d => { d.endlessSessionId = null; });
     setSession(null);
   }
-  async function multiAct(action: string, selectedPotionId?: string) {
+  async function multiAct(action: string, selectedPotionId?: string, targetUid?: string) {
     if (!session || session.state !== 'combat') return;
     let heal = 0;
+    let reviveFrac: number | undefined;
     if (action === 'potion') {
       if (!selectedPotionId) return;
       heal = item(selectedPotionId)!.hp ?? 0;
       mutate(d => { d.inventory[selectedPotionId]--; });
     }
-    await submitEndlessAction(session.id, player!.uid, action, heal);
+    if (action === 'revive') {
+      const useFeather = (player!.inventory['phoenix_feather'] ?? 0) > 0;
+      const reviveItem = useFeather ? 'phoenix_feather' : 'phoenix_elixir';
+      if ((player!.inventory[reviveItem] ?? 0) <= 0) return toast('Aucun objet de résurrection.', 'bad');
+      mutate(d => { d.inventory[reviveItem]--; if (d.inventory[reviveItem] <= 0) delete d.inventory[reviveItem]; });
+      reviveFrac = useFeather ? 0.7 : 0.3;
+    }
+    await submitEndlessAction(session.id, player!.uid, action, heal, targetUid, reviveFrac);
   }
 
   // Timeout auto (30s/tour).
@@ -323,7 +332,14 @@ export default function EndlessCard() {
             return (
               <div key={pl.uid} className={`rounded-lg border p-2 text-xs ${isTurn ? 'border-sky-400/50 bg-sky-500/10' : 'border-transparent bg-black/20'}`}>
                 <div className="mb-1 flex items-center justify-between">
-                  <span className={`font-semibold ${pl.isDead ? 'text-slate-500 line-through' : ''}`}>{pl.name}{isTurn && !pl.isDead && ' ⏳'}</span>
+                  <span className={`font-semibold flex items-center gap-1 ${pl.isDead ? 'text-slate-500 line-through' : ''}`}>
+                    {pl.name}{isTurn && !pl.isDead && ' ⏳'}
+                    {pl.isDead && myTurn && !me?.isDead && ((player.inventory['phoenix_feather'] ?? 0) > 0 || (player.inventory['phoenix_elixir'] ?? 0) > 0) && (
+                      <button onClick={() => multiAct('revive', undefined, pl.uid)} className="text-[10px] bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 px-1.5 py-0.5 rounded ml-1 no-underline">
+                        {(player.inventory['phoenix_feather'] ?? 0) > 0 ? '🪶 Réanimer' : '🧊 Réanimer'}
+                      </button>
+                    )}
+                  </span>
                   <span className="tabular-nums text-slate-400">{Math.round(pl.hp)}/{pl.maxHp}</span>
                 </div>
                 <div className="h-1.5 rounded bg-black/40"><div className={`h-1.5 rounded transition-all ${pct < 30 ? 'bg-rose-500' : 'bg-emerald-400'} ${pct < 15 ? 'animate-pulse' : ''}`} style={{ width: `${pct}%` }} /></div>
@@ -431,21 +447,44 @@ export default function EndlessCard() {
         <div className="h-28 space-y-1 overflow-y-auto rounded-xl bg-black/25 p-2 text-xs">
           {run.logs.map((l, i) => (<div key={i} className="opacity-80 last:font-medium last:opacity-100">{l}</div>))}
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <button onClick={() => handleAction('attack')} className="rounded-lg bg-rose-500/40 py-2.5 text-sm font-bold hover:bg-rose-500/60">⚔️ Attaquer</button>
-          {getAllActiveSkills().filter(s => player.equippedSkills.includes(s.id)).map(skill => {
-            const cd = run.skillCds[skill.id] || 0;
-            return (
-              <button key={skill.id} onClick={() => handleAction(skill.id)} disabled={cd > 0} title={skill.desc} className="rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40">
-                {cd > 0 ? `${skill.icon} ${skill.name} (${cd})` : `${skill.icon} ${skill.name}`}
-              </button>
-            );
-          })}
-          <button onClick={() => handleAction('potion')} disabled={soloPotionCount <= 0} className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500/30 py-2.5 text-sm font-bold hover:bg-emerald-500/50 disabled:opacity-40">
-            <ItemIcon id={soloPotionId ?? 'potion'} size={16} /> ({soloPotionCount})
-          </button>
-          <button onClick={() => handleAction('flee')} className="rounded-lg bg-slate-500/30 py-2.5 text-sm font-bold hover:bg-slate-500/50">🏃 Fuir</button>
-        </div>
+        {showSoloPotions ? (
+          <div className="space-y-2">
+            <div className="text-xs font-semibold text-slate-300">Choisir un soin :</div>
+            <div className="grid grid-cols-2 gap-2">
+              {POTIONS.filter(id => (player.inventory[id] ?? 0) > 0).map(id => (
+                <button key={id} onClick={() => { setShowSoloPotions(false); handleAction('potion', id); }} className="flex flex-col items-center gap-1 rounded-lg bg-emerald-500/30 py-2 text-xs font-bold hover:bg-emerald-500/50">
+                  <span className="inline-flex items-center gap-1"><ItemIcon id={id} size={16} /> {item(id)!.name}</span>
+                  <span className="text-[10px] font-normal text-slate-300">({player.inventory[id] ?? 0})</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowSoloPotions(false)} className="w-full rounded bg-slate-700/50 py-1.5 text-xs hover:bg-slate-700">Retour</button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => handleAction('attack')} className="rounded-lg bg-rose-500/40 py-2.5 text-sm font-bold hover:bg-rose-500/60">⚔️ Attaquer</button>
+            {getAllActiveSkills().filter(s => player.equippedSkills.includes(s.id)).map(skill => {
+              const cd = run.skillCds[skill.id] || 0;
+              return (
+                <button key={skill.id} onClick={() => handleAction(skill.id)} disabled={cd > 0} title={skill.desc} className="rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40">
+                  {cd > 0 ? `${skill.icon} ${skill.name} (${cd})` : `${skill.icon} ${skill.name}`}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => {
+                const available = POTIONS.filter(id => (player.inventory[id] ?? 0) > 0);
+                if (available.length === 1) handleAction('potion', available[0]);
+                else setShowSoloPotions(true);
+              }}
+              disabled={soloPotionCount <= 0}
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500/30 py-2.5 text-sm font-bold hover:bg-emerald-500/50 disabled:opacity-40"
+            >
+              <ItemIcon id={soloPotionId ?? 'potion'} size={16} /> ({soloPotionCount})
+            </button>
+            <button onClick={() => handleAction('flee')} className="rounded-lg bg-slate-500/30 py-2.5 text-sm font-bold hover:bg-slate-500/50">🏃 Fuir</button>
+          </div>
+        )}
       </div>
     );
   }

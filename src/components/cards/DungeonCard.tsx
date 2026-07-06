@@ -401,7 +401,7 @@ export default function DungeonCard() {
                     {pl.setProc && <span title={`Set actif : ${pl.setProc.name} (${Math.round(pl.setProc.chance * 100)}%/attaque)`} style={{ color: pl.setProc.color }}>{pl.setProc.icon}</span>}
                     {(pl.shield ?? 0) > 0 && <span title={`Bouclier : ${pl.shield} PV`}>🛡️<span className="text-[9px] text-sky-300">{pl.shield}</span></span>}
                     {pl.isDead && myTurn && !me.isDead && ((p.inventory['phoenix_feather'] ?? 0) > 0 || (p.inventory['phoenix_elixir'] ?? 0) > 0) && (
-                      <button onClick={() => act('revive', undefined, pl.uid)} className="text-[10px] bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 px-1.5 py-0.5 rounded ml-2">
+                      <button onClick={() => act('revive', undefined, pl.uid)} className="text-[10px] bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 px-1.5 py-0.5 rounded ml-2 no-underline">
                         {(p.inventory['phoenix_feather'] ?? 0) > 0 ? '🪶 Réanimer' : '🧊 Réanimer'}
                       </button>
                     )}
