@@ -262,7 +262,13 @@ function executeMonsterTurn(cur: DungeonSession) {
     return;
   }
 
-  const isEnraged = cur.roundCount > 10; // Enrage plus tôt (15→10)
+  // Enrage remis à zéro par ennemi (voir transition de stage) : seuil normal à
+  // 10 tours, repoussé à 20 pour le boss final (dernier stage) pour lui laisser
+  // plus de marge avant de punir un combat qui traîne.
+  const bossDef = DUNGEONS.find(d => d.id === cur.dungeonId);
+  const isBossStage = bossDef ? m.idx === bossDef.stages.length - 1 : false;
+  const enrageThreshold = isBossStage ? 20 : 10;
+  const isEnraged = cur.roundCount > enrageThreshold;
   const enrageMult = isEnraged ? 1.5 : 1;
   const isAoE = cur.roundCount > 0 && cur.roundCount % 4 === 0;
 
@@ -483,8 +489,9 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
         const avgLevel = playersArr.reduce((sum, p) => sum + (p.level || 1), 0) / Math.max(1, playersArr.length);
         cur.monster = initMonster(def, m.idx + 1, playersArr.length, avgLevel);
         cur.log.push({ text: `Un nouvel ennemi approche : ${cur.monster.name} !`, side: 'info' });
-        cur.turnIdx = 0; 
+        cur.turnIdx = 0;
         cur.turnStartAt = Date.now();
+        cur.roundCount = 1; // Enrage remis à zéro pour chaque nouvel ennemi (ne s'accumule plus sur tout le donjon).
       } else {
         cur.state = 'victory';
         cur.log.push({ text: `🏆 Donjon terminé avec succès !`, side: 'info' });
