@@ -1,4 +1,4 @@
-import type { PlayerState, MonsterDef } from './types';
+import type { PlayerState, MonsterDef, Element, DamageType } from './types';
 import { deriveStats, grantXp, addItem, cooldownLeft, reduceDurability, luckyDropMult } from './player';
 import { simulateCombat } from './combat';
 import { talentMods } from './talents';
@@ -26,8 +26,32 @@ export interface DungeonDef {
   raid?: boolean;
 }
 
-function mob(id: string, name: string, emoji: string, hp: number, atk: number, def: number, xp: number): MonsterDef {
-  return { id, name, emoji, hp, atk, def, xp, gold: [0, 0], biomes: [], loot: {}, element: 'earth', dmgType: 'physical' };
+interface MobOpts {
+  element?: Element;
+  dmgType?: DamageType;
+  weaknesses?: DamageType[];
+  resistances?: DamageType[];
+}
+
+/**
+ * Auparavant tous les monstres de donjon étaient tagués `earth`/`physical` en
+ * dur, peu importe leur thème (un "Golem de lave" tapait comme un gobelin) →
+ * aucune synergie élémentaire possible en donjon, contrairement à la chasse.
+ * `opts` permet désormais de leur donner de vrais éléments/faiblesses,
+ * cohérents avec les monstres du même thème dans `monsters.ts`. Les boss de
+ * fin (dernier stage) résistent volontairement aux deux types de dégâts sans
+ * aucune faiblesse (comme lava_titan/voidling en monde ouvert) : impossible à
+ * trivialiser via un simple choix d'arme, seuls les stages intermédiaires
+ * offrent un vrai bonus/malus élémentaire.
+ */
+function mob(id: string, name: string, emoji: string, hp: number, atk: number, def: number, xp: number, opts: MobOpts = {}): MonsterDef {
+  return {
+    id, name, emoji, hp, atk, def, xp, gold: [0, 0], biomes: [], loot: {},
+    element: opts.element ?? 'earth',
+    dmgType: opts.dmgType ?? 'physical',
+    weaknesses: opts.weaknesses,
+    resistances: opts.resistances,
+  };
 }
 
 export const DUNGEONS: DungeonDef[] = [
@@ -39,10 +63,10 @@ export const DUNGEONS: DungeonDef[] = [
     cooldownMs: 20 * 60 * 1000,
     desc: 'Un repaire grouillant. Idéal pour s\'aguerrir.',
     stages: [
-      mob('gob1', 'Gobelin', '👺', 50, 7, 2, 22),
-      mob('gob2', 'Gobelin', '👺', 60, 8, 3, 24),
-      mob('gob_arch', 'Gobelin archer', '🏹', 45, 10, 1, 29),
-      mob('gob_chief', 'Chef gobelin', '👹', 120, 14, 5, 90),
+      mob('gob1', 'Gobelin', '👺', 50, 7, 2, 22, { element: 'earth', dmgType: 'physical', weaknesses: ['magical'] }),
+      mob('gob2', 'Gobelin', '👺', 60, 8, 3, 24, { element: 'earth', dmgType: 'physical', weaknesses: ['magical'] }),
+      mob('gob_arch', 'Gobelin archer', '🏹', 45, 10, 1, 29, { element: 'earth', dmgType: 'physical', weaknesses: ['magical'] }),
+      mob('gob_chief', 'Chef gobelin', '👹', 120, 14, 5, 90, { element: 'earth', dmgType: 'physical', weaknesses: ['magical'], resistances: ['physical'] }),
     ],
     reward: { gold: 220, fateCoins: 3, gems: 0, loot: { iron_ore: 0.8, wood: 0.8, iron_blade: 0.2, iron_mail: 0.15 } },
   },
@@ -54,10 +78,10 @@ export const DUNGEONS: DungeonDef[] = [
     cooldownMs: 40 * 60 * 1000,
     desc: 'Les morts y refusent le repos.',
     stages: [
-      mob('skel1', 'Squelette', '💀', 135, 18, 7, 60),
-      mob('skel2', 'Garde squelette', '🦴', 165, 21, 10, 72),
-      mob('ghoul', 'Goule', '🧟', 180, 24, 9, 82),
-      mob('lich', 'Liche', '🪦', 450, 33, 15, 240),
+      mob('skel1', 'Squelette', '💀', 135, 18, 7, 60, { element: 'dark', dmgType: 'physical', weaknesses: ['magical'] }),
+      mob('skel2', 'Garde squelette', '🦴', 165, 21, 10, 72, { element: 'dark', dmgType: 'physical', weaknesses: ['magical'] }),
+      mob('ghoul', 'Goule', '🧟', 180, 24, 9, 82, { element: 'dark', dmgType: 'physical', weaknesses: ['magical'], resistances: ['physical'] }),
+      mob('lich', 'Liche', '🪦', 450, 33, 15, 240, { element: 'dark', dmgType: 'magical', resistances: ['physical', 'magical'] }),
     ],
     reward: { gold: 480, fateCoins: 5, gems: 1, loot: { frost_shard: 0.7, void_dust: 0.4, steel_plate: 0.2, crystal: 0.3 } },
   },
@@ -69,10 +93,10 @@ export const DUNGEONS: DungeonDef[] = [
     cooldownMs: 90 * 60 * 1000,
     desc: 'L\'antre d\'un dragon ancestral. Réservé aux vétérans.',
     stages: [
-      mob('drakeling1', 'Dragonnet', '🦎', 270, 30, 13, 150),
-      mob('drakeling2', 'Garde drakonide', '🐲', 315, 34, 16, 172),
-      mob('wyrm', 'Wyrm de flamme', '🔥', 360, 39, 18, 210),
-      mob('dragon_lord', 'Seigneur Dragon', '🐉', 900, 56, 22, 750),
+      mob('drakeling1', 'Dragonnet', '🦎', 270, 30, 13, 150, { element: 'fire', dmgType: 'physical', weaknesses: ['magical'] }),
+      mob('drakeling2', 'Garde drakonide', '🐲', 315, 34, 16, 172, { element: 'fire', dmgType: 'physical', weaknesses: ['magical'], resistances: ['physical'] }),
+      mob('wyrm', 'Wyrm de flamme', '🔥', 360, 39, 18, 210, { element: 'fire', dmgType: 'magical', weaknesses: ['physical'] }),
+      mob('dragon_lord', 'Seigneur Dragon', '🐉', 900, 56, 22, 750, { element: 'fire', dmgType: 'physical', resistances: ['physical', 'magical'] }),
     ],
     reward: { gold: 1000, fateCoins: 10, gems: 2, loot: { mithril_ore: 0.8, crystal: 0.6, mithril_blade: 0.2, crystal_charm: 0.15, void_reaver: 0.05 } },
   },
@@ -84,10 +108,10 @@ export const DUNGEONS: DungeonDef[] = [
     cooldownMs: 120 * 60 * 1000,
     desc: 'Les entrailles du volcan abritent des démons forgeurs. Équipement volcanique en récompense.',
     stages: [
-      mob('flame_imp1', 'Diablotin de feu', '🔥', 800, 60, 25, 400),
-      mob('lava_golem', 'Golem de lave', '🌋', 1100, 75, 35, 550),
-      mob('infernal_guard', 'Garde infernal', '👹', 950, 80, 30, 500),
-      mob('forge_lord', 'Seigneur de la Forge', '🔥', 2800, 110, 50, 1800),
+      mob('flame_imp1', 'Diablotin de feu', '🔥', 800, 60, 25, 400, { element: 'fire', dmgType: 'magical', weaknesses: ['physical'] }),
+      mob('lava_golem', 'Golem de lave', '🌋', 1100, 75, 35, 550, { element: 'fire', dmgType: 'physical', weaknesses: ['magical'], resistances: ['physical'] }),
+      mob('infernal_guard', 'Garde infernal', '👹', 950, 80, 30, 500, { element: 'fire', dmgType: 'physical', weaknesses: ['magical'] }),
+      mob('forge_lord', 'Seigneur de la Forge', '🔥', 2800, 110, 50, 1800, { element: 'fire', dmgType: 'physical', resistances: ['physical', 'magical'] }),
     ],
     reward: { gold: 3500, fateCoins: 15, gems: 3, loot: { lava_crystal: 0.9, ember_stone: 0.8, infernal_shard: 0.6, lava_blade: 0.15, volcanic_armor: 0.12, upgrade_matrix: 0.2 } },
   },
@@ -99,10 +123,10 @@ export const DUNGEONS: DungeonDef[] = [
     cooldownMs: 180 * 60 * 1000,
     desc: 'Forteresse à la frontière du vide. Seuls les plus puissants en reviennent.',
     stages: [
-      mob('void_sentinel1', 'Sentinelle du Vide', '💀', 1800, 130, 55, 900),
-      mob('void_sentinel2', 'Archonte du Vide', '🌑', 2200, 150, 65, 1100),
-      mob('abyssal_knight', 'Chevalier Abyssal', '🗡️', 2600, 165, 70, 1300),
-      mob('void_king', 'Roi Abyssal', '👑', 7000, 220, 90, 5000),
+      mob('void_sentinel1', 'Sentinelle du Vide', '💀', 1800, 130, 55, 900, { element: 'dark', dmgType: 'magical', weaknesses: ['physical'], resistances: ['magical'] }),
+      mob('void_sentinel2', 'Archonte du Vide', '🌑', 2200, 150, 65, 1100, { element: 'dark', dmgType: 'magical', weaknesses: ['physical'], resistances: ['magical'] }),
+      mob('abyssal_knight', 'Chevalier Abyssal', '🗡️', 2600, 165, 70, 1300, { element: 'dark', dmgType: 'physical', weaknesses: ['magical'], resistances: ['physical'] }),
+      mob('void_king', 'Roi Abyssal', '👑', 7000, 220, 90, 5000, { element: 'dark', dmgType: 'magical', resistances: ['physical', 'magical'] }),
     ],
     reward: { gold: 6000, fateCoins: 25, gems: 5, loot: { void_dust: 0.9, infernal_shard: 0.8, boss_soul: 0.4, void_mantle: 0.2, primordial_crown: 0.08, upgrade_matrix: 0.35, phoenix_feather: 0.05 } },
   },

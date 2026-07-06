@@ -5,6 +5,7 @@ import { MONSTERS } from '../../game/monsters';
 import type { ItemDef, MonsterDef } from '../../game/types';
 import { RECIPES } from '../../game/crafting';
 import { GATHER_SKILLS } from '../../game/gathering';
+import { DUNGEONS } from '../../game/dungeons';
 import { BIOMES } from '../../game/biomes';
 import { BASE_CLASSES, getAscensions } from '../../game/classes';
 import { setProcDesc } from '../../game/sets';
@@ -14,6 +15,7 @@ import MonsterIcon from '../MonsterIcon';
 export default function WikiCard() {
   const p = useGame(s => s.player);
   const [tab, setTab] = useState<'items' | 'bestiary' | 'classes'>('items');
+  const [bestiarySub, setBestiarySub] = useState<'world' | 'dungeon'>('world');
   const [search, setSearch] = useState('');
 
   const sourcesByItem = useMemo(() => {
@@ -71,9 +73,20 @@ export default function WikiCard() {
 
   const bestiaryList = useMemo(() => {
     const q = search.toLowerCase();
-    return Object.values(MONSTERS).filter(m => 
+    return Object.values(MONSTERS).filter(m =>
       m.name.toLowerCase().includes(q)
     );
+  }, [search]);
+
+  const dungeonBestiaryList = useMemo(() => {
+    const q = search.toLowerCase();
+    const list: (MonsterDef & { dungeonName: string; dungeonId: string })[] = [];
+    for (const d of DUNGEONS) {
+      for (const m of d.stages) {
+        if (m.name.toLowerCase().includes(q)) list.push({ ...m, dungeonName: d.name, dungeonId: d.id });
+      }
+    }
+    return list;
   }, [search]);
 
   if (!p) return null;
@@ -87,6 +100,12 @@ export default function WikiCard() {
           <button onClick={() => setTab('bestiary')} className={`flex-1 rounded p-2 text-sm font-bold transition ${tab === 'bestiary' ? 'bg-sky-500/40 text-white' : 'bg-black/25 text-slate-300 hover:bg-white/10'}`}>Bestiaire</button>
           <button onClick={() => setTab('classes')} className={`flex-1 rounded p-2 text-sm font-bold transition ${tab === 'classes' ? 'bg-sky-500/40 text-white' : 'bg-black/25 text-slate-300 hover:bg-white/10'}`}>Classes</button>
         </div>
+        {tab === 'bestiary' && (
+          <div className="flex gap-2">
+            <button onClick={() => setBestiarySub('world')} className={`flex-1 rounded p-1.5 text-xs font-semibold transition ${bestiarySub === 'world' ? 'bg-rose-500/40 text-white' : 'bg-black/20 text-slate-400 hover:bg-white/10'}`}>🌍 Monde ouvert</button>
+            <button onClick={() => setBestiarySub('dungeon')} className={`flex-1 rounded p-1.5 text-xs font-semibold transition ${bestiarySub === 'dungeon' ? 'bg-rose-500/40 text-white' : 'bg-black/20 text-slate-400 hover:bg-white/10'}`}>🏰 Donjons</button>
+          </div>
+        )}
         {tab !== 'classes' && (
           <input
             type="text"
@@ -121,7 +140,7 @@ export default function WikiCard() {
           </div>
         ))}
 
-        {tab === 'bestiary' && bestiaryList.map(m => {
+        {tab === 'bestiary' && bestiarySub === 'world' && bestiaryList.map(m => {
           const enc = p.statistics.mobsEncountered?.[m.id] ?? 0;
           const k = p.statistics.mobsKilled?.[m.id] ?? 0;
           
@@ -178,6 +197,47 @@ export default function WikiCard() {
                   Éliminez ce monstre pour révéler son butin.
                 </div>
               )}
+            </div>
+          );
+        })}
+
+        {tab === 'bestiary' && bestiarySub === 'dungeon' && dungeonBestiaryList.map((m, i) => {
+          const cleared = (p.dungeonClears?.[m.dungeonId] ?? 0) > 0;
+
+          if (!cleared) {
+            return (
+              <div key={`${m.dungeonId}-${m.id}-${i}`} className="rounded-lg bg-black/25 p-3 flex items-center justify-center opacity-50">
+                <span className="font-bold text-slate-400">❓ Termine « {m.dungeonName} » pour révéler ce monstre</span>
+              </div>
+            );
+          }
+
+          return (
+            <div key={`${m.dungeonId}-${m.id}-${i}`} className="rounded-lg bg-black/25 p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MonsterIcon id={m.id} emoji={m.emoji} size={28} title={m.name} />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-rose-300">{m.name}</span>
+                    <span className="text-[10px] text-slate-400">🏰 {m.dungeonName}</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-bold text-emerald-400">❤️ {m.hp}</div>
+                  <div className="text-xs text-slate-300">🗡️ {m.atk} | 🛡️ {m.def}</div>
+                </div>
+              </div>
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                {m.element && <span className="text-[10px] bg-slate-800 px-1.5 rounded text-slate-300">Élément : {m.element}</span>}
+                {m.dmgType && <span className="text-[10px] bg-slate-800 px-1.5 rounded text-slate-300">Dégâts : {m.dmgType === 'magical' ? 'Magique' : 'Physique'}</span>}
+                {m.weaknesses && m.weaknesses.length > 0 && (
+                  <span className="text-[10px] bg-emerald-900/40 text-emerald-300 px-1.5 rounded">Faiblesse : {m.weaknesses.join(', ')}</span>
+                )}
+                {m.resistances && m.resistances.length > 0 && (
+                  <span className="text-[10px] bg-rose-900/40 text-rose-300 px-1.5 rounded">Résistance : {m.resistances.join(', ')}</span>
+                )}
+              </div>
             </div>
           );
         })}
