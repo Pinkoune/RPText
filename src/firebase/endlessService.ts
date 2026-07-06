@@ -247,7 +247,10 @@ function executeEndlessMonsterTurn(cur: EndlessSession) {
     const roll = m.atk - 2 + Math.random() * 4;
     const dmgRed = t.mods?.dmgReduction || 0;
     const dodge = t.mods?.dodge || 0;
-    let dmg = Math.max(1, Math.round((roll - (t.def || 5) * 0.6) * enrageMult * (1 - dmgRed)));
+    // Élément de l'armure vs élément du monstre (créatures abyssales = 'dark',
+    // même logique que la chasse/donjon) — manquait ici aussi.
+    const defMult = getElementMult('dark', t.armorElement || undefined);
+    let dmg = Math.max(1, Math.round((roll - (t.def || 5) * 0.6) * defMult * enrageMult * (1 - dmgRed)));
     if (Math.random() < dodge) {
       cur.log.push({ text: `${t.name} esquive l'attaque de ${m.name} !`, side: 'info' });
       continue;

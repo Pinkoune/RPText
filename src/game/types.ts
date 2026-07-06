@@ -79,6 +79,14 @@ export interface EquippedGear {
   profession_armor: string | null;
 }
 
+/** Build sauvegardé (carte Équipement) : clés d'instance des slots au moment de la sauvegarde. */
+export interface EquipmentBuild {
+  id: string;
+  name: string;
+  icon: string;
+  gear: Partial<EquippedGear>;
+}
+
 export interface PlayerState {
   uid: string;
   name: string;
@@ -96,6 +104,8 @@ export interface PlayerState {
   /** id de l'objet -> quantité */
   inventory: Record<string, number>;
   equipped: EquippedGear;
+  /** Builds sauvegardés (carte Équipement, changement rapide façon Destiny 2). */
+  buildSlots?: EquipmentBuild[];
   
   // -- V2 Equipement --
   /** Durabilité actuelle des équipements par ID (0 à maxDurability). Si 0, l'équipement est cassé. */

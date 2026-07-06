@@ -1,4 +1,4 @@
-import type { PlayerState, ClassId, Stats, QuestState, ItemDef } from './types';
+import type { PlayerState, ClassId, Stats, QuestState, ItemDef, EquipmentBuild, EquippedGear } from './types';
 import { CLASSES, xpToNext, xpToNextV3, MAX_LEVEL } from './classes';
 import { getTeamBonus, getGuildBonus, getGuildGoldBonus } from '../firebase/groupsService';
 import { item, isGearId, hasInstanceTag, mintInstanceId, addItemToInventory } from './items';
@@ -83,6 +83,7 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (!p.settledCJDuels) p.settledCJDuels = [];
   if (!p.settledDungeons) p.settledDungeons = [];
   if (!p.lockedItems) p.lockedItems = [];
+  if (!p.buildSlots) p.buildSlots = [];
   if (!p.settledEndless) p.settledEndless = [];
   if (p.endlessSessionId === undefined) p.endlessSessionId = null;
   if (!p.settledPvpDuels) p.settledPvpDuels = [];
@@ -658,6 +659,51 @@ export function unequipItem(p: PlayerState, slot: 'weapon' | 'armor' | 'trinket'
     addItem(p, prev, 1);
     p.equipped[slot] = null;
   }
+}
+
+export const MAX_BUILD_SLOTS = 6;
+const BUILD_SLOTS: (keyof EquippedGear)[] = ['weapon', 'armor', 'trinket', 'tool', 'profession_armor'];
+
+/** Sauvegarde l'équipement actuel (5 slots) dans un nouveau build nommé. */
+export function saveEquipmentBuild(p: PlayerState, name: string, icon: string): boolean {
+  if (!p.buildSlots) p.buildSlots = [];
+  if (p.buildSlots.length >= MAX_BUILD_SLOTS) return false;
+  const gear: Partial<EquippedGear> = {};
+  for (const slot of BUILD_SLOTS) {
+    if (p.equipped[slot]) gear[slot] = p.equipped[slot];
+  }
+  p.buildSlots.push({ id: `build_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, name: name.slice(0, 20) || 'Build', icon, gear });
+  return true;
+}
+
+export function deleteEquipmentBuild(p: PlayerState, buildId: string): void {
+  if (!p.buildSlots) return;
+  p.buildSlots = p.buildSlots.filter((b) => b.id !== buildId);
+}
+
+/**
+ * Applique un build sauvegardé : équipe chaque pièce encore possédée (clé
+ * d'instance présente dans l'inventaire), ignore les slots dont l'exemplaire a
+ * disparu (vendu, cassé, etc — pas d'erreur, juste passé). Renvoie les slots
+ * ignorés pour informer le joueur.
+ */
+export function applyEquipmentBuild(p: PlayerState, buildId: string): { applied: number; skipped: string[] } {
+  const build = p.buildSlots?.find((b) => b.id === buildId);
+  if (!build) return { applied: 0, skipped: [] };
+  let applied = 0;
+  const skipped: string[] = [];
+  for (const slot of BUILD_SLOTS) {
+    const key = build.gear[slot];
+    if (!key) continue;
+    if ((p.inventory[key] ?? 0) <= 0 && p.equipped[slot] !== key) {
+      skipped.push(slot);
+      continue;
+    }
+    if (p.equipped[slot] === key) { applied++; continue; }
+    if (equipItem(p, key)) applied++;
+    else skipped.push(slot);
+  }
+  return { applied, skipped };
 }
 
 /** Cœur chanceux (objet passif admin-only) : +550% de chance de drop relative, juste en le possédant. */

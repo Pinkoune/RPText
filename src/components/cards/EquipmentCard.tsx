@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useGame } from '../../store/gameStore';
 import { item, RARITY_COLOR } from '../../game/items';
-import { deriveStats, equipItem, unequipItem, canEquip } from '../../game/player';
+import { deriveStats, equipItem, unequipItem, canEquip, saveEquipmentBuild, applyEquipmentBuild, deleteEquipmentBuild, MAX_BUILD_SLOTS } from '../../game/player';
 import { RECIPES, getCraftLevel } from '../../game/crafting';
 import type { ItemDef, ItemSlot } from '../../game/types';
 import ItemIcon from '../ItemIcon';
@@ -72,12 +72,40 @@ const UPGRADE_CHANCE = ['100%', '90%', '75%', '60%', '40%'];
 
 type SlotKey = 'weapon' | 'armor' | 'trinket' | 'tool' | 'profession_armor';
 
+const BUILD_ICONS = ['⚔️', '🛡️', '🏹', '🔮', '❤️', '💀', '🔥', '❄️', '🌪️', '🪨', '✨', '🌌', '🎯', '🧪', '👑', '💰'];
+
 export default function EquipmentCard() {
   const p = useGame((s) => s.player);
   const mutate = useGame((s) => s.mutate);
   const toast = useGame((s) => s.toast);
   const [openBag, setOpenBag] = useState<SlotKey | null>(null);
+  const [showAddBuild, setShowAddBuild] = useState(false);
+  const [buildName, setBuildName] = useState('');
+  const [buildIcon, setBuildIcon] = useState(BUILD_ICONS[0]);
   if (!p) return null;
+
+  function saveBuild() {
+    if (!buildName.trim()) return toast('Donne un nom au build.', 'bad');
+    let ok = false;
+    mutate((d) => { ok = saveEquipmentBuild(d, buildName, buildIcon); });
+    if (!ok) return toast(`Maximum ${MAX_BUILD_SLOTS} builds sauvegardés.`, 'bad');
+    toast(`Build "${buildName}" enregistré.`, 'good');
+    setShowAddBuild(false); setBuildName(''); setBuildIcon(BUILD_ICONS[0]);
+  }
+  function applyBuild(id: string, name: string) {
+    let res = { applied: 0, skipped: [] as string[] };
+    mutate((d) => { res = applyEquipmentBuild(d, id); });
+    const SLOT_LABEL: Record<string, string> = { weapon: 'arme', armor: 'armure', trinket: 'bijou', tool: 'outil', profession_armor: 'tenue de métier' };
+    if (res.skipped.length > 0) {
+      toast(`Build "${name}" appliqué (${res.applied} pièce(s)) — manquant(es) : ${res.skipped.map((s) => SLOT_LABEL[s] ?? s).join(', ')}.`, res.applied > 0 ? 'good' : 'bad');
+    } else {
+      toast(`Build "${name}" appliqué (${res.applied} pièce(s)).`, 'good');
+    }
+  }
+  function deleteBuild(id: string, name: string) {
+    if (!confirm(`Supprimer le build "${name}" ?`)) return;
+    mutate((d) => { deleteEquipmentBuild(d, id); });
+  }
 
   const stats = deriveStats(p);
 
@@ -139,6 +167,48 @@ export default function EquipmentCard() {
         <div className="rounded-lg bg-emerald-500/10 py-3"><div className="text-[10px] text-emerald-300/80">❤️ PV</div><div className="mt-0.5 text-lg font-bold text-emerald-200">{stats.maxHp}</div></div>
         <div className="rounded-lg bg-rose-500/10 py-3"><div className="text-[10px] text-rose-300/80">🗡️ ATK</div><div className="mt-0.5 text-lg font-bold text-rose-200">{stats.atk}</div></div>
         <div className="rounded-lg bg-sky-500/10 py-3"><div className="text-[10px] text-sky-300/80">🛡️ DEF</div><div className="mt-0.5 text-lg font-bold text-sky-200">{stats.def}</div></div>
+      </div>
+
+      {/* Builds sauvegardés : changement rapide d'équipement complet. */}
+      <div className="rounded-xl bg-black/25 p-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">💾 Builds</span>
+          <span className="text-[10px] text-slate-500">{(p.buildSlots ?? []).length}/{MAX_BUILD_SLOTS}</span>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {(p.buildSlots ?? []).map((b) => (
+            <div key={b.id} className="group relative flex items-center gap-1.5 rounded-lg bg-indigo-500/20 py-1.5 pl-2.5 pr-1.5 text-sm hover:bg-indigo-500/35">
+              <button onClick={() => applyBuild(b.id, b.name)} className="flex items-center gap-1.5">
+                <span className="text-base leading-none">{b.icon}</span>
+                <span className="max-w-[9rem] truncate font-medium">{b.name}</span>
+              </button>
+              <button onClick={() => deleteBuild(b.id, b.name)} className="rounded px-1 text-slate-400 hover:bg-rose-500/40 hover:text-rose-200" title="Supprimer">✕</button>
+            </div>
+          ))}
+          {(p.buildSlots ?? []).length < MAX_BUILD_SLOTS && !showAddBuild && (
+            <button onClick={() => setShowAddBuild(true)} className="rounded-lg bg-black/30 px-3 py-1.5 text-sm text-slate-300 hover:bg-white/10">+ Nouveau build</button>
+          )}
+        </div>
+        {showAddBuild && (
+          <div className="mt-2 space-y-2 rounded-lg bg-black/30 p-2.5">
+            <div className="flex flex-wrap gap-1">
+              {BUILD_ICONS.map((ic) => (
+                <button key={ic} onClick={() => setBuildIcon(ic)} className={`rounded px-1.5 py-1 text-base leading-none ${buildIcon === ic ? 'bg-indigo-500/50 ring-1 ring-indigo-300' : 'bg-black/30 hover:bg-white/10'}`}>{ic}</button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={buildName}
+                onChange={(e) => setBuildName(e.target.value.slice(0, 20))}
+                placeholder="Nom du build (ex: DPS, Tank...)"
+                className="min-w-0 flex-1 rounded bg-black/40 px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-sky-400/60"
+              />
+              <button onClick={saveBuild} className="shrink-0 rounded bg-indigo-500/40 px-3 py-1.5 text-sm font-semibold hover:bg-indigo-500/60">Enregistrer</button>
+              <button onClick={() => { setShowAddBuild(false); setBuildName(''); }} className="shrink-0 rounded bg-slate-700/50 px-2 py-1.5 text-sm hover:bg-slate-700">✕</button>
+            </div>
+            <p className="text-[10px] text-slate-500">Sauvegarde l'arme/armure/bijou/outil/tenue de métier actuellement équipés.</p>
+          </div>
+        )}
       </div>
 
       {SLOTS.map(({ slot, label, icon }) => {

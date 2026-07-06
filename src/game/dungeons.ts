@@ -132,10 +132,17 @@ export const DUNGEONS: DungeonDef[] = [
   },
 ];
 
-// ── Raid : trois donjons enchaînés (12 étages), stats renforcées ×1.4, illimité
-// en joueurs, ouvert seulement pendant les fenêtres d'inscription (voir raid.ts).
+// ── Raid : trois donjons enchaînés (12 étages), illimité en joueurs, ouvert
+// seulement pendant les fenêtres d'inscription (voir raid.ts).
 // Récompense généreuse mais bornée (le multiplicateur de groupe/niveau du
 // DungeonCard s'applique déjà par-dessus).
+//
+// Le scaling par nombre de joueurs (`initMonster` dans dungeonService.ts,
+// hpMult = numPlayers^1.4 * ...) s'applique à TOUS les donjons, raid inclus.
+// Le multiplicateur statique ci-dessous ne doit donc pas re-compenser un gros
+// groupe (déjà géré par ce scaling), juste refléter que le raid est plus
+// épique — sinon un petit raid (3-4 joueurs) se prend le cumul des deux et le
+// boss final devient absurdement costaud (constaté : ~42k PV à 3 joueurs).
 (() => {
   const src = ['goblin_cave', 'cursed_crypt', 'dragon_shrine']
     .map((id) => DUNGEONS.find((d) => d.id === id)!)
@@ -144,13 +151,13 @@ export const DUNGEONS: DungeonDef[] = [
   src.forEach((d, di) => {
     d.stages.forEach((m, mi) => {
       const finalBoss = di === src.length - 1 && mi === d.stages.length - 1;
-      const mult = finalBoss ? 2.2 : 1.4;
+      const mult = finalBoss ? 1.6 : 1.15;
       stages.push({
         ...m,
         id: `raid_${d.id}_${m.id}`,
         hp: Math.floor(m.hp * mult),
-        atk: Math.floor(m.atk * (finalBoss ? 1.6 : 1.3)),
-        def: Math.floor(m.def * 1.3),
+        atk: Math.floor(m.atk * (finalBoss ? 1.35 : 1.15)),
+        def: Math.floor(m.def * 1.15),
         xp: Math.floor(m.xp * 1.5),
       });
     });
@@ -165,6 +172,10 @@ export const DUNGEONS: DungeonDef[] = [
     stages,
     raid: true,
     reward: { gold: 3200, fateCoins: 20, gems: 6, loot: { mithril_ore: 1, crystal: 0.9, void_dust: 0.7, mithril_blade: 0.35, crystal_charm: 0.3, void_reaver: 0.12, boss_soul: 0.1 } },
+    // Récompenses par palier (voir DungeonCard.tsx `RAID_MILESTONES`) : un
+    // acompte à la mort de chaque boss intermédiaire (stage 4 = fin du 1er
+    // donjon, stage 8 = fin du 2e), la conquête complète reste `reward`
+    // ci-dessus au stage 12 (comme avant).
   });
 })();
 

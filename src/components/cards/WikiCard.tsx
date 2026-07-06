@@ -17,6 +17,7 @@ export default function WikiCard() {
   const p = useGame(s => s.player);
   const [tab, setTab] = useState<'items' | 'bestiary' | 'classes'>('items');
   const [bestiarySub, setBestiarySub] = useState<'world' | 'dungeon'>('world');
+  const [showElementInfo, setShowElementInfo] = useState(false);
   const [search, setSearch] = useState('');
 
   const sourcesByItem = useMemo(() => {
@@ -105,6 +106,29 @@ export default function WikiCard() {
           <div className="flex gap-2">
             <button onClick={() => setBestiarySub('world')} className={`flex-1 rounded p-1.5 text-xs font-semibold transition ${bestiarySub === 'world' ? 'bg-rose-500/40 text-white' : 'bg-black/20 text-slate-400 hover:bg-white/10'}`}>🌍 Monde ouvert</button>
             <button onClick={() => setBestiarySub('dungeon')} className={`flex-1 rounded p-1.5 text-xs font-semibold transition ${bestiarySub === 'dungeon' ? 'bg-rose-500/40 text-white' : 'bg-black/20 text-slate-400 hover:bg-white/10'}`}>🏰 Donjons</button>
+          </div>
+        )}
+        {tab === 'bestiary' && (
+          <button onClick={() => setShowElementInfo(v => !v)} className="text-left text-[11px] text-sky-300 hover:text-sky-200">
+            {showElementInfo ? '▲ Masquer' : 'ℹ️ Comment marchent éléments/faiblesses/résistances ?'}
+          </button>
+        )}
+        {tab === 'bestiary' && showElementInfo && (
+          <div className="rounded-lg bg-black/30 p-3 text-[11px] leading-relaxed text-slate-300 space-y-2">
+            <div>
+              <span className="font-semibold text-amber-300">Faiblesse / Résistance</span> (indépendant de l'élément) : chaque monstre peut avoir une faiblesse et/ou une résistance au type de dégâts de ton <b>arme</b> (⚔️ Physique ou 🔮 Magique, voir sa fiche). Faiblesse = ×1.5 dégâts. Résistance = ×0.5 dégâts. Les deux se cumulent si présents (ex: ×0.75).
+            </div>
+            <div>
+              <span className="font-semibold text-amber-300">Éléments</span> (arme vs élément du monstre, ×1.5 ou ×0.7, se cumule aussi avec ce qui précède) :
+              <ul className="mt-1 ml-3 list-disc space-y-0.5">
+                <li>🌊 Eau <b className="text-emerald-300">bat</b> 🔥 Feu <b className="text-emerald-300">bat</b> 🌪️ Vent <b className="text-emerald-300">bat</b> 🪨 Terre <b className="text-emerald-300">bat</b> 🌊 Eau (cycle : fort contre le suivant, faible contre le précédent)</li>
+                <li>❄️ Givre <b className="text-emerald-300">bat</b> 🌊 Eau et 🪨 Terre</li>
+                <li>🔥 Feu <b className="text-emerald-300">bat</b> ❄️ Givre</li>
+                <li>✨ Lumière ⇄ 🌌 Ténèbres : fortes l'une contre l'autre</li>
+                <li>⚪ Neutre : jamais de bonus ni malus</li>
+              </ul>
+            </div>
+            <div className="text-slate-400">Astuce : la <b>Rune de Transmutation</b> (Boutique du Destin) inverse le type de dégâts de ton arme (Physique ↔ Magique) — utile contre un monstre qui résiste au tien.</div>
           </div>
         )}
         {tab !== 'classes' && (

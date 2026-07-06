@@ -93,6 +93,40 @@ export default function DungeonCard() {
     });
   }, [p?.dungeonSessionId]);
 
+  // Récompenses de palier en raid : un acompte à la mort de chaque boss
+  // intermédiaire (stage 4 = fin du 1er donjon enchaîné, stage 8 = fin du 2e),
+  // en plus de la récompense de conquête complète au stage 12 (effet suivant).
+  // Escalade 25% → 50% de `reward` pour donner un vrai sentiment de progression
+  // même si le groupe ne va pas jusqu'au bout.
+  useEffect(() => {
+    if (!p || !session || session.dungeonId !== 'raid_trials' || session.state !== 'combat' || !session.monster) return;
+    const def = DUNGEONS.find(d => d.id === 'raid_trials');
+    if (!def) return;
+    const RAID_MILESTONES = [
+      { atIdx: 4, frac: 0.25, key: 'boss1' },
+      { atIdx: 8, frac: 0.5, key: 'boss2' },
+    ];
+    const ms = RAID_MILESTONES.find(m => m.atIdx === session.monster!.idx);
+    if (!ms) return;
+    const settleKey = `${session.id}:${ms.key}`;
+    if (p.settledDungeons?.includes(settleKey)) return;
+    const numPlayers = Object.keys(session.players).length;
+    const groupMult = 1 + (numPlayers - 1) * 0.4;
+    const lvlPenalty = Math.pow(Math.min(1, Math.max(1, p.level) / def.minLevel), 2);
+    const mult = groupMult * lvlPenalty * ms.frac;
+    const gold = Math.floor(def.reward.gold * mult);
+    const fateCoins = Math.floor(def.reward.fateCoins * ms.frac);
+    const gems = Math.floor(def.reward.gems * ms.frac);
+    mutate(d => {
+      d.settledDungeons = d.settledDungeons || [];
+      d.settledDungeons.push(settleKey);
+      d.gold += gold;
+      d.fateCoins += fateCoins;
+      d.gems += gems;
+    });
+    toast(`🔱 Boss du raid vaincu ! +${gold.toLocaleString()} 🪙${fateCoins ? ` · +${fateCoins} 🎲` : ''}${gems ? ` · +${gems} 💎` : ''}`, 'gold');
+  }, [session?.monster?.idx]);
+
   // Handle victory/defeat processing once
   useEffect(() => {
     if (!p || !session) return;

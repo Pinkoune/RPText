@@ -321,8 +321,13 @@ function executeMonsterTurn(cur: DungeonSession) {
     const tDef = target.def || 5;
     const dmgRed = target.mods?.dmgReduction || 0;
     const dodge = target.mods?.dodge || 0;
+    // Élément de l'armure vs élément du monstre (même logique qu'en chasse,
+    // combat.ts `defMult`) — manquait ici : une armure d'eau ne réduisait
+    // jamais les dégâts d'un boss de feu en donjon.
+    const defMult = getElementMult(m.element, target.armorElement || undefined);
 
     let dmg = Math.max(1, Math.round(roll - tDef * 0.6));
+    dmg = Math.max(1, Math.round(dmg * defMult));
     dmg = Math.max(1, Math.round(dmg * enrageMult * (1 - dmgRed)));
     if (m.affix === 'agile' && Math.random() < 0.2) dmg = Math.round(dmg * 1.2);
     if (chilled) dmg = Math.max(1, Math.round(dmg * 0.6)); // gel (proc de set) : dégâts réduits
