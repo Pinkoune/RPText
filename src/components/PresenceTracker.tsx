@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGame } from '../store/gameStore';
 import { trackPresence, touchPresence, type OnlinePlayer } from '../firebase/socialService';
-import { listenTeams, leaveTeam, transferTeamHost, type Team } from '../firebase/groupsService';
+import { listenTeams, leaveTeam, transferTeamHost, listenGuilds, type Team, type Guild } from '../firebase/groupsService';
 
 const ACTIVITY_THROTTLE_MS = 20_000;
 
 export default function PresenceTracker() {
   const status = useGame((s) => s.status);
   const player = useGame((s) => s.player);
+  const mutate = useGame((s) => s.mutate);
 
   const [teams, setTeams] = useState<Team[]>([]);
+  const [guilds, setGuilds] = useState<Guild[]>([]);
   const [onlinePlayers, setOnlinePlayers] = useState<OnlinePlayer[]>([]);
 
   useEffect(() => {
@@ -17,6 +19,27 @@ export default function PresenceTracker() {
     const unsub = listenTeams(setTeams);
     return () => unsub();
   }, [status, player?.uid]);
+
+  useEffect(() => {
+    if (status !== 'ready' || !player) return;
+    const unsub = listenGuilds(setGuilds);
+    return () => unsub();
+  }, [status, player?.uid]);
+
+  // Auto-répare `p.guildId` : seul `createGuild` le pose (`GuildCard.tsx`), pas
+  // `acceptApplication` (côté guilde, jamais renvoyé au client du candidat) →
+  // un joueur qui rejoint une guilde existante (au lieu de la fonder) reste avec
+  // `guildId: null` en local, alors qu'il est bien listé dans `guild.members`.
+  // GuildCard s'en sort (vérifie l'appartenance réelle via `guilds`), mais
+  // ChatCard/bonus de guilde ne lisent que `p.guildId` → toujours « pas de
+  // guilde » pour ces joueurs. Toujours monté (contrairement à GuildCard), donc
+  // corrige même si le joueur n'ouvre jamais la fenêtre Guilde.
+  useEffect(() => {
+    if (status !== 'ready' || !player || guilds.length === 0) return;
+    const real = guilds.find((g) => player.uid in (g.members ?? {}));
+    const realId = real ? real.id : null;
+    if (player.guildId !== realId) mutate((d) => { d.guildId = realId; });
+  }, [guilds, status, player?.uid, player?.guildId]);
 
   useEffect(() => {
     if (status !== 'ready' || !player) return;

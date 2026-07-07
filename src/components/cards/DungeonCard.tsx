@@ -383,7 +383,7 @@ export default function DungeonCard() {
   if (session && session.state === 'combat') {
     const m = session.monster!;
     const def = DUNGEONS.find(d => d.id === session.dungeonId)!;
-    const mhpPct = Math.max(0, (m.hp / m.maxHp) * 100);
+    const mhpPct = Math.max(0, Math.min(100, (m.hp / m.maxHp) * 100));
     const myTurn = session.turnOrder[session.turnIdx] === p.uid;
     const timeLeft = Math.max(0, 30 - Math.floor((Date.now() - session.turnStartAt) / 1000));
     const me = session.players[p.uid];
@@ -416,7 +416,7 @@ export default function DungeonCard() {
           {m.provokeTurns > 0 && <div className="text-[10px] text-rose-400 font-bold tracking-wide uppercase">💢 Provoqué par {session.players[m.provokedBy!]?.name}</div>}
           {m.staggered && <div className="text-[10px] text-cyan-400 font-bold uppercase animate-pulse">⚡ BRISÉ (Passe son tour)</div>}
           {!m.staggered && m.staggerHits > 0 && <div className="text-[10px] text-cyan-400/70">Faiblesse : {m.staggerHits}/3</div>}
-          <div className="h-2 rounded bg-black/40 mt-2 mx-4">
+          <div className="h-2 overflow-hidden rounded bg-black/40 mt-2 mx-4">
             <div className="h-2 rounded bg-orange-400 transition-all duration-300" style={{ width: `${mhpPct}%` }} />
           </div>
           <div className="text-xs text-slate-400 mt-1">{Math.round(m.hp)} / {m.maxHp}</div>
@@ -426,7 +426,7 @@ export default function DungeonCard() {
         <div className="grid grid-cols-2 gap-2">
           {Object.values(session.players).map(pl => {
             const isTurn = session.turnOrder[session.turnIdx] === pl.uid;
-            const phpPct = Math.max(0, (pl.hp / pl.maxHp) * 100);
+            const phpPct = Math.max(0, Math.min(100, (pl.hp / pl.maxHp) * 100));
             return (
               <div key={pl.uid} className={`rounded-lg p-2 text-xs border ${isTurn ? 'border-sky-400/50 bg-sky-500/10' : 'border-transparent bg-black/20'}`}>
                 <div className="flex justify-between items-center mb-1">
@@ -440,9 +440,9 @@ export default function DungeonCard() {
                       </button>
                     )}
                   </span>
-                  <span className="tabular-nums text-slate-400">{Math.round(pl.hp)}/{pl.maxHp}</span>
+                  <span className="tabular-nums text-slate-400">{Math.round(Math.min(pl.hp, pl.maxHp))}/{pl.maxHp}</span>
                 </div>
-                <div className="h-1.5 rounded bg-black/40">
+                <div className="h-1.5 overflow-hidden rounded bg-black/40">
                   <div className={`h-1.5 rounded transition-all duration-300 ${phpPct < 30 ? 'bg-rose-500' : 'bg-emerald-400'} ${phpPct < 15 ? 'animate-pulse' : ''}`} style={{ width: `${phpPct}%` }} />
                 </div>
               </div>
