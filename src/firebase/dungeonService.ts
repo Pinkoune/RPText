@@ -55,6 +55,9 @@ export interface DungeonMonster {
   chill?: number;
   poison?: number;
   poisonPow?: number;
+  /** Auteur de la brûlure/poison en cours — sert au combo élémentaire (2 joueurs différents). */
+  burnBy?: string;
+  poisonBy?: string;
   /** Affaiblissement (Chasseur : Morsure) — réduit l'ATK du monstre le temps que ça dure. */
   weaken?: number;
   weakenPow?: number;
@@ -532,11 +535,26 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
             if (st.type === 'burn') {
               m.burn = Math.max(m.burn || 0, st.turns);
               m.burnPow = Math.max(m.burnPow || 0, pow);
+              m.burnBy = p.uid;
               cur.log.push({ text: `🔥 ${m.name} prend feu !`, side: 'you' });
+              // Combo élémentaire : un autre joueur a déjà posé le poison → explosion bonus.
+              if ((m.poison || 0) > 0 && m.poisonBy && m.poisonBy !== p.uid) {
+                const boom = Math.max(1, Math.round(m.maxHp * 0.08));
+                m.hp = Math.max(0, (m.hp || 0) - boom);
+                maybeInterrupt(boom);
+                cur.log.push({ text: `💥 Combo élémentaire ! Brûlure + Poison se combinent : ${boom} dégâts bonus !`, side: 'you' });
+              }
             } else if (st.type === 'poison') {
               m.poison = Math.max(m.poison || 0, st.turns);
               m.poisonPow = Math.max(m.poisonPow || 0, pow);
+              m.poisonBy = p.uid;
               cur.log.push({ text: `🧪 ${m.name} est empoisonné !`, side: 'you' });
+              if ((m.burn || 0) > 0 && m.burnBy && m.burnBy !== p.uid) {
+                const boom = Math.max(1, Math.round(m.maxHp * 0.08));
+                m.hp = Math.max(0, (m.hp || 0) - boom);
+                maybeInterrupt(boom);
+                cur.log.push({ text: `💥 Combo élémentaire ! Poison + Brûlure se combinent : ${boom} dégâts bonus !`, side: 'you' });
+              }
             } else if (st.type === 'chill') {
               m.chill = Math.max(m.chill || 0, st.turns);
               cur.log.push({ text: `❄️ ${m.name} est gelé (frappe affaiblie) !`, side: 'you' });

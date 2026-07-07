@@ -80,6 +80,13 @@ export interface EndlessMonster {
   name: string;
   emoji: string;
   isBoss: boolean;
+  /** Brûlure/poison posés par une compétence (`skill.status`) — combo élémentaire si 2 joueurs différents. */
+  burn?: number;
+  burnPow?: number;
+  burnBy?: string;
+  poison?: number;
+  poisonPow?: number;
+  poisonBy?: string;
 }
 
 export interface EndlessTurnEvent {
@@ -385,6 +392,33 @@ export async function submitEndlessAction(id: string, uid: string, action: strin
           Object.values(cur.players).forEach(a => { if (!a.isDead) a.atk = (a.atk || 0) + bonus; });
           cur.log.push({ text: `🎶 ${p.name} galvanise le groupe (+${bonus} ATK pour tous) !`, side: 'info' });
         }
+        // Statuts (brûlure/poison) + combo élémentaire multi-joueurs (2 joueurs
+        // différents posent brûlure ET poison sur la même cible = explosion bonus).
+        if (skill.status && (m.hp || 0) > 0) {
+          const st = skill.status;
+          const pow = st.pow ? Math.max(1, Math.round(finalAtk * st.pow)) : 0;
+          if (st.type === 'burn') {
+            m.burn = Math.max(m.burn || 0, st.turns);
+            m.burnPow = Math.max(m.burnPow || 0, pow);
+            m.burnBy = p.uid;
+            cur.log.push({ text: `🔥 ${m.name} prend feu !`, side: 'you' });
+            if ((m.poison || 0) > 0 && m.poisonBy && m.poisonBy !== p.uid) {
+              const boom = Math.max(1, Math.round(m.maxHp * 0.08));
+              m.hp = Math.max(0, m.hp - boom);
+              cur.log.push({ text: `💥 Combo élémentaire ! Brûlure + Poison se combinent : ${boom} dégâts bonus !`, side: 'you' });
+            }
+          } else if (st.type === 'poison') {
+            m.poison = Math.max(m.poison || 0, st.turns);
+            m.poisonPow = Math.max(m.poisonPow || 0, pow);
+            m.poisonBy = p.uid;
+            cur.log.push({ text: `🧪 ${m.name} est empoisonné !`, side: 'you' });
+            if ((m.burn || 0) > 0 && m.burnBy && m.burnBy !== p.uid) {
+              const boom = Math.max(1, Math.round(m.maxHp * 0.08));
+              m.hp = Math.max(0, m.hp - boom);
+              cur.log.push({ text: `💥 Combo élémentaire ! Poison + Brûlure se combinent : ${boom} dégâts bonus !`, side: 'you' });
+            }
+          }
+        }
       }
     } else {
       // Attaque de base (applique tous les mods de talents, comme en chasse).
@@ -411,6 +445,18 @@ export async function submitEndlessAction(id: string, uid: string, action: strin
       for (const sId of Object.keys(p.skillCds)) if (p.skillCds[sId] > 0) p.skillCds[sId] -= 1;
     }
     if (p.mods?.regen > 0 && p.hp > 0 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + p.mods.regen);
+
+    // Brûlure/poison en cours sur le monstre : tick de fin de tour.
+    if (m.hp > 0 && (m.burn || 0) > 0 && (m.burnPow || 0) > 0) {
+      m.hp = Math.max(0, m.hp - m.burnPow!);
+      cur.log.push({ text: `🔥 Brûlure : ${m.name} perd ${m.burnPow} PV.`, side: 'you' });
+    }
+    if ((m.burn || 0) > 0) m.burn = (m.burn || 0) - 1;
+    if (m.hp > 0 && (m.poison || 0) > 0 && (m.poisonPow || 0) > 0) {
+      m.hp = Math.max(0, m.hp - m.poisonPow!);
+      cur.log.push({ text: `🧪 Poison : ${m.name} perd ${m.poisonPow} PV.`, side: 'you' });
+    }
+    if ((m.poison || 0) > 0) m.poison = (m.poison || 0) - 1;
 
     if (cur.log.length > 40) cur.log = cur.log.slice(cur.log.length - 40);
 

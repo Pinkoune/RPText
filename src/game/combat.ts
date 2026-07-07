@@ -192,6 +192,10 @@ export interface TurnResult {
   state: CombatState;
   /** Or chapardé instantanément (Voleur : Assassinat), à ajouter par l'appelant. */
   goldStolen: number;
+  /** Ressource d'archétype (rage/combo) gagnée ce tour, à ajouter par l'appelant. */
+  resourceGained: number;
+  /** Ressource dépensée pour la compétence utilisée ce tour (0 si aucune), à retirer par l'appelant. */
+  resourceSpent: number;
 }
 
 export interface HuntEncounter {
@@ -224,6 +228,10 @@ export function combatTurn(
     activeSkill?: ActiveSkillDef;
     potionHeal?: number;
     setProc?: { setId: string; name: string; icon: string; chance: number; kind: 'burn' | 'chill' | 'heal' | 'shield' | 'extra'; power: number };
+    /** Ressource d'archétype actuellement en réserve (Berserker/DK: rage 0-100 ; Voleur/Moine: combo 0-5). */
+    resourceAmount?: number;
+    /** Type de ressource passive de la classe du joueur (voir `classResourceType`). */
+    resourceType?: 'rage' | 'combo' | 'grace' | 'mana' | 'sap' | 'zeal' | 'tempo' | 'overcharge' | 'instinct' | 'corruption' | null;
   } = {},
   state: CombatState = freshCombatState(),
 ): TurnResult {
@@ -238,6 +246,9 @@ export function combatTurn(
   let hitsDealt = 0;
   let hitsTaken = 0;
   let goldStolen = 0;
+  let resourceSpent = 0;
+  let healDone = 0;
+  let critLanded = false;
 
   const atkMult = getElementMult(stats.weaponElement, monster.element) * getDmgTypeMult(stats.weaponDmgType, monster);
   const defMult = getElementMult(monster.element, stats.armorElement);
@@ -246,7 +257,7 @@ export function combatTurn(
   if (action === 'flee') {
     if (Math.random() < 0.55) {
       events.push({ text: 'Tu prends la fuite !', side: 'info' });
-      return { events, php, mhp, fled: true, abilityUsed: false, hitsDealt, hitsTaken, state, goldStolen };
+      return { events, php, mhp, fled: true, abilityUsed: false, hitsDealt, hitsTaken, state, goldStolen, resourceGained: 0, resourceSpent };
     }
     events.push({ text: 'Fuite ratée ! Le monstre t\'attaque.', side: 'info' });
   } else if (action === 'potion') {
@@ -258,19 +269,36 @@ export function combatTurn(
     if (skill) {
       abilityUsed = true; // On signale qu'une compétence a été utilisée (pour le cooldown global ou anim)
       
+      // Ressource d'archétype : coût fixe pour la rage, consomme tout le pool
+      // pour combo (scale les dégâts) et grace (scale le soin).
+      let effMult = skill.mult ?? 0;
+      let effHealFrac = skill.healFrac ?? 0;
+      if (skill.resource) {
+        const pool = opts.resourceAmount ?? 0;
+        if (skill.resource.type === 'combo') {
+          effMult = (skill.mult ?? 0) + (skill.resource.scalePerPoint ?? 0) * pool;
+          resourceSpent = pool;
+        } else if (skill.resource.type === 'grace') {
+          effHealFrac = (skill.healFrac ?? 0) + (skill.resource.scalePerPoint ?? 0) * pool;
+          resourceSpent = pool;
+        } else {
+          resourceSpent = skill.resource.cost;
+        }
+      }
       if (skill.type === 'attack' || skill.type === 'shield' || skill.type === 'heal' || skill.type === 'buff') {
-        if (skill.mult) {
+        if (effMult) {
           hitsDealt++;
-          let dmg = Math.max(1, Math.round(stats.atk * skill.mult * (0.9 + Math.random() * 0.3)) - effDef);
+          let dmg = Math.max(1, Math.round(stats.atk * effMult * (0.9 + Math.random() * 0.3)) - effDef);
           dmg = Math.round(dmg * atkMult);
           if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
           mhp -= dmg;
           if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
           events.push({ text: `${skill.name} : ${dmg} dégâts !`, side: 'you' });
         }
-        if (skill.healFrac) {
-          const heal = Math.round(maxHp * skill.healFrac);
+        if (effHealFrac) {
+          const heal = Math.round(maxHp * effHealFrac);
           php = Math.min(maxHp, php + heal);
+          healDone += heal;
           events.push({ text: `${skill.name} te rend ${heal} PV.`, side: 'info' });
         }
         if (skill.shield) {
@@ -301,7 +329,7 @@ export function combatTurn(
       if (php < maxHp * 0.3 && mods.berserkBonus > 0) dmg = Math.round(dmg * (1 + mods.berserkBonus));
       if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
       const crit = Math.random() < mods.crit;
-      if (crit) dmg = Math.round(dmg * (2 + mods.critMult));
+      if (crit) { dmg = Math.round(dmg * (2 + mods.critMult)); critLanded = true; }
       mhp -= dmg;
       if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
       events.push({ text: `${h > 0 ? 'Tir double ! ' : ''}Tu infliges ${dmg}${crit ? ' (CRIT !)' : ''}.`, side: 'you' });
@@ -333,9 +361,20 @@ export function combatTurn(
     }
   }
 
-  if (mhp <= 0) return { events, php, mhp: 0, fled, abilityUsed, hitsDealt, hitsTaken, state, goldStolen };
+  if (mhp <= 0) {
+    let resourceGained = 0;
+    if (opts.resourceType === 'combo' && hitsDealt > 0) resourceGained = 1;
+    else if (opts.resourceType === 'grace') resourceGained = Math.round(healDone * 0.15);
+    else if (opts.resourceType === 'mana') resourceGained = 15;
+    else if (opts.resourceType === 'instinct' && critLanded) resourceGained = 30;
+    else if (opts.resourceType === 'corruption' && hitsDealt > 0 && php < maxHp * 0.3) resourceGained = 35;
+    return { events, php, mhp: 0, fled, abilityUsed, hitsDealt, hitsTaken, state, goldStolen, resourceGained, resourceSpent };
+  }
 
   // ── Phase monstre (plus dangereux : la défense ne mitige qu'à 80%) ──
+  let dmgTakenThisTurn = 0;
+  let thornsProced = false;
+  let shieldAbsorbed = false;
   if (Math.random() < mods.dodge) {
     events.push({ text: `Tu esquives l'attaque de ${monster.name} !`, side: 'info' });
   } else {
@@ -349,13 +388,14 @@ export function combatTurn(
       const absorbed = Math.min(state.shield, mdmg);
       state.shield -= absorbed;
       mdmg -= absorbed;
-      if (absorbed > 0) events.push({ text: `🛡️ Ton bouclier absorbe ${absorbed} dégâts.`, side: 'info' });
+      if (absorbed > 0) { events.push({ text: `🛡️ Ton bouclier absorbe ${absorbed} dégâts.`, side: 'info' }); shieldAbsorbed = true; }
     }
     if (mdmg > 0) php -= mdmg;
-    if (mods.thorns > 0) mhp = Math.max(0, mhp - Math.round((mdmg || 1) * mods.thorns));
+    dmgTakenThisTurn = Math.max(0, mdmg);
+    if (mods.thorns > 0) { mhp = Math.max(0, mhp - Math.round((mdmg || 1) * mods.thorns)); thornsProced = true; }
     events.push({ text: `${monster.name} t'inflige ${mdmg}.`, side: 'enemy' });
   }
-  
+
   // Régénération : passif (Healer) 100% chance qui scale avec le niveau, mais dont la base est divisée pour compenser le déclenchement garanti
   if (action === 'attack' && mods.regen > 0 && php < maxHp && php > 0) {
     const reg = Math.max(1, Math.round(mods.regen / 3 + stats.level * 0.5));
@@ -391,7 +431,39 @@ export function combatTurn(
   if (state.poison > 0) state.poison -= 1;
   if (state.chill > 0) state.chill -= 1;
 
-  return { events, php: Math.max(0, php), mhp: Math.max(0, mhp), fled, abilityUsed, hitsDealt, hitsTaken, state, goldStolen };
+  // Ressource d'archétype passive : rage se charge en encaissant, combo en touchant.
+  let resourceGained = 0;
+  // Gain normalisé en % des PV max encaissés (pas en dégâts bruts, qui explosent
+  // avec le niveau) ET plafonné par tour : en contenu difficile un seul coup
+  // peut représenter 40-60% des PV max (constaté : ~690 dégâts pour un DK dont
+  // les soins tournent à 1200), donc même en % ça remplissait la jauge (100 max,
+  // coût 50) en un seul coup. Le plafond par tour force plusieurs tours pour
+  // reconstituer la Rage après avoir dépensé l'ultime, quelle que soit la
+  // brutalité du combat.
+  if (opts.resourceType === 'rage') resourceGained = Math.min(25, Math.round((dmgTakenThisTurn / maxHp) * 100 * 0.4));
+  else if (opts.resourceType === 'combo' && hitsDealt > 0) resourceGained = 1;
+  else if (opts.resourceType === 'grace') resourceGained = Math.round(healDone * 0.15);
+  // Mana : régen passive fixe à chaque tour, quelle que soit l'action (gestion
+  // par patience plutôt que réactive comme la rage/le combo).
+  else if (opts.resourceType === 'mana') resourceGained = 15;
+  // Sève (Druide) : se charge quand les Épines renvoient des dégâts au monstre
+  // — récompense d'encaisser des coups en ayant investi dans les Épines.
+  else if (opts.resourceType === 'sap' && thornsProced) resourceGained = 20;
+  // Ferveur (Paladin) : se charge quand SON PROPRE bouclier (Rempart) absorbe
+  // un coup — récompense la protection active, pas l'encaissement brut.
+  else if (opts.resourceType === 'zeal' && shieldAbsorbed) resourceGained = 20;
+  // Instinct (Chasseur) : se charge quand un coup CRIT — récompense
+  // l'investissement dans le critique plutôt que le simple fait de taper.
+  else if (opts.resourceType === 'instinct' && critLanded) resourceGained = 30;
+  // Corruption (Chevalier Noir) : se charge en infligeant des dégâts UNIQUEMENT
+  // sous 30% PV (même seuil que Douleur) — frapper au bord de la mort, pas
+  // juste encaisser passivement comme la Rage.
+  else if (opts.resourceType === 'corruption' && hitsDealt > 0 && php < maxHp * 0.3) resourceGained = 35;
+  // Tempo (Barde) et Surcharge (Arcaniste) : calculés par l'appelant (HuntCard),
+  // pas ici — l'un dépend de l'action du tour précédent (variété), l'autre du
+  // nombre de compétences lancées, deux signaux hors du périmètre de ce combat.
+
+  return { events, php: Math.max(0, php), mhp: Math.max(0, mhp), fled, abilityUsed, hitsDealt, hitsTaken, state, goldStolen, resourceGained, resourceSpent };
 }
 
 /** Récompenses de victoire (mute le joueur). */

@@ -341,6 +341,12 @@ export default function EndlessCard() {
           <div className={`text-sm font-bold ${m.isBoss ? 'text-purple-200' : 'text-rose-200'}`}>{m.name}</div>
           <div className="mx-4 mt-2"><Bar current={m.hp} max={m.maxHp} color={m.isBoss ? 'bg-purple-500' : 'bg-rose-500'} /></div>
           <div className="mt-1 text-xs text-slate-400">{Math.round(m.hp)} / {m.maxHp}</div>
+          {((m.burn ?? 0) > 0 || (m.poison ?? 0) > 0) && (
+            <div className="mt-1 flex flex-wrap justify-center gap-1 text-[10px]">
+              {(m.burn ?? 0) > 0 && <span className="rounded bg-orange-500/20 px-1.5 py-0.5 text-orange-300">🔥 Brûlure ({m.burn})</span>}
+              {(m.poison ?? 0) > 0 && <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-emerald-300">🧪 Poison ({m.poison})</span>}
+            </div>
+          )}
         </div>
 
         {/* Équipe */}

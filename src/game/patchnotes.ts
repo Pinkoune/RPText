@@ -18,6 +18,42 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'resource-combo-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '🔥 Une ressource propre à chaque sous-classe (fini le cooldown pour tous)',
+        items: [
+          'Berserker — Rage : se charge en encaissant des coups, Exécution coûte 50 Rage au lieu d\'un long cooldown.',
+          'Chevalier Noir — Corruption : contrairement à la Rage, ne se charge QUE si tu INFLIGES des dégâts sous 30% PV (même seuil que le passif Douleur, les deux se nourrissent ensemble) — récompense l\'agressivité au bord de la mort, pas juste l\'encaissement. Drain Noir coûte 45 Corruption.',
+          'Voleur & Moine — Combo : chaque coup porté charge 1 point (max 5), l\'ultime (Assassinat / Coup du Dragon) consomme tout le combo accumulé (min. 3 points) pour des dégâts qui grandissent avec.',
+          'Prêtre de l\'Aube — Grâce : chaque soin lancé la charge (max 100), Nova sacrée consomme toute la Grâce (min. 30) pour un soin qui grandit avec — jusqu\'à un vrai heal massif si t\'as beaucoup soigné avant de la lâcher.',
+          'Pyromancien & Cryomancien — Mana : se régénère passivement (+15/tour) quelle que soit l\'action, gestion par patience. L\'ultime (Enfer / Blizzard) coûte 40 Mana.',
+          'Druide — Sève : les Épines chargent la Sève à chaque riposte (renvoi de dégâts), Colère consomme 40 Sève — récompense d\'encaisser des coups plutôt que de les éviter.',
+          'Paladin — Ferveur : se charge uniquement quand SON PROPRE bouclier (Rempart) absorbe un coup, pas en encaissant n\'importe quel coup — récompense la protection active. Châtiment coûte 40 Ferveur.',
+          'Barde — Tempo : se charge en ALTERNANT ses actions d\'un tour à l\'autre plutôt qu\'en répétant la même — récompense la variété, littéralement "garder le rythme". Crescendo coûte 60 Tempo.',
+          'Arcaniste — Surcharge : se charge à chaque compétence lancée (n\'importe laquelle), contrairement au Mana qui régénère seul — récompense le rythme de sorts rapide. Distorsion coûte 50 Surcharge.',
+          'Chasseur (nouveau) — Traque : se charge quand un tir CRIT, en vraie synergie avec Concentration/Mise à mort (jusqu\'à +24% crit cumulé) — plus tu investis dans le critique, plus vite revient Tir de précision (60 Traque).',
+          'Guerrier, Archer, Soigneur et Mage (les 4 classes de base) gardent le cooldown classique.',
+          'Correction : le gain de Rage était basé sur les dégâts bruts encaissés (qui explosent avec le niveau) et est maintenant plafonné par tour — évite qu\'elle reste bloquée au maximum en permanence dans les combats difficiles.',
+        ],
+      },
+      {
+        title: '💥 Combos élémentaires en donjon & abysses coop',
+        items: [
+          'Si deux joueurs DIFFÉRENTS posent Brûlure et Poison sur le même monstre, les deux se combinent en une explosion bonus (dégâts supplémentaires instantanés).',
+          'Coordonnez vos compétences avec votre équipe pour déclencher le combo !',
+        ],
+      },
+      {
+        title: '🩸 Équilibrage des auras de prestige',
+        items: [
+          'Correction : l\'aura Sanguinaire (+5% ATK, -1% DEF) était strictement pire que l\'aura Ardent (+5% ATK sans malus) — aucune raison de jamais la choisir. Elle passe à +8% ATK, -3% DEF : un vrai choix offensif à haut risque plutôt qu\'une aura piège.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'classes-depth-v1',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [

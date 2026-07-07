@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useGame } from '../../store/gameStore';
 import { playSound } from '../../game/sound';
 import { addSeasonPoints, SEASON_POINTS } from '../../game/season';
@@ -93,26 +93,50 @@ export default function CardJitsuCard() {
 
   useEffect(() => listenCJDuels(setDuels), []);
 
-  // ─── GESTION DU TIMER (Solo & PvP) ───
+  // Refs miroir de l'état volatile lu dans l'intervalle ci-dessous : sans elles,
+  // l'effet devait tourner sans dépendances stables (donc recréer un nouveau
+  // setInterval à CHAQUE rendu, y compris ceux déclenchés par setTimeLeft
+  // lui-même) — l'intervalle n'atteignait quasiment jamais ses 1000ms complets
+  // avant d'être détruit/recréé, donc le tirage automatique en fin de chrono ne
+  // se déclenchait presque jamais en pratique. Avec des refs + un effet à
+  // dépendances vides, l'intervalle est stable et lit toujours l'état à jour.
+  const duelsRef = useRef(duels);
+  duelsRef.current = duels;
+  const resolvingRef = useRef(resolving);
+  resolvingRef.current = resolving;
+  const soloStatusRef = useRef(soloStatus);
+  soloStatusRef.current = soloStatus;
+  const sPHandRef = useRef(sPHand);
+  sPHandRef.current = sPHand;
+  const sTurnStartTimeRef = useRef(sTurnStartTime);
+  sTurnStartTimeRef.current = sTurnStartTime;
+  const pUidRef = useRef(p?.uid);
+  pUidRef.current = p?.uid;
+  const playSoloRef = useRef((_idx: number) => {});
+  playSoloRef.current = playSolo;
+
+  // ─── GESTION DU TIMER (Solo & PvP) : tirage auto d'une carte au hasard si le
+  // joueur n'a pas choisi avant la fin du chrono. ───
   useEffect(() => {
     const timer = setInterval(() => {
-      if (soloStatus === 'playing') {
-        const diff = 20 - Math.floor((Date.now() - sTurnStartTime) / 1000);
+      if (soloStatusRef.current === 'playing') {
+        const diff = 20 - Math.floor((Date.now() - sTurnStartTimeRef.current) / 1000);
         setTimeLeft(Math.max(0, diff));
-        if (diff <= 0) {
-          // Auto-pick solo
-          playSolo(Math.floor(Math.random() * sPHand.length));
+        if (diff <= 0 && sPHandRef.current.length > 0) {
+          // Auto-pick solo (via ref : playSolo ferme sur l'état du rendu où il a
+          // été défini, la ref pointe toujours vers la version la plus récente).
+          playSoloRef.current(Math.floor(Math.random() * sPHandRef.current.length));
         }
       } else {
-        const myGame = duels.find((d) => (d.hostUid === p?.uid || d.guestUid === p?.uid) && d.status === 'playing');
+        const myGame = duelsRef.current.find((d) => (d.hostUid === pUidRef.current || d.guestUid === pUidRef.current) && d.status === 'playing');
         if (myGame && myGame.turnStartTime) {
           const diff = 20 - Math.floor((Date.now() - myGame.turnStartTime) / 1000);
           setTimeLeft(Math.max(0, diff));
           if (diff <= 0) {
-            const isHost = myGame.hostUid === p?.uid;
+            const isHost = myGame.hostUid === pUidRef.current;
             const myPickIdx = isHost ? myGame.hostPick : myGame.guestPick;
             const myHand = isHost ? myGame.hostHand : myGame.guestHand;
-            if (myPickIdx == null && !resolving) {
+            if (myPickIdx == null && !resolvingRef.current && myHand.length > 0) {
               playCJCard(myGame.id, isHost, Math.floor(Math.random() * myHand.length));
             }
           }
@@ -122,7 +146,7 @@ export default function CardJitsuCard() {
       }
     }, 1000);
     return () => clearInterval(timer);
-  });
+  }, []);
 
   // ─── GESTION DES RÉSULTATS PVP ───
   useEffect(() => {

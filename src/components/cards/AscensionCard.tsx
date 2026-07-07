@@ -4,7 +4,7 @@ import { useGame } from '../../store/gameStore';
 import { useUi } from '../../store/uiStore';
 import { combatTurn, freshCombatState, type CombatState } from '../../game/combat';
 import { deriveStats } from '../../game/player';
-import { talentMods, getAllActiveSkills } from '../../game/talents';
+import { talentMods, getAllActiveSkills, type ActiveSkillDef } from '../../game/talents';
 import { computeAscensionBoss, ascensionOutcome, applyAscensionResult, type AscensionBoss } from '../../game/ascension';
 import { item, HP_CONSUMABLES } from '../../game/items';
 import { playSound, stopAmbientMusic, setAmbient } from '../../game/sound';
@@ -14,6 +14,32 @@ import ItemIcon from '../ItemIcon';
 type Transition = 'enter' | 'none' | 'win' | 'dead';
 
 const POTIONS = HP_CONSUMABLES;
+
+// Le Néant est calibré au millimètre contre un joueur "idéal" classique (voir
+// `computeAscensionBoss`) — les ressources d'archétype (rage/combo/grâce/mana/
+// sève/ferveur/tempo/surcharge) permettent de spammer des ultimes bien plus
+// souvent que le cooldown d'origine (parfois 25-35s ramené à 3s), ce qui
+// fausserait complètement cet équilibrage. Le Néant "annule" ces pouvoirs pour
+// ce combat uniquement : chaque compétence concernée retrouve son cooldown et
+// ses chiffres d'avant l'introduction des ressources, sans `resource`.
+const NEANT_LEGACY: Record<string, Partial<ActiveSkillDef>> = {
+  skill_ber_execute: { cooldownMs: 30_000, resource: undefined },
+  skill_dk_drain: { cooldownMs: 25_000, resource: undefined },
+  skill_rog_assassinate: { cooldownMs: 3_000, mult: 2.5, resource: undefined },
+  skill_mnk_dragon: { cooldownMs: 25_000, mult: 2.0, resource: undefined },
+  skill_dp_nova: { cooldownMs: 30_000, resource: undefined },
+  skill_pyro_inferno: { cooldownMs: 35_000, resource: undefined },
+  skill_cryo_blizzard: { cooldownMs: 25_000, resource: undefined },
+  skill_arc_time: { cooldownMs: 28_000, resource: undefined },
+  skill_pal_smite: { cooldownMs: 20_000, resource: undefined },
+  skill_brd_crescendo: { cooldownMs: 25_000, mult: 2.3, resource: undefined },
+  skill_dru_wrath: { cooldownMs: 16_000, resource: undefined },
+  skill_hnt_snipe: { cooldownMs: 28_000, resource: undefined },
+};
+function neutralizeForNeant(skill: ActiveSkillDef): ActiveSkillDef {
+  const override = NEANT_LEGACY[skill.id];
+  return override ? { ...skill, ...override } : skill;
+}
 
 type Phase = 'intro' | 'confirm' | 'fight' | 'result';
 
@@ -62,11 +88,18 @@ export default function AscensionCard() {
   if (!player) return null;
   const stats = deriveStats(player);
   const mods = talentMods(player);
-  const skills = getAllActiveSkills().filter((s) => player.equippedSkills.includes(s.id));
+  const skills = getAllActiveSkills().filter((s) => player.equippedSkills.includes(s.id)).map(neutralizeForNeant);
 
   function begin() {
     const boss = computeAscensionBoss(player!);
-    setFs({ boss, combat: freshCombatState(), php: player!.hp, bhp: boss.hp, logs: ['Le Néant Originel émerge des ténèbres...'], skillCds: {}, bonusAtk: 0 });
+    setFs({
+      boss, combat: freshCombatState(), php: player!.hp, bhp: boss.hp,
+      logs: [
+        'Le Néant Originel émerge des ténèbres...',
+        'Le Néant vous affaiblit... vous ne pourrez avoir recours à tous vos pouvoirs.',
+      ],
+      skillCds: {}, bonusAtk: 0,
+    });
     setPhase('fight');
     playSound('lose');
   }
@@ -88,6 +121,7 @@ export default function AscensionCard() {
     let skill = undefined;
     if (action !== 'attack' && action !== 'potion') {
       skill = getAllActiveSkills().find((s) => s.id === action);
+      if (skill) skill = neutralizeForNeant(skill);
       if (skill && (fs.skillCds[skill.id] || 0) > 0) return;
     }
     const monster = { ...fs.boss, hp: fs.bhp };

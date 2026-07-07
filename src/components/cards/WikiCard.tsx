@@ -9,6 +9,7 @@ import { DUNGEONS } from '../../game/dungeons';
 import { BIOMES } from '../../game/biomes';
 import { PHASE_LABEL } from '../../game/daynight';
 import { BASE_CLASSES, getAscensions } from '../../game/classes';
+import { classResourceType, RESOURCE_INFO } from '../../game/talents';
 import { setProcDesc } from '../../game/sets';
 import ItemIcon from '../ItemIcon';
 import MonsterIcon from '../MonsterIcon';
@@ -288,19 +289,28 @@ export default function WikiCard() {
               <p className="text-xs text-amber-200/90 mt-1">{base.desc}</p>
               <p className="text-xs text-slate-300 mt-2 leading-relaxed">{base.playstyle}</p>
             </div>
-            {getAscensions(base.id).map((sub) => (
-              <div key={sub.id} className="rounded-lg bg-black/15 p-3 ml-3 border-l-2 border-sky-500/30">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg leading-none">{sub.emoji}</span>
-                  <span className="font-bold text-emerald-300">{sub.name}</span>
-                  <span className="text-[10px] text-slate-500 ml-auto">
-                    ❤️ {sub.base.maxHp}+{sub.growth.maxHp}/nv · 🗡️ {sub.base.atk}+{sub.growth.atk}/nv · 🛡️ {sub.base.def}+{sub.growth.def}/nv
-                  </span>
+            {getAscensions(base.id).map((sub) => {
+              const resType = classResourceType(sub.id);
+              const resInfo = resType ? RESOURCE_INFO[resType] : null;
+              return (
+                <div key={sub.id} className="rounded-lg bg-black/15 p-3 ml-3 border-l-2 border-sky-500/30">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg leading-none">{sub.emoji}</span>
+                    <span className="font-bold text-emerald-300">{sub.name}</span>
+                    <span className="text-[10px] text-slate-500 ml-auto">
+                      ❤️ {sub.base.maxHp}+{sub.growth.maxHp}/nv · 🗡️ {sub.base.atk}+{sub.growth.atk}/nv · 🛡️ {sub.base.def}+{sub.growth.def}/nv
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-200/90 mt-1">{sub.desc}</p>
+                  {resInfo && (
+                    <div className="mt-1.5 inline-flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: `${resInfo.color}22`, color: resInfo.color }}>
+                      {resInfo.icon} Ressource : {resInfo.name} — {resInfo.desc}
+                    </div>
+                  )}
+                  <p className="text-xs text-slate-300 mt-2 leading-relaxed">{sub.playstyle}</p>
                 </div>
-                <p className="text-xs text-amber-200/90 mt-1">{sub.desc}</p>
-                <p className="text-xs text-slate-300 mt-2 leading-relaxed">{sub.playstyle}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ))}
       </div>

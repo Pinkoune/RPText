@@ -19,7 +19,7 @@ export const PRESTIGE_AURAS: PrestigeAura[] = [
   { emoji: '🌟', label: 'Prospère',      desc: '+3% XP et Or',           color: '#fde047', bonus: { xpPct: 0.03, goldPct: 0.03 } },
   { emoji: '⚡', label: 'Fulgurant',     desc: '+3% ATK, +2% PV',        color: '#fef08a', bonus: { atkPct: 0.03, hpPct: 0.02 } },
   { emoji: '🌙', label: 'Nocturne',      desc: '+6% PV',                 color: '#c4b5fd', bonus: { hpPct: 0.06 } },
-  { emoji: '🩸', label: 'Sanguinaire',   desc: '+5% ATK, -1% DEF',       color: '#f87171', bonus: { atkPct: 0.05, defPct: -0.01 } },
+  { emoji: '🩸', label: 'Sanguinaire',   desc: '+8% ATK, -3% DEF',       color: '#f87171', bonus: { atkPct: 0.08, defPct: -0.03 } },
   { emoji: '🐉', label: 'Draconique',    desc: '+2% ATK/DEF, +3% PV',    color: '#4ade80', bonus: { atkPct: 0.02, defPct: 0.02, hpPct: 0.03 } },
 ];
 

@@ -5,7 +5,7 @@ import ItemIcon from '../ItemIcon';
 import MonsterIcon from '../MonsterIcon';
 import { useGame } from '../../store/gameStore';
 import { deriveStats, removeItem, reduceDurability } from '../../game/player';
-import { talentMods, getAllActiveSkills } from '../../game/talents';
+import { talentMods, getAllActiveSkills, classResourceType } from '../../game/talents';
 import { activeSetProc } from '../../game/sets';
 import { addQuestMetric } from '../../game/quests';
 import { sendAutoAnnounce } from '../../firebase/chatService';
@@ -24,6 +24,19 @@ import {
 import { useUi } from '../../store/uiStore';
 
 const POTIONS = HP_CONSUMABLES;
+const RESOURCE_META: Record<string, { label: string; color: string }> = {
+  rage: { label: '🔥 Rage', color: 'bg-orange-500' },
+  combo: { label: '⚡ Combo', color: 'bg-fuchsia-500' },
+  grace: { label: '✨ Grâce', color: 'bg-sky-400' },
+  mana: { label: '🔷 Mana', color: 'bg-blue-500' },
+  sap: { label: '🌿 Sève', color: 'bg-lime-500' },
+  zeal: { label: '🕊️ Ferveur', color: 'bg-amber-400' },
+  tempo: { label: '🎵 Tempo', color: 'bg-pink-500' },
+  overcharge: { label: '🌌 Surcharge', color: 'bg-indigo-500' },
+  instinct: { label: '🎯 Traque', color: 'bg-cyan-400' },
+  corruption: { label: '💀 Corruption', color: 'bg-violet-600' },
+};
+
 const ABILITY_TURNS = 5;
 
 // Anti-macro : le jeu est client-authoritative (pas de Cloud Functions), donc
@@ -74,15 +87,19 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const [bonusMaxHp, setBonusMaxHp] = useState(0);
   const [combatHits, setCombatHits] = useState(0);
   const [cstate, setCstate] = useState<CombatState>(freshCombatState());
+  const [resourcePool, setResourcePool] = useState(0);
   const actionTimestamps = useRef<number[]>([]);
+  const lastActionType = useRef<string | null>(null);
 
   // Réinitialise quand une nouvelle rencontre arrive (relance de hunt).
   useEffect(() => {
     setMonsterHp(m.hp);
     setLog([]);
     setStatus('fighting');
+    setResourcePool(0);
     actionTimestamps.current = [];
-    
+    lastActionType.current = null;
+
     const pl = useGame.getState().player;
     if (pl && Date.now() - (pl.lastCombatAt ?? 0) < 60000) {
       setSkillCds(pl.combatCooldowns ?? {});
@@ -118,6 +135,8 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const activeSkills = getAllActiveSkills().filter(s => p.equippedSkills.includes(s.id));
   const potionId = POTIONS.find((id) => (p.inventory[id] ?? 0) > 0);
   const potionCount = POTIONS.reduce((n, id) => n + (p.inventory[id] ?? 0), 0);
+  const resourceType = classResourceType(p.classId);
+  const resourceMax = resourceType === 'combo' ? 5 : 100;
 
   function act(action: HuntAction, selectedPotionId?: string) {
     if (status !== 'fighting') return;
@@ -143,6 +162,11 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     if (action !== 'attack' && action !== 'potion' && action !== 'flee') {
       skill = activeSkills.find(s => s.id === action);
       if (skill && (skillCds[skill.id] || 0) > 0) return;
+      if (skill?.resource && resourcePool < skill.resource.cost) {
+        const label = RESOURCE_META[skill.resource.type]?.label.split(' ')[1] ?? 'Ressource';
+        toast(`Pas assez de ${label} (${resourcePool}/${skill.resource.cost} requis).`, 'bad');
+        return;
+      }
     }
 
     let potHeal = 0;
@@ -161,7 +185,22 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       activeSkill: skill,
       potionHeal: potHeal,
       setProc: setProc ?? undefined,
+      resourceAmount: resourcePool,
+      resourceType,
     }, { ...cstate });
+
+    // Tempo (Barde) et Surcharge (Arcaniste) : calculés ici plutôt que dans
+    // combat.ts, car ils dépendent de signaux hors de la portée d'un seul tour
+    // pur (variété d'action d'un tour à l'autre, nombre de compétences lancées).
+    let resourceGained = res.resourceGained;
+    if (resourceType === 'tempo' && action !== 'flee') {
+      resourceGained = lastActionType.current !== null && lastActionType.current !== action ? 30 : 0;
+    } else if (resourceType === 'overcharge' && res.abilityUsed) {
+      resourceGained = 25;
+    }
+    if (action !== 'flee') lastActionType.current = action;
+
+    const newResourcePool = Math.max(0, Math.min(resourceMax, resourcePool - res.resourceSpent + resourceGained));
 
     let newBonusAtk = bonusAtk;
     let newBonusMaxHp = bonusMaxHp;
@@ -246,6 +285,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     setBonusMaxHp(newBonusMaxHp);
     setCombatHits(newCombatHits);
     setCstate(res.state);
+    setResourcePool(newResourcePool);
 
     if (action === 'attack' || action === 'ability') playSound('hit');
     if (newStatus === 'won') {
@@ -310,6 +350,17 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
             <div className="h-2 overflow-hidden rounded bg-black/40">
               <div className={`h-2 rounded transition-all duration-300 ${phpPct < 30 ? 'bg-rose-500' : 'bg-emerald-400'} ${phpPct < 15 ? 'animate-pulse' : ''}`} style={{ width: `${phpPct}%` }} />
             </div>
+            {resourceType && (
+              <>
+                <div className="mt-1.5 flex items-center justify-between text-[10px]">
+                  <span>{RESOURCE_META[resourceType]?.label}</span>
+                  <span className="tabular-nums text-slate-400">{resourcePool}/{resourceMax}</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded bg-black/40">
+                  <div className={`h-1.5 rounded transition-all duration-300 ${RESOURCE_META[resourceType]?.color}`} style={{ width: `${(resourcePool / resourceMax) * 100}%` }} />
+                </div>
+              </>
+            )}
           </div>
         </>
       ) : (
@@ -327,6 +378,17 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
             <div className="h-2 overflow-hidden rounded bg-black/40">
               <div className={`h-2 rounded transition-all duration-300 ${phpPct < 30 ? 'bg-rose-500' : 'bg-emerald-400'} ${phpPct < 15 ? 'animate-pulse' : ''}`} style={{ width: `${phpPct}%` }} />
             </div>
+            {resourceType && (
+              <>
+                <div className="mt-1.5 flex items-center justify-between text-[10px]">
+                  <span>{RESOURCE_META[resourceType]?.label}</span>
+                  <span className="tabular-nums text-slate-400">{resourcePool}/{resourceMax}</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded bg-black/40">
+                  <div className={`h-1.5 rounded transition-all duration-300 ${RESOURCE_META[resourceType]?.color}`} style={{ width: `${(resourcePool / resourceMax) * 100}%` }} />
+                </div>
+              </>
+            )}
           </div>
           <div className="grid place-items-center text-xs text-slate-500">VS</div>
           <div className="flex-1 rounded-lg bg-black/25 p-2">
@@ -377,17 +439,24 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
           ) : (
             <>
               <button onClick={() => act('attack')} className="col-span-1 rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
-              {activeSkills.map(skill => (
-                <button
-                  key={skill.id}
-                  onClick={() => act(skill.id)}
-                  disabled={(skillCds[skill.id] || 0) > 0}
-                  title={skill.desc}
-                  className="col-span-1 rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
-                >
-                  {(skillCds[skill.id] || 0) > 0 ? `${skill.icon} ${skill.name} (${skillCds[skill.id]})` : `${skill.icon} ${skill.name}`}
-                </button>
-              ))}
+              {activeSkills.map(skill => {
+                const onCd = (skillCds[skill.id] || 0) > 0;
+                const lacksResource = !!skill.resource && resourcePool < skill.resource.cost;
+                let label = `${skill.icon} ${skill.name}`;
+                if (onCd) label += ` (${skillCds[skill.id]})`;
+                else if (skill.resource) label += ` (${RESOURCE_META[skill.resource.type]?.label.split(' ')[0]}${skill.resource.cost})`;
+                return (
+                  <button
+                    key={skill.id}
+                    onClick={() => act(skill.id)}
+                    disabled={onCd || lacksResource}
+                    title={skill.desc}
+                    className="col-span-1 rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
+                  >
+                    {label}
+                  </button>
+                );
+              })}
               <button
                 onClick={() => {
                   const available = POTIONS.filter(id => (p.inventory[id] ?? 0) > 0);
