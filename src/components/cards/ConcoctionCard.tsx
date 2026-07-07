@@ -188,7 +188,7 @@ export default function ConcoctionCard() {
           const out = item(r.id)!;
           
           return (
-            <div key={r.id} className="flex flex-col gap-2 rounded-xl bg-black/25 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div key={r.id} className="flex flex-col gap-2 rounded-xl bg-black/25 p-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-black/40 text-xl" style={{ color: RARITY_COLOR[out.rarity] }}>
                   <ItemIcon id={r.id} size={24} />
@@ -199,20 +199,20 @@ export default function ConcoctionCard() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-1 flex-wrap items-center gap-1.5">
                   {r.ingredients.map((ing) => {
                     const have = p.inventory[ing.id] ?? 0;
                     const it = item(ing.id);
                     const hasEnougth = have >= ing.qty;
                     return (
-                      <div key={ing.id} className={`flex items-center gap-1 rounded bg-black/40 px-2 py-1 text-xs ${hasEnougth ? 'text-slate-300' : 'text-rose-400'}`}>
-                        {it ? <ItemIcon id={ing.id} size={14} /> : null} {have}/{ing.qty}
+                      <div key={ing.id} className={`flex items-center gap-1 whitespace-nowrap rounded bg-black/40 px-2 py-1 text-xs ${hasEnougth ? 'text-slate-300' : 'text-rose-400'}`}>
+                        {it ? <ItemIcon id={ing.id} size={14} /> : null} {it?.name ?? ing.id} {have}/{ing.qty}
                       </div>
                     );
                   })}
                 </div>
-                
+
                 <button
                   onClick={() => start(r)}
                   disabled={!reqMet || !ingMet}

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useGame } from '../../store/gameStore';
 import { item, RARITY_COLOR } from '../../game/items';
-import { deriveStats, equipItem, unequipItem, canEquip, saveEquipmentBuild, applyEquipmentBuild, deleteEquipmentBuild, MAX_BUILD_SLOTS } from '../../game/player';
+import { deriveStats, equipItem, unequipItem, canEquip, saveEquipmentBuild, applyEquipmentBuild, updateEquipmentBuild, deleteEquipmentBuild, MAX_BUILD_SLOTS } from '../../game/player';
 import { RECIPES, getCraftLevel } from '../../game/crafting';
 import type { ItemDef, ItemSlot } from '../../game/types';
 import ItemIcon from '../ItemIcon';
@@ -73,6 +73,12 @@ const UPGRADE_CHANCE = ['100%', '90%', '75%', '60%', '40%'];
 type SlotKey = 'weapon' | 'armor' | 'trinket' | 'tool' | 'profession_armor';
 
 const BUILD_ICONS = ['⚔️', '🛡️', '🏹', '🔮', '❤️', '💀', '🔥', '❄️', '🌪️', '🪨', '✨', '🌌', '🎯', '🧪', '👑', '💰'];
+const BUILD_SLOTS: SlotKey[] = ['weapon', 'armor', 'trinket', 'tool', 'profession_armor'];
+
+/** Vrai si l'équipement actuellement porté diffère du contenu du build sauvegardé. */
+function buildOutdated(equipped: Partial<Record<SlotKey, string | null | undefined>>, gear: Partial<Record<SlotKey, string | null | undefined>>): boolean {
+  return BUILD_SLOTS.some((slot) => (equipped[slot] ?? undefined) !== (gear[slot] ?? undefined));
+}
 
 export default function EquipmentCard() {
   const p = useGame((s) => s.player);
@@ -105,6 +111,11 @@ export default function EquipmentCard() {
   function deleteBuild(id: string, name: string) {
     if (!confirm(`Supprimer le build "${name}" ?`)) return;
     mutate((d) => { deleteEquipmentBuild(d, id); });
+  }
+  function updateBuild(id: string, name: string) {
+    if (!confirm(`Remplacer "${name}" par l'équipement actuel ?`)) return;
+    mutate((d) => { updateEquipmentBuild(d, id); });
+    toast(`Build "${name}" mis à jour.`, 'good');
   }
 
   const stats = deriveStats(p);
@@ -182,6 +193,9 @@ export default function EquipmentCard() {
                 <span className="text-base leading-none">{b.icon}</span>
                 <span className="max-w-[9rem] truncate font-medium">{b.name}</span>
               </button>
+              {buildOutdated(p.equipped, b.gear) && (
+                <button onClick={() => updateBuild(b.id, b.name)} className="rounded px-1 text-slate-400 hover:bg-sky-500/40 hover:text-sky-200" title="Mettre à jour avec l'équipement actuel">🔄</button>
+              )}
               <button onClick={() => deleteBuild(b.id, b.name)} className="rounded px-1 text-slate-400 hover:bg-rose-500/40 hover:text-rose-200" title="Supprimer">✕</button>
             </div>
           ))}

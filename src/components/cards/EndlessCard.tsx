@@ -55,6 +55,7 @@ export default function EndlessCard() {
   const [showSoloPotions, setShowSoloPotions] = useState(false);
   const [, tick] = useState(0);
   const logEnd = useRef<HTMLDivElement>(null);
+  const endingRunRef = useRef(false);
 
   useEffect(() => {
     loadLeaderboards();
@@ -199,25 +200,32 @@ export default function EndlessCard() {
   };
 
   const endRun = async (reason: 'death' | 'flee') => {
-    if (!run) return;
+    if (!run || endingRunRef.current) return;
+    endingRunRef.current = true;
     const finalFloor = run.floor - (reason === 'death' ? 1 : 0);
+    const { accumulatedGold, accumulatedXp, accumulatedGems, php } = run;
+    setRun(null); // libère immédiatement le bouton Fuir/écran → plus de double-déclenchement.
+    let levels = 0;
     mutate(p => {
       const pStats = deriveStats(p);
-      p.hp = reason === 'death' ? Math.max(1, Math.floor(pStats.maxHp * 0.1)) : run.php;
-      p.gold += run.accumulatedGold;
-      p.xp += run.accumulatedXp;
-      p.gems += run.accumulatedGems;
+      p.hp = reason === 'death' ? Math.max(1, Math.floor(pStats.maxHp * 0.1)) : Math.min(php, pStats.maxHp);
+      p.gold += accumulatedGold;
+      p.gems += accumulatedGems;
       if (reason === 'death') p.deaths += 1;
       if (finalFloor > (p.endlessBest || 0)) p.endlessBest = finalFloor;
+      // grantXp (pas p.xp += direct) : sinon xp/level/talentPoints désynchronisent
+      // et la détection de « carry » de migratePlayer rétrograde le niveau au reload.
+      levels = grantXp(p, accumulatedXp);
     });
+    if (levels > 0) { playSound('levelup'); useGame.getState().celebrateLevelUp(); }
     if (finalFloor > 0) {
-      toast(`Fin du run (Étage ${finalFloor}). +${run.accumulatedGold} Or, +${run.accumulatedXp} XP`, 'info');
+      toast(`Fin du run (Étage ${finalFloor}). +${accumulatedGold} Or, +${accumulatedXp} XP`, 'info');
       await saveEndlessScore({ uid: player.uid, name: player.name, floor: finalFloor, classId: player.classId, date: Date.now(), mode: 'solo' });
       loadLeaderboards();
     } else {
       toast('Tu es mort au premier étage…', 'bad');
     }
-    setRun(null);
+    endingRunRef.current = false;
   };
 
   // ── Multi helpers ──

@@ -681,6 +681,18 @@ export function deleteEquipmentBuild(p: PlayerState, buildId: string): void {
   p.buildSlots = p.buildSlots.filter((b) => b.id !== buildId);
 }
 
+/** Remplace le contenu d'un build existant par l'équipement actuel (même nom/icône). */
+export function updateEquipmentBuild(p: PlayerState, buildId: string): boolean {
+  const build = p.buildSlots?.find((b) => b.id === buildId);
+  if (!build) return false;
+  const gear: Partial<EquippedGear> = {};
+  for (const slot of BUILD_SLOTS) {
+    if (p.equipped[slot]) gear[slot] = p.equipped[slot];
+  }
+  build.gear = gear;
+  return true;
+}
+
 /**
  * Applique un build sauvegardé : équipe chaque pièce encore possédée (clé
  * d'instance présente dans l'inventaire), ignore les slots dont l'exemplaire a

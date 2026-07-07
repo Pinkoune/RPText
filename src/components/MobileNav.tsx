@@ -21,6 +21,7 @@ const NAV: { cat: string; items: NavItem[] }[] = [
       { kind: 'dungeon', emoji: '🏰', label: 'Donjons' },
       { kind: 'endless', emoji: '🕳️', label: 'Abysses' },
       { kind: 'boss', emoji: '🐲', label: 'Boss' },
+      { kind: 'hunt', cmd: 'adventure', emoji: '🗡️', label: 'Aventure', reqLevel: 10 },
       { kind: 'hunt', cmd: 'miniboss', emoji: '👹', label: 'Mini-boss', reqLevel: 15 },
       { kind: 'hunt', cmd: 'mercenary', emoji: '🎯', label: 'Mercenaire', reqLevel: 25 },
       { kind: 'hunt', cmd: 'sanctuary', emoji: '🗿', label: 'Sanctuaire', reqLevel: 40 },
@@ -77,9 +78,17 @@ const NAV: { cat: string; items: NavItem[] }[] = [
   },
 ];
 
-const LABEL: Partial<Record<WindowKind, { emoji: string; label: string }>> = Object.fromEntries(
-  NAV.flatMap((g) => g.items.map((it) => [it.kind, { emoji: it.emoji, label: it.label }])),
-);
+// Plusieurs entrées NAV partagent le même kind ('hunt' pour chasse/aventure/
+// mini-boss/mercenaire/sanctuaire) : ne garder que la PREMIÈRE occurrence par
+// kind, sinon le dernier écrase les autres (bug : tous les combats affichaient
+// « Sanctuaire » dans le dock, quel que soit le combat réellement en cours).
+const LABEL: Partial<Record<WindowKind, { emoji: string; label: string }>> = {};
+for (const g of NAV) for (const it of g.items) if (!LABEL[it.kind]) LABEL[it.kind] = { emoji: it.emoji, label: it.label };
+
+// Libellé générique du dock pour les fenêtres 'hunt' génériques (pas de titre
+// contextuel posé par HuntCard.setChrome pour un boss) : "Combat" plutôt que
+// "Chasse", qui ne correspond pas à l'aventure/mini-boss/etc.
+const DOCK_LABEL_OVERRIDE: Partial<Record<WindowKind, string>> = { hunt: 'Combat' };
 
 export default function MobileNav() {
   const windows = useUi((s) => s.windows);
@@ -177,14 +186,17 @@ export default function MobileNav() {
               tabs.map((w) => {
                 const meta = LABEL[w.kind]!;
                 const active = w.id === activeId;
+                // Titre contextuel posé par HuntCard (ex: "🗿 Gardien des Anciens") pour
+                // les boss ; sinon libellé générique du dock (ex: "Combat" pour hunt).
+                const dockText = w.title ?? DOCK_LABEL_OVERRIDE[w.kind] ?? meta.label;
                 return (
                   <div
                     key={w.id}
                     className={`flex shrink-0 items-center rounded-xl ${active ? 'bg-white/20' : 'bg-black/30'}`}
                   >
                     <button onClick={() => focus(w.id)} className="flex items-center gap-1 py-2 pl-3 pr-1.5">
-                      <span className="text-base leading-none">{meta.emoji}</span>
-                      <span className="text-xs text-slate-200">{meta.label}</span>
+                      {!w.title && <span className="text-base leading-none">{meta.emoji}</span>}
+                      <span className="max-w-[7rem] truncate text-xs text-slate-200">{dockText}</span>
                     </button>
                     <button
                       onClick={() => close(w.id)}

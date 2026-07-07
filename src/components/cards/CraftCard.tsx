@@ -389,10 +389,9 @@ export default function CraftCard() {
                           return (
                             <span
                               key={id}
-                              title={`${item(id)!.name} : ${have}/${need}`}
-                              className={`inline-flex items-center gap-1 rounded px-1 py-0.5 ${have >= need ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'}`}
+                              className={`inline-flex items-center gap-1 whitespace-nowrap rounded px-1 py-0.5 ${have >= need ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'}`}
                             >
-                              <ItemIcon id={id} size={14} /> {have}/{need}
+                              <ItemIcon id={id} size={14} /> {item(id)!.name} {have}/{need}
                             </span>
                           );
                         })}
