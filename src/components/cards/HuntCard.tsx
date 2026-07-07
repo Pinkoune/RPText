@@ -179,6 +179,11 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       }
     }
 
+    // Barde : Crescendo buff l'ATK pour le reste du combat (solo = juste soi).
+    if (res.abilityUsed && skill?.teamAtkBuff) {
+      newBonusAtk += Math.round(s.atk * skill.teamAtkBuff);
+    }
+
     let newStatus: Status = 'fighting';
     if (res.fled) newStatus = 'fled';
     else if (res.mhp <= 0) newStatus = 'won';
@@ -188,7 +193,8 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     mutate((d) => {
       d.hp = res.php;
       if (potUse) removeItem(d, potUse, 1);
-      
+      if (res.goldStolen) d.gold += res.goldStolen;
+
       // Reduce durability based on hits
       reduceDurability(d, res.hitsTaken, res.hitsDealt);
 
@@ -223,6 +229,12 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     for (const id in nextCds) nextCds[id] = Math.max(0, nextCds[id] - 1);
     if (res.abilityUsed && skill) {
       nextCds[skill.id] = Math.ceil(skill.cooldownMs / 5000); // 1 turn = ~5s
+    }
+    // Arcaniste : Distorsion accélère aussi les autres compétences.
+    if (res.abilityUsed && skill?.haste) {
+      for (const id in nextCds) {
+        if (id !== skill!.id) nextCds[id] = Math.max(0, nextCds[id] - skill!.haste!);
+      }
     }
     setSkillCds(nextCds);
     mutate((d) => {

@@ -24,6 +24,7 @@ interface FightState {
   bhp: number;
   logs: string[];
   skillCds: Record<string, number>;
+  bonusAtk: number;
 }
 
 // NOTE (workstream B / feel) : cette carte est FONCTIONNELLE mais volontairement
@@ -65,7 +66,7 @@ export default function AscensionCard() {
 
   function begin() {
     const boss = computeAscensionBoss(player!);
-    setFs({ boss, combat: freshCombatState(), php: player!.hp, bhp: boss.hp, logs: ['Le Néant Originel émerge des ténèbres...'], skillCds: {} });
+    setFs({ boss, combat: freshCombatState(), php: player!.hp, bhp: boss.hp, logs: ['Le Néant Originel émerge des ténèbres...'], skillCds: {}, bonusAtk: 0 });
     setPhase('fight');
     playSound('lose');
   }
@@ -90,18 +91,27 @@ export default function AscensionCard() {
       if (skill && (fs.skillCds[skill.id] || 0) > 0) return;
     }
     const monster = { ...fs.boss, hp: fs.bhp };
-    const res = combatTurn(stats, mods, monster, fs.php, fs.bhp, action, { potionHeal: action === 'potion' ? potionHeal : 0, activeSkill: skill }, fs.combat);
+    const fightStats = { ...stats, atk: stats.atk + fs.bonusAtk };
+    const res = combatTurn(fightStats, mods, monster, fs.php, fs.bhp, action, { potionHeal: action === 'potion' ? potionHeal : 0, activeSkill: skill }, fs.combat);
     if (action === 'potion' && potionId) mutate((d) => { d.inventory[potionId]--; });
 
     const logs = [...fs.logs, ...res.events.map((l) => l.text)];
     if (logs.length > 12) logs.splice(0, logs.length - 12);
     const nextCds = { ...fs.skillCds };
     for (const id in nextCds) nextCds[id] = Math.max(0, nextCds[id] - 1);
-    if (res.abilityUsed && skill) nextCds[skill.id] = Math.ceil(skill.cooldownMs / 5000);
+    if (res.abilityUsed && skill) {
+      nextCds[skill.id] = Math.ceil(skill.cooldownMs / 5000);
+      if (skill.haste) {
+        for (const id in nextCds) {
+          if (id !== skill.id) nextCds[id] = Math.max(0, nextCds[id] - skill.haste!);
+        }
+      }
+    }
+    const nextBonusAtk = res.abilityUsed && skill?.teamAtkBuff ? fs.bonusAtk + Math.round(fightStats.atk * skill.teamAtkBuff) : fs.bonusAtk;
 
-    if (res.mhp <= 0) { setFs({ ...fs, php: res.php, bhp: 0, combat: res.state, logs, skillCds: nextCds }); finish(true, 0); return; }
-    if (res.php <= 0) { setFs({ ...fs, php: 0, bhp: res.mhp, combat: res.state, logs, skillCds: nextCds }); finish(false, res.mhp / fs.boss.maxHp); return; }
-    setFs({ ...fs, php: res.php, bhp: res.mhp, combat: res.state, logs, skillCds: nextCds });
+    if (res.mhp <= 0) { setFs({ ...fs, php: res.php, bhp: 0, combat: res.state, logs, skillCds: nextCds, bonusAtk: nextBonusAtk }); finish(true, 0); return; }
+    if (res.php <= 0) { setFs({ ...fs, php: 0, bhp: res.mhp, combat: res.state, logs, skillCds: nextCds, bonusAtk: nextBonusAtk }); finish(false, res.mhp / fs.boss.maxHp); return; }
+    setFs({ ...fs, php: res.php, bhp: res.mhp, combat: res.state, logs, skillCds: nextCds, bonusAtk: nextBonusAtk });
   }
 
   // ── Intro ──

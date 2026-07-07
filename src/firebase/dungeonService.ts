@@ -55,6 +55,15 @@ export interface DungeonMonster {
   chill?: number;
   poison?: number;
   poisonPow?: number;
+  /** Affaiblissement (Chasseur : Morsure) — réduit l'ATK du monstre le temps que ça dure. */
+  weaken?: number;
+  weakenPow?: number;
+  /** Bris d'armure (Guerrier : Fendoir) — réduit la DEF du monstre le temps que ça dure. */
+  armorBreak?: number;
+  armorBreakPow?: number;
+  /** Le boss (dernier stage) charge une attaque dévastatrice : un tour de préavis avant
+   *  qu'elle tombe, annulée si le boss encaisse un gros coup entre-temps (interruption). */
+  chargingHeavy?: boolean;
 }
 
 export interface TurnEvent {
@@ -304,6 +313,43 @@ function executeMonsterTurn(cur: DungeonSession) {
     return;
   }
 
+  // ── Boss final uniquement : attaque dévastatrice télégraphiée ──
+  // Un tour de préavis (le boss ne frappe pas ce tour-là) avant l'impact, pour
+  // laisser au groupe le temps de soigner/bouclier — sauf si interrompue par un
+  // gros coup encaissé entre-temps (voir `submitDungeonAction`).
+  if (m.chargingHeavy) {
+    m.chargingHeavy = false;
+    cur.log.push({ text: `💥 ${m.name} libère son attaque DÉVASTATRICE !`, side: 'enemy' });
+    for (const target of alive) {
+      const tDef = target.def || 5;
+      const dmgRed = target.mods?.dmgReduction || 0;
+      let dmg = Math.max(1, Math.round(m.atk * 2.3 - tDef * 0.6));
+      dmg = Math.max(1, Math.round(dmg * (1 - dmgRed)));
+      if ((target.shield || 0) > 0) {
+        const absorbed = Math.min(target.shield!, dmg);
+        target.shield = target.shield! - absorbed;
+        dmg -= absorbed;
+        if (absorbed > 0) cur.log.push({ text: `🛡️ Le bouclier de ${target.name} absorbe ${absorbed} dégâts.`, side: 'info' });
+      }
+      target.hp = (target.hp || 0) - dmg;
+      if (dmg > 0) cur.log.push({ text: `${m.name} écrase ${target.name} pour ${dmg} dégâts !`, side: 'enemy' });
+      if (target.hp <= 0) { target.hp = 0; target.isDead = true; cur.log.push({ text: `💀 ${target.name} est K.O. !`, side: 'enemy' }); }
+    }
+    if (Object.values(cur.players).every(p => p.isDead)) {
+      cur.state = 'defeat';
+      cur.log.push({ text: `Toute l'équipe a été vaincue... Échec du donjon.`, side: 'enemy' });
+      return;
+    }
+    advanceTurn(cur);
+    return;
+  }
+  if (isBossStage && cur.roundCount >= 4 && cur.roundCount % 6 === 0) {
+    m.chargingHeavy = true;
+    cur.log.push({ text: `⚠️⚠️ ${m.name} charge une attaque DÉVASTATRICE ! Protégez-vous au prochain tour !`, side: 'enemy' });
+    advanceTurn(cur);
+    return;
+  }
+
   // Si on AoE et qu'il n'y a PAS de provocation, on cible tout le monde
   const targets = (isAoE && !targetUid) ? alive : [targetUid ? cur.players[targetUid] : alive[Math.floor(Math.random() * alive.length)]];
 
@@ -317,9 +363,11 @@ function executeMonsterTurn(cur: DungeonSession) {
 
   let totalHeal = 0;
   const chilled = (m.chill || 0) > 0;
+  const weakened = (m.weaken || 0) > 0;
+  const effMAtk = weakened ? m.atk * (1 - (m.weakenPow || 0)) : m.atk;
 
   for (const target of targets) {
-    const roll = m.atk - 2 + Math.random() * 4;
+    const roll = effMAtk - 2 + Math.random() * 4;
     const tDef = target.def || 5;
     const dmgRed = target.mods?.dmgReduction || 0;
     const dodge = target.mods?.dodge || 0;
@@ -357,6 +405,7 @@ function executeMonsterTurn(cur: DungeonSession) {
   }
 
   if (chilled) m.chill = (m.chill || 0) - 1;
+  if (weakened) m.weaken = (m.weaken || 0) - 1;
 
   if (totalHeal > 0) {
     m.hp = Math.min(m.maxHp, m.hp + totalHeal);
@@ -413,6 +462,16 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
     const pAtk = p.atk || 10;
     const elemMult = getElementMult(p.weaponElement || undefined, m.element) * getDmgTypeMult(p.weaponDmgType || undefined, m as any);
     const finalAtk = pAtk * hopeMult * elemMult;
+    // Fendoir (Guerrier) : DEF du monstre réduite tant que le bris d'armure dure.
+    const effMDef = (m.armorBreak || 0) > 0 ? (m.def || 0) * (1 - (m.armorBreakPow || 0)) : (m.def || 0);
+    // L'attaque encaissée pendant la charge d'un boss interrompt son coup dévastateur.
+    const interruptThreshold = m.maxHp * 0.15;
+    function maybeInterrupt(dmg: number) {
+      if (m.chargingHeavy && dmg >= interruptThreshold) {
+        m.chargingHeavy = false;
+        cur!.log.push({ text: `⚡ ${p.name} interrompt la charge de ${m.name} !`, side: 'you' });
+      }
+    }
 
     if (action === 'timeout') {
       cur.log.push({ text: `⌛ Le tour de ${p.name} est passé (inactif).`, side: 'info' });
@@ -435,8 +494,9 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
         p.skillCds[skillId] = Math.max(1, Math.ceil(skill.cooldownMs / 4000));
         if (skill.type === 'attack' || skill.type === 'shield' || skill.type === 'heal' || skill.type === 'buff') {
           if (skill.mult) {
-            const dmg = Math.max(1, Math.round(finalAtk * skill.mult - (m.def || 0)));
+            const dmg = Math.max(1, Math.round(finalAtk * skill.mult - effMDef));
             m.hp = (m.hp || 0) - dmg;
+            maybeInterrupt(dmg);
             if (p.classId === 'warrior' || p.classId === 'paladin') {
               m.provokedBy = p.uid;
               m.provokeTurns = 2;
@@ -480,7 +540,35 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
             } else if (st.type === 'chill') {
               m.chill = Math.max(m.chill || 0, st.turns);
               cur.log.push({ text: `❄️ ${m.name} est gelé (frappe affaiblie) !`, side: 'you' });
+            } else if (st.type === 'weaken') {
+              m.weaken = Math.max(m.weaken || 0, st.turns);
+              m.weakenPow = Math.max(m.weakenPow || 0, st.pow || 0);
+              cur.log.push({ text: `🐺 ${m.name} est affaibli (ATK réduite) !`, side: 'you' });
+            } else if (st.type === 'armorBreak') {
+              m.armorBreak = Math.max(m.armorBreak || 0, st.turns);
+              m.armorBreakPow = Math.max(m.armorBreakPow || 0, st.pow || 0);
+              cur.log.push({ text: `🪓 L'armure de ${m.name} est brisée (DEF réduite) !`, side: 'you' });
             }
+          }
+          // Arcaniste : Distorsion accélère les autres compétences équipées.
+          if (skill.haste) {
+            for (const sId of Object.keys(p.skillCds)) {
+              if (sId !== skillId) p.skillCds[sId] = Math.max(0, p.skillCds[sId] - skill.haste);
+            }
+          }
+          // Paladin : Rempart force l'aggro même s'il ne fait pas de dégâts.
+          if (skill.taunt) {
+            m.provokedBy = p.uid;
+            m.provokeTurns = Math.max(m.provokeTurns, 3);
+            cur.log.push({ text: `🛡️ ${p.name} provoque ${m.name} !`, side: 'info' });
+          }
+          // Barde : Crescendo buff l'ATK pour le reste du combat, toute l'équipe en donjon.
+          if (skill.teamAtkBuff) {
+            const bonus = Math.round(pAtk * skill.teamAtkBuff);
+            Object.values(cur.players).forEach(ally => {
+              if (!ally.isDead) ally.atk = (ally.atk || 0) + bonus;
+            });
+            cur.log.push({ text: `🎶 ${p.name} galvanise le groupe (+${bonus} ATK pour tous) !`, side: 'info' });
           }
         }
       } else {
@@ -492,18 +580,18 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
       const hits = 1 + (Math.random() < doubleHit ? 1 : 0);
       let totalDmg = 0;
       for (let h = 0; h < hits; h++) {
-        const mDef = m.def || 0;
         const flatDmg = p.mods?.flatDmg || 0;
         const berserkBonus = p.mods?.berserkBonus || 0;
         const crit = p.mods?.crit || 0;
-        
-        let dmg = Math.max(1, (finalAtk - 2 + Math.random() * 4) - mDef) + flatDmg;
+
+        let dmg = Math.max(1, (finalAtk - 2 + Math.random() * 4) - effMDef) + flatDmg;
         const pMaxHp = p.maxHp || 100;
         if ((p.hp || 0) < pMaxHp * 0.3 && berserkBonus > 0) dmg = Math.round(dmg * (1 + berserkBonus));
         if (Math.random() < crit) dmg *= 2;
         dmg = Math.round(dmg);
         totalDmg += dmg;
         m.hp = (m.hp || 0) - dmg;
+        maybeInterrupt(dmg);
       }
       cur.log.push({ text: `⚔️ ${p.name} attaque ${m.name} pour ${totalDmg} dégâts${hits > 1 ? ' (Tir double!)' : ''}.`, side: 'you' });
       
@@ -565,6 +653,7 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
       cur.log.push({ text: `🧪 Poison : ${m.name} perd ${m.poisonPow} PV.`, side: 'you' });
     }
     if ((m.poison || 0) > 0) m.poison = (m.poison || 0) - 1;
+    if ((m.armorBreak || 0) > 0) m.armorBreak = (m.armorBreak || 0) - 1;
 
     if (cur.log.length > 40) cur.log = cur.log.slice(cur.log.length - 40);
 

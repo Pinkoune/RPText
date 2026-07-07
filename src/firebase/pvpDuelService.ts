@@ -257,6 +257,16 @@ export async function submitPvpAction(
           actor.hp += sh;
           cur.log.push({ text: `✨ ${actor.name} gagne un bouclier (+${sh} PV).`, side: 'info' });
         }
+        if (skill.haste) {
+          for (const sId of Object.keys(actor.skillCds)) {
+            if (sId !== skillId) actor.skillCds[sId] = Math.max(0, actor.skillCds[sId] - skill.haste);
+          }
+        }
+        if (skill.teamAtkBuff) {
+          const bonus = Math.round((actor.atk || 10) * skill.teamAtkBuff);
+          Object.values(cur.fighters).forEach((f) => { if (f.side === actor.side && !f.isDead) f.atk = (f.atk || 0) + bonus; });
+          cur.log.push({ text: `🎶 ${actor.name} galvanise son camp (+${bonus} ATK) !`, side: 'info' });
+        }
       }
     } else if (target) {
       // Attaque de base — mêmes mods de talents qu'en chasse/donjon/endless.

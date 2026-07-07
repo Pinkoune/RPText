@@ -36,6 +36,7 @@ interface RunState {
   accumulatedXp: number;
   accumulatedGems: number;
   skillCds: Record<string, number>;
+  bonusAtk: number;
 }
 
 export default function EndlessCard() {
@@ -137,7 +138,7 @@ export default function EndlessCard() {
       php: player.hp, mhp: firstMonster.hp,
       logs: ['Vous entrez dans les Abysses Infinis…'],
       accumulatedGold: 0, accumulatedXp: 0, accumulatedGems: 0,
-      skillCds: {},
+      skillCds: {}, bonusAtk: 0,
     });
   };
 
@@ -161,18 +162,28 @@ export default function EndlessCard() {
       mutate((d) => removeItem(d, potionId, 1));
     }
 
-    const res = combatTurn(stats, mods, run.monster, run.php, run.mhp, action, { potionHeal, activeSkill: skill }, run.combat);
+    const runStats = { ...stats, atk: stats.atk + run.bonusAtk };
+    const res = combatTurn(runStats, mods, run.monster, run.php, run.mhp, action, { potionHeal, activeSkill: skill }, run.combat);
     const newLogs = [...run.logs, ...res.events.map(l => l.text)];
     if (newLogs.length > 10) newLogs.splice(0, newLogs.length - 10);
-    
+
     const nextCds = { ...run.skillCds };
     for (const id in nextCds) nextCds[id] = Math.max(0, nextCds[id] - 1);
     if (res.abilityUsed && skill) {
       nextCds[skill.id] = Math.ceil(skill.cooldownMs / 5000);
+      // Arcaniste : Distorsion accélère aussi les autres compétences.
+      if (skill.haste) {
+        for (const id in nextCds) {
+          if (id !== skill.id) nextCds[id] = Math.max(0, nextCds[id] - skill.haste!);
+        }
+      }
     }
+    // Barde : Crescendo buff l'ATK pour le reste du run.
+    const nextBonusAtk = res.abilityUsed && skill?.teamAtkBuff ? run.bonusAtk + Math.round(runStats.atk * skill.teamAtkBuff) : run.bonusAtk;
+    const goldFromSteal = res.goldStolen ?? 0;
 
     if (res.php <= 0) {
-      setRun(prev => prev ? { ...prev, php: 0, mhp: res.mhp, logs: newLogs, combat: res.state, skillCds: nextCds } : null);
+      setRun(prev => prev ? { ...prev, php: 0, mhp: res.mhp, logs: newLogs, combat: res.state, skillCds: nextCds, bonusAtk: nextBonusAtk, accumulatedGold: prev.accumulatedGold + goldFromSteal } : null);
       setTimeout(() => endRun('death'), 1000);
       return;
     }
@@ -185,10 +196,10 @@ export default function EndlessCard() {
         ...prev, floor: nextFloor, monster: nextMonster, combat: freshCombatState(),
         php: res.php, mhp: nextMonster.hp,
         logs: [...newLogs, `Étage ${run.floor} terminé !`, `Monstre suivant : ${nextMonster.name}`],
-        accumulatedGold: prev.accumulatedGold + rewards.gold,
+        accumulatedGold: prev.accumulatedGold + rewards.gold + goldFromSteal,
         accumulatedXp: prev.accumulatedXp + rewards.xp,
         accumulatedGems: prev.accumulatedGems + rewards.gems,
-        skillCds: nextCds,
+        skillCds: nextCds, bonusAtk: nextBonusAtk,
       } : null);
       // endlessBest = étage RÉELLEMENT vaincu (run.floor), pas l'étage suivant
       // qu'on s'apprête juste à affronter — sinon un joueur qui meurt aussitôt
@@ -196,7 +207,7 @@ export default function EndlessCard() {
       if (run.floor > (player.endlessBest || 0)) mutate(p => { p.endlessBest = run.floor; });
       return;
     }
-    setRun(prev => prev ? { ...prev, php: res.php, mhp: res.mhp, combat: res.state, logs: newLogs, skillCds: nextCds } : null);
+    setRun(prev => prev ? { ...prev, php: res.php, mhp: res.mhp, combat: res.state, logs: newLogs, skillCds: nextCds, bonusAtk: nextBonusAtk, accumulatedGold: prev.accumulatedGold + goldFromSteal } : null);
   };
 
   const endRun = async (reason: 'death' | 'flee') => {

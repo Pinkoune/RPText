@@ -23,7 +23,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     desc: 'Tank : gros PV/DEF et -10% de dégâts subis (inné).',
     base: { maxHp: 130, atk: 13, def: 9 },
     growth: { maxHp: 18, atk: 3, def: 3 }, // DEF +2→+3 (tank principal)
-    playstyle: 'Tank pur, sans détour. Meilleure DEF innée du jeu (-10% dégâts subis dès la création) et la plus grosse réserve de PV. Son arbre mélange réduction de dégâts, PV max et un peu de critique pour ne pas taper mou, avec un unique gros coup (Coup héroïque, ×1.8) à sortir au bon moment. Pas de soin, pas de contrôle : il encaisse, tape régulièrement, et dure.',
+    playstyle: 'Tank pur, sans détour. Meilleure DEF innée du jeu (-10% dégâts subis dès la création) et la plus grosse réserve de PV. Son arbre mélange réduction de dégâts, PV max et un peu de critique, avec Coup héroïque (×1.8) pour le gros coup et Fendoir (×1.7) qui fend l\'armure de la cible (-20% DEF, 3 tours) — un vrai affaiblissement offensif, pas juste des dégâts. Pas de soin, pas de contrôle exotique : il encaisse, tape régulièrement, et dure.',
   },
   paladin: {
     id: 'paladin',
@@ -33,7 +33,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 130, atk: 13, def: 9 },
     growth: { maxHp: 22, atk: 4, def: 3 },
     parent: 'warrior',
-    playstyle: 'Le tank le plus increvable du jeu. Rempart pose un vrai bouclier (+20% PV max en absorption), Lumière ajoute une grosse régénération passive, et Châtiment (×2.0 + petit soin) lui permet de tenir indéfiniment sans potion. Aucun burst impressionnant, mais une durabilité quasi infinie — l\'archétype "je ne meurs jamais" plutôt que "je frappe fort".',
+    playstyle: 'Le tank le plus increvable du jeu, et le seul avec un vrai bouton de tank actif : Rempart pose un bouclier (+20% PV max en absorption) ET force l\'aggro du monstre sur lui en donjon (utile même s\'il n\'a pas tapé), Lumière ajoute une grosse régénération passive, et Châtiment (×2.0 + petit soin) lui permet de tenir indéfiniment sans potion. Aucun burst impressionnant, mais une durabilité quasi infinie et un vrai rôle de protecteur d\'équipe.',
   },
   berserker: {
     id: 'berserker',
@@ -94,7 +94,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 85, atk: 17, def: 3 },
     growth: { maxHp: 13, atk: 6, def: 1 },
     parent: 'mage',
-    playstyle: 'Le mage au tempo le plus rapide : Missile arcanique n\'a que 8s de recharge (le plus court de toutes les compétences du jeu), ce qui permet de spammer bien plus souvent qu\'ailleurs, complété par Distorsion (×2.4) pour le gros coup occasionnel. Plus de double-lancer que les autres mages. Moins de dégâts par coup individuel, mais une cadence largement supérieure — DPS constant plutôt que pics de burst.',
+    playstyle: 'Le mage au tempo le plus rapide : Missile arcanique n\'a que 8s de recharge (le plus court de toutes les compétences du jeu), ce qui permet de spammer bien plus souvent qu\'ailleurs. Distorsion (×2.0) manipule vraiment le temps : elle réduit de 2 tours le cooldown de toutes ses AUTRES compétences équipées, un vrai effet « accélérateur » plutôt qu\'un simple gros coup. Moins de dégâts par coup individuel, mais une cadence largement supérieure — DPS constant plutôt que pics de burst.',
   },
 
   // ── Archer ──
@@ -115,7 +115,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 100, atk: 15, def: 5 },
     growth: { maxHp: 15, atk: 6, def: 1 },
     parent: 'archer',
-    playstyle: 'Assassin évasif : Poignard (×2.2 + poison 2 tours) empoisonne avant le vrai finisher, Assassinat (×2.8, un des plus hauts multiplicateurs du jeu). L\'esquive est sa seule vraie défense (jusqu\'à +18% via Fantôme/Voile d\'ombre), pas de PV ni DEF particuliers — il compte sur le fait de ne pas se faire toucher plutôt que d\'encaisser.',
+    playstyle: 'Assassin évasif et cupide : Poignard (×2.2 + poison 2 tours) empoisonne avant le vrai finisher, Assassinat (×2.5) vole en plus de l\'or instantanément à la cible en plein combat — indépendant du butin de fin de combat, une vraie mécanique de vol plutôt qu\'un simple gros coup. L\'esquive est sa seule vraie défense (jusqu\'à +18% via Fantôme/Voile d\'ombre), pas de PV ni DEF particuliers — il compte sur le fait de ne pas se faire toucher plutôt que d\'encaisser.',
   },
   bard: {
     id: 'bard',
@@ -125,7 +125,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 100, atk: 15, def: 5 },
     growth: { maxHp: 16, atk: 4, def: 2 },
     parent: 'archer',
-    playstyle: 'DPS hybride auto-suffisant : Chant (×1.5 + 10% soin) le maintient en vie tout en tapant, Inspiration ajoute de l\'ATK ET de la DEF à la fois (rare de cumuler les deux), Crescendo (×2.8) sert de finisher. Contrairement à son nom "soutien", il n\'y a pas de buff d\'équipe actif dans le combat solo — c\'est un DPS qui se soigne un peu, pas un vrai support de groupe.',
+    playstyle: 'DPS hybride et vrai soutien : Chant (×1.5 + 10% soin) le maintient en vie tout en tapant, Inspiration ajoute de l\'ATK ET de la DEF à la fois (rare de cumuler les deux), Crescendo (×2.3) galvanise en plus tout le groupe (+15% ATK pour le reste du combat) en donjon/abysses coop — en solo le buff profite juste à lui-même. Le seul finisher du jeu qui rend toute l\'équipe plus forte, pas juste lui.',
   },
   hunter: {
     id: 'hunter',
@@ -135,7 +135,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 100, atk: 15, def: 5 },
     growth: { maxHp: 17, atk: 5, def: 2 },
     parent: 'archer',
-    playstyle: 'DPS régulier spécialisé en pénétration d\'armure : Perce-cœur et Concentration cumulent jusqu\'à +21% de pénétration, rendant Morsure (×2.0) et Tir de précision (×2.5) très efficaces contre les cibles bien blindées. Pas de burst extrême ni d\'esquive/soin particuliers — sa force est de rester efficace même face aux monstres résistants là où les autres archers perdent en dégâts.',
+    playstyle: 'DPS régulier spécialisé en pénétration d\'armure : Perce-cœur et Concentration cumulent jusqu\'à +21% de pénétration, et Morsure (×2.0) laisse en plus son familier affaiblir la cible (-25% ATK, 3 tours) — un vrai debuff défensif pour l\'équipe, pas juste des dégâts. Tir de précision (×2.5) reste le finisher pur. Sa force est de rester efficace même face aux monstres résistants là où les autres archers perdent en dégâts, tout en protégeant le groupe.',
   },
 
   // ── Soigneur ──

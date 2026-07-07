@@ -18,6 +18,31 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'classes-depth-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '🎭 Des compétences plus fidèles à leur classe',
+        items: [
+          'Voleur — Assassinat vole désormais de l\'or instantanément à sa cible en plus de ses dégâts (légèrement réduits en contrepartie) : un vrai vol de butin en plein combat.',
+          'Arcaniste — Distorsion manipule enfin le temps : elle réduit de 2 tours le cooldown de toutes tes autres compétences équipées.',
+          'Barde — Crescendo galvanise le groupe (+15% ATK pour le reste du combat, toute l\'équipe en donjon/abysses coop) : le premier vrai buff de groupe actif du jeu.',
+          'Guerrier — Fendoir brise désormais l\'armure de la cible (-20% DEF, 3 tours).',
+          'Chasseur — Morsure affaiblit désormais la cible via ton familier (-25% ATK, 3 tours).',
+          'Paladin — Rempart force maintenant l\'aggro du monstre sur toi en donjon, même s\'il ne fait pas de dégâts.',
+        ],
+      },
+      {
+        title: '🏰 Plus de profondeur en donjon',
+        items: [
+          'Les boss de fin de donjon peuvent désormais charger une attaque dévastatrice, télégraphiée un tour à l\'avance — soignez-vous ou posez un bouclier avant qu\'elle tombe !',
+          'Cette charge peut être interrompue en encaissant un gros coup dessus pendant sa préparation (≥15% de ses PV max en un coup).',
+          'Nouveaux affaiblissements de monstre en donjon : bris d\'armure (DEF réduite) et affaiblissement (ATK réduite), désormais visibles sur la fiche du monstre aux côtés de la brûlure/poison/gel.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'endless-enchant-v1',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [

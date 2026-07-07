@@ -190,6 +190,8 @@ export interface TurnResult {
   hitsDealt: number;
   hitsTaken: number;
   state: CombatState;
+  /** Or chapardé instantanément (Voleur : Assassinat), à ajouter par l'appelant. */
+  goldStolen: number;
 }
 
 export interface HuntEncounter {
@@ -235,7 +237,8 @@ export function combatTurn(
   let abilityUsed = false;
   let hitsDealt = 0;
   let hitsTaken = 0;
-  
+  let goldStolen = 0;
+
   const atkMult = getElementMult(stats.weaponElement, monster.element) * getDmgTypeMult(stats.weaponDmgType, monster);
   const defMult = getElementMult(monster.element, stats.armorElement);
 
@@ -243,7 +246,7 @@ export function combatTurn(
   if (action === 'flee') {
     if (Math.random() < 0.55) {
       events.push({ text: 'Tu prends la fuite !', side: 'info' });
-      return { events, php, mhp, fled: true, abilityUsed: false, hitsDealt, hitsTaken, state };
+      return { events, php, mhp, fled: true, abilityUsed: false, hitsDealt, hitsTaken, state, goldStolen };
     }
     events.push({ text: 'Fuite ratée ! Le monstre t\'attaque.', side: 'info' });
   } else if (action === 'potion') {
@@ -282,6 +285,10 @@ export function combatTurn(
           if (st.type === 'burn') { state.burn = Math.max(state.burn, st.turns); state.burnPow = Math.max(state.burnPow, pow); events.push({ text: `🔥 ${monster.name} prend feu !`, side: 'you' }); }
           else if (st.type === 'poison') { state.poison = Math.max(state.poison, st.turns); state.poisonPow = Math.max(state.poisonPow, pow); events.push({ text: `🧪 ${monster.name} est empoisonné !`, side: 'you' }); }
           else if (st.type === 'chill') { state.chill = Math.max(state.chill, st.turns); events.push({ text: `❄️ ${monster.name} est gelé (frappe affaiblie) !`, side: 'you' }); }
+        }
+        if (skill.goldSteal) {
+          goldStolen = Math.max(1, Math.round(stats.atk * skill.goldSteal));
+          events.push({ text: `💰 ${skill.name} : tu chapardes ${goldStolen} Or !`, side: 'you' });
         }
       }
     }
@@ -326,7 +333,7 @@ export function combatTurn(
     }
   }
 
-  if (mhp <= 0) return { events, php, mhp: 0, fled, abilityUsed, hitsDealt, hitsTaken, state };
+  if (mhp <= 0) return { events, php, mhp: 0, fled, abilityUsed, hitsDealt, hitsTaken, state, goldStolen };
 
   // ── Phase monstre (plus dangereux : la défense ne mitige qu'à 80%) ──
   if (Math.random() < mods.dodge) {
@@ -384,7 +391,7 @@ export function combatTurn(
   if (state.poison > 0) state.poison -= 1;
   if (state.chill > 0) state.chill -= 1;
 
-  return { events, php: Math.max(0, php), mhp: Math.max(0, mhp), fled, abilityUsed, hitsDealt, hitsTaken, state };
+  return { events, php: Math.max(0, php), mhp: Math.max(0, mhp), fled, abilityUsed, hitsDealt, hitsTaken, state, goldStolen };
 }
 
 /** Récompenses de victoire (mute le joueur). */

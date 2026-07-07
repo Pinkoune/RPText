@@ -370,6 +370,21 @@ export async function submitEndlessAction(id: string, uid: string, action: strin
           p.hp += sh;
           cur.log.push({ text: `✨ ${p.name} gagne un bouclier (+${sh} PV).`, side: 'info' });
         }
+        if (skill.goldSteal) {
+          const stolen = Math.max(1, Math.round(pAtk * skill.goldSteal));
+          cur.accGold += stolen;
+          cur.log.push({ text: `💰 ${p.name} chaparde ${stolen} Or !`, side: 'you' });
+        }
+        if (skill.haste) {
+          for (const sId of Object.keys(p.skillCds)) {
+            if (sId !== skillId) p.skillCds[sId] = Math.max(0, p.skillCds[sId] - skill.haste);
+          }
+        }
+        if (skill.teamAtkBuff) {
+          const bonus = Math.round(pAtk * skill.teamAtkBuff);
+          Object.values(cur.players).forEach(a => { if (!a.isDead) a.atk = (a.atk || 0) + bonus; });
+          cur.log.push({ text: `🎶 ${p.name} galvanise le groupe (+${bonus} ATK pour tous) !`, side: 'info' });
+        }
       }
     } else {
       // Attaque de base (applique tous les mods de talents, comme en chasse).

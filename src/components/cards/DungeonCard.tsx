@@ -420,6 +420,16 @@ export default function DungeonCard() {
           {m.provokeTurns > 0 && <div className="text-[10px] text-rose-400 font-bold tracking-wide uppercase">💢 Provoqué par {session.players[m.provokedBy!]?.name}</div>}
           {m.staggered && <div className="text-[10px] text-cyan-400 font-bold uppercase animate-pulse">⚡ BRISÉ (Passe son tour)</div>}
           {!m.staggered && m.staggerHits > 0 && <div className="text-[10px] text-cyan-400/70">Faiblesse : {m.staggerHits}/3</div>}
+          {m.chargingHeavy && <div className="text-[10px] text-rose-300 font-bold uppercase animate-pulse">⚠️ Charge une attaque dévastatrice !</div>}
+          {((m.burn ?? 0) > 0 || (m.poison ?? 0) > 0 || (m.chill ?? 0) > 0 || (m.weaken ?? 0) > 0 || (m.armorBreak ?? 0) > 0) && (
+            <div className="mt-1 flex flex-wrap justify-center gap-1 text-[10px]">
+              {(m.burn ?? 0) > 0 && <span className="rounded bg-orange-500/20 px-1.5 py-0.5 text-orange-300">🔥 Brûlure ({m.burn})</span>}
+              {(m.poison ?? 0) > 0 && <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-emerald-300">🧪 Poison ({m.poison})</span>}
+              {(m.chill ?? 0) > 0 && <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-sky-300">❄️ Gel ({m.chill})</span>}
+              {(m.weaken ?? 0) > 0 && <span className="rounded bg-fuchsia-500/20 px-1.5 py-0.5 text-fuchsia-300">🐺 Affaibli ({m.weaken})</span>}
+              {(m.armorBreak ?? 0) > 0 && <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-amber-300">🪓 Armure brisée ({m.armorBreak})</span>}
+            </div>
+          )}
           <div className="h-2 overflow-hidden rounded bg-black/40 mt-2 mx-4">
             <div className="h-2 rounded bg-orange-400 transition-all duration-300" style={{ width: `${mhpPct}%` }} />
           </div>

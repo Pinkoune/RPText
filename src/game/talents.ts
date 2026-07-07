@@ -33,7 +33,7 @@ const CAPS: Partial<Record<keyof CombatMods, number>> = {
   atkPct: 0.6, defPct: 0.6, hpPct: 0.6, regen: 100, critMult: 1.5,
 };
 
-export type StatusType = 'burn' | 'poison' | 'chill';
+export type StatusType = 'burn' | 'poison' | 'chill' | 'weaken' | 'armorBreak';
 
 export interface ActiveSkillDef {
   id: string;
@@ -48,6 +48,14 @@ export interface ActiveSkillDef {
   shield?: number;
   /** Altération d'état infligée au monstre. */
   status?: { type: StatusType; turns: number; /** Puissance (× ATK) pour brûlure/poison. */ pow?: number };
+  /** Voleur : chaparde de l'or instantanément (× ATK), indépendant du butin de fin de combat. */
+  goldSteal?: number;
+  /** Arcaniste : distorsion temporelle — réduit de N tours les cooldowns des AUTRES compétences équipées. */
+  haste?: number;
+  /** Barde : buff d'ATK (%) permanent pour le reste du combat, sur soi (solo) ou toute l'équipe (donjon/endless multi). */
+  teamAtkBuff?: number;
+  /** Paladin : force l'aggro du monstre sur soi (donjon), même sans dégâts (ex : Rempart). */
+  taunt?: boolean;
 }
 
 export interface TalentDef {
@@ -70,7 +78,7 @@ export const TALENTS: TalentDef[] = [
   { id: 'w_crit', classId: 'warrior', name: 'Frappe brutale', icon: '💥', desc: '+5% critique par rang.', maxRank: 3, requires: ['w_armor'], pos: { x: 1, y: 1 }, perRank: { crit: 0.05 } },
   { id: 'w_skill_hero', classId: 'warrior', name: 'Coup héroïque', icon: '⚔️', desc: 'Compétence : Attaque lourde (×1.8).', maxRank: 1, requires: ['w_vigor', 'w_crit'], pos: { x: 0, y: 2 }, activeSkill: { id: 'skill_hero', name: 'Coup héroïque', icon: '⚔️', desc: 'Inflige ×1.8 dégâts.', cooldownMs: 15_000, type: 'attack', mult: 1.8 } },
   // Paladin
-  { id: 'pal_shield', classId: 'paladin', name: 'Rempart', icon: '🔰', desc: 'Compétence : Bouclier sacré (+20% PV max).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_pal_shield', name: 'Rempart', icon: '🔰', desc: 'Génère un bouclier (20% PV).', cooldownMs: 25_000, type: 'shield', shield: 0.20 } },
+  { id: 'pal_shield', classId: 'paladin', name: 'Rempart', icon: '🔰', desc: 'Compétence : Bouclier sacré (+20% PV max) et provoque le monstre.', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_pal_shield', name: 'Rempart', icon: '🔰', desc: 'Génère un bouclier (20% PV) et force l\'aggro sur toi (donjon).', cooldownMs: 25_000, type: 'shield', shield: 0.20, taunt: true } },
   { id: 'pal_regen', classId: 'paladin', name: 'Lumière', icon: '✨', desc: '+10 régén/tour par rang.', maxRank: 3, requires: ['pal_shield'], pos: { x: 0, y: 4 }, perRank: { regen: 10 } },
   { id: 'pal_skill_smite', classId: 'paladin', name: 'Châtiment', icon: '⚡', desc: 'Compétence : Dégâts sacrés (×2.0) et petit soin.', maxRank: 1, requires: ['pal_regen'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_pal_smite', name: 'Châtiment', icon: '⚡', desc: '×2.0 dégâts, +5% soin.', cooldownMs: 20_000, type: 'attack', mult: 2.0, healFrac: 0.05 } },
   // Berserker
@@ -98,7 +106,7 @@ export const TALENTS: TalentDef[] = [
   // Arcanist
   { id: 'arc_missile', classId: 'arcanist', name: 'Missile arcanique', icon: '✨', desc: 'Compétence : ×1.5 dégâts (faible cooldown).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_arc_missile', name: 'Missile arcanique', icon: '✨', desc: 'Inflige ×1.5 dégâts.', cooldownMs: 8_000, type: 'attack', mult: 1.5 } },
   { id: 'arc_mind', classId: 'arcanist', name: 'Esprit clair', icon: '🧠', desc: '+6% ATK par rang.', maxRank: 3, requires: ['arc_missile'], pos: { x: 0, y: 4 }, perRank: { atkPct: 0.06 } },
-  { id: 'arc_skill_time', classId: 'arcanist', name: 'Distorsion', icon: '⏳', desc: 'Compétence : ×2.4 dégâts bruts.', maxRank: 1, requires: ['arc_mind'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_arc_time', name: 'Distorsion', icon: '⏳', desc: 'Inflige ×2.4 dégâts.', cooldownMs: 28_000, type: 'attack', mult: 2.4 } },
+  { id: 'arc_skill_time', classId: 'arcanist', name: 'Distorsion', icon: '⏳', desc: 'Compétence : ×2.0 dégâts + accélère le temps (-2 tours de recharge sur tes autres compétences).', maxRank: 1, requires: ['arc_mind'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_arc_time', name: 'Distorsion', icon: '⏳', desc: '×2.0 dégâts, réduit les autres cooldowns de 2 tours.', cooldownMs: 28_000, type: 'attack', mult: 2.0, haste: 2 } },
 
   // --- ARCHER BASE ---
   { id: 'a_aim', classId: 'archer', name: 'Visée', icon: '🎯', desc: '+5% critique par rang.', maxRank: 3, pos: { x: 0, y: 0 }, perRank: { crit: 0.05 } },
@@ -108,13 +116,13 @@ export const TALENTS: TalentDef[] = [
   // Rogue
   { id: 'rog_stab', classId: 'rogue', name: 'Poignard', icon: '🗡️', desc: 'Compétence : ×2.2 dégâts.', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_rog_stab', name: 'Poignard', icon: '🗡️', desc: '×2.2 dégâts + Poison (2 tours).', cooldownMs: 14_000, type: 'attack', mult: 2.2, status: { type: 'poison', turns: 2, pow: 0.3 } } },
   { id: 'rog_evade', classId: 'rogue', name: 'Fantôme', icon: '👻', desc: '+5% esquive par rang.', maxRank: 3, requires: ['rog_stab'], pos: { x: 0, y: 4 }, perRank: { dodge: 0.05 } },
-  { id: 'rog_skill_assassinate', classId: 'rogue', name: 'Assassinat', icon: '☠️', desc: 'Compétence : ×2.8 dégâts.', maxRank: 1, requires: ['rog_evade'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_rog_assassinate', name: 'Assassinat', icon: '☠️', desc: 'Inflige ×2.8 dégâts.', cooldownMs: 30_000, type: 'attack', mult: 2.8 } },
+  { id: 'rog_skill_assassinate', classId: 'rogue', name: 'Assassinat', icon: '☠️', desc: 'Compétence : ×2.5 dégâts + chapardage d\'or.', maxRank: 1, requires: ['rog_evade'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_rog_assassinate', name: 'Assassinat', icon: '☠️', desc: '×2.5 dégâts + vole de l\'or à la cible.', cooldownMs: 30_000, type: 'attack', mult: 2.5, goldSteal: 0.6 } },
   // Bard
   { id: 'brd_song', classId: 'bard', name: 'Chant', icon: '🎵', desc: 'Compétence : ×1.5 dégâts + Soin (10%).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_brd_song', name: 'Chant', icon: '🎵', desc: '×1.5 dégâts, +10% soin.', cooldownMs: 18_000, type: 'attack', mult: 1.5, healFrac: 0.10 } },
   { id: 'brd_inspire', classId: 'bard', name: 'Inspiration', icon: '✨', desc: '+5% ATK/DEF par rang.', maxRank: 3, requires: ['brd_song'], pos: { x: 0, y: 4 }, perRank: { atkPct: 0.05, defPct: 0.05 } },
-  { id: 'brd_skill_crescendo', classId: 'bard', name: 'Crescendo', icon: '🎶', desc: 'Compétence : ×2.8 dégâts.', maxRank: 1, requires: ['brd_inspire'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_brd_crescendo', name: 'Crescendo', icon: '🎶', desc: 'Inflige ×2.8 dégâts.', cooldownMs: 25_000, type: 'attack', mult: 2.8 } },
+  { id: 'brd_skill_crescendo', classId: 'bard', name: 'Crescendo', icon: '🎶', desc: 'Compétence : ×2.3 dégâts + rallie l\'équipe (+15% ATK, tout le combat).', maxRank: 1, requires: ['brd_inspire'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_brd_crescendo', name: 'Crescendo', icon: '🎶', desc: '×2.3 dégâts, +15% ATK pour toi (et l\'équipe en donjon/abysses).', cooldownMs: 25_000, type: 'attack', mult: 2.3, teamAtkBuff: 0.15 } },
   // Hunter
-  { id: 'hnt_pet', classId: 'hunter', name: 'Morsure', icon: '🐺', desc: 'Compétence : ×2.0 dégâts.', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_hnt_pet', name: 'Morsure', icon: '🐺', desc: 'Inflige ×2.0 dégâts.', cooldownMs: 15_000, type: 'attack', mult: 2.0 } },
+  { id: 'hnt_pet', classId: 'hunter', name: 'Morsure', icon: '🐺', desc: 'Compétence : ×2.0 dégâts + affaiblit la cible (-25% ATK, 3 tours).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_hnt_pet', name: 'Morsure', icon: '🐺', desc: '×2.0 dégâts, la morsure de ton familier affaiblit (-25% ATK, 3 tours).', cooldownMs: 15_000, type: 'attack', mult: 2.0, status: { type: 'weaken', turns: 3, pow: 0.25 } } },
   { id: 'hnt_pierce', classId: 'hunter', name: 'Perce-cœur', icon: '💔', desc: '+7% pénétration d\'armure par rang.', maxRank: 3, requires: ['hnt_pet'], pos: { x: 0, y: 4 }, perRank: { armorPen: 0.07 } },
   { id: 'hnt_skill_snipe', classId: 'hunter', name: 'Tir de précision', icon: '🎯', desc: 'Compétence : ×2.5 dégâts.', maxRank: 1, requires: ['hnt_pierce'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_hnt_snipe', name: 'Tir de précision', icon: '🎯', desc: 'Inflige ×2.5 dégâts.', cooldownMs: 28_000, type: 'attack', mult: 2.5 } },
 
@@ -161,7 +169,7 @@ export const TALENTS: TalentDef[] = [
   { id: 'mnk_flow', classId: 'monk', name: 'Souffle', icon: '💨', desc: '+5% esquive par rang.', maxRank: 3, requires: ['mnk_punch'], pos: { x: -2, y: 4 }, perRank: { dodge: 0.05 } },
 
   // --- 2e compétence de base par classe (accessible avant l'ascension) ---
-  { id: 'w_skill_cleave', classId: 'warrior', name: 'Fendoir', icon: '🪓', desc: 'Compétence : ×1.7 dégâts.', maxRank: 1, requires: ['w_might'], pos: { x: 2, y: 2 }, activeSkill: { id: 'skill_cleave', name: 'Fendoir', icon: '🪓', desc: 'Inflige ×1.7 dégâts.', cooldownMs: 12_000, type: 'attack', mult: 1.7 } },
+  { id: 'w_skill_cleave', classId: 'warrior', name: 'Fendoir', icon: '🪓', desc: 'Compétence : ×1.7 dégâts + brise l\'armure (-20% DEF, 3 tours).', maxRank: 1, requires: ['w_might'], pos: { x: 2, y: 2 }, activeSkill: { id: 'skill_cleave', name: 'Fendoir', icon: '🪓', desc: '×1.7 dégâts, fend l\'armure de la cible (-20% DEF, 3 tours).', cooldownMs: 12_000, type: 'attack', mult: 1.7, status: { type: 'armorBreak', turns: 3, pow: 0.20 } } },
   { id: 'm_skill_frost', classId: 'mage', name: 'Trait de givre', icon: '❄️', desc: 'Compétence : ×1.6 dégâts + Gel (2 tours).', maxRank: 1, requires: ['m_ward'], pos: { x: 2, y: 2 }, activeSkill: { id: 'skill_frostbolt', name: 'Trait de givre', icon: '❄️', desc: '×1.6 dégâts + Gel (2 tours).', cooldownMs: 12_000, type: 'attack', mult: 1.6, status: { type: 'chill', turns: 2 } } },
   { id: 'a_skill_venom', classId: 'archer', name: 'Flèche empoisonnée', icon: '🏹', desc: 'Compétence : ×1.6 dégâts + Poison (3 tours).', maxRank: 1, requires: ['a_hawk'], pos: { x: 2, y: 2 }, activeSkill: { id: 'skill_venomshot', name: 'Flèche empoisonnée', icon: '🏹', desc: '×1.6 dégâts + Poison (3 tours).', cooldownMs: 14_000, type: 'attack', mult: 1.6, status: { type: 'poison', turns: 3, pow: 0.3 } } },
   { id: 'h_skill_heal', classId: 'healer', name: 'Soin', icon: '💗', desc: 'Compétence : soigne 20% des PV max.', maxRank: 1, requires: ['h_grace'], pos: { x: 2, y: 2 }, activeSkill: { id: 'skill_heal', name: 'Soin', icon: '💗', desc: 'Soigne 20% PV.', cooldownMs: 16_000, type: 'heal', healFrac: 0.20 } },
