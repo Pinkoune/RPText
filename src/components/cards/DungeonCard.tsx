@@ -391,14 +391,18 @@ export default function DungeonCard() {
     const globalTimeLeft = Math.max(0, 20 * 60 - Math.floor((Date.now() - session.startedAt) / 1000));
     const globalM = Math.floor(globalTimeLeft / 60);
     const globalS = globalTimeLeft % 60;
-    const isEnraged = session.roundCount > 15;
+    // Doit rester synchro avec `executeMonsterTurn` (dungeonService.ts) : seuil
+    // normal 15 tours, 20 pour le boss (dernier stage).
+    const isBossStage = m.idx === def.stages.length - 1;
+    const enrageThreshold = isBossStage ? 20 : 15;
+    const isEnraged = session.roundCount > enrageThreshold;
     const isLastHope = globalTimeLeft <= 120;
 
     return (
       <div className="space-y-3">
         <div className="flex justify-between items-center px-1">
           <div className="text-xs font-semibold text-slate-300">
-            ⚔️ Combat de donjon <span className={isEnraged ? 'text-rose-400 animate-pulse' : ''}>(Tour {session.roundCount}/15)</span>
+            ⚔️ Combat de donjon <span className={isEnraged ? 'text-rose-400 animate-pulse' : ''}>(Tour {session.roundCount}/{enrageThreshold})</span>
           </div>
           <div className={`text-xs font-mono font-bold ${isLastHope ? 'text-rose-400 animate-pulse' : 'text-amber-200'}`}>
             ⌛ {globalM}:{globalS.toString().padStart(2, '0')}

@@ -49,10 +49,12 @@ export interface DungeonMonster {
   staggerHits: number;
   staggered: boolean;
   affix: DungeonAffix;
-  /** Brûlure/gel posés par un proc de set d'un joueur (affectent le monstre). */
+  /** Brûlure/gel/poison posés par un proc de set ou une compétence (affectent le monstre). */
   burn?: number;
   burnPow?: number;
   chill?: number;
+  poison?: number;
+  poisonPow?: number;
 }
 
 export interface TurnEvent {
@@ -275,11 +277,11 @@ function executeMonsterTurn(cur: DungeonSession) {
   }
 
   // Enrage remis à zéro par ennemi (voir transition de stage) : seuil normal à
-  // 10 tours, repoussé à 20 pour le boss final (dernier stage) pour lui laisser
+  // 15 tours, repoussé à 20 pour le boss final (dernier stage) pour lui laisser
   // plus de marge avant de punir un combat qui traîne.
   const bossDef = DUNGEONS.find(d => d.id === cur.dungeonId);
   const isBossStage = bossDef ? m.idx === bossDef.stages.length - 1 : false;
-  const enrageThreshold = isBossStage ? 20 : 10;
+  const enrageThreshold = isBossStage ? 20 : 15;
   const isEnraged = cur.roundCount > enrageThreshold;
   const enrageMult = isEnraged ? 1.5 : 1;
   const isAoE = cur.roundCount > 0 && cur.roundCount % 4 === 0;
@@ -461,6 +463,25 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
             p.hp = p.hp + heal; // Temp overheal for dungeon
             cur.log.push({ text: `✨ ${p.name} gagne un bouclier via ${skill.name} (+${heal} PV).`, side: 'info' });
           }
+          // Statuts de compétence (brûlure/poison/gel) : jusqu'ici seuls les procs de
+          // set les posaient en donjon, `skill.status` (ex: flèche empoisonnée) était
+          // lu en chasse (combat.ts) mais jamais ici. Même formule que combat.ts.
+          if (skill.status && (m.hp || 0) > 0) {
+            const st = skill.status;
+            const pow = st.pow ? Math.max(1, Math.round(finalAtk * st.pow)) : 0;
+            if (st.type === 'burn') {
+              m.burn = Math.max(m.burn || 0, st.turns);
+              m.burnPow = Math.max(m.burnPow || 0, pow);
+              cur.log.push({ text: `🔥 ${m.name} prend feu !`, side: 'you' });
+            } else if (st.type === 'poison') {
+              m.poison = Math.max(m.poison || 0, st.turns);
+              m.poisonPow = Math.max(m.poisonPow || 0, pow);
+              cur.log.push({ text: `🧪 ${m.name} est empoisonné !`, side: 'you' });
+            } else if (st.type === 'chill') {
+              m.chill = Math.max(m.chill || 0, st.turns);
+              cur.log.push({ text: `❄️ ${m.name} est gelé (frappe affaiblie) !`, side: 'you' });
+            }
+          }
         }
       } else {
         cur.log.push({ text: `Compétence inconnue utilisée par ${p.name}.`, side: 'info' });
@@ -533,12 +554,17 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
       }
     }
 
-    // Brûlure en cours sur le monstre : tick de fin de tour.
+    // Brûlure/poison en cours sur le monstre : tick de fin de tour.
     if ((m.hp || 0) > 0 && (m.burn || 0) > 0 && (m.burnPow || 0) > 0) {
       m.hp = Math.max(0, (m.hp || 0) - m.burnPow!);
       cur.log.push({ text: `🔥 Brûlure : ${m.name} perd ${m.burnPow} PV.`, side: 'you' });
     }
     if ((m.burn || 0) > 0) m.burn = (m.burn || 0) - 1;
+    if ((m.hp || 0) > 0 && (m.poison || 0) > 0 && (m.poisonPow || 0) > 0) {
+      m.hp = Math.max(0, (m.hp || 0) - m.poisonPow!);
+      cur.log.push({ text: `🧪 Poison : ${m.name} perd ${m.poisonPow} PV.`, side: 'you' });
+    }
+    if ((m.poison || 0) > 0) m.poison = (m.poison || 0) - 1;
 
     if (cur.log.length > 40) cur.log = cur.log.slice(cur.log.length - 40);
 

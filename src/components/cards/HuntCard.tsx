@@ -26,6 +26,25 @@ import { useUi } from '../../store/uiStore';
 const POTIONS = HP_CONSUMABLES;
 const ABILITY_TURNS = 5;
 
+// Anti-macro : le jeu est client-authoritative (pas de Cloud Functions), donc
+// impossible de prouver côté serveur qu'un clic vient d'un humain. On détecte
+// à la place un rythme de clics anormalement RÉGULIER (écart-type très faible
+// entre les intervalles) — un humain a toujours une variance naturelle, un
+// setInterval/macro non. Seuils volontairement stricts pour éviter les faux
+// positifs sur un joueur qui spam-clique vite mais irrégulièrement.
+const MACRO_SAMPLE_SIZE = 8;
+const MACRO_MAX_MEAN_MS = 400;
+const MACRO_MAX_STDDEV_MS = 20;
+function isRoboticTiming(times: number[]): boolean {
+  if (times.length < MACRO_SAMPLE_SIZE) return false;
+  const intervals: number[] = [];
+  for (let i = 1; i < times.length; i++) intervals.push(times[i] - times[i - 1]);
+  const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+  if (mean > MACRO_MAX_MEAN_MS) return false;
+  const variance = intervals.reduce((a, b) => a + (b - mean) ** 2, 0) / intervals.length;
+  return Math.sqrt(variance) < MACRO_MAX_STDDEV_MS;
+}
+
 // Thème d'arène par type de boss (id du monstre synthétisé dans commands.ts).
 interface BossTheme { label: string; sub: string; grad: string; ring: string; bar: string; text: string }
 const BOSS_THEME: Record<string, BossTheme> = {
@@ -55,12 +74,14 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const [bonusMaxHp, setBonusMaxHp] = useState(0);
   const [combatHits, setCombatHits] = useState(0);
   const [cstate, setCstate] = useState<CombatState>(freshCombatState());
+  const actionTimestamps = useRef<number[]>([]);
 
   // Réinitialise quand une nouvelle rencontre arrive (relance de hunt).
   useEffect(() => {
     setMonsterHp(m.hp);
     setLog([]);
     setStatus('fighting');
+    actionTimestamps.current = [];
     
     const pl = useGame.getState().player;
     if (pl && Date.now() - (pl.lastCombatAt ?? 0) < 60000) {
@@ -102,7 +123,22 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     if (status !== 'fighting') return;
     const player = useGame.getState().player;
     if (!player) return;
-    
+
+    if (action !== 'flee') {
+      actionTimestamps.current = [...actionTimestamps.current, Date.now()].slice(-MACRO_SAMPLE_SIZE);
+      if (isRoboticTiming(actionTimestamps.current)) {
+        mutate((d) => {
+          d.cooldowns.hunt = Date.now();
+          if (encounter.isAdventure) d.cooldowns.adventure = Date.now();
+        });
+        toast('Rythme de clics anormalement régulier détecté — combat annulé, cooldown réappliqué.', 'bad');
+        setLog((l) => [...l, { text: '⚠️ Motif de clics robotique détecté — combat interrompu sans récompense.', side: 'info' }]);
+        setStatus('fled');
+        actionTimestamps.current = [];
+        return;
+      }
+    }
+
     let skill = undefined;
     if (action !== 'attack' && action !== 'potion' && action !== 'flee') {
       skill = activeSkills.find(s => s.id === action);

@@ -175,6 +175,8 @@ export interface PlayerState {
   concoctionXp?: number;
   /** XP d'artisanat. */
   craftXp: number;
+  /** Recettes déjà craftées à 100% qualité au moins une fois (débloque le craft multiple/rapide). */
+  masteredRecipes?: string[];
   /** Nombre de clears par donjon. */
   dungeonClears: Record<string, number>;
   /** Points de talent non dépensés. */

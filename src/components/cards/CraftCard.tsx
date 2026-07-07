@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useGame } from '../../store/gameStore';
-import { RECIPES, canCraft, consumeMaterials, finishCraft, getCraftLevel, type Recipe } from '../../game/crafting';
+import { RECIPES, canCraft, consumeMaterials, finishCraft, craftMultiple, getCraftLevel, type Recipe } from '../../game/crafting';
 import { item, RARITY_COLOR } from '../../game/items';
 import type { ItemSlot } from '../../game/types';
 import { deriveStats } from '../../game/player';
@@ -124,6 +124,22 @@ export default function CraftCard() {
       setDurability(r.durability);
       setCp(maxCp);
     }
+  }
+
+  // Craft rapide en série (façon Synthèse Rapide FF14) : réservé aux recettes
+  // déjà maîtrisées (100% qualité obtenue une fois). Saute le minijeu, succès
+  // garanti, mais qualité toujours 0% — donc jamais de bonus/x2. Pure commodité.
+  function craftBatch(r: Recipe, count: number) {
+    const lockedMat = Object.keys(r.materials).find((id) => p!.lockedItems?.includes(id));
+    if (lockedMat) {
+      toast(`${item(lockedMat)?.name ?? 'Un matériau'} est verrouillé 🔒 — déverrouille-le pour craft.`, 'bad');
+      return;
+    }
+    let result = { id: '', totalQty: 0, crafted: 0 };
+    mutate((d) => { result = craftMultiple(d, r, count); });
+    if (result.crafted === 0) { toast('Matériaux ou or insuffisants.', 'bad'); return; }
+    const partial = result.crafted < count ? ' (matériaux épuisés en cours de route)' : '';
+    toast(`Craft rapide x${result.crafted} : ${item(result.id)?.name ?? result.id} x${result.totalQty}${partial}`, 'good');
   }
 
   function handleResult(r: Recipe, newProg: number, newDur: number, newQual: number) {
@@ -412,6 +428,24 @@ export default function CraftCard() {
                       >
                         {levelOk ? 'Forger' : `Niveau ${r.levelReq} requis`}
                       </button>
+                      {['material', 'consumable'].includes(out.slot) && levelOk && (p.masteredRecipes ?? []).includes(r.output) && (
+                        <div className="mt-1 flex gap-1">
+                          <button
+                            onClick={() => craftBatch(r, 5)}
+                            title="Craft rapide : succès garanti, qualité 0% (jamais de bonus x2)"
+                            className="flex-1 rounded bg-indigo-500/25 py-1 text-[10px] font-semibold text-indigo-200 hover:bg-indigo-500/45"
+                          >
+                            ⚡ x5
+                          </button>
+                          <button
+                            onClick={() => craftBatch(r, 10)}
+                            title="Craft rapide : succès garanti, qualité 0% (jamais de bonus x2)"
+                            className="flex-1 rounded bg-indigo-500/25 py-1 text-[10px] font-semibold text-indigo-200 hover:bg-indigo-500/45"
+                          >
+                            ⚡ x10
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>,

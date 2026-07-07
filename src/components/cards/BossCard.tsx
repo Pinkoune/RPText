@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useGame } from '../../store/gameStore';
-import { watchBoss, ensureBoss, attackBoss, bossReward, bossOnline, BOSS_ATTACK_CD, type WorldBoss } from '../../firebase/bossService';
+import { watchBoss, watchLastBoss, ensureBoss, attackBoss, bossReward, bossOnline, BOSS_ATTACK_CD, type WorldBoss } from '../../firebase/bossService';
 import { deriveStats, cooldownLeft } from '../../game/player';
 import { addQuestMetric } from '../../game/quests';
 import { playSound } from '../../game/sound';
@@ -22,28 +22,31 @@ export default function BossCard() {
   const mutate = useGame((s) => s.mutate);
   const toast = useGame((s) => s.toast);
   const [boss, setBoss] = useState<WorldBoss | null>(null);
+  const [lastBoss, setLastBoss] = useState<WorldBoss | null>(null);
+  const [showLoot, setShowLoot] = useState(false);
   const [, tick] = useState(0);
 
   useEffect(() => {
     const unsub = watchBoss(setBoss);
+    const unsubLast = watchLastBoss(setLastBoss);
     void ensureBoss();
     const respawn = setInterval(() => void ensureBoss(), 8_000);
     const cd = setInterval(() => tick((n) => n + 1), 1000);
-    return () => { unsub(); clearInterval(respawn); clearInterval(cd); };
+    return () => { unsub(); unsubLast(); clearInterval(respawn); clearInterval(cd); };
   }, []);
 
-  function claimReward() {
-    if (!boss || !boss.defeatedAt) return;
-    if (!boss.contributors?.[p!.uid]) return toast('Tu n\'as pas participé à ce boss.', 'bad');
-    if (p!.bossClaims.includes(boss.id)) return toast('Butin déjà réclamé.', 'bad');
-    const r = bossReward(boss, p!.uid);
+  function claimReward(target: WorldBoss) {
+    if (!target.defeatedAt) return;
+    if (!target.contributors?.[p!.uid]) return toast('Tu n\'as pas participé à ce boss.', 'bad');
+    if (p!.bossClaims.includes(target.id)) return toast('Butin déjà réclamé.', 'bad');
+    const r = bossReward(target, p!.uid);
     const wonFamiliar = Math.random() < LEGENDARY_DROP_CHANCE;
     let familiarId = '';
     mutate((d) => {
       d.gold += r.gold;
       d.fateCoins += r.fateCoins;
       d.inventory['boss_soul'] = (d.inventory['boss_soul'] ?? 0) + 1; // sert à l'ascension de classe
-      d.bossClaims.push(boss.id);
+      d.bossClaims.push(target.id);
       if (wonFamiliar) {
         familiarId = rollFamiliar(d, 'legendary');
         d.familiars[familiarId] = (d.familiars[familiarId] ?? 0) + 0;
@@ -59,6 +62,14 @@ export default function BossCard() {
   }
 
   if (!p) return null;
+
+  // Butin d'un boss précédent pas encore réclamé (fenêtre de respawn ratée) :
+  // seulement pertinent si un nouveau boss est déjà là (sinon le bloc "dead"
+  // ci-dessous gère déjà la réclamation du boss courant).
+  const missedLast = lastBoss && boss && lastBoss.id !== boss.id
+    && (lastBoss.contributors?.[p.uid]?.dmg ?? 0) > 0
+    && !p.bossClaims.includes(lastBoss.id)
+    ? lastBoss : null;
 
 
   const cdLeft = cooldownLeft(p, 'boss', BOSS_ATTACK_CD);
@@ -91,11 +102,31 @@ export default function BossCard() {
     <div className="space-y-3">
       <div className="flex items-center gap-3">
         <div className="text-5xl">{boss.emoji}</div>
-        <div>
-          <div className="text-lg font-bold">{boss.name}</div>
+        <div className="flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-lg font-bold">{boss.name}</span>
+            <button
+              onClick={() => setShowLoot((v) => !v)}
+              title="Table de butin"
+              className="grid h-5 w-5 place-items-center rounded-full bg-black/30 text-[11px] text-slate-300 hover:bg-white/10"
+            >
+              ℹ️
+            </button>
+          </div>
           <div className="text-xs text-slate-400">{dead ? 'Vaincu' : `Boss mondial · ${contribs.length} combattant${contribs.length > 1 ? 's' : ''}`}</div>
         </div>
       </div>
+
+      {showLoot && (
+        <div className="space-y-1 rounded-lg bg-black/25 p-3 text-xs text-slate-300">
+          <div className="mb-1 font-semibold uppercase tracking-wide text-slate-400">Butin (au prorata des dégâts infligés)</div>
+          <div>🪙 Or — pool total : <b className="text-amber-300">{boss.goldPool.toLocaleString()}</b></div>
+          <div>🎲 Fate Coins — pool total : <b className="text-fuchsia-300">{boss.fatePool.toLocaleString()}</b> (min. 1 si tu as participé)</div>
+          <div>🏰 XP de guilde — pool total : <b className="text-sky-300">{boss.guildXpPool.toLocaleString()}</b> (versée à ta guilde si tu en as une)</div>
+          <div>💎 Âme de Boss — garanti pour tout participant</div>
+          <div>🌠 Familier légendaire — {Math.round(LEGENDARY_DROP_CHANCE * 100)}% de chance à la réclamation</div>
+        </div>
+      )}
 
       <div>
         <div className="mb-1 flex justify-between text-xs text-slate-300">
@@ -128,7 +159,7 @@ export default function BossCard() {
               <div className="text-xs text-emerald-300">✅ Butin réclamé.</div>
             ) : (
               <button
-                onClick={claimReward}
+                onClick={() => claimReward(boss)}
                 className="w-full rounded-lg bg-amber-500/40 py-2 text-sm font-bold hover:bg-amber-500/60"
               >
                 🏆 Réclamer le butin
@@ -137,6 +168,18 @@ export default function BossCard() {
           ) : (
             <div className="text-xs text-slate-400">Tu n'as pas participé à ce boss.</div>
           )}
+        </div>
+      )}
+
+      {missedLast && (
+        <div className="rounded-xl border border-sky-400/40 bg-sky-500/15 p-3 text-center text-sm space-y-2">
+          <div className="text-xs text-sky-200">Un nouveau boss est déjà apparu, mais tu n'as pas réclamé ton butin du précédent ({missedLast.emoji} {missedLast.name}).</div>
+          <button
+            onClick={() => claimReward(missedLast)}
+            className="w-full rounded-lg bg-sky-500/40 py-2 text-sm font-bold hover:bg-sky-500/60"
+          >
+            🏆 Réclamer le butin du dernier boss
+          </button>
         </div>
       )}
 

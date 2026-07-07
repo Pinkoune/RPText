@@ -242,12 +242,43 @@ export function finishCraft(p: PlayerState, r: Recipe, qualityRatio: number, suc
       outId = `${r.output}:q${100 + bonus}`;
     }
   } else if (outItem && ['material', 'consumable'].includes(outItem.slot)) {
-    // Chance de doubler les quantités selon la qualité (max 50% de chance)
-    if (Math.random() < qualityRatio * 0.5) {
+    // Qualité maximale = x2 garanti ; en dessous, chance proportionnelle (max 50%).
+    if (qualityRatio >= 1) {
+      finalQty *= 2;
+    } else if (Math.random() < qualityRatio * 0.5) {
       finalQty *= 2;
     }
   }
-  
+
+  // Recette « maîtrisée » (100% qualité atteinte au moins une fois) : débloque
+  // le craft multiple rapide (voir `craftMultiple`).
+  if (qualityRatio >= 1) {
+    if (!p.masteredRecipes) p.masteredRecipes = [];
+    if (!p.masteredRecipes.includes(r.output)) p.masteredRecipes.push(r.output);
+  }
+
   addItem(p, outId, finalQty);
   return { id: outId, qty: finalQty };
+}
+
+/**
+ * Craft rapide en série (façon « Synthèse Rapide » FF14) : réservé aux
+ * recettes déjà maîtrisées (100% qualité obtenue au moins une fois via le
+ * minijeu). Saute le minijeu — succès garanti, mais qualité TOUJOURS à 0%
+ * (aucun bonus de stats, aucune chance de x2) : pure commodité, pas de gain
+ * net par rapport à un craft manuel soigné. S'arrête dès que les matériaux
+ * manquent (craft partiel, pas d'annulation des unités déjà produites).
+ */
+export function craftMultiple(p: PlayerState, r: Recipe, count: number): { id: string; totalQty: number; crafted: number } {
+  let outId = r.output;
+  let totalQty = 0;
+  let crafted = 0;
+  for (let i = 0; i < count; i++) {
+    if (!consumeMaterials(p, r)) break;
+    const res = finishCraft(p, r, 0, true);
+    outId = res.id;
+    totalQty += res.qty;
+    crafted++;
+  }
+  return { id: outId, totalQty, crafted };
 }

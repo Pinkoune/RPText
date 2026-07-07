@@ -1,4 +1,4 @@
-import { ref, onValue, runTransaction } from 'firebase/database';
+import { ref, onValue, runTransaction, set } from 'firebase/database';
 import { rtdb, isFirebaseConfigured } from './config';
 
 /** Un joueur ne peut frapper le boss qu'une fois toutes les 2 heures. */
@@ -58,8 +58,11 @@ export const bossOnline = isFirebaseConfigured && !!rtdb;
 
 // ── Mode local (pas de RTDB) ───────────────────────────────────────────────
 const LOCAL_KEY = 'rptext.localBoss';
+const LOCAL_LAST_KEY = 'rptext.localLastBoss';
 let localBoss: WorldBoss | null = null;
+let localLastBoss: WorldBoss | null = null;
 const localListeners = new Set<(b: WorldBoss | null) => void>();
+const localLastListeners = new Set<(b: WorldBoss | null) => void>();
 
 function loadLocal(): WorldBoss | null {
   if (localBoss) return localBoss;
@@ -71,6 +74,11 @@ function saveLocal(b: WorldBoss | null) {
   localBoss = b;
   if (b) localStorage.setItem(LOCAL_KEY, JSON.stringify(b));
   localListeners.forEach((cb) => cb(b));
+}
+function saveLocalLast(b: WorldBoss) {
+  localLastBoss = b;
+  localStorage.setItem(LOCAL_LAST_KEY, JSON.stringify(b));
+  localLastListeners.forEach((cb) => cb(b));
 }
 
 // ── API ────────────────────────────────────────────────────────────────────
@@ -84,15 +92,41 @@ export function watchBoss(cb: (b: WorldBoss | null) => void): () => void {
   return onValue(ref(rtdb, 'world/boss'), (snap) => cb((snap.val() as WorldBoss | null) ?? null));
 }
 
+/**
+ * Snapshot du dernier boss VAINCU (survit au respawn suivant), pour laisser
+ * réclamer son butin même après la fenêtre de 25s (`RESPAWN_GRACE`) — un
+ * joueur qui ouvre la fenêtre juste après le respawn perdait sinon
+ * définitivement sa part, le boss précédent n'étant nulle part persisté.
+ */
+export function watchLastBoss(cb: (b: WorldBoss | null) => void): () => void {
+  if (!rtdb) {
+    if (!localLastBoss) {
+      const raw = localStorage.getItem(LOCAL_LAST_KEY);
+      localLastBoss = raw ? (JSON.parse(raw) as WorldBoss) : null;
+    }
+    cb(localLastBoss);
+    localLastListeners.add(cb);
+    return () => localLastListeners.delete(cb);
+  }
+  return onValue(ref(rtdb, 'world/lastBoss'), (snap) => cb((snap.val() as WorldBoss | null) ?? null));
+}
+
 /** Fait apparaître un boss si aucun n'est vivant (ou après le délai de respawn). */
 export async function ensureBoss(): Promise<void> {
   if (!rtdb) {
-    if (needsRespawn(loadLocal())) saveLocal(spawn());
+    const cur = loadLocal();
+    if (needsRespawn(cur)) {
+      if (cur?.defeatedAt) saveLocalLast(cur);
+      saveLocal(spawn());
+    }
     return;
   }
-  await runTransaction(ref(rtdb, 'world/boss'), (cur: WorldBoss | null) =>
-    needsRespawn(cur) ? spawn() : cur,
-  );
+  const database = rtdb;
+  await runTransaction(ref(database, 'world/boss'), (cur: WorldBoss | null) => {
+    if (!needsRespawn(cur)) return cur;
+    if (cur?.defeatedAt) void set(ref(database, 'world/lastBoss'), cur);
+    return spawn();
+  });
 }
 
 /** Inflige des dégâts au boss de façon atomique. Retourne l'état après coup. */

@@ -69,8 +69,9 @@ export function pickMonster(biome: BiomeId, phase: Phase, playerLevel: number = 
     const targetId = BAIT_TARGETS[activeBait];
     const targetMonster = list.find(m => m.id === targetId);
     if (targetMonster) {
-      // 50% de chance d'attirer spécifiquement ce monstre s'il est dans la liste
-      if (Math.random() < 0.5) {
+      // 85% de chance d'attirer spécifiquement ce monstre s'il est dans la liste
+      // (avant : 50%, trop proche du hasard pour justifier le coût de l'appât).
+      if (Math.random() < 0.85) {
         baseMonster = targetMonster;
       }
     }

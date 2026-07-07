@@ -151,7 +151,12 @@ export const DUNGEONS: DungeonDef[] = [
   src.forEach((d, di) => {
     d.stages.forEach((m, mi) => {
       const finalBoss = di === src.length - 1 && mi === d.stages.length - 1;
-      const mult = finalBoss ? 1.6 : 1.15;
+      // Aligné sur 1.15 pour le boss final aussi (avant : 1.6) — le scaling par
+      // joueur/niveau (initMonster, dungeonService.ts) gère déjà la difficulté
+      // de groupe, cumuler un ×1.6 statique par-dessus faisait un boss final
+      // absurdement costaud (~42-45k PV à 3-4 joueurs, jamais battable dans le
+      // temps imparti). Reste un peu plus fort que les autres mobs via l'ATK.
+      const mult = 1.15;
       stages.push({
         ...m,
         id: `raid_${d.id}_${m.id}`,
