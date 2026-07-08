@@ -85,11 +85,17 @@ export default function PlayerProfileModal({ row, onClose, onMessage }: { row: P
 
         {/* Infos complémentaires (dispo seulement une fois `full` chargé) */}
         {full && (
-          <div className="mt-2 grid grid-cols-4 gap-2 text-center text-sm">
+          <div className="mt-2 grid grid-cols-3 gap-2 text-center text-sm">
             <div className="rounded-lg bg-black/25 py-2"><div className="text-[10px] text-slate-400">💀 Morts</div><div className="font-bold">{full.deaths ?? 0}</div></div>
             <div className="rounded-lg bg-black/25 py-2"><div className="text-[10px] text-slate-400">🌌 Abysses</div><div className="font-bold">{full.endlessBest ?? 0}</div></div>
             <div className="rounded-lg bg-black/25 py-2"><div className="text-[10px] text-slate-400">🔥 Connexions</div><div className="font-bold">{full.loginStreak ?? 0}j</div></div>
-            <div className="rounded-lg bg-black/25 py-2"><div className="text-[10px] text-slate-400">⏱️ Temps de jeu</div><div className="font-bold">{fmtPlaytime(full.playtimeMs ?? 0)}</div></div>
+          </div>
+        )}
+
+        {full && (
+          <div className="mt-2 flex items-center justify-between rounded-lg bg-black/25 px-3 py-2 text-sm">
+            <span className="text-slate-400">⏱️ Temps de jeu</span>
+            <span className="tabular-nums text-slate-300">{fmtPlaytime(full.playtimeMs ?? 0)}</span>
           </div>
         )}
 
