@@ -22,6 +22,9 @@ import {
   // Armures
   GiClothes, GiLeatherBoot, GiShield, GiPointyHat, GiRobe, GiChestArmor, GiBreastplate,
   GiCape, GiSpikedArmor, GiScaleMail, GiHoodedFigure, GiSickle,
+  GiCloak, GiLargeDress, GiKimono, GiRomanToga, GiSunPriest, GiWarlockHood,
+  GiLeatherVest, GiLeatherArmor, GiArmorVest, GiNinjaArmor, GiLayeredArmor, GiCapeArmor,
+  GiHoodedAssassin, GiKevlarVest, GiMetalPlate, GiTrenchBodyArmor,
   // Volcanique + end-game
   GiStonePile, GiFireAxe, GiFlameSpin, GiAbdominalArmor, GiFireBottle, GiCrenelCrown, GiAngelWings,
   // Nécropole de Cristal (crypt, niv.30) + end-game
@@ -80,12 +83,18 @@ export const ITEM_ICONS: Record<string, IconType> = {
   star_orb: GiOrbital, sage_staff: GiWizardStaff,
 
   // ── Armures ──
-  woven_shirt: GiClothes, leather_boots: GiLeatherBoot, wooden_shield: GiShield,
-  mage_hat: GiPointyHat, cloth_robe: GiRobe, iron_mail: GiChestArmor, frost_plate: GiBreastplate,
-  ember_chest: GiBreastplate, wind_cloak: GiCape, earth_plate: GiSpikedArmor,
-  scale_mail: GiScaleMail, templar_armor: GiChestArmor, cultist_robe: GiHoodedFigure,
-  obsidian_armor: GiSpikedArmor, steel_plate: GiBreastplate, silk_robe: GiRobe,
-  sunplate_armor: GiBreastplate, smith_apron: GiClothes, farmer_boots: GiLeatherBoot,
+  woven_shirt: GiClothes, leather_boots: GiLeatherBoot, wooden_shield: GiShield, hide_tunic: GiLeatherVest,
+  mage_hat: GiPointyHat, cloth_robe: GiRobe, iron_mail: GiChestArmor, iron_vest: GiLeatherArmor,
+  frost_plate: GiBreastplate, frost_leather: GiLeatherArmor, frost_robe: GiCloak,
+  ember_chest: GiMetalPlate, ember_leather: GiLeatherVest, ember_robe: GiLargeDress,
+  wind_cloak: GiCape, wind_leather: GiArmorVest, wind_robe: GiKimono,
+  earth_plate: GiSpikedArmor, earth_leather: GiLayeredArmor, earth_robe: GiRomanToga,
+  scale_mail: GiScaleMail, water_leather: GiNinjaArmor, water_robe: GiKimono,
+  templar_armor: GiChestArmor, light_leather: GiCapeArmor, light_robe: GiSunPriest,
+  shadow_plate: GiTrenchBodyArmor, shadow_leather: GiHoodedAssassin, cultist_robe: GiHoodedFigure,
+  obsidian_armor: GiSpikedArmor, obsidian_leather: GiKevlarVest, obsidian_robe: GiWarlockHood,
+  steel_plate: GiBreastplate, silk_robe: GiRobe,
+  sunplate_armor: GiBreastplate, sunplate_leather: GiArmorVest, smith_apron: GiClothes, farmer_boots: GiLeatherBoot,
   golden_sickle: GiSickle, master_hammer: GiHammerNails,
 
   // ── Compléments (derniers objets non mappés) ──

@@ -151,6 +151,7 @@ export default function WikiCard() {
                 <ItemIcon id={it.id} size={18} /> {it.name}
               </span>
               {it.slot && <span className="text-[10px] bg-slate-800 px-1.5 rounded text-slate-300">{it.slot}</span>}
+              {classBadge(it) && <span className={`text-[10px] px-1.5 rounded font-semibold ${classBadge(it)!.cls}`}>{classBadge(it)!.label}</span>}
               <span className="text-xs text-amber-300 ml-auto">{it.value} Sol</span>
             </div>
             <p className="text-xs text-slate-300 mt-1">{it.desc}</p>
@@ -316,6 +317,23 @@ export default function WikiCard() {
       </div>
     </div>
   );
+}
+
+const CLASS_LABEL: Record<string, string> = { warrior: 'Guerrier', archer: 'Archer', mage: 'Mage', healer: 'Soigneur' };
+
+/** Badge de restriction de classe — pour l'armure, affiche le poids (Tissu/Cuir/Plate),
+ * cohérent avec le même déduit dans CraftCard (une pièce par set = une classe précise
+ * depuis le split guerrier/archer/mage-soigneur). */
+function classBadge(it: ItemDef): { label: string; cls: string } | null {
+  const c = it.classes;
+  if (!c || c.length === 0 || c.length >= 4) return null;
+  if (it.slot === 'armor') {
+    if (c.includes('mage') || c.includes('healer')) return { label: 'Tissu', cls: 'bg-sky-500/20 text-sky-200' };
+    if (c.includes('archer')) return { label: 'Cuir', cls: 'bg-amber-600/25 text-amber-200' };
+    if (c.includes('warrior')) return { label: 'Plate', cls: 'bg-slate-400/25 text-slate-100' };
+    return null;
+  }
+  return { label: c.map((x) => CLASS_LABEL[x] ?? x).join(' / '), cls: 'bg-indigo-500/20 text-indigo-200' };
 }
 
 function getStatsStr(it: ItemDef) {

@@ -51,6 +51,7 @@ export const RECIPES: Recipe[] = [
   { output: 'cactus_water', qty: 1, materials: { cactus_pulp: 8 }, gold: 10, levelReq: 2, difficulty: 15, maxQuality: 40, durability: 20 },
   { output: 'silk_robe', qty: 1, materials: { silk_thread: 10, sturdy_leather: 3 }, gold: 350, levelReq: 4, difficulty: 55, maxQuality: 220, durability: 50 },
   { output: 'sunplate_armor', qty: 1, materials: { sun_shard: 10, iron_ingot: 8 }, gold: 1400, levelReq: 11, difficulty: 140, maxQuality: 550, durability: 70 },
+  { output: 'sunplate_leather', qty: 1, materials: { sun_shard: 10, iron_ingot: 8 }, gold: 1400, levelReq: 11, difficulty: 140, maxQuality: 550, durability: 70 },
   { output: 'venom_fang', qty: 1, materials: { bog_root: 12, mudfish: 6, sturdy_leather: 3 }, gold: 1000, levelReq: 13, difficulty: 160, maxQuality: 500, durability: 60 },
   { output: 'phoenix_elixir', qty: 1, materials: { frost_lotus: 6, crystal: 4, herb: 10 }, gold: 800, levelReq: 20, difficulty: 350, maxQuality: 1200, durability: 80 },
 
@@ -64,12 +65,14 @@ export const RECIPES: Recipe[] = [
   { output: 'leather_boots', qty: 1, materials: { sturdy_leather: 2 }, gold: 20, levelReq: 3, difficulty: 25, maxQuality: 100, durability: 30 },
   { output: 'mage_hat', qty: 1, materials: { herb: 10, slime_gel: 2 }, gold: 25, levelReq: 2, difficulty: 30, maxQuality: 80, durability: 30 },
   { output: 'wooden_shield', qty: 1, materials: { wood: 5, slime_gel: 1 }, gold: 15, levelReq: 1, difficulty: 15, maxQuality: 60, durability: 25 },
+  { output: 'hide_tunic', qty: 1, materials: { wood: 5, slime_gel: 1 }, gold: 15, levelReq: 1, difficulty: 15, maxQuality: 60, durability: 25 },
   { output: 'flower_crown', qty: 1, materials: { herb: 3, slime_gel: 1 }, gold: 10, levelReq: 1, difficulty: 10, maxQuality: 50, durability: 15 },
   { output: 'bone_necklace', qty: 1, materials: { boar_tusk: 2, wolf_pelt: 1 }, gold: 30, levelReq: 2, difficulty: 30, maxQuality: 80, durability: 40 },
   { output: 'slime_ring', qty: 1, materials: { slime_gel: 6, herb: 2 }, gold: 30, levelReq: 2, difficulty: 25, maxQuality: 70, durability: 40 },
 
   // ── Forge (Équipements Avancés) ──
   { output: 'iron_mail', qty: 1, materials: { iron_ingot: 8, sturdy_leather: 3 }, gold: 120, levelReq: 5, difficulty: 70, maxQuality: 250, durability: 50 },
+  { output: 'iron_vest', qty: 1, materials: { iron_ingot: 8, sturdy_leather: 3 }, gold: 120, levelReq: 5, difficulty: 70, maxQuality: 250, durability: 50 },
   { output: 'iron_blade', qty: 1, materials: { iron_ingot: 4, sturdy_leather: 2 }, gold: 400, levelReq: 3, difficulty: 40, maxQuality: 200, durability: 50 },
 
   // Armes intermédiaires (comblent le vide entre le niveau 3 et le niveau 12).
@@ -93,6 +96,8 @@ export const RECIPES: Recipe[] = [
   
   { output: 'frost_glaive', qty: 1, materials: { iron_ingot: 6, frost_shard: 10, refined_wood: 4 }, gold: 800, levelReq: 10, difficulty: 120, maxQuality: 500, durability: 70 },
   { output: 'frost_plate', qty: 1, materials: { iron_ingot: 10, frost_shard: 12, sturdy_leather: 8 }, gold: 1200, levelReq: 12, difficulty: 150, maxQuality: 600, durability: 70 },
+  { output: 'frost_leather', qty: 1, materials: { iron_ingot: 10, frost_shard: 12, sturdy_leather: 8 }, gold: 1200, levelReq: 12, difficulty: 150, maxQuality: 600, durability: 70 },
+  { output: 'frost_robe', qty: 1, materials: { iron_ingot: 10, frost_shard: 12, sturdy_leather: 8 }, gold: 1200, levelReq: 12, difficulty: 150, maxQuality: 600, durability: 70 },
   { output: 'ember_axe', qty: 1, materials: { iron_ingot: 8, ember_core: 10, refined_wood: 6 }, gold: 2200, levelReq: 14, difficulty: 180, maxQuality: 800, durability: 80 },
 
   // ── Bâtons & sceptres (magie) ──
@@ -105,35 +110,49 @@ export const RECIPES: Recipe[] = [
   // ── Sets d'Équipement ──
   { output: 'wind_blade', qty: 1, materials: { iron_ingot: 6, wildflower: 15 }, gold: 800, levelReq: 9, difficulty: 110, maxQuality: 400, durability: 60 },
   { output: 'wind_cloak', qty: 1, materials: { silk_thread: 10, sturdy_leather: 5 }, gold: 800, levelReq: 9, difficulty: 110, maxQuality: 400, durability: 60 },
+  { output: 'wind_leather', qty: 1, materials: { silk_thread: 10, sturdy_leather: 5 }, gold: 800, levelReq: 9, difficulty: 110, maxQuality: 400, durability: 60 },
+  { output: 'wind_robe', qty: 1, materials: { silk_thread: 10, sturdy_leather: 5 }, gold: 800, levelReq: 9, difficulty: 110, maxQuality: 400, durability: 60 },
   { output: 'wind_staff', qty: 1, materials: { refined_wood: 6, wildflower: 12 }, gold: 800, levelReq: 9, difficulty: 110, maxQuality: 400, durability: 60 },
   { output: 'wind_charm', qty: 1, materials: { wildflower: 8, magic_dust: 2 }, gold: 600, levelReq: 9, difficulty: 90, maxQuality: 350, durability: 50 },
 
   { output: 'earth_hammer', qty: 1, materials: { iron_ingot: 10, stone: 20 }, gold: 1100, levelReq: 11, difficulty: 140, maxQuality: 500, durability: 70 },
   { output: 'earth_plate', qty: 1, materials: { iron_ingot: 15, stone: 30 }, gold: 1300, levelReq: 11, difficulty: 160, maxQuality: 600, durability: 70 },
+  { output: 'earth_leather', qty: 1, materials: { iron_ingot: 15, stone: 30 }, gold: 1300, levelReq: 11, difficulty: 160, maxQuality: 600, durability: 70 },
+  { output: 'earth_robe', qty: 1, materials: { iron_ingot: 15, stone: 30 }, gold: 1300, levelReq: 11, difficulty: 160, maxQuality: 600, durability: 70 },
   { output: 'earth_tome', qty: 1, materials: { ironwood: 6, dryad_leaf: 5 }, gold: 1100, levelReq: 11, difficulty: 140, maxQuality: 500, durability: 70 },
   { output: 'earth_talisman', qty: 1, materials: { stone: 15, magic_dust: 3 }, gold: 800, levelReq: 11, difficulty: 120, maxQuality: 400, durability: 60 },
 
   { output: 'ember_chest', qty: 1, materials: { iron_ingot: 15, ember_core: 12 }, gold: 2000, levelReq: 14, difficulty: 180, maxQuality: 800, durability: 80 },
+  { output: 'ember_leather', qty: 1, materials: { iron_ingot: 15, ember_core: 12 }, gold: 2000, levelReq: 14, difficulty: 180, maxQuality: 800, durability: 80 },
+  { output: 'ember_robe', qty: 1, materials: { iron_ingot: 15, ember_core: 12 }, gold: 2000, levelReq: 14, difficulty: 180, maxQuality: 800, durability: 80 },
   { output: 'ember_ring', qty: 1, materials: { ember_core: 5, magic_dust: 4 }, gold: 1500, levelReq: 14, difficulty: 150, maxQuality: 600, durability: 70 },
   { output: 'ember_staff', qty: 1, materials: { refined_wood: 8, ember_core: 8 }, gold: 2200, levelReq: 14, difficulty: 180, maxQuality: 800, durability: 80 },
 
   { output: 'tide_spear', qty: 1, materials: { iron_ingot: 6, pure_water: 8 }, gold: 1200, levelReq: 12, difficulty: 130, maxQuality: 450, durability: 65 },
   { output: 'water_wand', qty: 1, materials: { refined_wood: 6, pure_water: 6 }, gold: 1200, levelReq: 12, difficulty: 130, maxQuality: 450, durability: 65 },
   { output: 'scale_mail', qty: 1, materials: { iron_ingot: 10, pure_water: 10, big_fish: 5 }, gold: 1500, levelReq: 12, difficulty: 150, maxQuality: 550, durability: 70 },
+  { output: 'water_leather', qty: 1, materials: { iron_ingot: 10, pure_water: 10, big_fish: 5 }, gold: 1500, levelReq: 12, difficulty: 150, maxQuality: 550, durability: 70 },
+  { output: 'water_robe', qty: 1, materials: { iron_ingot: 10, pure_water: 10, big_fish: 5 }, gold: 1500, levelReq: 12, difficulty: 150, maxQuality: 550, durability: 70 },
   { output: 'pearl_ring', qty: 1, materials: { pure_water: 5, magic_dust: 4 }, gold: 1000, levelReq: 12, difficulty: 110, maxQuality: 400, durability: 60 },
 
   { output: 'sun_blade', qty: 1, materials: { mithril_ingot: 4, sun_orb: 6 }, gold: 3500, levelReq: 16, difficulty: 250, maxQuality: 1000, durability: 90 },
   { output: 'radiant_staff', qty: 1, materials: { ironwood: 4, sun_orb: 6 }, gold: 3500, levelReq: 16, difficulty: 250, maxQuality: 1000, durability: 90 },
   { output: 'templar_armor', qty: 1, materials: { mithril_ingot: 8, sun_orb: 8 }, gold: 4500, levelReq: 16, difficulty: 300, maxQuality: 1200, durability: 100 },
+  { output: 'light_leather', qty: 1, materials: { mithril_ingot: 8, sun_orb: 8 }, gold: 4500, levelReq: 16, difficulty: 300, maxQuality: 1200, durability: 100 },
+  { output: 'light_robe', qty: 1, materials: { mithril_ingot: 8, sun_orb: 8 }, gold: 4500, levelReq: 16, difficulty: 300, maxQuality: 1200, durability: 100 },
   { output: 'light_pendant', qty: 1, materials: { sun_orb: 4, magic_dust: 6 }, gold: 2500, levelReq: 16, difficulty: 200, maxQuality: 800, durability: 80 },
 
   { output: 'shadow_bow', qty: 1, materials: { ironwood: 6, voodoo_charm: 6 }, gold: 4000, levelReq: 18, difficulty: 280, maxQuality: 1100, durability: 90 },
   { output: 'void_tome', qty: 1, materials: { void_dust: 10, voodoo_charm: 8 }, gold: 6000, levelReq: 23, difficulty: 400, maxQuality: 1500, durability: 100 },
   { output: 'cultist_robe', qty: 1, materials: { silk_thread: 15, voodoo_charm: 6 }, gold: 3500, levelReq: 18, difficulty: 250, maxQuality: 1000, durability: 85 },
+  { output: 'shadow_plate', qty: 1, materials: { silk_thread: 15, voodoo_charm: 6 }, gold: 3500, levelReq: 18, difficulty: 250, maxQuality: 1000, durability: 85 },
+  { output: 'shadow_leather', qty: 1, materials: { silk_thread: 15, voodoo_charm: 6 }, gold: 3500, levelReq: 18, difficulty: 250, maxQuality: 1000, durability: 85 },
   { output: 'dark_amulet', qty: 1, materials: { void_dust: 6, voodoo_charm: 4 }, gold: 5000, levelReq: 23, difficulty: 350, maxQuality: 1200, durability: 90 },
 
   { output: 'obsidian_blade', qty: 1, materials: { obsidian: 15, iron_ingot: 10 }, gold: 3000, levelReq: 15, difficulty: 220, maxQuality: 900, durability: 120 },
   { output: 'obsidian_armor', qty: 1, materials: { obsidian: 25, iron_ingot: 15 }, gold: 4000, levelReq: 15, difficulty: 280, maxQuality: 1100, durability: 150 },
+  { output: 'obsidian_leather', qty: 1, materials: { obsidian: 25, iron_ingot: 15 }, gold: 4000, levelReq: 15, difficulty: 280, maxQuality: 1100, durability: 150 },
+  { output: 'obsidian_robe', qty: 1, materials: { obsidian: 25, iron_ingot: 15 }, gold: 4000, levelReq: 15, difficulty: 280, maxQuality: 1100, durability: 150 },
   { output: 'obsidian_ring', qty: 1, materials: { obsidian: 8, magic_dust: 5 }, gold: 2000, levelReq: 15, difficulty: 180, maxQuality: 700, durability: 100 },
   { output: 'ironwood_staff', qty: 1, materials: { ironwood: 8, magic_dust: 4 }, gold: 1800, levelReq: 13, difficulty: 160, maxQuality: 600, durability: 70 },
   { output: 'ironwood_bow', qty: 1, materials: { ironwood: 8, sturdy_leather: 4 }, gold: 1800, levelReq: 13, difficulty: 160, maxQuality: 600, durability: 70 },

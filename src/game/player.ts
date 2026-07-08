@@ -180,6 +180,64 @@ export function migratePlayer(p: PlayerState): PlayerState {
     (p as any).enchantsInstancedVersion = 1;
   }
 
+  // Split des armures de set par famille de classe (plate warrior / cuir archer /
+  // robe mage-healer, ex: Cuirasse ardente / Brigandine ardente / Étole
+  // incandescente) : avant, une seule pièce d'armure par set servait à 2-4
+  // classes, peu "lore-accurate" (un archer en cuirasse de plaques). Convertit
+  // les exemplaires déjà possédés vers la variante qui correspond à la classe
+  // ACTUELLE du joueur (même stats/durabilité/étoiles/runes, juste id/nom/icône)
+  // — personne ne perd son objet. v2 (< 2) : ajoute la branche archer (cuir),
+  // idempotent pour les joueurs déjà migrés en v1 (mage/healer/warrior).
+  if (((p as any).armorSetSplitVersion ?? 0) < 2) {
+    const baseClass = CLASSES[p.classId]?.parent ?? p.classId;
+    const SWAP_BY_CLASS: Record<string, Record<string, string>> = {
+      warrior: { cultist_robe: 'shadow_plate' },
+      archer: {
+        cultist_robe: 'shadow_leather', shadow_plate: 'shadow_leather',
+        ember_chest: 'ember_leather', frost_plate: 'frost_leather', wind_cloak: 'wind_leather',
+        scale_mail: 'water_leather', earth_plate: 'earth_leather', templar_armor: 'light_leather',
+        obsidian_armor: 'obsidian_leather',
+        wooden_shield: 'hide_tunic', iron_mail: 'iron_vest', sunplate_armor: 'sunplate_leather',
+      },
+      mage: {
+        ember_chest: 'ember_robe', frost_plate: 'frost_robe', wind_cloak: 'wind_robe',
+        scale_mail: 'water_robe', earth_plate: 'earth_robe', templar_armor: 'light_robe',
+        obsidian_armor: 'obsidian_robe', shadow_plate: 'cultist_robe',
+      },
+      healer: {
+        ember_chest: 'ember_robe', frost_plate: 'frost_robe', wind_cloak: 'wind_robe',
+        scale_mail: 'water_robe', earth_plate: 'earth_robe', templar_armor: 'light_robe',
+        obsidian_armor: 'obsidian_robe', shadow_plate: 'cultist_robe',
+      },
+    };
+    const SWAP = SWAP_BY_CLASS[baseClass] ?? {};
+    const swapKey = (key: string): string => {
+      const parts = key.split(':');
+      if (SWAP[parts[0]]) { parts[0] = SWAP[parts[0]]; return parts.join(':'); }
+      return key;
+    };
+    for (const key of Object.keys(p.inventory)) {
+      const nk = swapKey(key);
+      if (nk === key) continue;
+      p.inventory[nk] = (p.inventory[nk] ?? 0) + p.inventory[key];
+      delete p.inventory[key];
+      if (p.gearStars[key] !== undefined) { p.gearStars[nk] = p.gearStars[key]; delete p.gearStars[key]; }
+      if (p.gearDurability[key] !== undefined) { p.gearDurability[nk] = p.gearDurability[key]; delete p.gearDurability[key]; }
+      if (p.enchants[key]) { p.enchants[nk] = p.enchants[key]; delete p.enchants[key]; }
+    }
+    const eqKey = p.equipped.armor;
+    if (eqKey) {
+      const nk = swapKey(eqKey);
+      if (nk !== eqKey) {
+        p.equipped.armor = nk;
+        if (p.gearStars[eqKey] !== undefined) { p.gearStars[nk] = p.gearStars[eqKey]; delete p.gearStars[eqKey]; }
+        if (p.gearDurability[eqKey] !== undefined) { p.gearDurability[nk] = p.gearDurability[eqKey]; delete p.gearDurability[eqKey]; }
+        if (p.enchants[eqKey]) { p.enchants[nk] = p.enchants[eqKey]; delete p.enchants[eqKey]; }
+      }
+    }
+    (p as any).armorSetSplitVersion = 2;
+  }
+
   // -- V3 Normalisation anti-carry --
   // Certains joueurs bas niveau ont reçu énormément d'XP en se faisant "carry" dans des donjons HL.
   // On recalcule une "XP max légitime" basée sur leurs faits d'armes pour corriger les niveaux absurdes.

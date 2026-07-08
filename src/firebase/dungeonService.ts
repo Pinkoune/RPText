@@ -464,7 +464,12 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
     
     const pAtk = p.atk || 10;
     const elemMult = getElementMult(p.weaponElement || undefined, m.element) * getDmgTypeMult(p.weaponDmgType || undefined, m as any);
-    const finalAtk = pAtk * hopeMult * elemMult;
+    // elemMult (résistance/faiblesse) appliqué APRÈS soustraction de la DEF, comme en
+    // chasse (combat.ts) — avant : appliqué avant, donc un attaquant faible face à un
+    // boss à double résistance (physique+magique, cas de la Liche) voyait son ATK déjà
+    // divisé par 2 avant même de soustraire la DEF (scalée par niveau/groupe), et
+    // retombait à 1 dégât garanti à chaque coup quel que soit son arme.
+    const finalAtk = pAtk * hopeMult;
     // Fendoir (Guerrier) : DEF du monstre réduite tant que le bris d'armure dure.
     const effMDef = (m.armorBreak || 0) > 0 ? (m.def || 0) * (1 - (m.armorBreakPow || 0)) : (m.def || 0);
     // L'attaque encaissée pendant la charge d'un boss interrompt son coup dévastateur.
@@ -497,7 +502,7 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
         p.skillCds[skillId] = Math.max(1, Math.ceil(skill.cooldownMs / 4000));
         if (skill.type === 'attack' || skill.type === 'shield' || skill.type === 'heal' || skill.type === 'buff') {
           if (skill.mult) {
-            const dmg = Math.max(1, Math.round(finalAtk * skill.mult - effMDef));
+            const dmg = Math.round(Math.max(1, finalAtk * skill.mult - effMDef) * elemMult);
             m.hp = (m.hp || 0) - dmg;
             maybeInterrupt(dmg);
             if (p.classId === 'warrior' || p.classId === 'paladin') {
@@ -602,7 +607,7 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
         const berserkBonus = p.mods?.berserkBonus || 0;
         const crit = p.mods?.crit || 0;
 
-        let dmg = Math.max(1, (finalAtk - 2 + Math.random() * 4) - effMDef) + flatDmg;
+        let dmg = Math.round(Math.max(1, (finalAtk - 2 + Math.random() * 4) - effMDef) * elemMult) + flatDmg;
         const pMaxHp = p.maxHp || 100;
         if ((p.hp || 0) < pMaxHp * 0.3 && berserkBonus > 0) dmg = Math.round(dmg * (1 + berserkBonus));
         if (Math.random() < crit) dmg *= 2;
