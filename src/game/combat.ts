@@ -175,10 +175,12 @@ export interface CombatState {
   poisonPow: number;
   /** Tours de gel : le monstre frappe plus faiblement. */
   chill: number;
+  /** Tours d'étourdissement : le monstre passe son tour (Moine : Coup du Dragon à 5/5 Combo). */
+  stun: number;
 }
 
 export function freshCombatState(): CombatState {
-  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, chill: 0 };
+  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, chill: 0, stun: 0 };
 }
 
 export interface TurnResult {
@@ -294,6 +296,11 @@ export function combatTurn(
           mhp -= dmg;
           if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
           events.push({ text: `${skill.name} : ${dmg} dégâts !`, side: 'you' });
+          // Moine : Coup du Dragon lancé à Combo plein (5/5) touche un point vital et étourdit.
+          if (skill.id === 'skill_mnk_dragon' && (opts.resourceAmount ?? 0) >= 5 && mhp > 0) {
+            state.stun = Math.max(state.stun, 1);
+            events.push({ text: `👊 Point vital ! ${monster.name} est étourdi et va perdre son prochain tour.`, side: 'you' });
+          }
         }
         if (effHealFrac) {
           const heal = Math.round(maxHp * effHealFrac);
@@ -375,7 +382,9 @@ export function combatTurn(
   let dmgTakenThisTurn = 0;
   let thornsProced = false;
   let shieldAbsorbed = false;
-  if (Math.random() < mods.dodge) {
+  if (state.stun > 0) {
+    events.push({ text: `😵 ${monster.name} est étourdi et ne peut pas agir !`, side: 'you' });
+  } else if (Math.random() < mods.dodge) {
     events.push({ text: `Tu esquives l'attaque de ${monster.name} !`, side: 'info' });
   } else {
     hitsTaken++;
@@ -430,6 +439,7 @@ export function combatTurn(
   if (state.burn > 0) state.burn -= 1;
   if (state.poison > 0) state.poison -= 1;
   if (state.chill > 0) state.chill -= 1;
+  if (state.stun > 0) state.stun -= 1;
 
   // Ressource d'archétype passive : rage se charge en encaissant, combo en touchant.
   let resourceGained = 0;

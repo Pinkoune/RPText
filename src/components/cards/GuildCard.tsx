@@ -91,6 +91,7 @@ export default function GuildCard() {
   }
   function leave() {
     if (!myGuild) return;
+    if (!window.confirm(`Es-tu sûr de vouloir quitter la guilde « ${myGuild.name} » ?`)) return;
     void leaveGuild(myGuild.id, p!.uid);
     mutate((d) => { d.guildId = null; });
   }
@@ -199,7 +200,7 @@ export default function GuildCard() {
           </div>
         </div>
 
-        {myGuild.ownerUid === p.uid && Object.keys(myGuild.applications || {}).length > 0 && (
+        {Object.keys(myGuild.applications || {}).length > 0 && (
           <div className="mt-4">
             <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-400">Candidatures · {Object.keys(myGuild.applications || {}).length}</div>
             <div className="space-y-1">

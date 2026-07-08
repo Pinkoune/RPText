@@ -33,7 +33,7 @@ const CAPS: Partial<Record<keyof CombatMods, number>> = {
   atkPct: 0.6, defPct: 0.6, hpPct: 0.6, regen: 100, critMult: 1.5,
 };
 
-export type StatusType = 'burn' | 'poison' | 'chill' | 'weaken' | 'armorBreak';
+export type StatusType = 'burn' | 'poison' | 'chill' | 'weaken' | 'armorBreak' | 'stun';
 
 export interface ActiveSkillDef {
   id: string;
@@ -203,7 +203,7 @@ export const TALENTS: TalentDef[] = [
   // Monk
   { id: 'mnk_punch', classId: 'monk', name: 'Poing de fer', icon: '🥊', desc: 'Compétence : ×1.8 dégâts.', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_mnk_punch', name: 'Poing de fer', icon: '🥊', desc: 'Inflige ×1.8 dégâts.', cooldownMs: 14_000, type: 'attack', mult: 1.8 } },
   { id: 'mnk_chi', classId: 'monk', name: 'Chi', icon: '☯️', desc: '+5% vol de vie par rang.', maxRank: 3, requires: ['mnk_punch'], pos: { x: 0, y: 4 }, perRank: { lifesteal: 0.05 } },
-  { id: 'mnk_skill_dragon', classId: 'monk', name: 'Coup du Dragon', icon: '🐉', desc: 'Compétence : dégâts croissants avec le Combo (min. 3 points, consomme tout).', maxRank: 1, requires: ['mnk_chi'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_mnk_dragon', name: 'Coup du Dragon', icon: '🐉', desc: 'Consomme tout ton Combo (min. 3) : dégâts croissants.', cooldownMs: 3_000, type: 'attack', mult: 1.0, resource: { type: 'combo', cost: 3, scalePerPoint: 0.35 } } },
+  { id: 'mnk_skill_dragon', classId: 'monk', name: 'Coup du Dragon', icon: '🐉', desc: 'Compétence : dégâts croissants avec le Combo (min. 3 points, consomme tout). À 5/5 Combo : étourdit le monstre (passe son prochain tour).', maxRank: 1, requires: ['mnk_chi'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_mnk_dragon', name: 'Coup du Dragon', icon: '🐉', desc: 'Consomme tout ton Combo (min. 3) : dégâts croissants. À 5/5 Combo : point vital, le monstre est étourdi 1 tour.', cooldownMs: 3_000, type: 'attack', mult: 1.0, resource: { type: 'combo', cost: 3, scalePerPoint: 0.35 } } },
 
   // --- Extensions d'arbre de base (profondeur : forcent la spécialisation) ---
   { id: 'w_might', classId: 'warrior', name: 'Puissance', icon: '💪', desc: '+5% ATK par rang.', maxRank: 3, requires: ['w_armor'], pos: { x: 0, y: 1 }, perRank: { atkPct: 0.05 } },

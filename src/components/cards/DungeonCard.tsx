@@ -8,7 +8,7 @@ import { auraColor } from '../../game/prestige';
 import ItemIcon from '../ItemIcon';
 import { playSound } from '../../game/sound';
 import { deriveStats, applyBonuses, grantXp, addItem, luckyDropMult } from '../../game/player';
-import { talentMods, getAllActiveSkills } from '../../game/talents';
+import { talentMods, getAllActiveSkills, classResourceType, RESOURCE_INFO } from '../../game/talents';
 import { activeSetProc } from '../../game/sets';
 import { addQuestMetric } from '../../game/quests';
 import { listenTeams, setTeamDungeon, type Team } from '../../firebase/groupsService';
@@ -461,6 +461,27 @@ export default function DungeonCard() {
           <div className="text-xs text-slate-400 mt-1">{Math.round(m.hp)} / {m.maxHp}</div>
         </div>
 
+        {/* Ressource d'archétype (Rage/Combo/Mana/...) : voir classResourceType. */}
+        {(() => {
+          const resourceType = classResourceType(p.classId);
+          if (!resourceType) return null;
+          const info = RESOURCE_INFO[resourceType];
+          const resourceMax = resourceType === 'combo' ? 5 : 100;
+          const pool = me.resourcePool ?? 0;
+          const pct = Math.max(0, Math.min(100, (pool / resourceMax) * 100));
+          return (
+            <div className="rounded-lg bg-black/25 px-3 py-1.5">
+              <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                <span>{info.icon} {info.name}</span>
+                <span className="tabular-nums">{pool}/{resourceMax}</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded bg-black/40">
+                <div className="h-1.5 rounded transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: info.color }} />
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Players List */}
         <div className="grid grid-cols-2 gap-2">
           {Object.values(session.players).map(pl => {
@@ -524,15 +545,21 @@ export default function DungeonCard() {
               <button onClick={() => act('attack')} className="col-span-1 rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
               {getAllActiveSkills().filter(s => p.equippedSkills.includes(s.id)).map(skill => {
                 const cd = me.skillCds?.[skill.id] || 0;
+                const pool = me.resourcePool ?? 0;
+                const lacksResource = !!skill.resource && pool < skill.resource.cost;
+                const label = skill.resource ? `${RESOURCE_INFO[skill.resource.type]?.name ?? ''} ${skill.resource.cost}` : null;
                 return (
                   <button
                     key={skill.id}
-                    onClick={() => act(skill.id as any)}
+                    onClick={() => {
+                      if (lacksResource) return toast(`Pas assez de ${RESOURCE_INFO[skill.resource!.type]?.name ?? 'ressource'} (${pool}/${skill.resource!.cost}).`, 'bad');
+                      act(skill.id as any);
+                    }}
                     disabled={cd > 0}
                     title={skill.desc}
-                    className="col-span-1 rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40"
+                    className={`col-span-1 rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40 ${lacksResource ? 'opacity-60' : ''}`}
                   >
-                    {cd > 0 ? `${skill.icon} ${skill.name} (${cd})` : `${skill.icon} ${skill.name}`}
+                    {cd > 0 ? `${skill.icon} ${skill.name} (${cd})` : label ? `${skill.icon} ${skill.name} (${label})` : `${skill.icon} ${skill.name}`}
                   </button>
                 );
               })}

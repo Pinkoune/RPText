@@ -176,7 +176,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     base: { maxHp: 120, atk: 12, def: 7 },
     growth: { maxHp: 18, atk: 6, def: 1 }, // DEF +2→+1 (moine = DPS soigneur, pas tank)
     parent: 'healer',
-    playstyle: 'Le plus offensif des Soigneurs, un vrai DPS déguisé, et le second à jouer sur du Combo plutôt qu\'un cooldown : chaque coup de Poing de fer (×1.8) charge 1 point de Combo (max 5), Coup du Dragon consomme tout le combo (min. 3) pour des dégâts croissants. Chi donne du vol de vie (se soigne en tapant, pas via un sort), et Zenith ajoute encore de la régén passive en fin d\'arbre. Pas de bouton de soin dédié comme les autres Soigneurs — sa survie vient entièrement de l\'agressivité (vol de vie + régén), pas d\'un sort de soin.',
+    playstyle: 'Le plus offensif des Soigneurs, un vrai DPS déguisé, et le second à jouer sur du Combo plutôt qu\'un cooldown : chaque coup de Poing de fer (×1.8) charge 1 point de Combo (max 5), Coup du Dragon consomme tout le combo (min. 3) pour des dégâts croissants — et lancé à Combo PLEIN (5/5), il frappe un point vital qui étourdit le monstre (passe son tour), une vraie récompense à monter le combo au max plutôt que de le dépenser dès que possible. Chi donne du vol de vie (se soigne en tapant, pas via un sort), et Zenith ajoute encore de la régén passive en fin d\'arbre. Pas de bouton de soin dédié comme les autres Soigneurs — sa survie vient entièrement de l\'agressivité (vol de vie + régén), pas d\'un sort de soin.',
   },
 };
 

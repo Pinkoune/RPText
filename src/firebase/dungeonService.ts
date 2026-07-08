@@ -2,7 +2,7 @@ import { ref, onValue, runTransaction, remove, set } from 'firebase/database';
 import { rtdb } from './config';
 import type { ClassId } from '../game/types';
 import type { CombatMods } from '../game/talents';
-import { getAllActiveSkills } from '../game/talents';
+import { getAllActiveSkills, classResourceType } from '../game/talents';
 import { DUNGEONS, type DungeonDef } from '../game/dungeons';
 import { getElementMult, getDmgTypeMult } from '../game/combat';
 import type { SetProc } from '../game/sets';
@@ -29,6 +29,12 @@ export interface DungeonPlayer {
   setProc?: SetProc | null;
   /** Bouclier temporaire posé par un proc de set (absorbe les dégâts avant les PV). */
   shield?: number;
+  /** Ressource d'archétype (rage/combo/mana/...), voir `classResourceType`. Manquait totalement
+   *  en donjon avant : les compétences à ressource (ex: Enfer du Pyromancien) n'étaient gatées
+   *  QUE par le cooldown (~1 tour vu le plancher anti-spam de 3s), donc castables en illimité. */
+  resourcePool?: number;
+  /** Dernière action jouée (Barde : Tempo se charge en alternant les actions). */
+  lastActionType?: string | null;
 }
 
 export type DungeonAffix = 'vampiric' | 'armored' | 'agile' | 'none';
@@ -304,6 +310,26 @@ function advanceTurn(cur: DungeonSession) {
 function executeMonsterTurn(cur: DungeonSession) {
   const m = cur.monster!;
 
+  // Réaction d'un joueur qui encaisse un coup (dégâts finaux, post-bouclier) :
+  // charge Rage (Berserker)/Ferveur (Paladin, sur absorption) et applique les
+  // Épines (Druide) — manquaient totalement en donjon, `mods.thorns` n'était
+  // jamais lu ici (le passif ne faisait donc rien en multijoueur).
+  function reactToHit(target: DungeonPlayer, dmg: number, absorbed: number) {
+    const rt = classResourceType(target.classId);
+    if (rt === 'rage' && dmg > 0) {
+      const gain = Math.min(25, Math.round((dmg / (target.maxHp || 1)) * 100 * 0.4));
+      target.resourcePool = Math.min(100, (target.resourcePool ?? 0) + gain);
+    } else if (rt === 'zeal' && absorbed > 0) {
+      target.resourcePool = Math.min(100, (target.resourcePool ?? 0) + 20);
+    }
+    if ((target.mods?.thorns || 0) > 0 && dmg > 0) {
+      const thornsDmg = Math.max(1, Math.round(dmg * target.mods.thorns));
+      m.hp = Math.max(0, (m.hp || 0) - thornsDmg);
+      cur.log.push({ text: `🌿 Épines : ${m.name} subit ${thornsDmg} dégâts en retour !`, side: 'you' });
+      if (rt === 'sap') target.resourcePool = Math.min(100, (target.resourcePool ?? 0) + 20);
+    }
+  }
+
   if (m.staggered) {
     m.staggered = false;
     cur.log.push({ text: `🌀 ${m.name} est étourdi et passe son tour !`, side: 'info' });
@@ -351,12 +377,14 @@ function executeMonsterTurn(cur: DungeonSession) {
       const dmgRed = target.mods?.dmgReduction || 0;
       let dmg = Math.max(1, Math.round(m.atk * 2.3 - tDef * 0.6));
       dmg = Math.max(1, Math.round(dmg * (1 - dmgRed)));
+      let absorbed = 0;
       if ((target.shield || 0) > 0) {
-        const absorbed = Math.min(target.shield!, dmg);
+        absorbed = Math.min(target.shield!, dmg);
         target.shield = target.shield! - absorbed;
         dmg -= absorbed;
         if (absorbed > 0) cur.log.push({ text: `🛡️ Le bouclier de ${target.name} absorbe ${absorbed} dégâts.`, side: 'info' });
       }
+      reactToHit(target, dmg, absorbed);
       target.hp = (target.hp || 0) - dmg;
       if (dmg > 0) cur.log.push({ text: `${m.name} écrase ${target.name} pour ${dmg} dégâts !`, side: 'enemy' });
       if (target.hp <= 0) { target.hp = 0; target.isDead = true; cur.log.push({ text: `💀 ${target.name} est K.O. !`, side: 'enemy' }); }
@@ -412,12 +440,14 @@ function executeMonsterTurn(cur: DungeonSession) {
       cur.log.push({ text: `L'attaque de ${m.name} sur ${target.name} échoue (Esquive) !`, side: 'info' });
     } else {
       // Bouclier posé par un proc de set : absorbe avant les PV.
+      let absorbed = 0;
       if ((target.shield || 0) > 0) {
-        const absorbed = Math.min(target.shield!, dmg);
+        absorbed = Math.min(target.shield!, dmg);
         target.shield = target.shield! - absorbed;
         dmg -= absorbed;
         if (absorbed > 0) cur.log.push({ text: `🛡️ Le bouclier de ${target.name} absorbe ${absorbed} dégâts.`, side: 'info' });
       }
+      reactToHit(target, dmg, absorbed);
       target.hp = (target.hp || 0) - dmg;
       if (m.affix === 'vampiric') totalHeal += Math.round(dmg * 0.2);
       if (dmg > 0) cur.log.push({ text: `${m.name} attaque ${target.name} et inflige ${dmg} dégâts !`, side: 'enemy' });
@@ -476,6 +506,13 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
     const m = cur.monster!;
     
     p.skillCds = p.skillCds || {};
+    p.resourcePool = p.resourcePool ?? 0;
+    const resourceType = classResourceType(p.classId);
+    const resourceMax = resourceType === 'combo' ? 5 : 100;
+    let dealtHit = false;
+    let critLanded = false;
+    let healedAmount = 0;
+    let abilityUsed = false;
 
     if (p.isDead) {
       advanceTurn(cur);
@@ -521,22 +558,44 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
       if ((p.skillCds[skillId] || 0) > 0) return cur; // Skill is on cooldown
 
       const skill = getAllActiveSkills().find(s => s.id === skillId);
+      // Ressource d'archétype : sans ça, une compétence comme Enfer (Pyromancien) n'était
+      // gatée QUE par le cooldown (~1 tour vu le plancher anti-spam de 3s) → castable
+      // à chaque tour. Même logique de coût/scaling qu'en chasse (combat.ts).
+      if (skill?.resource && (p.resourcePool ?? 0) < skill.resource.cost) return cur;
+
       if (skill) {
         p.skillCds[skillId] = Math.max(1, Math.ceil(skill.cooldownMs / 4000));
+        abilityUsed = true;
+        let effMult = skill.mult ?? 0;
+        let effHealFrac = skill.healFrac ?? 0;
+        if (skill.resource) {
+          const pool = p.resourcePool ?? 0;
+          let resourceSpent = skill.resource.cost;
+          if (skill.resource.type === 'combo') {
+            effMult = (skill.mult ?? 0) + (skill.resource.scalePerPoint ?? 0) * pool;
+            resourceSpent = pool;
+          } else if (skill.resource.type === 'grace') {
+            effHealFrac = (skill.healFrac ?? 0) + (skill.resource.scalePerPoint ?? 0) * pool;
+            resourceSpent = pool;
+          }
+          p.resourcePool = Math.max(0, pool - resourceSpent);
+        }
         if (skill.type === 'attack' || skill.type === 'shield' || skill.type === 'heal' || skill.type === 'buff') {
-          if (skill.mult) {
-            const dmg = Math.round(Math.max(1, finalAtk * skill.mult - effMDef) * elemMult);
+          if (effMult) {
+            const dmg = Math.round(Math.max(1, finalAtk * effMult - effMDef) * elemMult);
             m.hp = (m.hp || 0) - dmg;
             maybeInterrupt(dmg);
+            dealtHit = true;
             if (p.classId === 'warrior' || p.classId === 'paladin') {
               m.provokedBy = p.uid;
               m.provokeTurns = 2;
             }
             cur.log.push({ text: `✨ ${p.name} utilise ${skill.name} : ${dmg} dégâts !`, side: 'you' });
           }
-          if (skill.healFrac) {
+          if (effHealFrac) {
             const pMaxHp = p.maxHp || 100;
-            const heal = Math.round(pAtk * 1.0 + pMaxHp * skill.healFrac);
+            const heal = Math.round(pAtk * 1.0 + pMaxHp * effHealFrac);
+            healedAmount += heal;
             // AoE Heal for Healer/Dawn Priest/Druid
             if (p.classId === 'healer' || p.classId === 'dawn_priest' || p.classId === 'druid') {
               Object.values(cur.players).forEach(ally => {
@@ -633,11 +692,12 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
         let dmg = Math.round(Math.max(1, (finalAtk - 2 + Math.random() * 4) - effMDef) * elemMult) + flatDmg;
         const pMaxHp = p.maxHp || 100;
         if ((p.hp || 0) < pMaxHp * 0.3 && berserkBonus > 0) dmg = Math.round(dmg * (1 + berserkBonus));
-        if (Math.random() < crit) dmg *= 2;
+        if (Math.random() < crit) { dmg *= 2; critLanded = true; }
         dmg = Math.round(dmg);
         totalDmg += dmg;
         m.hp = (m.hp || 0) - dmg;
         maybeInterrupt(dmg);
+        dealtHit = true;
       }
       cur.log.push({ text: `⚔️ ${p.name} attaque ${m.name} pour ${totalDmg} dégâts${hits > 1 ? ' (Tir double!)' : ''}.`, side: 'you' });
       
@@ -656,6 +716,20 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
       for (const sId of Object.keys(p.skillCds)) {
         if (p.skillCds[sId] > 0) p.skillCds[sId] -= 1;
       }
+    }
+
+    // Gain de ressource d'archétype (même formule qu'en chasse, combat.ts).
+    if (action !== 'timeout' && !p.isDead) {
+      let resourceGain = 0;
+      if (resourceType === 'combo' && dealtHit) resourceGain = 1;
+      else if (resourceType === 'mana') resourceGain = 15;
+      else if (resourceType === 'instinct' && critLanded) resourceGain = 30;
+      else if (resourceType === 'corruption' && dealtHit && (p.hp || 0) < (p.maxHp || 1) * 0.3) resourceGain = 35;
+      else if (resourceType === 'overcharge' && abilityUsed) resourceGain = 25;
+      else if (resourceType === 'grace' && healedAmount > 0) resourceGain = Math.round(healedAmount * 0.15);
+      else if (resourceType === 'tempo' && p.lastActionType != null && p.lastActionType !== action) resourceGain = 30;
+      p.resourcePool = Math.max(0, Math.min(resourceMax, (p.resourcePool ?? 0) + resourceGain));
+      p.lastActionType = action;
     }
 
     if (p.mods.regen > 0 && p.hp > 0 && p.hp < p.maxHp) {

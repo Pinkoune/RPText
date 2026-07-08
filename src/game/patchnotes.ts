@@ -18,6 +18,33 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'dungeon-resource-fix-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '🐛 Correction : les compétences à ressource étaient castables en illimité en donjon',
+        items: [
+          'Depuis l\'ajout des ressources d\'archétype (Rage, Combo, Mana, Corruption, Ferveur, Tempo, Surcharge, Traque, Grâce, Sève), le donjon multijoueur n\'avait jamais été branché dessus : les compétences comme Enfer (Pyromancien) n\'étaient gatées QUE par le cooldown de base (~1 tour), donc castables à chaque tour sans aucune restriction de ressource.',
+          'La jauge est maintenant suivie et affichée en donjon comme en chasse, avec les mêmes conditions de charge (encaisser des coups pour la Rage, toucher pour le Combo, régén passive pour le Mana, etc.) et de dépense.',
+          'Corrigé au passage : les Épines du Druide (renvoi de dégâts) ne faisaient jamais rien en donjon, `thorns` n\'était jamais lu dans le calcul des dégâts encaissés.',
+        ],
+      },
+    ],
+  },
+  {
+    version: 'monk-stun-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '👊 Moine — Coup du Dragon frappe un point vital',
+        items: [
+          'Lancé à Combo PLEIN (5/5), Coup du Dragon étourdit le monstre en plus de ses dégâts croissants : il passe son tour suivant. Récompense enfin le fait de monter le combo au maximum plutôt que de le dépenser dès 3 points (le minimum requis).',
+          'Nouvel effet « étourdissement » dans le moteur de combat (chasse). Le monstre ne peut ni attaquer ni esquiver pendant ce tour.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'resource-combo-v1',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [
