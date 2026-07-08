@@ -110,7 +110,9 @@ export default function PresenceTracker() {
   }, [teams, player?.uid]);
 
   // Notification globale quand un joueur ouvre un groupe de donjon (hors raid,
-  // qui a déjà sa propre bannière). Désactivable dans DungeonCard (file d'attente).
+  // qui a déjà sa propre bannière). Diffusée 10s après la création par l'hôte
+  // (annulable côté DungeonCard), et affichée seulement aux joueurs qui ont le
+  // niveau requis pour ce donjon précis.
   // Skip le tout premier snapshot (rediffusion de l'ancienne ouverture au chargement),
   // et n'affiche rien pour l'hôte lui-même (déjà dans son propre lobby).
   const lastDungeonOpenId = useRef<string | null>(null);
@@ -127,7 +129,8 @@ export default function PresenceTracker() {
       if (b.id === lastDungeonOpenId.current) return;
       lastDungeonOpenId.current = b.id;
       if (b.hostUid === player.uid) return;
-      if (useGame.getState().player?.dungeonOpenNotifs === false) return;
+      const me = useGame.getState().player;
+      if (!me || me.level < b.minLevel) return;
       useGame.getState().toast(`🏰 ${b.hostName} a ouvert un groupe : ${b.dungeonName} !`, 'good', 6000);
     });
     return () => unsub();

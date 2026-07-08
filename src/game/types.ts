@@ -217,8 +217,6 @@ export interface PlayerState {
   classChangeTokens?: number;
   /** Temps de jeu cumulé (ms), compté seulement onglet visible (PresenceTracker). */
   playtimeMs?: number;
-  /** Notification globale quand un joueur ouvre un groupe de donjon. Défaut activé (undefined = true). */
-  dungeonOpenNotifs?: boolean;
   /** Expédition de familier en cours : fin (ms) + biome ciblé. */
   expeditionEndsAt?: number;
   expeditionBiome?: BiomeId;

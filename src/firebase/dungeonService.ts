@@ -103,13 +103,15 @@ export interface DungeonOpenBroadcast {
   hostUid: string;
   hostName: string;
   dungeonName: string;
+  /** Niveau requis du donjon — la notif n'est affichée qu'aux joueurs qui l'atteignent. */
+  minLevel: number;
   ts: number;
 }
 
 /** Diffuse l'ouverture d'un groupe de donjon (hors raid, déjà couvert par sa propre bannière). */
-export async function broadcastDungeonOpen(hostUid: string, hostName: string, dungeonName: string): Promise<void> {
+export async function broadcastDungeonOpen(hostUid: string, hostName: string, dungeonName: string, minLevel: number): Promise<void> {
   if (!rtdb) return;
-  const b: DungeonOpenBroadcast = { id: `${hostUid}-${Date.now()}`, hostUid, hostName, dungeonName, ts: Date.now() };
+  const b: DungeonOpenBroadcast = { id: `${hostUid}-${Date.now()}`, hostUid, hostName, dungeonName, minLevel, ts: Date.now() };
   await set(ref(rtdb, 'world/dungeonOpen'), b);
 }
 

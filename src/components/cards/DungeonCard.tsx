@@ -37,6 +37,18 @@ export default function DungeonCard() {
   const [, tick] = useState(0);
   const logEnd = useRef<HTMLDivElement>(null);
 
+  // Notification globale d'ouverture de groupe : diffusée 10s après la création
+  // (le temps que l'hôte annule s'il s'est trompé), et seulement aux joueurs qui
+  // ont le niveau requis pour CE donjon (filtré côté réception, voir PresenceTracker).
+  const [pendingNotify, setPendingNotify] = useState<{ at: number; hostUid: string; hostName: string; dungeonName: string; minLevel: number } | null>(null);
+  useEffect(() => {
+    if (!pendingNotify) return;
+    if (Date.now() >= pendingNotify.at) {
+      broadcastDungeonOpen(pendingNotify.hostUid, pendingNotify.hostName, pendingNotify.dungeonName, pendingNotify.minLevel);
+      setPendingNotify(null);
+    }
+  });
+
   useEffect(() => listenTeams(setTeams), []);
   useEffect(() => listenAllDungeons(setAllSessions), []);
 
@@ -217,7 +229,7 @@ export default function DungeonCard() {
       const id = await createDungeonLobby(p!.uid, p!.name, p!.classId, def.id, stats, mods, p!.level, p!.prestigeAura, p!.auraColorOn, activeSetProc(p!));
       mutate(d => { d.dungeonSessionId = id; });
       if (myTeam) await setTeamDungeon(myTeam.id, id);
-      broadcastDungeonOpen(p!.uid, p!.name, def.name);
+      setPendingNotify({ at: Date.now() + 10_000, hostUid: p!.uid, hostName: p!.name, dungeonName: def.name, minLevel: def.minLevel });
     } catch (e: any) {
       toast(e.message, 'bad');
     }
@@ -247,6 +259,7 @@ export default function DungeonCard() {
       await leaveDungeon(session.id, p!.uid);
       if (myTeam && session.host === p!.uid) await setTeamDungeon(myTeam.id, null);
     }
+    setPendingNotify(null);
     mutate(d => { d.dungeonSessionId = null; });
     // Quitter un raid ferme la carte (ne pas retomber sur la liste des donjons).
     if (closeCard) {
@@ -344,6 +357,17 @@ export default function DungeonCard() {
               {raidLeft > 0 ? `${rm}:${rs.toString().padStart(2, '0')}` : 'Le raid commence !'}
             </div>
             <div className="text-[11px] text-amber-200/60">{raidLeft > 0 ? 'Démarrage automatique' : ''}</div>
+          </div>
+        )}
+
+        {amHost && !isRaid && pendingNotify && (
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs">
+            <span className="text-sky-200">
+              🔔 Notification aux joueurs Nv.{pendingNotify.minLevel}+ dans {Math.max(0, Math.ceil((pendingNotify.at - Date.now()) / 1000))}s...
+            </span>
+            <button onClick={() => setPendingNotify(null)} className="shrink-0 rounded bg-rose-500/30 px-2 py-1 font-semibold hover:bg-rose-500/50">
+              Annuler
+            </button>
           </div>
         )}
 
@@ -584,16 +608,6 @@ export default function DungeonCard() {
       <p className="text-xs text-slate-400">
         Donjons multijoueurs : créez un groupe ou jouez en solo. Les combats se déroulent au tour par tour !
       </p>
-
-      <label className="flex items-center gap-2 text-[11px] text-slate-400 select-none">
-        <input
-          type="checkbox"
-          checked={p.dungeonOpenNotifs !== false}
-          onChange={(e) => mutate((d) => { d.dungeonOpenNotifs = e.target.checked; })}
-          className="accent-sky-500"
-        />
-        🔔 Me notifier quand un joueur ouvre un groupe de donjon
-      </label>
 
       {/* Lobbies ouverts */}
       {allSessions.filter(s => s.state === 'lobby' && s.id !== p.dungeonSessionId).length > 0 && (
