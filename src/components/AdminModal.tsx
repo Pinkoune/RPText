@@ -3,6 +3,7 @@ import { useGame } from '../store/gameStore';
 import type { PlayerState } from '../game/types';
 import { getAllPlayers, updatePlayerAdmin, wipeAllChats, wipeEndlessScores, resetPvpSeason, triggerFullWipe, cleanupOrphanedPlayers } from '../firebase/adminService';
 import { broadcastRaid } from '../firebase/raidService';
+import { listenGuilds, leaveGuild, adminForceJoinGuild, GUILD_MAX, type Guild } from '../firebase/groupsService';
 import { ITEMS, getItem } from '../game/items';
 import { farmProgress } from '../game/gathering';
 import { getCraftLevel } from '../game/crafting';
@@ -50,6 +51,8 @@ export function AdminModal() {
   const [giveItemQty, setGiveItemQty] = useState(1);
   const [giveItemSearch, setGiveItemSearch] = useState('');
   const [pickClassId, setPickClassId] = useState<ClassId>('warrior');
+  const [guilds, setGuilds] = useState<Guild[]>([]);
+  const [pickGuildId, setPickGuildId] = useState<string>('');
 
   const sortedItems = useMemo(() => {
     return Object.values(ITEMS).sort((a, b) => a.name.localeCompare(b.name));
@@ -64,6 +67,8 @@ export function AdminModal() {
   useEffect(() => {
     loadPlayers();
   }, []);
+
+  useEffect(() => listenGuilds(setGuilds), []);
 
   async function loadPlayers() {
     setLoading(true);
@@ -132,6 +137,26 @@ export function AdminModal() {
       inventory: newInv,
     });
     toast(`Classe changée en ${CLASSES[newClassId].name}.`, 'good');
+  }
+
+  /** Ajoute de force le joueur édité à une guilde (ignore le cap, pas de candidature). Le retire d'abord de son ancienne guilde s'il en a une. */
+  async function forceJoinGuild(guildId: string) {
+    if (!editingPlayer || !guildId) return;
+    const target = guilds.find((g) => g.id === guildId);
+    if (!target) return;
+    if (!confirm(`Ajouter de force ${editingPlayer.name} à la guilde « ${target.name} » ?`)) return;
+    try {
+      const current = guilds.find((g) => editingPlayer.uid in (g.members ?? {}));
+      if (current && current.id !== guildId) await leaveGuild(current.id, editingPlayer.uid);
+      await adminForceJoinGuild(guildId, {
+        uid: editingPlayer.uid, name: editingPlayer.name, level: editingPlayer.level,
+        title: editingPlayer.title ?? null, aura: editingPlayer.prestigeAura ?? null, auraColorOn: editingPlayer.auraColorOn ?? true,
+      });
+      await write({ guildId });
+      toast(`${editingPlayer.name} ajouté à ${target.name}.`, 'good');
+    } catch (e: any) {
+      toast('Erreur guilde: ' + e.message, 'bad');
+    }
   }
 
   async function handleSave() {
@@ -373,6 +398,30 @@ export function AdminModal() {
                 </select>
                 <button className="px-3 py-2 bg-indigo-800 hover:bg-indigo-700 text-indigo-100 rounded whitespace-nowrap" onClick={() => changeClass(pickClassId)}>
                   Changer
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-green-500/30 pt-4">
+              <h3 className="text-green-300 font-bold mb-2">Rejoindre une guilde de force</h3>
+              <p className="text-[11px] text-gray-500 mb-2">Ignore le cap ({GUILD_MAX} membres) et la candidature. Le retire d'abord de son ancienne guilde s'il en a une.</p>
+              <div className="flex gap-2">
+                <select
+                  value={pickGuildId}
+                  onChange={(e) => setPickGuildId(e.target.value)}
+                  className="flex-1 bg-gray-900 border border-green-500/30 p-2 text-white rounded"
+                >
+                  <option value="">— Choisir une guilde —</option>
+                  {[...guilds].sort((a, b) => a.name.localeCompare(b.name)).map((g) => (
+                    <option key={g.id} value={g.id}>[{g.tag}] {g.name} · {Object.keys(g.members ?? {}).length} membres</option>
+                  ))}
+                </select>
+                <button
+                  disabled={!pickGuildId}
+                  className="px-3 py-2 bg-indigo-800 hover:bg-indigo-700 text-indigo-100 rounded whitespace-nowrap disabled:opacity-40"
+                  onClick={() => forceJoinGuild(pickGuildId)}
+                >
+                  Ajouter
                 </button>
               </div>
             </div>

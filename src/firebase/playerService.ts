@@ -117,14 +117,18 @@ export async function savePlayer(p: PlayerState): Promise<void> {
   if (p.guildId) {
     const sig = `${p.guildId}:${p.level}:${p.title ?? ''}:${p.name}:${p.prestigeAura ?? ''}:${p.auraColorOn ?? true}`;
     if (lastGuildSyncSig.get(p.uid) !== sig) {
-      lastGuildSyncSig.set(p.uid, sig);
+      // Ne marque le sync "fait" qu'APRÈS succès — avant, la signature était posée
+      // avant même l'écriture (fire-and-forget), donc un échec silencieux (offline,
+      // race sur le doc guilde...) figeait le membre pour de bon : plus aucune
+      // relance tant que level/titre/nom/aura ne rechangeaient pas, alors que le
+      // classement (setDoc inconditionnel juste au-dessus) restait toujours à jour.
       void syncGuildMember(p.guildId, p.uid, {
         name: p.name,
         level: p.level,
         title: p.title ?? null,
         aura: p.prestigeAura ?? null,
         auraColorOn: p.auraColorOn ?? true,
-      });
+      }).then(() => { lastGuildSyncSig.set(p.uid, sig); });
     }
   }
 }

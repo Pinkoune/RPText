@@ -167,6 +167,11 @@ export default function ProfileCard() {
         </div>
       </div>
 
+      <div className="flex items-center justify-between rounded-lg bg-black/25 px-3 py-2 text-xs text-slate-400">
+        <span>⏱️ Temps de jeu</span>
+        <span className="tabular-nums text-slate-300">{fmtPlaytime(p.playtimeMs ?? 0)}</span>
+      </div>
+
       <div className="grid grid-cols-4 gap-2">
         <Stat label="PV" value={`${stats.hp}/${stats.maxHp}`} />
         <Stat label="ATK" value={stats.atk} />
@@ -179,10 +184,6 @@ export default function ProfileCard() {
         <Stat label="Morts" value={p.deaths} />
         <Stat label="K/D" value={kd} />
         <Stat label="Donjons" value={dungeonsCleared} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-2">
-        <Stat label="⏱️ Temps de jeu" value={fmtPlaytime(p.playtimeMs ?? 0)} />
       </div>
 
       <div className="grid grid-cols-4 gap-2">

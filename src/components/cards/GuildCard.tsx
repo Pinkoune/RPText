@@ -5,7 +5,7 @@ import { talentMods } from '../../game/talents';
 import { auraColor } from '../../game/prestige';
 import {
   listenGuilds, createGuild, applyGuild, acceptApplication, rejectApplication, leaveGuild, contributeGuild, guildLevel,
-  attackGuildBoss, guildBossWeekId, getGuildBossCdMult, hasGuildBossLootBonus, GUILD_PERK_TIERS,
+  attackGuildBoss, guildBossWeekId, getGuildBossCdMult, hasGuildBossLootBonus, getGuildBonus, GUILD_PERK_TIERS,
   socialEnabled, GUILD_MAX, GUILD_CREATE_COST, type Guild,
 } from '../../firebase/groupsService';
 import { item } from '../../game/items';
@@ -118,7 +118,7 @@ export default function GuildCard() {
           </div>
           <div className="mt-1.5 h-2 rounded bg-black/40"><div className="h-2 rounded bg-amber-400" style={{ width: `${(lvl.into / lvl.need) * 100}%` }} /></div>
           <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
-            <span className={`rounded px-1.5 py-0.5 ${lvl.level >= 1 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/40 text-slate-500'}`}>+{lvl.level * 2}% XP</span>
+            <span className={`rounded px-1.5 py-0.5 ${lvl.level >= 1 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/40 text-slate-500'}`}>+{Math.round((getGuildBonus(myGuild.id) - 1) * 100)}% XP</span>
             <span className={`rounded px-1.5 py-0.5 ${lvl.level >= GUILD_PERK_TIERS.gold ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/40 text-slate-500'}`}>Nv.{GUILD_PERK_TIERS.gold} : Or aussi bonus</span>
             <span className={`rounded px-1.5 py-0.5 ${lvl.level >= GUILD_PERK_TIERS.bossLoot ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/40 text-slate-500'}`}>Nv.{GUILD_PERK_TIERS.bossLoot} : Loot boss bonus</span>
             <span className={`rounded px-1.5 py-0.5 ${lvl.level >= GUILD_PERK_TIERS.bossCd ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/40 text-slate-500'}`}>Nv.{GUILD_PERK_TIERS.bossCd} : CD boss -33%</span>

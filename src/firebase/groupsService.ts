@@ -177,6 +177,27 @@ export async function acceptApplication(guildId: string, targetUid: string): Pro
   });
 }
 
+/**
+ * Admin uniquement : ajoute de force un joueur à une guilde, en ignorant le
+ * cap (`GUILD_MAX`) et sans passer par une candidature. Nettoie aussi une
+ * éventuelle candidature en attente du joueur dans CETTE guilde (devenue
+ * inutile). Ne retire pas le joueur de son ancienne guilde — à faire
+ * séparément côté appelant (`leaveGuild`) s'il en a déjà une, l'appelant
+ * connaissant déjà la liste des guildes chargée pour l'admin.
+ */
+export async function adminForceJoinGuild(guildId: string, member: Member & { uid: string }): Promise<void> {
+  if (!db) throw new Error('offline');
+  const ref = doc(db, 'guilds', guildId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('introuvable');
+    tx.update(ref, {
+      [`members.${member.uid}`]: { name: member.name, level: member.level, title: member.title ?? null, aura: member.aura ?? null, auraColorOn: member.auraColorOn ?? true },
+      [`applications.${member.uid}`]: deleteField(),
+    });
+  });
+}
+
 export async function rejectApplication(guildId: string, targetUid: string): Promise<void> {
   if (!db) throw new Error('offline');
   const ref = doc(db, 'guilds', guildId);
@@ -308,18 +329,21 @@ export function listenGuilds(cb: (g: Guild[]) => void): () => void {
 /** Niveaux de guilde requis pour débloquer chaque palier de bonus/perk. */
 export const GUILD_PERK_TIERS = { gold: 3, bossLoot: 6, bossCd: 10 } as const;
 
-/** Renvoie le multiplicateur d'XP basé sur le niveau de la guilde (1.0 + 0.02 par niveau). */
+/** Niveau de guilde max pris en compte pour le bonus XP/Or (plafond +40%) — la contribution en or n'a plus de sens sans lui, un compte pouvait pousser le niveau à 100+ (aucune limite d'XP contribuable) et se retrouver avec un bonus à plusieurs centaines de %. */
+const GUILD_BONUS_LEVEL_CAP = 20;
+
+/** Renvoie le multiplicateur d'XP basé sur le niveau de la guilde (1.0 + 0.02 par niveau, plafonné). */
 export function getGuildBonus(guildId: string | null): number {
   if (!guildId || !cachedGuilds[guildId]) return 1.0;
   const xp = cachedGuilds[guildId].xp ?? 0;
-  const lvl = guildLevel(xp).level;
+  const lvl = Math.min(GUILD_BONUS_LEVEL_CAP, guildLevel(xp).level);
   return 1.0 + (lvl * 0.02);
 }
 
 /** Palier Nv.3 : le bonus de guilde s'étend aussi à l'Or (avant : XP uniquement). */
 export function getGuildGoldBonus(guildId: string | null): number {
   if (!guildId || !cachedGuilds[guildId]) return 1.0;
-  const lvl = guildLevel(cachedGuilds[guildId].xp ?? 0).level;
+  const lvl = Math.min(GUILD_BONUS_LEVEL_CAP, guildLevel(cachedGuilds[guildId].xp ?? 0).level);
   if (lvl < GUILD_PERK_TIERS.gold) return 1.0;
   return 1.0 + (lvl * 0.02);
 }
