@@ -69,11 +69,33 @@ export const TEAM_MAX = 4;
 export const GUILD_MAX = 30;
 export const GUILD_CREATE_COST = 500;
 
-/** Niveau de guilde : +1 tous les 1000 d'XP contribué. */
-export function guildLevel(xp: number): { level: number; into: number; need: number } {
-  const need = 1000;
+/** Niveau de guilde max — au-delà, l'XP contribuée est conservée (pas perdue) mais n'a plus d'effet. */
+export const GUILD_LEVEL_CAP = 20;
+const GUILD_XP_BASE = 1000;
+const GUILD_XP_GROWTH = 1.15;
+
+/** XP requise pour passer du niveau `level` au niveau `level+1` (courbe progressive, avant : 1000 fixe à vie). */
+function guildXpForLevel(level: number): number {
+  return Math.round(GUILD_XP_BASE * Math.pow(GUILD_XP_GROWTH, level - 1));
+}
+
+/**
+ * Niveau de guilde à partir de l'XP totale contribuée. Plafonné à `GUILD_LEVEL_CAP` :
+ * avant, un flat 1000xp/niveau sans plafond permettait de dump de l'or à l'infini
+ * pour un niveau (et un bonus XP/Or) délirant (constaté : niveau 183, +366% XP).
+ */
+export function guildLevel(xp: number): { level: number; into: number; need: number; capped: boolean } {
   const x = Number.isFinite(xp) && xp > 0 ? xp : 0;
-  return { level: Math.floor(x / need) + 1, into: x % need, need };
+  let level = 1;
+  let rem = x;
+  while (level < GUILD_LEVEL_CAP) {
+    const need = guildXpForLevel(level);
+    if (rem < need) break;
+    rem -= need;
+    level++;
+  }
+  const capped = level >= GUILD_LEVEL_CAP;
+  return { level, into: capped ? 0 : rem, need: capped ? 0 : guildXpForLevel(level), capped };
 }
 
 // ─── Équipes ────────────────────────────────────────────────────────────────
@@ -329,21 +351,18 @@ export function listenGuilds(cb: (g: Guild[]) => void): () => void {
 /** Niveaux de guilde requis pour débloquer chaque palier de bonus/perk. */
 export const GUILD_PERK_TIERS = { gold: 3, bossLoot: 6, bossCd: 10 } as const;
 
-/** Niveau de guilde max pris en compte pour le bonus XP/Or (plafond +40%) — la contribution en or n'a plus de sens sans lui, un compte pouvait pousser le niveau à 100+ (aucune limite d'XP contribuable) et se retrouver avec un bonus à plusieurs centaines de %. */
-const GUILD_BONUS_LEVEL_CAP = 20;
-
-/** Renvoie le multiplicateur d'XP basé sur le niveau de la guilde (1.0 + 0.02 par niveau, plafonné). */
+/** Renvoie le multiplicateur d'XP basé sur le niveau de la guilde (1.0 + 0.02 par niveau, plafonné via `guildLevel`/`GUILD_LEVEL_CAP`, soit +40% max). */
 export function getGuildBonus(guildId: string | null): number {
   if (!guildId || !cachedGuilds[guildId]) return 1.0;
   const xp = cachedGuilds[guildId].xp ?? 0;
-  const lvl = Math.min(GUILD_BONUS_LEVEL_CAP, guildLevel(xp).level);
+  const lvl = guildLevel(xp).level;
   return 1.0 + (lvl * 0.02);
 }
 
 /** Palier Nv.3 : le bonus de guilde s'étend aussi à l'Or (avant : XP uniquement). */
 export function getGuildGoldBonus(guildId: string | null): number {
   if (!guildId || !cachedGuilds[guildId]) return 1.0;
-  const lvl = Math.min(GUILD_BONUS_LEVEL_CAP, guildLevel(cachedGuilds[guildId].xp ?? 0).level);
+  const lvl = guildLevel(cachedGuilds[guildId].xp ?? 0).level;
   if (lvl < GUILD_PERK_TIERS.gold) return 1.0;
   return 1.0 + (lvl * 0.02);
 }

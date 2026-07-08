@@ -114,9 +114,9 @@ export default function GuildCard() {
         <div className="rounded-xl bg-black/25 p-3">
           <div className="flex items-center justify-between text-sm">
             <span className="font-semibold">Niveau de guilde <span className="text-amber-300">{lvl.level}</span></span>
-            <span className="text-[10px] tabular-nums text-slate-500">{lvl.into}/{lvl.need}</span>
+            <span className="text-[10px] tabular-nums text-slate-500">{lvl.capped ? 'Niveau max' : `${lvl.into}/${lvl.need}`}</span>
           </div>
-          <div className="mt-1.5 h-2 rounded bg-black/40"><div className="h-2 rounded bg-amber-400" style={{ width: `${(lvl.into / lvl.need) * 100}%` }} /></div>
+          <div className="mt-1.5 h-2 rounded bg-black/40"><div className="h-2 rounded bg-amber-400" style={{ width: lvl.capped ? '100%' : `${(lvl.into / lvl.need) * 100}%` }} /></div>
           <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
             <span className={`rounded px-1.5 py-0.5 ${lvl.level >= 1 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/40 text-slate-500'}`}>+{Math.round((getGuildBonus(myGuild.id) - 1) * 100)}% XP</span>
             <span className={`rounded px-1.5 py-0.5 ${lvl.level >= GUILD_PERK_TIERS.gold ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/40 text-slate-500'}`}>Nv.{GUILD_PERK_TIERS.gold} : Or aussi bonus</span>
