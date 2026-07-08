@@ -8,6 +8,14 @@ import { item, RARITY_COLOR } from '../../game/items';
 import type { ClassId } from '../../game/types';
 import ItemIcon from '../ItemIcon';
 
+export function fmtPlaytime(ms: number): string {
+  const totalMin = Math.floor(ms / 60_000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m}min`;
+  return `${h}h${String(m).padStart(2, '0')}`;
+}
+
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-lg bg-black/25 px-2.5 py-1.5">
@@ -171,6 +179,10 @@ export default function ProfileCard() {
         <Stat label="Morts" value={p.deaths} />
         <Stat label="K/D" value={kd} />
         <Stat label="Donjons" value={dungeonsCleared} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-2">
+        <Stat label="⏱️ Temps de jeu" value={fmtPlaytime(p.playtimeMs ?? 0)} />
       </div>
 
       <div className="grid grid-cols-4 gap-2">

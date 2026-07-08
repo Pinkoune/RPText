@@ -39,6 +39,8 @@ export interface OnlinePlayer {
   level: number;
   /** Dernière activité (ms côté client). Sert à repérer les inactifs. */
   lastActive?: number;
+  /** Temps de jeu cumulé (ms) — diffusé via la présence, donc visible seulement en ligne. */
+  playtimeMs?: number;
 }
 
 /**
@@ -101,10 +103,10 @@ export function watchSeasonLadder(currentSeasonId: string, max: number, onChange
  */
 // Référence de présence du joueur courant, pour rafraîchir son activité.
 let myPresenceRef: ReturnType<typeof ref> | null = null;
-let myPresenceData: { uid: string; name: string; level: number } | null = null;
+let myPresenceData: { uid: string; name: string; level: number; playtimeMs?: number } | null = null;
 
 export function trackPresence(
-  me: { uid: string; name: string; level: number },
+  me: { uid: string; name: string; level: number; playtimeMs?: number },
   onChange: (players: OnlinePlayer[]) => void,
 ): () => void {
   if (!isFirebaseConfigured || !rtdb) {
@@ -132,5 +134,12 @@ export function trackPresence(
 /** Rafraîchit l'horodatage d'activité du joueur (appelé à chaque action). */
 export function touchPresence(): void {
   if (!myPresenceRef || !myPresenceData || !rtdb) return;
+  set(myPresenceRef, { ...myPresenceData, ts: serverTimestamp(), lastActive: Date.now() });
+}
+
+/** Met à jour le temps de jeu diffusé en présence (PresenceTracker, toutes les 30s). */
+export function updatePresencePlaytime(playtimeMs: number): void {
+  if (!myPresenceRef || !myPresenceData || !rtdb) return;
+  myPresenceData = { ...myPresenceData, playtimeMs };
   set(myPresenceRef, { ...myPresenceData, ts: serverTimestamp(), lastActive: Date.now() });
 }

@@ -2,6 +2,7 @@ import { useGame } from '../../store/gameStore';
 import { MONSTERS } from '../../game/monsters';
 import { farmProgress } from '../../game/gathering';
 import { getCraftLevel } from '../../game/crafting';
+import { fmtPlaytime } from './ProfileCard';
 
 export default function StatsCard() {
   const player = useGame((s) => s.player);
@@ -56,6 +57,10 @@ export default function StatsCard() {
 
       <div className="rounded bg-black/20 p-3">
         <h3 className="mb-2 font-bold text-white">🏆 Progression</h3>
+        <div className="flex justify-between">
+          <span>⏱️ Temps de jeu</span>
+          <span className="font-mono text-sky-300">{fmtPlaytime(player.playtimeMs ?? 0)}</span>
+        </div>
         <div className="flex justify-between">
           <span>Donjons complétés</span>
           <span className="font-mono">{dungeonClears}</span>

@@ -90,6 +90,7 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (p.pvpDuelSessionId === undefined) p.pvpDuelSessionId = null;
   if (p.prestigeLevel === undefined) p.prestigeLevel = 0;
   if (p.classChangeTokens === undefined) p.classChangeTokens = 0;
+  if (p.playtimeMs === undefined) p.playtimeMs = 0;
   if (p.cjWins == null) p.cjWins = 0;
   if (p.teamId === undefined) p.teamId = null;
   if (p.endlessBest === undefined) p.endlessBest = 0;

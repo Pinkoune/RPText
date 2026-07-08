@@ -61,7 +61,7 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
   // Joueurs en ligne (pour choisir un destinataire de DM).
   useEffect(() => {
     if (!p) return;
-    return trackPresence({ uid: p.uid, name: p.name, level: p.level }, setOnline);
+    return trackPresence({ uid: p.uid, name: p.name, level: p.level, playtimeMs: p.playtimeMs ?? 0 }, setOnline);
   }, [p?.uid, p?.name, p?.level]);
 
   // Fils de discussion privés dérivés de la boîte de réception.

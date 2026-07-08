@@ -8,6 +8,7 @@ import type { PlayerState } from '../game/types';
 import { deriveStats, migratePlayer } from '../game/player';
 import { auraColor } from '../game/prestige';
 import ItemIcon from './ItemIcon';
+import { fmtPlaytime } from './cards/ProfileCard';
 
 /** Fiche minimale nécessaire pour ouvrir la modale (ex: depuis un clic sur un pseudo en chat, sans avoir la ligne de classement complète). Le reste est comblé par `fetchPublicProfile` une fois chargé. */
 export type ProfileSeed = Partial<LeaderRow> & { uid: string; name: string };
@@ -84,10 +85,11 @@ export default function PlayerProfileModal({ row, onClose, onMessage }: { row: P
 
         {/* Infos complémentaires (dispo seulement une fois `full` chargé) */}
         {full && (
-          <div className="mt-2 grid grid-cols-3 gap-2 text-center text-sm">
+          <div className="mt-2 grid grid-cols-4 gap-2 text-center text-sm">
             <div className="rounded-lg bg-black/25 py-2"><div className="text-[10px] text-slate-400">💀 Morts</div><div className="font-bold">{full.deaths ?? 0}</div></div>
             <div className="rounded-lg bg-black/25 py-2"><div className="text-[10px] text-slate-400">🌌 Abysses</div><div className="font-bold">{full.endlessBest ?? 0}</div></div>
             <div className="rounded-lg bg-black/25 py-2"><div className="text-[10px] text-slate-400">🔥 Connexions</div><div className="font-bold">{full.loginStreak ?? 0}j</div></div>
+            <div className="rounded-lg bg-black/25 py-2"><div className="text-[10px] text-slate-400">⏱️ Temps de jeu</div><div className="font-bold">{fmtPlaytime(full.playtimeMs ?? 0)}</div></div>
           </div>
         )}
 

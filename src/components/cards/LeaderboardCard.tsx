@@ -24,7 +24,7 @@ export default function LeaderboardCard() {
     });
 
     if (p) {
-      unsubOnline = trackPresence({ uid: p.uid, name: p.name, level: p.level }, setOnline);
+      unsubOnline = trackPresence({ uid: p.uid, name: p.name, level: p.level, playtimeMs: p.playtimeMs ?? 0 }, setOnline);
     }
     
     return () => {

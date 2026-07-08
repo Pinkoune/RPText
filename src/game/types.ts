@@ -215,6 +215,8 @@ export interface PlayerState {
   ascensionCooldownUntil?: number;
   /** Jetons de changement de classe (gagnés au prestige), utilisables depuis le Profil. */
   classChangeTokens?: number;
+  /** Temps de jeu cumulé (ms), compté seulement onglet visible (PresenceTracker). */
+  playtimeMs?: number;
   /** Expédition de familier en cours : fin (ms) + biome ciblé. */
   expeditionEndsAt?: number;
   expeditionBiome?: BiomeId;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGame } from '../store/gameStore';
-import { trackPresence, touchPresence, type OnlinePlayer } from '../firebase/socialService';
+import { trackPresence, touchPresence, updatePresencePlaytime, type OnlinePlayer } from '../firebase/socialService';
 import { listenTeams, leaveTeam, transferTeamHost, listenGuilds, type Team, type Guild } from '../firebase/groupsService';
 
 const ACTIVITY_THROTTLE_MS = 20_000;
@@ -45,11 +45,29 @@ export default function PresenceTracker() {
     if (status !== 'ready' || !player) return;
     
     const unsub = trackPresence(
-      { uid: player.uid, name: player.name, level: player.level },
+      { uid: player.uid, name: player.name, level: player.level, playtimeMs: player.playtimeMs ?? 0 },
       setOnlinePlayers
     );
     return () => unsub();
   }, [status, player?.uid, player?.level, player?.name]);
+
+  // Temps de jeu : accumulé seulement onglet visible (comme la pause d'animations,
+  // #50), diffusé via la présence toutes les 30s pour que les autres joueurs le
+  // voient en ligne (LeaderboardCard/ChatCard écoutent déjà `presence/`).
+  const playtimeTick = useRef(Date.now());
+  useEffect(() => {
+    if (status !== 'ready' || !player) return;
+    playtimeTick.current = Date.now();
+    const id = setInterval(() => {
+      const now = Date.now();
+      const delta = now - playtimeTick.current;
+      playtimeTick.current = now;
+      if (document.hidden || delta <= 0 || delta > 120_000) return;
+      mutate((d) => { d.playtimeMs = (d.playtimeMs ?? 0) + delta; });
+      updatePresencePlaytime(useGame.getState().player?.playtimeMs ?? 0);
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [status, player?.uid]);
 
   // Activité "réelle" (clic/touche/scroll), indépendante des mutations d'état :
   // avant, seul `mutate()` rafraîchissait la présence, donc naviguer l'inventaire,
