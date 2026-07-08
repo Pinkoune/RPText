@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useGame } from '../store/gameStore';
 import { trackPresence, touchPresence, updatePresencePlaytime, type OnlinePlayer } from '../firebase/socialService';
 import { listenTeams, leaveTeam, transferTeamHost, listenGuilds, type Team, type Guild } from '../firebase/groupsService';
+import { listenDungeonOpenBroadcast } from '../firebase/dungeonService';
 
 const ACTIVITY_THROTTLE_MS = 20_000;
 
@@ -107,6 +108,30 @@ export default function PresenceTracker() {
       prevTeamMembers.current = {};
     }
   }, [teams, player?.uid]);
+
+  // Notification globale quand un joueur ouvre un groupe de donjon (hors raid,
+  // qui a déjà sa propre bannière). Désactivable dans DungeonCard (file d'attente).
+  // Skip le tout premier snapshot (rediffusion de l'ancienne ouverture au chargement),
+  // et n'affiche rien pour l'hôte lui-même (déjà dans son propre lobby).
+  const lastDungeonOpenId = useRef<string | null>(null);
+  const firstDungeonOpenSnap = useRef(true);
+  useEffect(() => {
+    if (status !== 'ready' || !player) return;
+    const unsub = listenDungeonOpenBroadcast((b) => {
+      if (!b) return;
+      if (firstDungeonOpenSnap.current) {
+        firstDungeonOpenSnap.current = false;
+        lastDungeonOpenId.current = b.id;
+        return;
+      }
+      if (b.id === lastDungeonOpenId.current) return;
+      lastDungeonOpenId.current = b.id;
+      if (b.hostUid === player.uid) return;
+      if (useGame.getState().player?.dungeonOpenNotifs === false) return;
+      useGame.getState().toast(`🏰 ${b.hostName} a ouvert un groupe : ${b.dungeonName} !`, 'good', 6000);
+    });
+    return () => unsub();
+  }, [status, player?.uid]);
 
   // Nettoyage automatique des équipes en fonction de la présence
   useEffect(() => {

@@ -14,7 +14,7 @@ import { addQuestMetric } from '../../game/quests';
 import { listenTeams, setTeamDungeon, type Team } from '../../firebase/groupsService';
 import {
   listenDungeon, listenAllDungeons, createDungeonLobby, joinDungeon, toggleReady, leaveDungeon,
-  startDungeon, submitDungeonAction, cleanupDungeon, type DungeonSession
+  startDungeon, submitDungeonAction, cleanupDungeon, broadcastDungeonOpen, type DungeonSession
 } from '../../firebase/dungeonService';
 
 const POTIONS = HP_CONSUMABLES;
@@ -217,6 +217,7 @@ export default function DungeonCard() {
       const id = await createDungeonLobby(p!.uid, p!.name, p!.classId, def.id, stats, mods, p!.level, p!.prestigeAura, p!.auraColorOn, activeSetProc(p!));
       mutate(d => { d.dungeonSessionId = id; });
       if (myTeam) await setTeamDungeon(myTeam.id, id);
+      broadcastDungeonOpen(p!.uid, p!.name, def.name);
     } catch (e: any) {
       toast(e.message, 'bad');
     }
@@ -583,6 +584,16 @@ export default function DungeonCard() {
       <p className="text-xs text-slate-400">
         Donjons multijoueurs : créez un groupe ou jouez en solo. Les combats se déroulent au tour par tour !
       </p>
+
+      <label className="flex items-center gap-2 text-[11px] text-slate-400 select-none">
+        <input
+          type="checkbox"
+          checked={p.dungeonOpenNotifs !== false}
+          onChange={(e) => mutate((d) => { d.dungeonOpenNotifs = e.target.checked; })}
+          className="accent-sky-500"
+        />
+        🔔 Me notifier quand un joueur ouvre un groupe de donjon
+      </label>
 
       {/* Lobbies ouverts */}
       {allSessions.filter(s => s.state === 'lobby' && s.id !== p.dungeonSessionId).length > 0 && (

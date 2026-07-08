@@ -1,4 +1,4 @@
-import { ref, onValue, runTransaction, remove } from 'firebase/database';
+import { ref, onValue, runTransaction, remove, set } from 'firebase/database';
 import { rtdb } from './config';
 import type { ClassId } from '../game/types';
 import type { CombatMods } from '../game/talents';
@@ -96,6 +96,27 @@ const ABILITY_CD = 4;
 export function listenDungeon(id: string, cb: (ds: DungeonSession | null) => void): () => void {
   if (!rtdb) { cb(null); return () => {}; }
   return onValue(ref(rtdb, `dungeons/${id}`), (snap) => cb(snap.val() as DungeonSession | null));
+}
+
+export interface DungeonOpenBroadcast {
+  id: string;
+  hostUid: string;
+  hostName: string;
+  dungeonName: string;
+  ts: number;
+}
+
+/** Diffuse l'ouverture d'un groupe de donjon (hors raid, déjà couvert par sa propre bannière). */
+export async function broadcastDungeonOpen(hostUid: string, hostName: string, dungeonName: string): Promise<void> {
+  if (!rtdb) return;
+  const b: DungeonOpenBroadcast = { id: `${hostUid}-${Date.now()}`, hostUid, hostName, dungeonName, ts: Date.now() };
+  await set(ref(rtdb, 'world/dungeonOpen'), b);
+}
+
+/** Écoute la diffusion d'ouverture de groupe de donjon (notification globale). */
+export function listenDungeonOpenBroadcast(cb: (b: DungeonOpenBroadcast | null) => void): () => void {
+  if (!rtdb) { cb(null); return () => {}; }
+  return onValue(ref(rtdb, 'world/dungeonOpen'), (snap) => cb((snap.val() as DungeonOpenBroadcast | null) ?? null));
 }
 
 export async function createDungeonLobby(hostUid: string, hostName: string, hostClass: ClassId, dungeonId: string, pStats: any, pMods: any, pLevel: number, aura?: string | null, auraColorOn?: boolean, setProc?: SetProc | null): Promise<string> {
