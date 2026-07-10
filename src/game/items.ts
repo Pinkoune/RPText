@@ -223,6 +223,18 @@ export const ITEMS: Record<string, ItemDef> = {
   ember_stone: { id: 'ember_stone', name: 'Pierre ardente', icon: '🪨', rarity: 'rare', slot: 'material', value: 65, desc: 'Pulse d\'une chaleur volcanique.' },
   infernal_shard: { id: 'infernal_shard', name: 'Éclat infernal', icon: '⛧', rarity: 'epic', slot: 'material', value: 140, desc: 'Fragment d\'un démon, imprégné de flammes.' },
 
+  // ── Set de transition « Marais-Braise » (niv.22-24) : comble le trou de
+  //    progression identifié par la simulation — aucune arme entre Nv20 et Nv30,
+  //    aucune armure entre Nv15 et Nv32. Sans ce palier, on entrait au volcan
+  //    (Nv24) avec l'équipement du Nv15-20, ce qui aggravait le mur de difficulté.
+  warlord_axe: { id: 'warlord_axe', name: 'Hache de seigneur de guerre', icon: '🪓', rarity: 'epic', slot: 'weapon', atk: 46, classes: ['warrior'], value: 1600, desc: 'Lourde et sans pitié.', element: 'neutral', dmgType: 'physical', maxDurability: 700, reqLevel: 22 },
+  swiftwind_bow: { id: 'swiftwind_bow', name: 'Arc de Vent-Rapide', icon: '🏹', rarity: 'epic', slot: 'weapon', atk: 44, classes: ['archer'], value: 1600, desc: 'Décoche plus vite que l\'œil ne suit.', element: 'wind', dmgType: 'physical', maxDurability: 650, reqLevel: 22 },
+  emberflow_staff: { id: 'emberflow_staff', name: 'Bâton d\'Embrasement', icon: '🪄', rarity: 'epic', slot: 'weapon', atk: 46, classes: ['mage'], value: 1650, desc: 'Couve une braise prête à jaillir.', element: 'fire', dmgType: 'magical', maxDurability: 650, reqLevel: 22 },
+  marsh_cane: { id: 'marsh_cane', name: 'Canne des Marais', icon: '🪄', rarity: 'epic', slot: 'weapon', atk: 40, hp: 60, classes: ['healer'], value: 1650, desc: 'Puise la vie des tourbières.', element: 'water', dmgType: 'magical', maxDurability: 650, reqLevel: 22 },
+  warplate: { id: 'warplate', name: 'Cuirasse de Guerre', icon: '🛡️', rarity: 'epic', slot: 'armor', def: 34, hp: 130, classes: ['warrior'], value: 1500, desc: 'Plaques rivetées pour la ligne de front.', maxDurability: 900, reqLevel: 23 },
+  scout_leathers: { id: 'scout_leathers', name: 'Cuir d\'Éclaireur', icon: '🥋', rarity: 'epic', slot: 'armor', def: 26, hp: 140, classes: ['archer'], value: 1450, desc: 'Souple, silencieux, résistant.', maxDurability: 800, reqLevel: 23 },
+  mystic_garb: { id: 'mystic_garb', name: 'Habit Mystique', icon: '👘', rarity: 'epic', slot: 'armor', def: 16, hp: 160, classes: ['mage', 'healer'], value: 1450, desc: 'Tissé de fils imprégnés de mana.', maxDurability: 700, reqLevel: 23 },
+
   // ── Équipement end-game (niv.30-45, ressources volcaniques) ──
   lava_blade: { id: 'lava_blade', name: 'Lame de lave', icon: '⚔️', rarity: 'legendary', slot: 'weapon', atk: 62, classes: ['warrior'], value: 2600, desc: 'Tranche et brûle à la fois.', element: 'fire', dmgType: 'physical', maxDurability: 800, reqLevel: 30 },
   infernal_bow: { id: 'infernal_bow', name: 'Arc infernal', icon: '🏹', rarity: 'legendary', slot: 'weapon', atk: 58, classes: ['archer'], value: 2500, desc: 'Décoche des flèches incandescentes.', element: 'fire', dmgType: 'physical', maxDurability: 800, reqLevel: 30 },

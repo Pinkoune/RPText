@@ -1,0 +1,11 @@
+level;biome;winrate
+5;plains;1
+10;mountains;1
+15;desert;1
+20;swamp;1
+25;volcano;0,8
+30;crypt;0,339
+35;crypt;0,583
+40;frozen;0
+45;frozen;0,026
+50;frozen;0,002

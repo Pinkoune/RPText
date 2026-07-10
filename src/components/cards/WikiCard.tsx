@@ -129,7 +129,10 @@ export default function WikiCard() {
                 <li>⚪ Neutre : jamais de bonus ni malus</li>
               </ul>
             </div>
-            <div className="text-slate-400">Astuce : la <b>Rune de Transmutation</b> (Boutique du Destin) inverse le type de dégâts de ton arme (Physique ↔ Magique) — utile contre un monstre qui résiste au tien.</div>
+            <div className="text-slate-400">Astuce : la <b>Rune de Transmutation</b> (Boutique du Destin) inverse le type de dégâts de ton arme (Physique ↔ Magique) — utile contre un monstre qui résiste au tien. En chasse, un indicateur <b>🟢/⚪/🔴</b> te dit si ton arme est efficace contre le monstre en cours.</div>
+            <div>
+              <span className="font-semibold text-amber-300">⚡ Faille</span> : quand un monstre est <b>gelé</b> (❄️) ou <b>étourdi</b>, tes coups infligent <b>+50% de dégâts</b> le temps du contrôle. Pose le contrôle (sorts de gel, étourdissement du Moine à Combo plein, sets de givre) puis enchaîne pour maximiser le burst.
+            </div>
           </div>
         )}
         {tab !== 'classes' && (

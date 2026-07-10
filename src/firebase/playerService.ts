@@ -1,7 +1,7 @@
 import { doc, getDoc, setDoc, collection, query, where, limit, getDocs, onSnapshot } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
 import type { PlayerState } from '../game/types';
-import { syncGuildMember } from './groupsService';
+import { syncGuildMember, contributeGuildGoal } from './groupsService';
 
 const localKey = (uid: string) => `rptext.player.${uid}`;
 
@@ -91,6 +91,15 @@ export async function savePlayer(p: PlayerState): Promise<void> {
     localStorage.setItem(localKey(p.uid), JSON.stringify(p));
     return;
   }
+  // Flush de l'objectif de guilde : on capture ET remet à zéro le delta AVANT
+  // d'écrire le doc joueur, sinon le doc persisté garderait `pending>0` et on
+  // recompterait le même delta au prochain chargement.
+  const wk = String(Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)));
+  let goalDelta = 0;
+  if (p.guildId && p.guildGoalKills && p.guildGoalKills.week === wk && p.guildGoalKills.pending > 0) {
+    goalDelta = p.guildGoalKills.pending;
+    p.guildGoalKills.pending = 0;
+  }
   await setDoc(doc(db, 'players', p.uid), p);
   await setDoc(doc(db, 'leaderboard', p.uid), {
     uid: p.uid,
@@ -130,5 +139,7 @@ export async function savePlayer(p: PlayerState): Promise<void> {
         auraColorOn: p.auraColorOn ?? true,
       }).then(() => { lastGuildSyncSig.set(p.uid, sig); });
     }
+    // Flush des kills de l'objectif de guilde (delta capturé plus haut, avant l'écriture).
+    if (goalDelta > 0) void contributeGuildGoal(p.guildId, p.uid, goalDelta);
   }
 }

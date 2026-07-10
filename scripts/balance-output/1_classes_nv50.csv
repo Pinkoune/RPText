@@ -1,0 +1,17 @@
+name;base;isSub;atk;def;hp;dps;survWinrate;survEndHpPct
+Guerrier;warrior;false;459;320;2514;404;0;0
+Paladin;warrior;true;583;368;2769;526;1;0,431
+Berserker;warrior;true;725;222;2824;760;1;0,943
+Chevalier Noir;warrior;true;654;312;2960;620;1;0,794
+Mage;mage;false;521;216;1963;552;0;0
+Pyromancien;mage;true;877;216;2265;1012;0,003;0,109
+Cryomancien;mage;true;653;305;2474;706;0,098;0,076
+Arcaniste;mage;true;798;216;2088;875;0,001;0,04
+Archer;archer;false;398;218;1708;408;0;0
+Voleur;archer;true;496;218;1757;586;0,267;0,234
+Barde;archer;true;517;347;2077;546;0,622;0,169
+Chasseur;archer;true;514;267;1855;689;0,311;0,184
+Soigneur;healer;false;338;286;2939;240;0;0
+Prêtre de l'Aube;healer;true;445;326;3194;353;0;0
+Druide;healer;true;436;319;3194;333;0;0
+Moine;healer;true;558;319;2939;462;0,911;0,541

@@ -1,0 +1,17 @@
+name;resource;bestAtkMult;bestHealFrac;bestShield;hasStun;hasCC;nbSkills
+Guerrier;cooldown;1,8;0;0;false;false;2
+Paladin;zeal;2;0,05;0,2;false;false;4
+Berserker;rage;2,8;0;0;false;false;4
+Chevalier Noir;corruption;2,2;0,15;0;false;false;4
+Mage;cooldown;2,2;0;0;false;true;2
+Pyromancien;mana;3,2;0;0;false;true;4
+Cryomancien;mana;2,2;0;0,15;false;true;4
+Arcaniste;overcharge;2,2;0;0;false;true;4
+Archer;cooldown;1,9;0;0;false;false;2
+Voleur;combo;2,2;0;0;false;false;4
+Barde;tempo;2,3;0,1;0;false;false;4
+Chasseur;instinct;2,5;0;0;false;false;4
+Soigneur;cooldown;1,5;0,2;0;false;false;2
+Prêtre de l'Aube;grace;1,6;0,22;0;false;false;4
+Druide;sap;2;0,25;0;false;false;4
+Moine;combo;1,8;0,2;0;true;false;4

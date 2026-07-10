@@ -75,6 +75,25 @@ export default function GuildCard() {
     void contributeGuild(myGuild.id, 300); // la victoire fait aussi progresser la guilde
   }
 
+  function claimGoalReward() {
+    const goal = myGuild?.goal;
+    const wid = guildBossWeekId();
+    if (!goal || goal.weekId !== wid || goal.progress < goal.target) return;
+    const key = `${myGuild!.id}:${wid}`;
+    if ((p!.settledGuildGoals ?? []).includes(key)) return toast('Récompense déjà réclamée.', 'bad');
+    if ((goal.contributors?.[p!.uid] ?? 0) <= 0) return toast('Tu n\'as pas participé à cet objectif.', 'bad');
+    mutate((d) => {
+      if (!d.settledGuildGoals) d.settledGuildGoals = [];
+      d.settledGuildGoals.push(key);
+      const gold = 1000 + guildLevel(myGuild!.xp).level * 120;
+      d.gold += gold;
+      d.fateCoins += 10;
+      d.inventory['upgrade_matrix'] = (d.inventory['upgrade_matrix'] ?? 0) + 1;
+      toast(`🎉 Objectif de guilde accompli ! +${gold} 🪙, +10 🎲, +1 ${item('upgrade_matrix')!.name}`, 'gold');
+    });
+    void contributeGuild(myGuild!.id, 400); // l'objectif fait progresser la guilde
+  }
+
   if (!socialEnabled) {
     return <p className="text-sm text-amber-200">Les guildes nécessitent Firebase (mode en ligne).</p>;
   }
@@ -184,6 +203,48 @@ export default function GuildCard() {
             </div>
           );
         })()}
+
+        {/* Objectif collectif hebdomadaire (contribution de toute la guilde) */}
+        {(() => {
+          const wid = guildBossWeekId();
+          const goal = myGuild.goal && myGuild.goal.weekId === wid ? myGuild.goal : null;
+          const pct = goal ? Math.min(100, (goal.progress / goal.target) * 100) : 0;
+          const done = goal ? goal.progress >= goal.target : false;
+          const claimKey = `${myGuild.id}:${wid}`;
+          const claimed = (p.settledGuildGoals ?? []).includes(claimKey);
+          const myContrib = goal?.contributors?.[p.uid] ?? 0;
+          return (
+            <div className="rounded-xl bg-black/25 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">🎯 Objectif de guilde (hebdo)</span>
+                {goal && <span className="text-[10px] text-slate-500">ta part : {myContrib}</span>}
+              </div>
+              {!goal ? (
+                <p className="mt-1 text-sm text-slate-400">Chassez des monstres pour lancer l'objectif de la semaine !</p>
+              ) : (
+                <>
+                  <div className="mt-1 flex items-center gap-2 text-sm">
+                    <span className="text-lg">{goal.icon}</span>
+                    <span className="font-medium">{goal.name}</span>
+                    <span className="ml-auto text-[10px] tabular-nums text-slate-500">{Math.min(goal.progress, goal.target)} / {goal.target}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">{goal.desc}</div>
+                  <div className="mt-1.5 h-2 rounded bg-black/40">
+                    <div className="h-2 rounded bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                  <button
+                    onClick={claimGoalReward}
+                    disabled={!done || claimed || myContrib <= 0}
+                    className="mt-2 w-full rounded bg-amber-500/30 py-1.5 text-xs font-semibold hover:bg-amber-500/50 disabled:opacity-40"
+                  >
+                    {claimed ? 'Récompense réclamée ✅' : done ? (myContrib > 0 ? 'Réclamer le coffre 🎁' : 'Non participé') : `Objectif en cours (${Math.round(pct)}%)`}
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        })()}
+
         <div>
           <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Membres · {members.length}/{GUILD_MAX}</div>
           <div className="space-y-1">

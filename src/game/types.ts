@@ -1,10 +1,10 @@
 // ─── Types de base du jeu ────────────────────────────────────────────────
 
-export type ClassId = 
-  | 'warrior' | 'paladin' | 'berserker' | 'dark_knight'
-  | 'mage' | 'pyromancer' | 'cryomancer' | 'arcanist'
-  | 'archer' | 'rogue' | 'bard' | 'hunter'
-  | 'healer' | 'dawn_priest' | 'druid' | 'monk';
+export type ClassId =
+  | 'warrior' | 'paladin' | 'berserker' | 'dark_knight' | 'sentinel'
+  | 'mage' | 'pyromancer' | 'cryomancer' | 'arcanist' | 'necromancer'
+  | 'archer' | 'rogue' | 'bard' | 'hunter' | 'trapper'
+  | 'healer' | 'dawn_priest' | 'druid' | 'monk' | 'oracle';
 
 export type BiomeId =
   | 'forest'
@@ -135,6 +135,12 @@ export interface PlayerState {
     mobsKilled: Record<string, number>;
     mobsEncountered: Record<string, number>;
   };
+  /** Maîtrise des biomes : kills cumulés par biome (paliers → titres + bonus XP/Or). */
+  biomeKills?: Record<string, number>;
+  /** Objectif de guilde : kills de la semaine pas encore flushés vers le doc guilde. */
+  guildGoalKills?: { week: string; pending: number };
+  /** Récompenses d'objectif de guilde déjà réclamées (clé `guildId:weekId`). */
+  settledGuildGoals?: string[];
   /** Progression des quêtes (journalières/hebdomadaires). */
   quests: QuestState;
   /** Duels PvP déjà encaissés (anti double-crédit). */

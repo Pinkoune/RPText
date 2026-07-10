@@ -1,0 +1,21 @@
+dungeon;level;numPlayers;winrateCurrent;winrateProposed
+Caverne des Gobelins;7;1;1;1
+Caverne des Gobelins;7;2;1;1
+Caverne des Gobelins;7;3;1;1
+Caverne des Gobelins;7;4;1;1
+Crypte Maudite;14;1;1;1
+Crypte Maudite;14;2;1;1
+Crypte Maudite;14;3;1;1
+Crypte Maudite;14;4;1;1
+Sanctuaire du Dragon;24;1;1;1
+Sanctuaire du Dragon;24;2;1;1
+Sanctuaire du Dragon;24;3;1;1
+Sanctuaire du Dragon;24;4;0,502;0,488
+Forge Infernale;32;1;0;0
+Forge Infernale;32;2;0;0
+Forge Infernale;32;3;0;0
+Forge Infernale;32;4;0;0
+Citadelle Abyssale;42;1;0;0
+Citadelle Abyssale;42;2;0;0
+Citadelle Abyssale;42;3;0;0
+Citadelle Abyssale;42;4;0;0

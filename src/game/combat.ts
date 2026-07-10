@@ -6,9 +6,15 @@ import { PHASE_MODIFIERS, currentPhase } from './daynight';
 import { addQuestMetric } from './quests';
 import { emptyMods, type CombatMods, type ActiveSkillDef } from './talents';
 import { grantFamiliarXp } from './familiars';
+import { masteryMult, addBiomeKill, masteryTitle } from './mastery';
 
 /** Probabilité que la régénération se déclenche à un tour donné (passif). */
 const REGEN_CHANCE = 0.3;
+
+/** « Faille » : bonus de dégâts quand le monstre est sous contrôle (gel/étourdi).
+ *  Récompense le fait de poser un contrôle puis de burst — rend le combat moins
+ *  passif (poser le débuff, puis exploiter la fenêtre). */
+const VULN_MULT = 1.5;
 
 export interface CombatStats {
   level: number;
@@ -177,10 +183,13 @@ export interface CombatState {
   chill: number;
   /** Tours d'étourdissement : le monstre passe son tour (Moine : Coup du Dragon à 5/5 Combo). */
   stun: number;
+  /** Nécromancien : tours restants et dégâts/tour d'un serviteur invoqué (frappe en fin de tour). */
+  minion: number;
+  minionPow: number;
 }
 
 export function freshCombatState(): CombatState {
-  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, chill: 0, stun: 0 };
+  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, chill: 0, stun: 0, minion: 0, minionPow: 0 };
 }
 
 export interface TurnResult {
@@ -212,6 +221,8 @@ export interface HuntRewards {
   gold: number;
   loot: string[];
   levelsGained: number;
+  /** Palier de maîtrise de biome franchi par ce kill (titre débloqué). */
+  masteryUp?: { biome: string; tier: number; title: string };
 }
 
 /**
@@ -233,7 +244,7 @@ export function combatTurn(
     /** Ressource d'archétype actuellement en réserve (Berserker/DK: rage 0-100 ; Voleur/Moine: combo 0-5). */
     resourceAmount?: number;
     /** Type de ressource passive de la classe du joueur (voir `classResourceType`). */
-    resourceType?: 'rage' | 'combo' | 'grace' | 'mana' | 'sap' | 'zeal' | 'tempo' | 'overcharge' | 'instinct' | 'corruption' | null;
+    resourceType?: 'rage' | 'combo' | 'grace' | 'mana' | 'sap' | 'zeal' | 'tempo' | 'overcharge' | 'instinct' | 'corruption' | 'vindicte' | 'souls' | 'traps' | 'presage' | null;
   } = {},
   state: CombatState = freshCombatState(),
 ): TurnResult {
@@ -254,6 +265,9 @@ export function combatTurn(
 
   const atkMult = getElementMult(stats.weaponElement, monster.element) * getDmgTypeMult(stats.weaponDmgType, monster);
   const defMult = getElementMult(monster.element, stats.armorElement);
+  // « Faille » : le monstre est-il sous contrôle (gel/étourdi) en début de tour ?
+  // → les dégâts offensifs de ce tour sont amplifiés (fenêtre de burst).
+  const vuln = state.chill > 0 || state.stun > 0;
 
   // ── Phase joueur ──
   if (action === 'flee') {
@@ -292,10 +306,11 @@ export function combatTurn(
           hitsDealt++;
           let dmg = Math.max(1, Math.round(stats.atk * effMult * (0.9 + Math.random() * 0.3)) - effDef);
           dmg = Math.round(dmg * atkMult);
+          if (vuln) dmg = Math.round(dmg * VULN_MULT);
           if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
           mhp -= dmg;
           if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
-          events.push({ text: `${skill.name} : ${dmg} dégâts !`, side: 'you' });
+          events.push({ text: `${skill.name} : ${dmg} dégâts !${vuln ? ' ⚡ Faille !' : ''}`, side: 'you' });
           // Moine : Coup du Dragon lancé à Combo plein (5/5) touche un point vital et étourdit.
           if (skill.id === 'skill_mnk_dragon' && (opts.resourceAmount ?? 0) >= 5 && mhp > 0) {
             state.stun = Math.max(state.stun, 1);
@@ -313,6 +328,11 @@ export function combatTurn(
           const amount = Math.round(maxHp * skill.shield);
           state.shield += amount;
           events.push({ text: `🛡️ ${skill.name} t'accorde un bouclier de ${amount} PV.`, side: 'info' });
+        }
+        if (skill.summon) {
+          state.minion = skill.summon.turns;
+          state.minionPow = Math.max(1, Math.round(stats.atk * skill.summon.pow));
+          events.push({ text: `💀 ${skill.name} : un serviteur se lève et frappe ${state.minionPow} PV/tour (${state.minion} tours).`, side: 'you' });
         }
         if (skill.status && mhp > 0) {
           const st = skill.status;
@@ -333,13 +353,14 @@ export function combatTurn(
       hitsDealt++;
       let dmg = Math.max(1, roll(stats.atk - 2, stats.atk + 3) - effDef) + mods.flatDmg;
       dmg = Math.round(dmg * atkMult);
+      if (vuln) dmg = Math.round(dmg * VULN_MULT);
       if (php < maxHp * 0.3 && mods.berserkBonus > 0) dmg = Math.round(dmg * (1 + mods.berserkBonus));
       if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
       const crit = Math.random() < mods.crit;
       if (crit) { dmg = Math.round(dmg * (2 + mods.critMult)); critLanded = true; }
       mhp -= dmg;
       if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
-      events.push({ text: `${h > 0 ? 'Tir double ! ' : ''}Tu infliges ${dmg}${crit ? ' (CRIT !)' : ''}.`, side: 'you' });
+      events.push({ text: `${h > 0 ? 'Tir double ! ' : ''}Tu infliges ${dmg}${crit ? ' (CRIT !)' : ''}${vuln ? ' ⚡Faille' : ''}.`, side: 'you' });
     }
   }
 
@@ -425,6 +446,10 @@ export function combatTurn(
   }
 
   // ── Altérations de fin de tour (brûlure / poison sur le monstre) ──
+  // Ressources DoT : `wasPoisoned` (cible empoisonnée ce tour → Pièges du Piégeur),
+  // `poisonTicked` (le poison a fait des dégâts → Âmes du Nécromancien).
+  const wasPoisoned = state.poison > 0;
+  let poisonTicked = false;
   if (mhp > 0) {
     if (state.burn > 0 && state.burnPow > 0) {
       mhp = Math.max(0, mhp - state.burnPow);
@@ -432,7 +457,12 @@ export function combatTurn(
     }
     if (state.poison > 0 && state.poisonPow > 0) {
       mhp = Math.max(0, mhp - state.poisonPow);
+      poisonTicked = true;
       events.push({ text: `🧪 Poison : ${monster.name} perd ${state.poisonPow} PV.`, side: 'you' });
+    }
+    if (state.minion > 0 && state.minionPow > 0) {
+      mhp = Math.max(0, mhp - state.minionPow);
+      events.push({ text: `💀 Serviteur : ${monster.name} perd ${state.minionPow} PV.`, side: 'you' });
     }
   }
   // Décrémente la durée des altérations.
@@ -440,6 +470,7 @@ export function combatTurn(
   if (state.poison > 0) state.poison -= 1;
   if (state.chill > 0) state.chill -= 1;
   if (state.stun > 0) state.stun -= 1;
+  if (state.minion > 0) state.minion -= 1;
 
   // Ressource d'archétype passive : rage se charge en encaissant, combo en touchant.
   let resourceGained = 0;
@@ -469,6 +500,17 @@ export function combatTurn(
   // sous 30% PV (même seuil que Douleur) — frapper au bord de la mort, pas
   // juste encaisser passivement comme la Rage.
   else if (opts.resourceType === 'corruption' && hitsDealt > 0 && php < maxHp * 0.3) resourceGained = 35;
+  // Vindicte (Sentinelle) : se charge en encaissant, comme la Rage mais pour un
+  // tank vengeur (transforme la douleur reçue en riposte).
+  else if (opts.resourceType === 'vindicte') resourceGained = Math.min(25, Math.round((dmgTakenThisTurn / maxHp) * 100 * 0.4));
+  // Âmes (Nécromancien) : se charge quand le Poison ronge la cible (chaque tick).
+  else if (opts.resourceType === 'souls' && poisonTicked) resourceGained = 20;
+  // Pièges (Piégeur) : se charge en frappant une cible déjà empoisonnée (le piège
+  // se referme sur une proie affaiblie).
+  else if (opts.resourceType === 'traps' && hitsDealt > 0 && wasPoisoned) resourceGained = 25;
+  // Présage (Oracle) : se charge quand un bouclier absorbe un coup ou qu'un soin
+  // passe — l'anticipation nourrit la prophétie.
+  else if (opts.resourceType === 'presage' && (shieldAbsorbed || healDone > 0)) resourceGained = 20;
   // Tempo (Barde) et Surcharge (Arcaniste) : calculés par l'appelant (HuntCard),
   // pas ici — l'un dépend de l'action du tour précédent (variété), l'autre du
   // nombre de compétences lancées, deux signaux hors du périmètre de ce combat.
@@ -483,9 +525,11 @@ export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRe
   
   const biome = BIOMES[p.biome];
   const biomeXpMult = biome?.xpMult ?? 1.0;
+  // Bonus de maîtrise du biome courant (palier atteint) appliqué à l'XP et l'Or.
+  const mMult = masteryMult(p, p.biome);
   const base = {
-    xp: Math.round(monster.xp * mod.xp * biomeXpMult),
-    gold: Math.round(roll(monster.gold[0], monster.gold[1]) * mod.gold)
+    xp: Math.round(monster.xp * mod.xp * biomeXpMult * mMult),
+    gold: Math.round(roll(monster.gold[0], monster.gold[1]) * mod.gold * mMult)
   };
   const { xp, gold } = applyBonuses(p, base);
 
@@ -494,7 +538,22 @@ export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRe
     p.statistics.goldEarned += gold;
     p.statistics.mobsKilled[monster.id] = (p.statistics.mobsKilled[monster.id] ?? 0) + 1;
   }
+  // Maîtrise du biome : compte le kill, débloque le titre si palier franchi.
+  const mUp = addBiomeKill(p, p.biome);
+  let masteryUp: HuntRewards['masteryUp'];
+  if (mUp.leveledUp) {
+    const title = masteryTitle(p.biome, mUp.newTier);
+    if (!p.unlockedTitles) p.unlockedTitles = [];
+    if (!p.unlockedTitles.includes(title)) p.unlockedTitles.push(title);
+    masteryUp = { biome: p.biome, tier: mUp.newTier, title };
+  }
   p.kills += 1;
+  // Objectif de guilde : compte le kill localement (flushé à la sauvegarde).
+  if (p.guildId) {
+    const wk = String(Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)));
+    if (!p.guildGoalKills || p.guildGoalKills.week !== wk) p.guildGoalKills = { week: wk, pending: 0 };
+    p.guildGoalKills.pending += 1;
+  }
   addQuestMetric(p, 'kills', 1);
   addQuestMetric(p, 'goldEarned', gold);
   const levelsGained = grantXp(p, xp);
@@ -511,7 +570,7 @@ export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRe
     p.fateCoins += 1;
     loot.push('__fate');
   }
-  return { xp, gold, loot, levelsGained };
+  return { xp, gold, loot, levelsGained, masteryUp };
 }
 
 /** Pénalité de mort : perte de 10% d'or, résurrection à 30% PV. */

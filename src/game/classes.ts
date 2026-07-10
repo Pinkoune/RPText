@@ -55,6 +55,16 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     parent: 'warrior',
     playstyle: 'Tank à risque croissant : Douleur donne jusqu\'à +30% dégâts quand il passe sous 30% PV, donc il devient plus dangereux à l\'agonie. Ressource unique — la Corruption : contrairement à la Rage (encaisser suffit), elle ne se charge QUE si tu INFLIGES des dégâts sous 30% PV — même seuil que Douleur, les deux se nourrissent ensemble. Drain Noir (×2.0 + 15% soin) coûte 45 Corruption. Un style "plus je saigne en frappant, plus je deviens fort" — demande de rester agressif au bord de la mort, pas juste survivre.',
   },
+  sentinel: {
+    id: 'sentinel',
+    name: 'Sentinelle',
+    emoji: '🛡️',
+    desc: 'Muraille punitive : renvoie les coups reçus (épines) et se soigne en encaissant.',
+    base: { maxHp: 130, atk: 13, def: 9 },
+    growth: { maxHp: 22, atk: 3, def: 3 },
+    parent: 'warrior',
+    playstyle: 'Le seul vrai tank de CONTRÔLE : là où le Paladin protège le groupe, la Sentinelle PUNIT l\'attaquant. Rempart d\'épines pose un bouclier ET provoque le monstre sur elle (donjon), Épines renforcées renvoie une grosse part des dégâts subis (jusqu\'à +21% cumulés), et Représailles (×2.2 + 10% soin) transforme l\'encaissement en riposte. Ressource unique — la Vindicte : elle se charge en ENCAISSANT des coups (comme la Rage, mais pour un tank vengeur) et alimente Représailles (50 Vindicte) — plus on la frappe, plus sa riposte revient vite. Idéale pour tenir l\'aggro et user un boss sans rien faire d\'autre que survivre.',
+  },
 
   // ── Mage ──
   mage: {
@@ -95,6 +105,16 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     growth: { maxHp: 13, atk: 6, def: 1 },
     parent: 'mage',
     playstyle: 'Le mage au tempo le plus rapide : Missile arcanique n\'a que 8s de recharge (le plus court de toutes les compétences du jeu), ce qui permet de spammer bien plus souvent qu\'ailleurs. Ressource unique — la Surcharge : elle se charge à chaque compétence lancée (n\'importe laquelle), pas passivement comme le Mana des autres mages — récompense directement le rythme de sorts rapide propre à l\'archétype. Distorsion (×2.0, 50 Surcharge) manipule vraiment le temps en réduisant de 2 tours le cooldown de toutes ses AUTRES compétences équipées. Moins de dégâts par coup individuel, mais une cadence largement supérieure — DPS constant plutôt que pics de burst.',
+  },
+  necromancer: {
+    id: 'necromancer',
+    name: 'Nécromancien',
+    emoji: '💀',
+    desc: 'Maître des poisons et des âmes : dégâts sur la durée et drain de vie.',
+    base: { maxHp: 85, atk: 17, def: 3 },
+    growth: { maxHp: 14, atk: 5, def: 1 },
+    parent: 'mage',
+    playstyle: 'Le mage du DoT plutôt que du burst : là où le Pyromancien nuke et le Cryomancien contrôle, le Nécromancien empoisonne et draine. Éclat nécrotique applique un Poison qui ronge le monstre tour après tour, Putréfaction perce l\'armure (jusqu\'à +18% pénétration — idéal contre les boss cuirassés), et Vague d\'âmes (×2.8 + poison renforcé + drain de 15% des dégâts) coûte 40 Âmes. Ressource unique — les Âmes : elles se chargent quand le POISON ronge la cible (chaque tick), pas passivement — récompense directement le jeu DoT (poser le poison alimente l\'ultime). Peut aussi lever un serviteur (« Lever un mort ») qui frappe en fin de tour. Moins de pic que le Pyromancien mais des dégâts continus qui ignorent l\'armure et un vol de vie qui le rend bien moins fragile que le mage de base.',
   },
 
   // ── Archer ──
@@ -137,6 +157,16 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     parent: 'archer',
     playstyle: 'DPS régulier spécialisé en pénétration d\'armure : Perce-cœur cumule jusqu\'à +21% de pénétration, et Morsure (×2.0) laisse en plus son familier affaiblir la cible (-25% ATK, 3 tours) — un vrai debuff défensif pour l\'équipe, pas juste des dégâts. Ressource unique — la Traque : se charge quand un tir CRIT, ce qui crée une vraie synergie avec Concentration et Mise à mort (jusqu\'à +24% crit cumulé sur l\'arbre) — plus tu investis dans le critique, plus Tir de précision (×2.5, 60 Traque) revient vite. Sa force est de rester efficace même face aux monstres résistants là où les autres archers perdent en dégâts, tout en protégeant le groupe.',
   },
+  trapper: {
+    id: 'trapper',
+    name: 'Piégeur',
+    emoji: '🪤',
+    desc: 'Traqueur toxique : pièges empoisonnés et esquive, use l\'ennemi sur la durée.',
+    base: { maxHp: 100, atk: 15, def: 5 },
+    growth: { maxHp: 16, atk: 4, def: 2 },
+    parent: 'archer',
+    playstyle: 'L\'archer du poison plutôt que du burst : là où le Voleur mise sur le combo/crit et le Chasseur sur la pénétration d\'armure, le Piégeur empoisonne et s\'esquive. Piège explosif (×2.0 + Poison 3 tours) puis Embuscade (×2.6 + Poison fort) rongent la cible tour après tour, pendant qu\'Esquive/Ombre montent jusqu\'à +21% d\'esquive cumulée — sa vraie défense. Ressource unique — les Pièges : ils se chargent en FRAPPANT une cible déjà empoisonnée (le piège se referme sur une proie affaiblie) et déclenchent Embuscade (60 Pièges) — une vraie boucle "j\'empoisonne, je capitalise". Le skirmisher autosuffisant qui use les gros PV des boss là où les autres archers cherchent le pic de dégâts.',
+  },
 
   // ── Soigneur ──
   healer: {
@@ -177,6 +207,16 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     growth: { maxHp: 18, atk: 6, def: 1 }, // DEF +2→+1 (moine = DPS soigneur, pas tank)
     parent: 'healer',
     playstyle: 'Le plus offensif des Soigneurs, un vrai DPS déguisé, et le second à jouer sur du Combo plutôt qu\'un cooldown : chaque coup de Poing de fer (×1.8) charge 1 point de Combo (max 5), Coup du Dragon consomme tout le combo (min. 3) pour des dégâts croissants — et lancé à Combo PLEIN (5/5), il frappe un point vital qui étourdit le monstre (passe son tour), une vraie récompense à monter le combo au max plutôt que de le dépenser dès que possible. Chi donne du vol de vie (se soigne en tapant, pas via un sort), et Zenith ajoute encore de la régén passive en fin d\'arbre. Pas de bouton de soin dédié comme les autres Soigneurs — sa survie vient entièrement de l\'agressivité (vol de vie + régén), pas d\'un sort de soin.',
+  },
+  oracle: {
+    id: 'oracle',
+    name: 'Oracle',
+    emoji: '🔮',
+    desc: 'Prophète protecteur : boucliers prophétiques et jugement de lumière.',
+    base: { maxHp: 120, atk: 12, def: 7 },
+    growth: { maxHp: 20, atk: 4, def: 2 },
+    parent: 'healer',
+    playstyle: 'Le Soigneur de la protection plutôt que du soin brut : là où le Prêtre de l\'Aube empile la Grâce pour un heal massif et le Druide encaisse via ses épines, l\'Oracle anticipe et absorbe. Bouclier prophétique pose une grosse absorption (18% PV) avant même le coup, Clairvoyance/Foi montent la DEF et la réduction de dégâts (le plus solide des quatre), et Jugement (×1.8 de lumière + 15% soin) mêle offense et sustain. Ressource unique — le Présage : il se charge quand un BOUCLIER absorbe un coup ou qu\'un SOIN passe (l\'anticipation nourrit la prophétie) et alimente Jugement (50 Présage) — protéger et soigner arme sa riposte, un style "je vois venir les coups, je les bloque, puis je punis".',
   },
 };
 

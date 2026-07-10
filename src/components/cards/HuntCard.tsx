@@ -14,12 +14,16 @@ import {
   grantMonsterRewards,
   applyDeathPenalty,
   freshCombatState,
+  getElementMult,
+  getDmgTypeMult,
   type CombatState,
   type HuntAction,
   type TurnEvent,
   type HuntEncounter,
   type HuntRewards,
 } from '../../game/combat';
+import { masteryProgress, biomeKills } from '../../game/mastery';
+import { BIOMES } from '../../game/biomes';
 
 import { useUi } from '../../store/uiStore';
 
@@ -35,28 +39,13 @@ const RESOURCE_META: Record<string, { label: string; color: string }> = {
   overcharge: { label: '🌌 Surcharge', color: 'bg-indigo-500' },
   instinct: { label: '🎯 Traque', color: 'bg-cyan-400' },
   corruption: { label: '💀 Corruption', color: 'bg-violet-600' },
+  vindicte: { label: '🌵 Vindicte', color: 'bg-lime-600' },
+  souls: { label: '👻 Âmes', color: 'bg-violet-400' },
+  traps: { label: '🪤 Pièges', color: 'bg-orange-600' },
+  presage: { label: '🔮 Présage', color: 'bg-cyan-600' },
 };
 
 const ABILITY_TURNS = 5;
-
-// Anti-macro : le jeu est client-authoritative (pas de Cloud Functions), donc
-// impossible de prouver côté serveur qu'un clic vient d'un humain. On détecte
-// à la place un rythme de clics anormalement RÉGULIER (écart-type très faible
-// entre les intervalles) — un humain a toujours une variance naturelle, un
-// setInterval/macro non. Seuils volontairement stricts pour éviter les faux
-// positifs sur un joueur qui spam-clique vite mais irrégulièrement.
-const MACRO_SAMPLE_SIZE = 8;
-const MACRO_MAX_MEAN_MS = 400;
-const MACRO_MAX_STDDEV_MS = 20;
-function isRoboticTiming(times: number[]): boolean {
-  if (times.length < MACRO_SAMPLE_SIZE) return false;
-  const intervals: number[] = [];
-  for (let i = 1; i < times.length; i++) intervals.push(times[i] - times[i - 1]);
-  const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-  if (mean > MACRO_MAX_MEAN_MS) return false;
-  const variance = intervals.reduce((a, b) => a + (b - mean) ** 2, 0) / intervals.length;
-  return Math.sqrt(variance) < MACRO_MAX_STDDEV_MS;
-}
 
 // Thème d'arène par type de boss (id du monstre synthétisé dans commands.ts).
 interface BossTheme { label: string; sub: string; grad: string; ring: string; bar: string; text: string }
@@ -88,7 +77,6 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const [combatHits, setCombatHits] = useState(0);
   const [cstate, setCstate] = useState<CombatState>(freshCombatState());
   const [resourcePool, setResourcePool] = useState(0);
-  const actionTimestamps = useRef<number[]>([]);
   const lastActionType = useRef<string | null>(null);
 
   // Réinitialise quand une nouvelle rencontre arrive (relance de hunt).
@@ -97,7 +85,6 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     setLog([]);
     setStatus('fighting');
     setResourcePool(0);
-    actionTimestamps.current = [];
     lastActionType.current = null;
 
     const pl = useGame.getState().player;
@@ -143,20 +130,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     const player = useGame.getState().player;
     if (!player) return;
 
-    if (action !== 'flee') {
-      actionTimestamps.current = [...actionTimestamps.current, Date.now()].slice(-MACRO_SAMPLE_SIZE);
-      if (isRoboticTiming(actionTimestamps.current)) {
-        mutate((d) => {
-          d.cooldowns.hunt = Date.now();
-          if (encounter.isAdventure) d.cooldowns.adventure = Date.now();
-        });
-        toast('Rythme de clics anormalement régulier détecté — combat annulé, cooldown réappliqué.', 'bad');
-        setLog((l) => [...l, { text: '⚠️ Motif de clics robotique détecté — combat interrompu sans récompense.', side: 'info' }]);
-        setStatus('fled');
-        actionTimestamps.current = [];
-        return;
-      }
-    }
+    // (Détection anti-macro retirée : elle bloquait le spam-clic légitime.)
 
     let skill = undefined;
     if (action !== 'attack' && action !== 'potion' && action !== 'flee') {
@@ -290,6 +264,10 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     if (action === 'attack' || action === 'ability') playSound('hit');
     if (newStatus === 'won') {
       setOutcome(captured.rewards);
+      if (captured.rewards?.masteryUp) {
+        const mu = captured.rewards.masteryUp;
+        toast(`🏅 Maîtrise ${BIOMES[mu.biome as keyof typeof BIOMES]?.name ?? mu.biome} : palier atteint ! Titre « ${mu.title} » débloqué.`, 'gold');
+      }
       if (captured.rewards && captured.rewards.levelsGained > 0) {
         playSound('levelup');
         useGame.getState().celebrateLevelUp();
@@ -309,6 +287,18 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       {cstate.chill > 0 && <span title={`Gelé (${cstate.chill})`}>❄️{cstate.chill}</span>}
     </>
   );
+  // Efficacité de l'arme vs ce monstre (élément + type de dégâts) — rend le
+  // système phys/mag lisible : le joueur voit s'il tape fort/faible AVANT d'agir.
+  const effMultVsMonster = getElementMult(stats.weaponElement, (m as any).element) * getDmgTypeMult(stats.weaponDmgType, m);
+  const effBadge = effMultVsMonster >= 1.15
+    ? { txt: '🟢 Arme efficace', cls: 'bg-emerald-500/20 text-emerald-200', tip: `×${effMultVsMonster.toFixed(2)} dégâts` }
+    : effMultVsMonster <= 0.85
+      ? { txt: '🔴 Arme peu efficace', cls: 'bg-rose-500/20 text-rose-200', tip: `×${effMultVsMonster.toFixed(2)} dégâts — change d'arme/élément ?` }
+      : { txt: '⚪ Arme neutre', cls: 'bg-white/10 text-slate-300', tip: `×${effMultVsMonster.toFixed(2)} dégâts` };
+  // « Faille » : le monstre est sous contrôle → prochains coups amplifiés.
+  const vulnActive = cstate.chill > 0 || cstate.stun > 0;
+  // Maîtrise du biome courant (progression vers le palier suivant).
+  const mastery = masteryProgress(biomeKills(p, p.biome));
 
   return (
     <div className="space-y-3">
@@ -402,6 +392,23 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
               <div className="h-2 rounded bg-orange-400 transition-all duration-300" style={{ width: `${mhpPct}%` }} />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Bandeau tactique : efficacité d'arme + faille + maîtrise du biome */}
+      {fighting && (
+        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+          <span className={`rounded px-2 py-0.5 font-medium ${effBadge.cls}`} title={effBadge.tip}>{effBadge.txt}</span>
+          {vulnActive && <span className="rounded px-2 py-0.5 font-bold bg-amber-400 text-black animate-pulse" title="Monstre sous contrôle : tes coups infligent +50% de dégâts">⚡ FAILLE — burst !</span>}
+          <span className="ml-auto inline-flex items-center gap-1.5 text-slate-400" title={mastery.next ? `${mastery.into}/${mastery.need} vers le palier suivant` : 'Maîtrise maximale'}>
+            🏅 {BIOMES[p.biome as keyof typeof BIOMES]?.name ?? p.biome} · {mastery.label}
+            {mastery.bonus > 0 && <span className="text-emerald-300">+{Math.round(mastery.bonus * 100)}% XP/Or</span>}
+            {mastery.next != null && (
+              <span className="inline-block h-1.5 w-16 overflow-hidden rounded bg-black/40 align-middle">
+                <span className="block h-full rounded bg-amber-400" style={{ width: `${Math.min(100, (mastery.into / mastery.need) * 100)}%` }} />
+              </span>
+            )}
+          </span>
         </div>
       )}
 

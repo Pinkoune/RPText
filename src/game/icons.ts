@@ -73,6 +73,9 @@ export const ITEM_ICONS: Record<string, IconType> = {
   bronze_blade: GiPointySword, oak_bow: GiBowArrow, soldier_sword: GiBroadsword,
   ranger_bow: GiBowArrow, tempered_greatblade: GiBroadsword, master_longbow: GiBowArrow,
   iron_spear: GiSpearHook,
+  // Set de transition Marais-Braise (Nv22-24)
+  warlord_axe: GiBattleAxe, swiftwind_bow: GiBowArrow, emberflow_staff: GiWizardStaff, marsh_cane: GiWizardStaff,
+  warplate: GiChestArmor, scout_leathers: GiLeatherArmor, mystic_garb: GiRobe,
 
   // ── Armes magiques ──
   apprentice_wand: GiMagicPalm, arcane_staff: GiWizardStaff, acolyte_wand: GiMagicPalm,

@@ -3,7 +3,7 @@ import { collection, doc, setDoc, getDocs, query, orderBy, limit } from 'firebas
 import { ref, onValue, runTransaction, remove } from 'firebase/database';
 import type { ClassId } from '../game/types';
 import type { CombatMods } from '../game/talents';
-import { getAllActiveSkills } from '../game/talents';
+import { getAllActiveSkills, classResourceType } from '../game/talents';
 import { getElementMult, getDmgTypeMult } from '../game/combat';
 import { generateEndlessMonster, getEndlessRewards } from '../game/endless';
 
@@ -66,6 +66,10 @@ export interface EndlessPlayer {
   isDead: boolean;
   mods: CombatMods;
   skillCds: Record<string, number>;
+  /** Ressource d'archétype accumulée (rage/mana/combo/…). */
+  pool?: number;
+  /** Dernière action (pour le Tempo du Barde). */
+  lastAction?: string;
   weaponElement?: string | null;
   weaponDmgType?: string | null;
   armorElement?: string | null;
@@ -120,11 +124,15 @@ function mkEndlessPlayer(uid: string, name: string, classId: ClassId, pStats: an
     uid, name, classId, level: pLevel, ready,
     hp: Math.floor(pStats.maxHp), maxHp: Math.floor(pStats.maxHp),
     atk: Math.floor(pStats.atk), def: Math.floor(pStats.def),
-    isDead: false, mods: pMods, skillCds: {},
+    isDead: false, mods: pMods, skillCds: {}, pool: 0, lastAction: '',
     weaponElement: pStats.weaponElement || null,
     weaponDmgType: pStats.weaponDmgType || null,
     armorElement: pStats.armorElement || null,
   };
+}
+/** Ressource max d'un archétype (combo plafonne à 5, le reste à 100). */
+function poolMaxFor(classId: ClassId): number {
+  return classResourceType(classId) === 'combo' ? 5 : 100;
 }
 
 /** Monstre d'étage mis à l'échelle du nombre de joueurs (plus de PV/DEF/ATK en groupe). */
@@ -264,9 +272,21 @@ function executeEndlessMonsterTurn(cur: EndlessSession) {
     }
     t.hp = (t.hp || 0) - dmg;
     cur.log.push({ text: `${m.name} frappe ${t.name} : ${dmg} dégâts.`, side: 'enemy' });
+    // Ressources qui se chargent en ENCAISSANT : Rage (Berserker), Ferveur
+    // (Paladin, approx.), Corruption via seuil géré au tour joueur. Normalisé en
+    // % PV max, plafonné par coup (comme combatTurn).
+    {
+      const rt = classResourceType(t.classId);
+      if (rt === 'rage' || rt === 'zeal' || rt === 'vindicte') {
+        const g = Math.min(25, Math.round((dmg / Math.max(1, t.maxHp)) * 100 * 0.4));
+        if (g > 0) t.pool = Math.max(0, Math.min(poolMaxFor(t.classId), (t.pool ?? 0) + g));
+      }
+    }
     // Épines : renvoie une partie des dégâts subis au monstre.
     if ((t.mods?.thorns || 0) > 0) {
       const reflect = Math.round(dmg * t.mods.thorns);
+      // Sève (Druide) : se charge quand les Épines renvoient des dégâts.
+      if (classResourceType(t.classId) === 'sap' && reflect > 0) t.pool = Math.max(0, Math.min(poolMaxFor(t.classId), (t.pool ?? 0) + 20));
       if (reflect > 0) {
         m.hp = Math.max(0, m.hp - reflect);
         cur.log.push({ text: `🌿 ${t.name} renvoie ${reflect} dégâts (Épines).`, side: 'you' });
@@ -331,6 +351,8 @@ export async function submitEndlessAction(id: string, uid: string, action: strin
     if (!p) return cur;
     p.skillCds = p.skillCds || {};
     if (p.isDead) { advanceEndlessTurn(cur); return cur; }
+    let critLandedTurn = false; // pour la Traque du Chasseur
+    let didHeal = false;        // pour la Grâce du Prêtre
 
     const pAtk = p.atk || 10;
     // Les créatures abyssales sont de l'ombre ; l'élément de l'arme joue.
@@ -354,16 +376,27 @@ export async function submitEndlessAction(id: string, uid: string, action: strin
       if ((p.skillCds[skillId] || 0) > 0) return cur;
       const skill = getAllActiveSkills().find(s => s.id === skillId);
       if (skill) {
+        // Ressource d'archétype : gating + scaling (combo/grace consomment tout).
+        let effMult = skill.mult ?? 0;
+        let effHealFrac = skill.healFrac ?? 0;
+        if (skill.resource) {
+          const pool = p.pool ?? 0;
+          if (pool < skill.resource.cost) return cur; // pas assez de ressource
+          if (skill.resource.type === 'combo') { effMult = (skill.mult ?? 0) + (skill.resource.scalePerPoint ?? 0) * pool; p.pool = 0; }
+          else if (skill.resource.type === 'grace') { effHealFrac = (skill.healFrac ?? 0) + (skill.resource.scalePerPoint ?? 0) * pool; p.pool = 0; }
+          else { p.pool = Math.max(0, pool - skill.resource.cost); }
+        }
         p.skillCds[skillId] = ABILITY_CD_TURNS;
-        if (skill.mult) {
+        if (effMult) {
           const effDef = (m.def || 0) * (1 - (p.mods?.armorPen || 0));
-          const dmg = Math.max(1, Math.round(finalAtk * skill.mult - effDef));
+          const dmg = Math.max(1, Math.round(finalAtk * effMult - effDef));
           m.hp -= dmg;
           if ((p.mods?.lifesteal || 0) > 0) p.hp = Math.min(p.maxHp, p.hp + Math.round(dmg * p.mods.lifesteal));
           cur.log.push({ text: `✨ ${p.name} utilise ${skill.name} : ${dmg} dégâts !`, side: 'you' });
         }
-        if (skill.healFrac) {
-          const heal = Math.round(pAtk * 1.0 + p.maxHp * skill.healFrac);
+        if (effHealFrac) {
+          didHeal = true;
+          const heal = Math.round(pAtk * 1.0 + p.maxHp * effHealFrac);
           if (p.classId === 'healer' || p.classId === 'dawn_priest' || p.classId === 'druid') {
             Object.values(cur.players).forEach(a => { if (!a.isDead) a.hp = Math.min(a.maxHp, a.hp + heal); });
             cur.log.push({ text: `✨ ${p.name} soigne tout le groupe (+${heal} PV) !`, side: 'info' });
@@ -431,7 +464,7 @@ export async function submitEndlessAction(id: string, uid: string, action: strin
         let dmg = Math.max(1, (finalAtk - 2 + Math.random() * 4) - effDef) + (md.flatDmg || 0);
         if ((p.hp || 0) < p.maxHp * 0.3 && (md.berserkBonus || 0) > 0) dmg *= (1 + md.berserkBonus);
         if (m.maxHp > 0 && m.hp / m.maxHp < 0.2 && (md.execute || 0) > 0) dmg *= (1 + md.execute); // exécution
-        if (Math.random() < (md.crit || 0)) dmg *= (2 + (md.critMult || 0));
+        if (Math.random() < (md.crit || 0)) { dmg *= (2 + (md.critMult || 0)); critLandedTurn = true; }
         dmg = Math.round(dmg);
         total += dmg;
         m.hp -= dmg;
@@ -439,6 +472,29 @@ export async function submitEndlessAction(id: string, uid: string, action: strin
       }
       if (healed > 0) p.hp = Math.min(p.maxHp, p.hp + healed);
       cur.log.push({ text: `⚔️ ${p.name} attaque ${m.name} : ${total} dégâts${hits > 1 ? ' (double!)' : ''}${healed > 0 ? ` (+${healed} PV volés)` : ''}.`, side: 'you' });
+    }
+
+    // Gain de ressource d'archétype sur le tour du joueur (rage/zeal/sap = tour du
+    // monstre, voir executeEndlessMonsterTurn).
+    {
+      const rt = classResourceType(p.classId);
+      const offensive = action !== 'timeout' && action !== 'potion' && action !== 'revive' && action !== 'flee';
+      let gain = 0;
+      if (rt === 'combo' && offensive) gain = 1;
+      else if (rt === 'mana') gain = 15;
+      else if (rt === 'overcharge' && action !== 'attack' && offensive) gain = 25;
+      else if (rt === 'tempo' && action !== (p.lastAction ?? '')) gain = 25;
+      else if (rt === 'grace' && didHeal) gain = 20;
+      else if (rt === 'corruption' && offensive && (p.hp || 0) < p.maxHp * 0.3) gain = 35;
+      else if (rt === 'instinct' && critLandedTurn) gain = 30;
+      // Âmes (Nécromancien) / Pièges (Piégeur) : le combat multi ne modélise pas le
+      // poison sur le monstre → approximé sur l'action offensive (le vrai poison est
+      // câblé en solo/chasse via combatTurn). Présage (Oracle) : sur un soin.
+      else if (rt === 'souls' && offensive) gain = 20;
+      else if (rt === 'traps' && offensive) gain = 20;
+      else if (rt === 'presage' && didHeal) gain = 25;
+      if (gain) p.pool = Math.max(0, Math.min(poolMaxFor(p.classId), (p.pool ?? 0) + gain));
+      p.lastAction = action;
     }
 
     if (action !== 'timeout') {

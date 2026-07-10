@@ -2,6 +2,7 @@ import { useGame } from '../../store/gameStore';
 import { BIOMES } from '../../game/biomes';
 import type { BiomeId } from '../../game/types';
 import { currentGlobalEvent, currentBiomeEvent } from '../../game/events';
+import { masteryProgress } from '../../game/mastery';
 
 // Serpentin harmonieux du bas (Forêt niv.1) vers le haut (Abysses niv.38).
 const POS: Record<BiomeId, { x: number; y: number }> = {
@@ -114,6 +115,27 @@ export default function MapCard() {
         <span className="text-slate-400">Position : </span>
         <span style={{ color: BIOMES[p.biome].accent }}>{BIOMES[p.biome].emoji} {BIOMES[p.biome].name}</span>
         <div className="mt-0.5 text-[11px] text-slate-400">{BIOMES[p.biome].desc}</div>
+      </div>
+
+      {/* Maîtrise des biomes : progression du farm (titres + bonus XP/Or par palier) */}
+      <div className="rounded-lg bg-black/25 px-3 py-2">
+        <div className="mb-1.5 text-xs font-semibold text-amber-300">🏅 Maîtrise des biomes</div>
+        <div className="space-y-1.5">
+          {ORDER.filter((id) => p.level >= BIOMES[id].minLevel).map((id) => {
+            const kills = p.biomeKills?.[id] ?? 0;
+            const mp = masteryProgress(kills);
+            return (
+              <div key={id} className="flex items-center gap-2 text-[11px]">
+                <span className="w-28 shrink-0 truncate" style={{ color: BIOMES[id].accent }}>{BIOMES[id].emoji} {BIOMES[id].name}</span>
+                <span className="w-16 shrink-0 text-slate-300">{mp.label}{mp.bonus > 0 && <span className="text-emerald-300"> +{Math.round(mp.bonus * 100)}%</span>}</span>
+                <span className="h-1.5 flex-1 overflow-hidden rounded bg-black/40">
+                  <span className="block h-full rounded bg-amber-400" style={{ width: mp.next != null ? `${Math.min(100, (mp.into / mp.need) * 100)}%` : '100%' }} />
+                </span>
+                <span className="w-20 shrink-0 text-right tabular-nums text-slate-500">{mp.next != null ? `${kills}/${mp.next}` : `${kills} · MAX`}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {p.level >= 3 && (

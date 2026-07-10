@@ -43,6 +43,19 @@ export interface GuildBoss {
   defeatedAt?: number;
 }
 
+/** Objectif collectif hebdomadaire : toute la guilde cumule ses contributions. */
+export interface GuildGoal {
+  weekId: string;
+  name: string;
+  icon: string;
+  desc: string;
+  target: number;
+  progress: number;
+  /** uid -> contribution cumulée cette semaine. */
+  contributors: Record<string, number>;
+  completedAt?: number;
+}
+
 export interface Guild {
   id: string;
   name: string;
@@ -53,6 +66,7 @@ export interface Guild {
   xp: number;
   createdAt: number;
   boss?: GuildBoss;
+  goal?: GuildGoal;
   applications?: Record<string, Member>;
 }
 
@@ -291,6 +305,46 @@ const GUILD_BOSS_ROSTER = [
 /** Identifiant de la semaine (numéro de semaine depuis l'epoch). */
 export function guildBossWeekId(now = Date.now()): string {
   return String(Math.floor(now / (7 * 24 * 60 * 60 * 1000)));
+}
+
+// ─── Objectif collectif hebdomadaire ─────────────────────────────────────────
+// Toute la guilde cumule un compteur partagé (kills, par défaut). Atteint →
+// coffre réclamable une fois par membre. La contribution est accumulée CÔTÉ
+// JOUEUR (voir player.ts `guildGoalKills`) et flushée par delta à la sauvegarde
+// (débounced), pas une écriture Firestore par kill — évite d'exploser le quota.
+const GUILD_GOAL_ROSTER = [
+  { name: 'Battue collective', icon: '⚔️', desc: 'Vaincre 1500 monstres ensemble.', target: 1500 },
+  { name: 'Grande chasse', icon: '🏹', desc: 'Vaincre 2500 monstres ensemble.', target: 2500 },
+  { name: 'Purge des terres', icon: '🔥', desc: 'Vaincre 2000 monstres ensemble.', target: 2000 },
+  { name: 'Marée de fer', icon: '🛡️', desc: 'Vaincre 3000 monstres ensemble.', target: 3000 },
+];
+export function freshGuildGoal(weekId: string, memberCount: number): GuildGoal {
+  const idx = ((parseInt(weekId, 10) % GUILD_GOAL_ROSTER.length) + GUILD_GOAL_ROSTER.length) % GUILD_GOAL_ROSTER.length;
+  const g = GUILD_GOAL_ROSTER[idx];
+  // La cible s'adapte un peu à la taille de la guilde (plus de membres = plus de cible).
+  const target = Math.round(g.target * (0.5 + Math.min(1, memberCount / 10)));
+  return { weekId, name: g.name, icon: g.icon, desc: g.desc, target, progress: 0, contributors: {} };
+}
+
+/** Ajoute `delta` kills à l'objectif collectif (transaction ; init/reset si la semaine a changé). */
+export async function contributeGuildGoal(guildId: string, uid: string, delta: number): Promise<void> {
+  if (!db || delta <= 0) return;
+  const ref = doc(db, 'guilds', guildId);
+  const wid = guildBossWeekId();
+  try {
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) return;
+      const data = snap.data() as Omit<Guild, 'id'>;
+      if (!(uid in (data.members ?? {}))) return; // pas membre
+      let goal = data.goal;
+      if (!goal || goal.weekId !== wid) goal = freshGuildGoal(wid, Object.keys(data.members ?? {}).length || 1);
+      goal.progress = Math.min(goal.target, (goal.progress ?? 0) + delta);
+      goal.contributors = { ...goal.contributors, [uid]: (goal.contributors?.[uid] ?? 0) + delta };
+      if (goal.progress >= goal.target && !goal.completedAt) goal.completedAt = Date.now();
+      tx.update(ref, { goal });
+    });
+  } catch { /* best-effort */ }
 }
 
 function freshBoss(weekId: string, memberCount: number, avgLevel: number, guildLvl: number): GuildBoss {

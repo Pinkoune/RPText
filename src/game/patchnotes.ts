@@ -18,6 +18,48 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'new-subclasses-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '🌟 Quatre nouvelles voies d\'ascension',
+        items: [
+          'Au Niveau 20, ta classe de base peut désormais s\'élever vers une spécialisation inédite — une par famille, avec son propre arbre de talents complet :',
+          '🛡️ Sentinelle (Guerrier) — le tank qui PUNIT au lieu de simplement protéger. Rempart d\'épines te blinde et force l\'aggro, Épines renforcées renvoie jusqu\'à +21% des dégâts subis, Représailles transforme chaque coup encaissé en riposte. La plus haute DEF/PV des guerriers.',
+          '💀 Nécromancien (Mage) — le maître du poison et des âmes. Là où le Pyromancien explose et le Cryomancien gèle, lui empoisonne, perce l\'armure et draine la vie. Ses dégâts continus ignorent les boss les mieux cuirassés.',
+          '🪤 Piégeur (Archer) — le traqueur toxique. Pièges empoisonnés qui rongent la cible + esquive cumulée (jusqu\'à +21%) pour sa survie. Use les gros PV des boss là où les autres archers cherchent le pic de dégâts.',
+          '🔮 Oracle (Soigneur) — le prophète protecteur. Boucliers posés AVANT le coup, la meilleure DEF/réduction de dégâts des soigneurs, et un Jugement de lumière qui mêle dégâts et soin. Le protecteur d\'équipe le plus fiable en donjon.',
+          'Toutes sont jouables, équilibrées et déjà dans le Wiki (onglet Classes) et l\'écran d\'ascension.',
+        ],
+      },
+      {
+        title: '⚡ Une ressource d\'archétype pour chacune',
+        items: [
+          'Comme les sous-classes existantes, les quatre nouvelles ont leur propre jauge à gérer — fini le simple cooldown :',
+          '🌵 Sentinelle — Vindicte : se charge en ENCAISSANT des coups (le tank vengeur transforme la douleur en riposte). Alimente Représailles.',
+          '👻 Nécromancien — Âmes : se charge à chaque fois que le POISON ronge la cible. Poser le poison arme directement ta Vague d\'âmes.',
+          '🪤 Piégeur — Pièges : se charge en FRAPPANT une cible déjà empoisonnée (le piège se referme). Déclenche Embuscade.',
+          '🔮 Oracle — Présage : se charge quand un BOUCLIER absorbe un coup ou qu\'un SOIN passe (l\'anticipation nourrit la prophétie). Alimente Jugement.',
+        ],
+      },
+      {
+        title: '🧟 Nécromancien — Lever un mort',
+        items: [
+          'Nouvelle compétence d\'invocation : dresse un serviteur qui frappe automatiquement le monstre en fin de tour pendant 4 tours, en plus de tes propres attaques.',
+          'Disponible en chasse, aventure et Abysses solo.',
+        ],
+      },
+      {
+        title: '⚖️ Équilibrage & corrections',
+        items: [
+          'Correction : la Vague d\'âmes du Nécromancien affichait un coût de ressource mais la jauge ne se chargeait jamais — l\'ultime était injouable. C\'est réglé (elle tourne maintenant sur les Âmes).',
+          'Les 18 sous-classes ont été repassées à la simulation de combat (des milliers de combats au Nv.50) : toutes survivent à 100% et restent dans la fourchette saine. Aucune n\'est laissée de côté.',
+          'Rappel : les 4 classes de base (Guerrier/Mage/Archer/Soigneur) restent volontairement en retrait à haut niveau — on ascensionne dès le Niveau 20.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'dungeon-resource-fix-v1',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [

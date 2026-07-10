@@ -171,6 +171,17 @@ export const RECIPES: Recipe[] = [
   // Recettes manquantes (items sans source de drop)
   { output: 'spirit_staff', qty: 1, materials: { refined_wood: 8, mana_bloom: 10, magic_dust: 4 }, gold: 2000, levelReq: 13, difficulty: 160, maxQuality: 650, durability: 70 },
 
+  // ── Set de transition « Marais-Braise » (niv.22-24) : comble le trou de
+  //    progression Nv20-30 (armes) / Nv15-32 (armures). Matériaux du marais +
+  //    entrée du volcan, forgeables dès qu'on atteint le mur de difficulté.
+  { output: 'warlord_axe', qty: 1, materials: { mithril_ingot: 3, bog_root: 8, iron_ingot: 6 }, gold: 1600, levelReq: 13, difficulty: 175, maxQuality: 700, durability: 70 },
+  { output: 'swiftwind_bow', qty: 1, materials: { ironwood: 6, wildflower: 12, sturdy_leather: 5 }, gold: 1600, levelReq: 13, difficulty: 175, maxQuality: 700, durability: 65 },
+  { output: 'emberflow_staff', qty: 1, materials: { ember_stone: 6, refined_wood: 6, magic_dust: 5 }, gold: 1650, levelReq: 13, difficulty: 175, maxQuality: 700, durability: 65 },
+  { output: 'marsh_cane', qty: 1, materials: { bog_root: 10, mana_bloom: 6, magic_dust: 4 }, gold: 1650, levelReq: 13, difficulty: 175, maxQuality: 700, durability: 65 },
+  { output: 'warplate', qty: 1, materials: { iron_ingot: 12, ember_stone: 4, sturdy_leather: 6 }, gold: 1500, levelReq: 14, difficulty: 185, maxQuality: 720, durability: 90 },
+  { output: 'scout_leathers', qty: 1, materials: { sturdy_leather: 10, bog_root: 6, silk_thread: 6 }, gold: 1450, levelReq: 14, difficulty: 185, maxQuality: 700, durability: 80 },
+  { output: 'mystic_garb', qty: 1, materials: { silk_thread: 12, mana_bloom: 5, magic_dust: 6 }, gold: 1450, levelReq: 14, difficulty: 185, maxQuality: 700, durability: 70 },
+
   // ── End-game (ressources volcaniques, niv.30-45) ──
   { output: 'lava_blade', qty: 1, materials: { lava_crystal: 8, mithril_ingot: 6, ember_stone: 4 }, gold: 6000, levelReq: 30, difficulty: 500, maxQuality: 2000, durability: 100 },
   { output: 'infernal_bow', qty: 1, materials: { lava_crystal: 6, ember_stone: 8, ironwood: 6 }, gold: 6000, levelReq: 30, difficulty: 500, maxQuality: 2000, durability: 100 },

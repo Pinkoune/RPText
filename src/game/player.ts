@@ -84,6 +84,8 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (!p.settledDungeons) p.settledDungeons = [];
   if (!p.lockedItems) p.lockedItems = [];
   if (!p.buildSlots) p.buildSlots = [];
+  if (!p.biomeKills) p.biomeKills = {};
+  if (!p.settledGuildGoals) p.settledGuildGoals = [];
   if (!p.settledEndless) p.settledEndless = [];
   if (p.endlessSessionId === undefined) p.endlessSessionId = null;
   if (!p.settledPvpDuels) p.settledPvpDuels = [];

@@ -1,0 +1,168 @@
+<title>RPText — Vue d'ensemble de l'équilibrage</title>
+<style>
+  :root{--bg:#f6f7f4;--surface:#fcfcfb;--card:#ffffff;--border:#e6e5df;--ink:#141311;--ink2:#52514e;--ink3:#8a887f;
+    --s1:#2a78d6;--s2:#1baf7a;--s3:#eda100;--s4:#e34948;--s5:#4a3aa7;--s6:#eb6834;--good:#008300;--bad:#e34948;--warn:#eda100;--grid:#ecebe5;}
+  @media (prefers-color-scheme:dark){:root{--bg:#121311;--surface:#191a18;--card:#20211e;--border:#33342e;--ink:#f5f6ef;--ink2:#c2c3b7;--ink3:#8e8f84;--s1:#3987e5;--s2:#199e70;--s3:#c98500;--s4:#e66767;--s5:#9085e9;--s6:#d95926;--good:#3fa63f;--warn:#c98500;--grid:#292a25;}}
+  :root[data-theme="dark"]{--bg:#121311;--surface:#191a18;--card:#20211e;--border:#33342e;--ink:#f5f6ef;--ink2:#c2c3b7;--ink3:#8e8f84;--s1:#3987e5;--s2:#199e70;--s3:#c98500;--s4:#e66767;--s5:#9085e9;--s6:#d95926;--good:#3fa63f;--warn:#c98500;--grid:#292a25;}
+  :root[data-theme="light"]{--bg:#f6f7f4;--surface:#fcfcfb;--card:#ffffff;--border:#e6e5df;--ink:#141311;--ink2:#52514e;--ink3:#8a887f;--s1:#2a78d6;--s2:#1baf7a;--s3:#eda100;--s4:#e34948;--s5:#4a3aa7;--s6:#eb6834;--good:#008300;--warn:#eda100;--grid:#ecebe5;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:30px 20px 80px}
+  h1{font-size:29px;line-height:1.15;margin:0 0 6px;letter-spacing:-.02em;text-wrap:balance}
+  h2{font-size:19px;margin:38px 0 2px;letter-spacing:-.01em}
+  .tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px}
+  .lead{color:var(--ink2);max-width:74ch;margin:0 0 6px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px 12px;margin:14px 0}
+  .cap{font-size:12.5px;color:var(--ink3);margin:0 0 10px}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink2);margin:0 0 8px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:12px;height:3px;border-radius:2px;display:inline-block}.sw.d{width:10px;height:10px;border-radius:3px}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .axlabel{font:11px sans-serif;fill:var(--ink3)}.barlabel{font:600 11px sans-serif;fill:var(--ink)}
+  .callout{border-left:3px solid var(--s3);background:color-mix(in srgb,var(--s3) 8%,transparent);padding:11px 15px;border-radius:0 8px 8px 0;margin:12px 0;font-size:13.5px}
+  .callout.good{border-color:var(--good);background:color-mix(in srgb,var(--good) 8%,transparent)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}@media(max-width:720px){.kpis{grid-template-columns:1fr 1fr}}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+  .kpi .v{font-size:22px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .kpi .l{font-size:11.5px;color:var(--ink3);margin-top:1px}
+  .rndbox{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;font-size:13px;margin-top:4px}@media(max-width:600px){.rndbox{grid-template-columns:1fr}}
+  .rndbox b{color:var(--ink)}
+  .foot{color:var(--ink3);font-size:12px;margin-top:36px;border-top:1px solid var(--border);padding-top:12px}
+</style>
+<div class="wrap">
+  <span class="tag">RPText · Carte d'équilibrage globale</span>
+  <h1>Tout le jeu sur une montée de niveau — puissance, contenu, classes & temps</h1>
+  <p class="lead">Une lecture unifiée : comment la puissance du joueur se construit (classe → équipement → talents) au fil des 50 niveaux, ce que ça donne face au contenu, l'éventail des 16 classes, et où passe réellement le temps de jeu. Mesuré sur le moteur de combat réel.</p>
+
+  <div class="kpis" id="kpis"></div>
+
+  <h2>① Construction de la puissance — système par système</h2>
+  <p class="cap">Puissance offensive (dégâts/tour) d'un joueur de référence, indexée à Nv.1 = 100. Chaque couche s'ajoute à la précédente. Les <b>plateaux</b> = paliers où l'équipement ne progresse pas ; les <b>sauts</b> = nouveaux tiers de craft.</p>
+  <div class="card">
+    <div class="legend">
+      <span><span class="sw" style="background:var(--ink3)"></span>Classe seule (stats de base)</span>
+      <span><span class="sw" style="background:var(--s1)"></span>+ Équipement du niveau</span>
+      <span><span class="sw" style="background:var(--s2)"></span>+ Talents (arbre max)</span>
+    </div>
+    <div id="powChart"></div>
+  </div>
+  <div class="callout good"><b>L'équipement est le levier n°1</b> (écart classe↔gear), les talents lissent la courbe. Le plateau Nv.1-10 (le gear starter ne bouge pas) puis les marches à Nv.15 / <b>Nv.22 (set Marais-Braise ajouté)</b> / Nv.30 (volcanique) montrent la cadence des tiers. Le trou Nv.20-30 qui existait avant est désormais comblé.</p></div>
+
+  <h2>② L'équilibre réel — issue des combats par niveau</h2>
+  <p class="cap">Winrate d'un build de référence contre le contenu de son niveau (compétences + potions). C'est la vérité qui réconcilie « puissance joueur » et « difficulté contenu ».</p>
+  <div class="card"><div id="wrChart"></div></div>
+  <div class="callout"><b>Trois zones :</b> confort (Nv.1-20, 100%) → défi maîtrisé (volcan/Nécropole, 45-80% après correctifs) → mur de fin de jeu assumé (Abysses Nv.38+, on out-niveau/optimise). Le pic de difficulté du Nv.24-30 a été aplani (avant : chute à 1%).</div>
+
+  <h2>③ L'éventail des 16 classes à Nv.50</h2>
+  <p class="cap">Chaque point = une classe maxée. Axe X = puissance offensive (DPS), axe Y = survie (PV effectifs). Bleu = classe de base, vert = sous-classe (ascension). Un roster équilibré = les points restent dans une bande, sans outlier isolé.</p>
+  <div class="card">
+    <div class="legend"><span><span class="sw d" style="background:var(--s1)"></span>Classe de base</span><span><span class="sw d" style="background:var(--s2)"></span>Sous-classe</span></div>
+    <div id="scatterChart"></div>
+  </div>
+  <div class="callout"><b>Compromis DPS ↔ survie lisible :</b> en haut à gauche les tanks/soigneurs (survie haute, DPS bas), en bas à droite les casters (DPS haut, fragiles). Pas d'outlier isolé après le nerf Berserker. Le glass-cannon (Pyro/Arca) et le bunker (Prêtre/Moine) sont les deux extrêmes assumés.</div>
+
+  <h2>④ Où passe le temps — courbe d'XP</h2>
+  <div class="grid2">
+    <div class="card"><h3 style="margin:2px 0 2px;font-size:14px">XP cumulée (% du chemin vers Nv.50)</h3><div id="xpChart"></div></div>
+    <div class="card"><h3 style="margin:2px 0 2px;font-size:14px">Part du grind par tranche de 10 niveaux</h3><div id="xpBandChart"></div></div>
+  </div>
+  <div class="callout"><b>Progression très « end-loaded »</b> : les niveaux 40-50 représentent ~81% du grind total. Le end-game est long — et comme tous les biomes sont débloqués dès Nv.28, c'est du farm dans les mêmes zones. Levier possible : adoucir la courbe post-Nv.30 (non fait, choix de design).</div>
+
+  <h2>⑤ Les sources aléatoires — la bande d'incertitude</h2>
+  <p class="cap">Au-dessus de la courbe médiane ci-dessus se superposent des gains variables qui décalent la puissance/progression vers le haut, sans jamais la faire baisser. Ils élargissent la « bande » du joueur au-dessus du minimum garanti.</p>
+  <div class="card">
+    <div class="rndbox">
+      <div>🎁 <b>Lootbox / coffres de donjon</b> — gear & matériaux au hasard (peut sauter un palier de craft).</div>
+      <div>🏰 <b>Guilde</b> — bonus passif <b>+2% XP par niveau de guilde</b> (jusqu'à ~+20%), boss hebdo → matrices/or.</div>
+      <div>📜 <b>Quêtes (jour/semaine)</b> — or, gemmes, matrices, Fate Coins garantis en flux régulier.</div>
+      <div>🎲 <b>Saison PvP / casino / boss mondial</b> — Fate Coins & lots ponctuels, pics de ressources.</div>
+      <div>⭐ <b>Étoiles (matrices)</b> — jusqu'à +50% stats sur une pièce (bonus multiplicatif au-dessus du gear de base).</div>
+      <div>✦ <b>Prestige</b> — +8% ATK/DEF/PV & +10% XP/Or par palier (cap 5) → décale toute la bande d'un joueur avancé.</div>
+    </div>
+  </div>
+  <div class="callout good"><b>Effet net :</b> ces sources ne changent pas la <b>forme</b> des courbes (la structure classe/gear/talents/XP), elles remontent le plancher. Un joueur chanceux/investi (guilde active + étoiles + prestige) vit ~15-40% au-dessus de la courbe médiane — la marge qui transforme un « mur » en « défi ». C'est sain tant que le minimum garanti (les courbes ci-dessus) reste jouable, ce qui est le cas après correctifs.</div>
+
+  <p class="foot">Généré sur la logique de combat réelle (<code>scripts/master-curve-data.ts</code>, <code>balance-sim-turns.ts</code>). Puissance = dégâts/tour auto-combat ; survie = PV × réductions. Courbes indexées Nv.1 = 100. Palette data-viz validée CVD-safe, thèmes clair & sombre.</p>
+</div>
+<script>
+const D=/*__DATA__*/;
+const $=id=>document.getElementById(id);const NS='http://www.w3.org/2000/svg';
+function el(t,a,x){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;return e;}
+function svg(w,h){return el('svg',{viewBox:`0 0 ${w} ${h}`});}
+
+// KPIs
+const kp=[
+ {v:'16',l:'classes équilibrées'},
+ {v:'×5',l:'puissance Nv.1→50 (joueur)'},
+ {v:'81%',l:'du grind en Nv.40-50'},
+ {v:'Nv.22',l:'trou de gear comblé'},
+];
+$('kpis').innerHTML=kp.map(k=>`<div class="kpi"><div class="v">${k.v}</div><div class="l">${k.l}</div></div>`).join('');
+
+// ① Power layers (indexed to powClass Nv1)
+(function(){
+ const rows=D.rows;const base=rows[0].powClass;
+ const series=[{k:'powClass',c:'var(--ink3)'},{k:'powGear',c:'var(--s1)'},{k:'powFull',c:'var(--s2)'}];
+ const W=900,H=320,pL=44,pR=54,pT=14,pB=30;
+ const maxV=Math.max(...rows.map(r=>r.powFull/base*100))*1.05;
+ const X=l=>pL+((l-1)/49)*(W-pL-pR);const Y=v=>H-pB-(v/maxV)*(H-pT-pB);
+ const s=svg(W,H);
+ for(let t=0;t<=5;t++){const v=maxV*t/5,y=Y(v);s.appendChild(el('line',{x1:pL,x2:W-pR,y1:y,y2:y,stroke:'var(--grid)'}));s.appendChild(el('text',{x:pL-6,y:y+4,'text-anchor':'end',class:'axlabel'},Math.round(v)));}
+ [1,10,20,30,40,50].forEach(l=>s.appendChild(el('text',{x:X(l),y:H-8,'text-anchor':'middle',class:'axlabel'},'Nv'+l)));
+ // markers
+ [[20,'Ascension'],[22,'Set Nv22'],[30,'Volcanique']].forEach(([l,lab])=>{s.appendChild(el('line',{x1:X(l),x2:X(l),y1:pT,y2:H-pB,stroke:'var(--s3)','stroke-width':1,'stroke-dasharray':'3 3','opacity':0.5}));s.appendChild(el('text',{x:X(l),y:pT+2,'text-anchor':'middle',class:'axlabel',style:'fill:var(--s3);font-size:10px'},lab));});
+ series.forEach(se=>{const d=rows.map((r,i)=>(i?'L':'M')+X(r.lvl)+' '+Y(r[se.k]/base*100)).join(' ');s.appendChild(el('path',{d,fill:'none',stroke:se.c,'stroke-width':se.k==='powFull'?2.6:2,'stroke-linejoin':'round'}));const last=rows[49];s.appendChild(el('text',{x:X(50)+6,y:Y(last[se.k]/base*100)+4,class:'barlabel',style:`fill:${se.c}`},Math.round(last[se.k]/base*100)));});
+ $('powChart').appendChild(s);
+})();
+
+// ② Winrate area
+(function(){
+ const pts=D.hunt;const W=900,H=250,pL=40,pR=20,pT=14,pB=32;
+ const X=l=>pL+((l-pts[0].lvl)/(pts.at(-1).lvl-pts[0].lvl))*(W-pL-pR);const Y=v=>H-pB-(v/100)*(H-pT-pB);
+ const s=svg(W,H);
+ for(let t=0;t<=4;t++){const v=25*t,y=Y(v);s.appendChild(el('line',{x1:pL,x2:W-pR,y1:y,y2:y,stroke:'var(--grid)'}));s.appendChild(el('text',{x:pL-6,y:y+4,'text-anchor':'end',class:'axlabel'},v+'%'));}
+ pts.forEach(p=>s.appendChild(el('text',{x:X(p.lvl),y:H-8,'text-anchor':'middle',class:'axlabel'},'Nv'+p.lvl)));
+ const d=pts.map((p,i)=>(i?'L':'M')+X(p.lvl)+' '+Y(p.wr)).join(' ');
+ s.appendChild(el('path',{d:d+` L ${X(pts.at(-1).lvl)} ${Y(0)} L ${X(pts[0].lvl)} ${Y(0)} Z`,fill:'color-mix(in srgb,var(--s2) 13%,transparent)'}));
+ s.appendChild(el('path',{d,fill:'none',stroke:'var(--s2)','stroke-width':2.6,'stroke-linejoin':'round'}));
+ pts.forEach(p=>{s.appendChild(el('circle',{cx:X(p.lvl),cy:Y(p.wr),r:3.5,fill:'var(--s2)',stroke:'var(--surface)','stroke-width':2}));s.appendChild(el('text',{x:X(p.lvl),y:Y(p.wr)-9,'text-anchor':'middle',class:'barlabel'},p.wr+'%'));});
+ $('wrChart').appendChild(s);
+})();
+
+// ③ Scatter DPS vs survie
+(function(){
+ const pts=D.subPow;const W=900,H=380,pL=52,pR=16,pT=16,pB=36;
+ const xs=pts.map(p=>p.dps),ys=pts.map(p=>p.tank);
+ const xmin=Math.min(...xs)*0.9,xmax=Math.max(...xs)*1.05,ymin=Math.min(...ys)*0.9,ymax=Math.max(...ys)*1.06;
+ const X=v=>pL+((v-xmin)/(xmax-xmin))*(W-pL-pR);const Y=v=>H-pB-((v-ymin)/(ymax-ymin))*(H-pT-pB);
+ const s=svg(W,H);
+ for(let t=0;t<=4;t++){const v=ymin+(ymax-ymin)*t/4,y=Y(v);s.appendChild(el('line',{x1:pL,x2:W-pR,y1:y,y2:y,stroke:'var(--grid)'}));s.appendChild(el('text',{x:pL-6,y:y+4,'text-anchor':'end',class:'axlabel'},Math.round(v)));}
+ for(let t=0;t<=4;t++){const v=xmin+(xmax-xmin)*t/4,x=X(v);s.appendChild(el('text',{x,y:H-8,'text-anchor':'middle',class:'axlabel'},Math.round(v)));}
+ s.appendChild(el('text',{x:(pL+W-pR)/2,y:H-2,'text-anchor':'middle',class:'axlabel',style:'font-weight:600'},'DPS →'));
+ s.appendChild(el('text',{x:12,y:(pT+H-pB)/2,'text-anchor':'middle',class:'axlabel',style:'font-weight:600',transform:`rotate(-90 12 ${(pT+H-pB)/2})`},'Survie (PV eff.) →'));
+ pts.forEach(p=>{const c=p.isSub?'var(--s2)':'var(--s1)';s.appendChild(el('circle',{cx:X(p.dps),cy:Y(p.tank),r:5,fill:c,stroke:'var(--surface)','stroke-width':1.5,'fill-opacity':0.9}));s.appendChild(el('text',{x:X(p.dps)+8,y:Y(p.tank)+3,class:'axlabel',style:'font-size:10.5px;fill:var(--ink2)'},p.name));});
+ $('scatterChart').appendChild(s);
+})();
+
+// ④ XP cumulative + band
+(function(){
+ const pts=D.xp;const W=430,H=240,pL=36,pR=14,pT=12,pB=28;
+ const X=l=>pL+((l-1)/49)*(W-pL-pR);const Y=v=>H-pB-(v/100)*(H-pT-pB);
+ const s=svg(W,H);
+ for(let t=0;t<=4;t++){const v=25*t,y=Y(v);s.appendChild(el('line',{x1:pL,x2:W-pR,y1:y,y2:y,stroke:'var(--grid)'}));s.appendChild(el('text',{x:pL-5,y:y+4,'text-anchor':'end',class:'axlabel'},v+'%'));}
+ [1,20,30,40,50].forEach(l=>s.appendChild(el('text',{x:X(l),y:H-8,'text-anchor':'middle',class:'axlabel'},'Nv'+l)));
+ const d=pts.map((p,i)=>(i?'L':'M')+X(p.lvl)+' '+Y(p.cumPct)).join(' ');
+ s.appendChild(el('path',{d:d+` L ${X(50)} ${Y(0)} L ${X(1)} ${Y(0)} Z`,fill:'color-mix(in srgb,var(--s4) 12%,transparent)'}));
+ s.appendChild(el('path',{d,fill:'none',stroke:'var(--s4)','stroke-width':2.4}));
+ $('xpChart').appendChild(s);
+})();
+(function(){
+ const bands=[['1-20',0.5],['20-30',2.8],['30-40',15.5],['40-50',81.2]];
+ const W=430,H=240,pL=36,pR=14,pT=12,pB=28;const max=90;const gw=(W-pL-pR)/bands.length;
+ const s=svg(W,H);
+ for(let t=0;t<=3;t++){const v=Math.round(max*t/3),y=H-pB-(v/max)*(H-pT-pB);s.appendChild(el('line',{x1:pL,x2:W-pR,y1:y,y2:y,stroke:'var(--grid)'}));s.appendChild(el('text',{x:pL-5,y:y+4,'text-anchor':'end',class:'axlabel'},v+'%'));}
+ bands.forEach((b,i)=>{const x=pL+i*gw+gw*0.2,bw=gw*0.6,bh=(b[1]/max)*(H-pT-pB);const col=b[1]>50?'var(--s4)':b[1]>10?'var(--s3)':'var(--s2)';s.appendChild(el('rect',{x,y:H-pB-bh,width:bw,height:bh,rx:3,fill:col}));s.appendChild(el('text',{x:x+bw/2,y:H-pB-bh-6,'text-anchor':'middle',class:'barlabel'},b[1]+'%'));s.appendChild(el('text',{x:x+bw/2,y:H-9,'text-anchor':'middle',class:'axlabel'},'Nv'+b[0]));});
+ $('xpBandChart').appendChild(s);
+})();
+</script>

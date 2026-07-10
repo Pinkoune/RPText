@@ -77,8 +77,15 @@ export function pickMonster(biome: BiomeId, phase: Phase, playerLevel: number = 
     }
   }
   
-  // Scaling exponentiel basé sur le niveau du joueur (plus raide après l'Ascension au nv 20)
-  const powerFactor = playerLevel >= 20 ? 2.0 : 1.5;
+  // Scaling exponentiel du monstre selon le niveau du joueur.
+  // AVANT : exposant 1.5 puis SAUT à 2.0 pile au Nv.20 (post-ascension) → +32%
+  // de stats monstre en un seul niveau, exactement au moment où le joueur passe
+  // sous-classe. Une simulation (chasse, avec compétences+potions) a montré une
+  // falaise : winrate 100% jusqu'au Nv.20 puis 62% au volcan (24), 1% à la
+  // Nécropole (30). Corrigé en exposant CONTINU 1.7 (ni discontinuité, ni
+  // explosion quadratique) : la montée reste ferme mais régulière. L'Abysse
+  // (Nv.38+) reste volontairement un mur de fin de jeu.
+  const powerFactor = 1.75;
   const scale = Math.pow(1 + Math.max(0, playerLevel - 1) / 30, powerFactor);
   
   return {

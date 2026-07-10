@@ -56,6 +56,8 @@ export interface ActiveSkillDef {
   teamAtkBuff?: number;
   /** Paladin : force l'aggro du monstre sur soi (donjon), même sans dégâts (ex : Rempart). */
   taunt?: boolean;
+  /** Nécromancien : invoque un serviteur qui frappe `pow`×ATK/tour pendant `turns` tours (fin de tour). */
+  summon?: { turns: number; pow: number };
   /**
    * Ressource alternative au cooldown universel (pilote sur 4 archétypes) :
    * - rage (Berserker/Dark Knight) : coût fixe, se charge en encaissant des dégâts.
@@ -87,11 +89,11 @@ export interface ActiveSkillDef {
    *   dégâts UNIQUEMENT sous 30% PV (même seuil que Douleur) — récompense le
    *   fait de frapper au bord de la mort plutôt que de simplement encaisser.
    */
-  resource?: { type: 'rage' | 'combo' | 'grace' | 'mana' | 'sap' | 'zeal' | 'tempo' | 'overcharge' | 'instinct' | 'corruption'; cost: number; scalePerPoint?: number };
+  resource?: { type: 'rage' | 'combo' | 'grace' | 'mana' | 'sap' | 'zeal' | 'tempo' | 'overcharge' | 'instinct' | 'corruption' | 'vindicte' | 'souls' | 'traps' | 'presage'; cost: number; scalePerPoint?: number };
 }
 
 /** Type de ressource passive accumulée par archétype (pilote : Berserker = rage, Chevalier Noir = corruption, Voleur/Moine = combo, Prêtre de l'Aube = grâce, Pyro/Cryo = mana, Druide = sève, Paladin = ferveur, Barde = tempo, Arcaniste = surcharge, Chasseur = instinct). */
-export function classResourceType(classId: ClassId): 'rage' | 'combo' | 'grace' | 'mana' | 'sap' | 'zeal' | 'tempo' | 'overcharge' | 'instinct' | 'corruption' | null {
+export function classResourceType(classId: ClassId): 'rage' | 'combo' | 'grace' | 'mana' | 'sap' | 'zeal' | 'tempo' | 'overcharge' | 'instinct' | 'corruption' | 'vindicte' | 'souls' | 'traps' | 'presage' | null {
   if (classId === 'berserker') return 'rage';
   if (classId === 'dark_knight') return 'corruption';
   if (classId === 'rogue' || classId === 'monk') return 'combo';
@@ -102,6 +104,10 @@ export function classResourceType(classId: ClassId): 'rage' | 'combo' | 'grace' 
   if (classId === 'arcanist') return 'overcharge';
   if (classId === 'dawn_priest') return 'grace';
   if (classId === 'hunter') return 'instinct';
+  if (classId === 'sentinel') return 'vindicte';
+  if (classId === 'necromancer') return 'souls';
+  if (classId === 'trapper') return 'traps';
+  if (classId === 'oracle') return 'presage';
   return null;
 }
 
@@ -117,6 +123,10 @@ export const RESOURCE_INFO: Record<string, { icon: string; name: string; color: 
   overcharge: { icon: '🌌', name: 'Surcharge', color: '#6366f1', desc: 'Se charge à chaque compétence lancée (n\'importe laquelle).' },
   instinct: { icon: '🎯', name: 'Traque', color: '#22d3ee', desc: 'Se charge quand un coup CRIT.' },
   corruption: { icon: '💀', name: 'Corruption', color: '#7c3aed', desc: 'Se charge en infligeant des dégâts uniquement sous 30% PV.' },
+  vindicte: { icon: '🌵', name: 'Vindicte', color: '#65a30d', desc: 'Se charge en encaissant des coups (le tank vengeur transforme la douleur en riposte).' },
+  souls: { icon: '👻', name: 'Âmes', color: '#a78bfa', desc: 'Se charge quand le Poison ronge la cible (chaque âme arrachée aux mourants).' },
+  traps: { icon: '🪤', name: 'Pièges', color: '#ea580c', desc: 'Se charge en frappant une cible déjà empoisonnée (le piège se referme).' },
+  presage: { icon: '🔮', name: 'Présage', color: '#0891b2', desc: 'Se charge quand un bouclier absorbe un coup ou qu\'un soin passe (l\'oracle anticipe).' },
 };
 
 export interface TalentDef {
@@ -144,7 +154,7 @@ export const TALENTS: TalentDef[] = [
   { id: 'pal_skill_smite', classId: 'paladin', name: 'Châtiment', icon: '⚡', desc: 'Compétence : Dégâts sacrés (×2.0) et petit soin. Coûte 40 Ferveur (se charge quand Rempart absorbe un coup).', maxRank: 1, requires: ['pal_regen'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_pal_smite', name: 'Châtiment', icon: '⚡', desc: '×2.0 dégâts, +5% soin. Coûte 40 Ferveur.', cooldownMs: 3_000, type: 'attack', mult: 2.0, healFrac: 0.05, resource: { type: 'zeal', cost: 40 } } },
   // Berserker
   { id: 'ber_rage', classId: 'berserker', name: 'Fureur', icon: '😤', desc: 'Compétence : Frappe frénétique (×2.5).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_ber_rage', name: 'Fureur', icon: '😤', desc: 'Inflige ×2.5 dégâts.', cooldownMs: 18_000, type: 'attack', mult: 2.5 } },
-  { id: 'ber_life', classId: 'berserker', name: 'Soif de sang', icon: '🩸', desc: '+5% vol de vie par rang.', maxRank: 3, requires: ['ber_rage'], pos: { x: 0, y: 4 }, perRank: { lifesteal: 0.05 } },
+  { id: 'ber_life', classId: 'berserker', name: 'Soif de sang', icon: '🩸', desc: '+4% vol de vie par rang.', maxRank: 3, requires: ['ber_rage'], pos: { x: 0, y: 4 }, perRank: { lifesteal: 0.04 } },
   { id: 'ber_skill_execute', classId: 'berserker', name: 'Exécution', icon: '☠️', desc: 'Compétence : Frappe mortelle (×2.8). Coûte 50 Rage (se charge en encaissant des coups).', maxRank: 1, requires: ['ber_life'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_ber_execute', name: 'Exécution', icon: '☠️', desc: 'Inflige ×2.8 dégâts. Coûte 50 Rage.', cooldownMs: 3_000, type: 'attack', mult: 2.8, resource: { type: 'rage', cost: 50 } } },
   // Dark Knight
   { id: 'dk_shadow', classId: 'dark_knight', name: 'Ombre', icon: '🌑', desc: 'Compétence : Frappe ténébreuse (×2.2).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_dk_shadow', name: 'Ombre', icon: '🌑', desc: 'Inflige ×2.2 dégâts.', cooldownMs: 16_000, type: 'attack', mult: 2.2 } },
@@ -204,6 +214,43 @@ export const TALENTS: TalentDef[] = [
   { id: 'mnk_punch', classId: 'monk', name: 'Poing de fer', icon: '🥊', desc: 'Compétence : ×1.8 dégâts.', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_mnk_punch', name: 'Poing de fer', icon: '🥊', desc: 'Inflige ×1.8 dégâts.', cooldownMs: 14_000, type: 'attack', mult: 1.8 } },
   { id: 'mnk_chi', classId: 'monk', name: 'Chi', icon: '☯️', desc: '+5% vol de vie par rang.', maxRank: 3, requires: ['mnk_punch'], pos: { x: 0, y: 4 }, perRank: { lifesteal: 0.05 } },
   { id: 'mnk_skill_dragon', classId: 'monk', name: 'Coup du Dragon', icon: '🐉', desc: 'Compétence : dégâts croissants avec le Combo (min. 3 points, consomme tout). À 5/5 Combo : étourdit le monstre (passe son prochain tour).', maxRank: 1, requires: ['mnk_chi'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_mnk_dragon', name: 'Coup du Dragon', icon: '🐉', desc: 'Consomme tout ton Combo (min. 3) : dégâts croissants. À 5/5 Combo : point vital, le monstre est étourdi 1 tour.', cooldownMs: 3_000, type: 'attack', mult: 1.0, resource: { type: 'combo', cost: 3, scalePerPoint: 0.35 } } },
+
+  // ── Sentinelle (ascension guerrier) : tank de contrôle / épines ──
+  { id: 'sent_bulwark', classId: 'sentinel', name: 'Rempart d\'épines', icon: '🔰', desc: 'Compétence : Bouclier (15% PV) et provoque le monstre (donjon).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_sent_bulwark', name: 'Rempart d\'épines', icon: '🔰', desc: 'Bouclier (15% PV max) + force l\'aggro sur toi (donjon).', cooldownMs: 22_000, type: 'shield', shield: 0.15, taunt: true } },
+  { id: 'sent_thorns', classId: 'sentinel', name: 'Épines renforcées', icon: '🌵', desc: '+6% renvoi de dégâts par rang.', maxRank: 3, requires: ['sent_bulwark'], pos: { x: 0, y: 4 }, perRank: { thorns: 0.06 } },
+  { id: 'sent_skill_retribution', classId: 'sentinel', name: 'Représailles', icon: '⚡', desc: 'Compétence : ×2.2 dégâts + 10% soin. Coûte 50 Vindicte (se charge en encaissant des coups).', maxRank: 1, requires: ['sent_thorns'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_sent_retribution', name: 'Représailles', icon: '⚡', desc: '×2.2 dégâts, +10% soin. Coûte 50 Vindicte.', cooldownMs: 3_000, type: 'attack', mult: 2.2, healFrac: 0.10, resource: { type: 'vindicte', cost: 50 } } },
+  { id: 'sent_guard', classId: 'sentinel', name: 'Garde', icon: '🛡️', desc: '+5% DEF par rang.', maxRank: 3, requires: ['sent_bulwark'], pos: { x: -2, y: 4 }, perRank: { defPct: 0.05 } },
+  { id: 'sent_wall', classId: 'sentinel', name: 'Muraille', icon: '🧱', desc: '+3% DEF par rang.', maxRank: 5, requires: ['sent_guard'], pos: { x: -2, y: 5 }, perRank: { defPct: 0.03 } },
+  { id: 'sent_vigor', classId: 'sentinel', name: 'Endurance', icon: '❤️', desc: '+3% PV max par rang.', maxRank: 5, requires: ['sent_thorns'], pos: { x: 2, y: 5 }, perRank: { hpPct: 0.03 } },
+  { id: 'sent_mend', classId: 'sentinel', name: 'Régénérescence', icon: '💚', desc: '+4 régén/tour par rang.', maxRank: 3, requires: ['sent_skill_retribution'], pos: { x: 0, y: 6 }, perRank: { regen: 4 } },
+
+  // ── Nécromancien (ascension mage) : DoT / poison / drain via Mana ──
+  { id: 'necro_bolt', classId: 'necromancer', name: 'Éclat nécrotique', icon: '☠️', desc: 'Compétence : ×2.0 dégâts + Poison (3 tours).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_necro_bolt', name: 'Éclat nécrotique', icon: '☠️', desc: '×2.0 dégâts + Poison (3 tours).', cooldownMs: 14_000, type: 'attack', mult: 2.0, status: { type: 'poison', turns: 3, pow: 0.3 } } },
+  { id: 'necro_rot', classId: 'necromancer', name: 'Putréfaction', icon: '🦠', desc: '+6% pénétration d\'armure par rang.', maxRank: 3, requires: ['necro_bolt'], pos: { x: 0, y: 4 }, perRank: { armorPen: 0.06 } },
+  { id: 'necro_skill_soulwave', classId: 'necromancer', name: 'Vague d\'âmes', icon: '👻', desc: 'Compétence : ×2.8 dégâts + Poison fort + 15% drain. Coûte 40 Âmes (se charge quand le Poison ronge la cible).', maxRank: 1, requires: ['necro_rot'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_necro_soulwave', name: 'Vague d\'âmes', icon: '👻', desc: '×2.8 dégâts + Poison (4 tours) + soigne 15%. Coûte 40 Âmes.', cooldownMs: 3_000, type: 'attack', mult: 2.8, healFrac: 0.15, status: { type: 'poison', turns: 4, pow: 0.5 }, resource: { type: 'souls', cost: 40 } } },
+  { id: 'necro_wither', classId: 'necromancer', name: 'Flétrissure', icon: '🥀', desc: '+5% ATK par rang.', maxRank: 3, requires: ['necro_bolt'], pos: { x: -2, y: 4 }, perRank: { atkPct: 0.05 } },
+  { id: 'necro_grave', classId: 'necromancer', name: 'Sépulcre', icon: '⚰️', desc: '+3% ATK par rang.', maxRank: 4, requires: ['necro_wither'], pos: { x: -2, y: 5 }, perRank: { atkPct: 0.03 } },
+  { id: 'necro_summon', classId: 'necromancer', name: 'Lever un mort', icon: '🧟‍♂️', desc: 'Compétence : invoque un serviteur qui frappe 0.5×ATK/tour pendant 4 tours.', maxRank: 1, requires: ['necro_bolt'], pos: { x: 2, y: 4 }, activeSkill: { id: 'skill_necro_summon', name: 'Lever un mort', icon: '🧟‍♂️', desc: 'Invoque un serviteur : 0.5×ATK/tour pendant 4 tours (frappe en fin de tour).', cooldownMs: 18_000, type: 'buff', summon: { turns: 4, pow: 0.5 } } },
+  { id: 'necro_bone', classId: 'necromancer', name: 'Armure d\'os', icon: '🦴', desc: '+3% PV max par rang.', maxRank: 5, requires: ['necro_summon'], pos: { x: 2, y: 5 }, perRank: { hpPct: 0.03 } },
+  { id: 'necro_undying', classId: 'necromancer', name: 'Non-mort', icon: '🧟', desc: '+4 régén/tour par rang.', maxRank: 3, requires: ['necro_skill_soulwave'], pos: { x: 0, y: 6 }, perRank: { regen: 4 } },
+
+  // ── Piégeur (ascension archer) : poison / esquive, DoT sur cooldown ──
+  { id: 'trp_trap', classId: 'trapper', name: 'Piège explosif', icon: '🪤', desc: 'Compétence : ×2.0 dégâts + Poison (3 tours).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_trp_trap', name: 'Piège explosif', icon: '🪤', desc: '×2.0 dégâts + Poison (3 tours).', cooldownMs: 15_000, type: 'attack', mult: 2.0, status: { type: 'poison', turns: 3, pow: 0.35 } } },
+  { id: 'trp_venom', classId: 'trapper', name: 'Venin', icon: '🧪', desc: '+5% critique par rang.', maxRank: 3, requires: ['trp_trap'], pos: { x: 0, y: 4 }, perRank: { crit: 0.05 } },
+  { id: 'trp_skill_ambush', classId: 'trapper', name: 'Embuscade', icon: '🎯', desc: 'Compétence : ×2.6 dégâts + Poison fort (4 tours). Coûte 60 Pièges (se charge en frappant une cible empoisonnée).', maxRank: 1, requires: ['trp_venom'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_trp_ambush', name: 'Embuscade', icon: '🎯', desc: '×2.6 dégâts + Poison (4 tours). Coûte 60 Pièges.', cooldownMs: 3_000, type: 'attack', mult: 2.6, status: { type: 'poison', turns: 4, pow: 0.5 }, resource: { type: 'traps', cost: 60 } } },
+  { id: 'trp_evade', classId: 'trapper', name: 'Esquive', icon: '💨', desc: '+5% esquive par rang.', maxRank: 3, requires: ['trp_trap'], pos: { x: -2, y: 4 }, perRank: { dodge: 0.05 } },
+  { id: 'trp_shadow', classId: 'trapper', name: 'Ombre', icon: '🌘', desc: '+3% esquive par rang.', maxRank: 5, requires: ['trp_evade'], pos: { x: -2, y: 5 }, perRank: { dodge: 0.03 } },
+  { id: 'trp_lethal', classId: 'trapper', name: 'Létalité', icon: '🗡️', desc: '+3% ATK par rang.', maxRank: 5, requires: ['trp_venom'], pos: { x: 2, y: 5 }, perRank: { atkPct: 0.03 } },
+  { id: 'trp_recover', classId: 'trapper', name: 'Second souffle', icon: '💚', desc: '+4 régén/tour par rang.', maxRank: 3, requires: ['trp_skill_ambush'], pos: { x: 0, y: 6 }, perRank: { regen: 4 } },
+
+  // ── Oracle (ascension soigneur) : boucliers / protection, sur cooldown ──
+  { id: 'orc_ward', classId: 'oracle', name: 'Bouclier prophétique', icon: '🔮', desc: 'Compétence : Bouclier (18% PV max).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_orc_ward', name: 'Bouclier prophétique', icon: '🔮', desc: 'Bouclier (18% PV max).', cooldownMs: 20_000, type: 'shield', shield: 0.18 } },
+  { id: 'orc_insight', classId: 'oracle', name: 'Clairvoyance', icon: '👁️', desc: '-5% dégâts subis par rang.', maxRank: 3, requires: ['orc_ward'], pos: { x: 0, y: 4 }, perRank: { dmgReduction: 0.05 } },
+  { id: 'orc_skill_judgment', classId: 'oracle', name: 'Jugement', icon: '⚖️', desc: 'Compétence : ×1.8 dégâts + 15% soin. Coûte 50 Présage (se charge quand un bouclier absorbe ou qu\'un soin passe).', maxRank: 1, requires: ['orc_insight'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_orc_judgment', name: 'Jugement', icon: '⚖️', desc: '×1.8 dégâts, +15% soin. Coûte 50 Présage.', cooldownMs: 3_000, type: 'attack', mult: 1.8, healFrac: 0.15, resource: { type: 'presage', cost: 50 } } },
+  { id: 'orc_faith', classId: 'oracle', name: 'Foi', icon: '✝️', desc: '+6% DEF par rang.', maxRank: 3, requires: ['orc_ward'], pos: { x: -2, y: 4 }, perRank: { defPct: 0.06 } },
+  { id: 'orc_aegis', classId: 'oracle', name: 'Égide', icon: '🛡️', desc: '+3% DEF par rang.', maxRank: 5, requires: ['orc_faith'], pos: { x: -2, y: 5 }, perRank: { defPct: 0.03 } },
+  { id: 'orc_vitality', classId: 'oracle', name: 'Vitalité', icon: '❤️', desc: '+3% PV max par rang.', maxRank: 5, requires: ['orc_insight'], pos: { x: 2, y: 5 }, perRank: { hpPct: 0.03 } },
+  { id: 'orc_blessing', classId: 'oracle', name: 'Bénédiction', icon: '💚', desc: '+4 régén/tour par rang.', maxRank: 3, requires: ['orc_skill_judgment'], pos: { x: 0, y: 6 }, perRank: { regen: 4 } },
 
   // --- Extensions d'arbre de base (profondeur : forcent la spécialisation) ---
   { id: 'w_might', classId: 'warrior', name: 'Puissance', icon: '💪', desc: '+5% ATK par rang.', maxRank: 3, requires: ['w_armor'], pos: { x: 0, y: 1 }, perRank: { atkPct: 0.05 } },
@@ -319,10 +366,10 @@ export function talentMods(p: PlayerState): CombatMods {
   const mods = emptyMods();
   
   // Base innée selon la classe (on peut garder les bonus pour la V2)
-  if (p.classId === 'warrior' || p.classId === 'paladin' || p.classId === 'berserker' || p.classId === 'dark_knight') mods.dmgReduction += 0.1;
-  if (p.classId === 'mage' || p.classId === 'pyromancer' || p.classId === 'cryomancer' || p.classId === 'arcanist') mods.crit += 0.06;
-  if (p.classId === 'archer' || p.classId === 'rogue' || p.classId === 'bard' || p.classId === 'hunter') mods.doubleHit += 0.06;
-  if (p.classId === 'healer' || p.classId === 'dawn_priest' || p.classId === 'druid' || p.classId === 'monk') mods.regen += 5;
+  if (p.classId === 'warrior' || p.classId === 'paladin' || p.classId === 'berserker' || p.classId === 'dark_knight' || p.classId === 'sentinel') mods.dmgReduction += 0.1;
+  if (p.classId === 'mage' || p.classId === 'pyromancer' || p.classId === 'cryomancer' || p.classId === 'arcanist' || p.classId === 'necromancer') mods.crit += 0.06;
+  if (p.classId === 'archer' || p.classId === 'rogue' || p.classId === 'bard' || p.classId === 'hunter' || p.classId === 'trapper') mods.doubleHit += 0.06;
+  if (p.classId === 'healer' || p.classId === 'dawn_priest' || p.classId === 'druid' || p.classId === 'monk' || p.classId === 'oracle') mods.regen += 5;
 
   if (p.talents) {
     for (const def of getTalentsForClass(p.classId)) {

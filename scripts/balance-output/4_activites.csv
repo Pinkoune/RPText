@@ -1,0 +1,42 @@
+activity;level;biome;numPlayers;floor;bossHp;mHp;winrate
+Chasse;5;plains;;;;;1
+Chasse;10;mountains;;;;;1
+Chasse;15;desert;;;;;1
+Chasse;20;swamp;;;;;0,979
+Chasse;25;volcano;;;;;0,512
+Chasse;30;crypt;;;;;0,004
+Chasse;35;crypt;;;;;0,011
+Chasse;40;frozen;;;;;0
+Chasse;45;frozen;;;;;0
+Chasse;50;frozen;;;;;0
+Donjon:Caverne des Gobelins;7;;1;;154;;1
+Donjon:Caverne des Gobelins;7;;2;;449;;1
+Donjon:Caverne des Gobelins;7;;3;;865;;1
+Donjon:Caverne des Gobelins;7;;4;;1402;;1
+Donjon:Crypte Maudite;14;;1;;744;;1
+Donjon:Crypte Maudite;14;;2;;2162;;1
+Donjon:Crypte Maudite;14;;3;;4161;;0,388
+Donjon:Crypte Maudite;14;;4;;6744;;0,003
+Donjon:Sanctuaire du Dragon;24;;1;;2506;;0
+Donjon:Sanctuaire du Dragon;24;;2;;7277;;0
+Donjon:Sanctuaire du Dragon;24;;3;;14004;;0
+Donjon:Sanctuaire du Dragon;24;;4;;22695;;0
+Donjon:Forge Infernale;32;;1;;10044;;0
+Donjon:Forge Infernale;32;;2;;29158;;0
+Donjon:Forge Infernale;32;;3;;56115;;0
+Donjon:Forge Infernale;32;;4;;90941;;0
+Donjon:Citadelle Abyssale;42;;1;;33002;;0
+Donjon:Citadelle Abyssale;42;;2;;95803;;0
+Donjon:Citadelle Abyssale;42;;3;;184372;;0
+Donjon:Citadelle Abyssale;42;;4;;298794;;0
+Abysses;50;;;5;;856;1
+Abysses;50;;;10;;1576;1
+Abysses;50;;;15;;2412;1
+Abysses;50;;;20;;3348;1
+Abysses;50;;;25;;4368;1
+Abysses;50;;;30;;5470;1
+Abysses;50;;;40;;7890;0,014
+Abysses;50;;;50;;10572;0
+Abysses;50;;;60;;13498;0
+Abysses;50;;;75;;18302;0
+Abysses;50;;;100;;27318;0

@@ -1,0 +1,17 @@
+name;isSub;atk;def;hp;winrate;endHpPct
+Guerrier;false;459;320;2514;1;0,404
+Paladin;true;583;368;2769;1;0,361
+Berserker;true;725;222;2824;1;0,993
+Chevalier Noir;true;654;312;2960;1;0,945
+Mage;false;521;216;1963;0,768;0,081
+Pyromancien;true;877;216;2265;1;0,435
+Cryomancien;true;653;305;2474;1;0,823
+Arcaniste;true;798;216;2088;1;0,445
+Archer;false;398;218;1708;0,118;0,278
+Voleur;true;496;218;1757;1;0,521
+Barde;true;517;347;2077;1;0,467
+Chasseur;true;514;267;1855;1;0,437
+Soigneur;false;338;286;2939;1;0,531
+Prêtre de l'Aube;true;445;326;3194;1;1
+Druide;true;436;319;3194;1;0,483
+Moine;true;558;319;2939;1;0,997

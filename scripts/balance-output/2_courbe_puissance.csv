@@ -1,0 +1,125 @@
+name;classId;level;atk;def;hp;dps
+Guerrier;warrior;5;48;30;497;150
+Guerrier;warrior;10;79;53;663;150
+Guerrier;warrior;15;118;87;906;150
+Guerrier;warrior;20;153;102;1023;150
+Guerrier;warrior;25;173;117;1140;150
+Guerrier;warrior;30;251;132;1257;182
+Guerrier;warrior;35;282;180;1589;215
+Guerrier;warrior;40;317;207;1686;253
+Guerrier;warrior;45;356;251;1998;298
+Guerrier;warrior;50;376;266;2115;327
+Paladin;paladin;20;199;117;1122;171
+Paladin;paladin;25;228;135;1265;171
+Paladin;paladin;30;322;152;1408;265
+Paladin;paladin;35;364;207;1765;310
+Paladin;paladin;40;410;238;1889;363
+Paladin;paladin;45;461;289;2227;401
+Paladin;paladin;50;490;306;2370;452
+Berserker;berserker;20;254;64;1147;210
+Berserker;berserker;25;297;69;1286;264
+Berserker;berserker;30;406;74;1425;403
+Berserker;berserker;35;463;112;1793;454
+Berserker;berserker;40;523;129;1911;545
+Berserker;berserker;45;589;163;2259;600
+Berserker;berserker;50;632;168;2398;643
+Chevalier Noir;dark_knight;20;226;95;1196;171
+Chevalier Noir;dark_knight;25;262;107;1359;197
+Chevalier Noir;dark_knight;30;364;118;1521;311
+Chevalier Noir;dark_knight;35;413;168;1898;361
+Chevalier Noir;dark_knight;40;467;193;2041;426
+Chevalier Noir;dark_knight;45;525;238;2399;488
+Chevalier Noir;dark_knight;50;561;250;2561;525
+Mage;mage;5;57;13;392;150
+Mage;mage;10;96;29;511;150
+Mage;mage;15;140;53;704;150
+Mage;mage;20;183;58;773;151
+Mage;mage;25;209;63;843;173
+Mage;mage;30;235;68;913;206
+Mage;mage;35;316;106;1193;310
+Mage;mage;40;369;123;1243;374
+Mage;mage;45;415;157;1504;427
+Mage;mage;50;441;162;1574;461
+Pyromancien;pyromancer;20;317;58;892;334
+Pyromancien;pyromancer;25;373;63;977;420
+Pyromancien;pyromancer;30;429;68;1062;490
+Pyromancien;pyromancer;35;552;106;1382;632
+Pyromancien;pyromancer;40;642;123;1446;747
+Pyromancien;pyromancer;45;722;157;1744;805
+Pyromancien;pyromancer;50;778;162;1829;901
+Cryomancien;cryomancer;20;232;89;973;203
+Cryomancien;cryomancer;25;268;100;1079;248
+Cryomancien;cryomancer;30;305;112;1186;290
+Cryomancien;cryomancer;35;402;161;1527;416
+Cryomancien;cryomancer;40;468;186;1612;492
+Cryomancien;cryomancer;45;526;231;1931;559
+Cryomancien;cryomancer;50;563;243;2038;610
+Arcaniste;arcanist;20;286;58;822;287
+Arcaniste;arcanist;25;334;63;904;341
+Arcaniste;arcanist;30;382;68;987;405
+Arcaniste;arcanist;35;498;106;1279;541
+Arcaniste;arcanist;40;579;123;1342;635
+Arcaniste;arcanist;45;651;157;1615;716
+Arcaniste;arcanist;50;699;162;1698;779
+Archer;archer;5;43;18;336;136
+Archer;archer;10;72;31;444;136
+Archer;archer;15;107;55;611;136
+Archer;archer;20;136;60;681;136
+Archer;archer;25;156;65;751;136
+Archer;archer;30;218;70;821;193
+Archer;archer;35;249;108;1056;234
+Archer;archer;40;281;125;1111;274
+Archer;archer;45;316;159;1331;309
+Archer;archer;50;336;164;1401;337
+Voleur;rogue;20;174;60;700;187
+Voleur;rogue;25;204;65;775;227
+Voleur;rogue;30;276;70;850;316
+Voleur;rogue;35;317;108;1090;375
+Voleur;rogue;40;359;125;1150;431
+Voleur;rogue;45;404;159;1375;484
+Voleur;rogue;50;434;164;1450;509
+Barde;bard;20;177;103;827;153
+Barde;bard;25;203;116;919;175
+Barde;bard;30;283;129;1011;278
+Barde;bard;35;324;185;1293;321
+Barde;bard;40;365;213;1367;368
+Barde;bard;45;411;264;1632;426
+Barde;bard;50;437;277;1724;455
+Chasseur;hunter;20;178;79;738;195
+Chasseur;hunter;25;207;89;823;239
+Chasseur;hunter;30;284;99;908;350
+Chasseur;hunter;35;325;142;1158;415
+Chasseur;hunter;40;368;164;1228;478
+Chasseur;hunter;45;414;203;1463;530
+Chasseur;hunter;50;443;213;1548;568
+Soigneur;healer;5;36;22;484;171
+Soigneur;healer;10;60;43;650;171
+Soigneur;healer;15;89;74;893;171
+Soigneur;healer;20;117;81;1010;171
+Soigneur;healer;25;132;87;1127;171
+Soigneur;healer;30;147;94;1244;171
+Soigneur;healer;35;201;143;1810;171
+Soigneur;healer;40;234;165;1966;170
+Soigneur;healer;45;264;209;2278;173
+Soigneur;healer;50;279;216;2395;188
+Prêtre de l'Aube;dawn_priest;20;156;92;1109;171
+Prêtre de l'Aube;dawn_priest;25;179;99;1252;171
+Prêtre de l'Aube;dawn_priest;30;202;107;1395;171
+Prêtre de l'Aube;dawn_priest;35;270;163;1986;177
+Prêtre de l'Aube;dawn_priest;40;314;188;2168;222
+Prêtre de l'Aube;dawn_priest;45;354;238;2506;261
+Prêtre de l'Aube;dawn_priest;50;377;246;2649;286
+Druide;druid;20;155;90;1109;171
+Druide;druid;25;180;97;1252;171
+Druide;druid;30;205;104;1395;171
+Druide;druid;35;269;160;1986;177
+Druide;druid;40;312;184;2168;220
+Druide;druid;45;352;233;2506;261
+Druide;druid;50;377;241;2649;286
+Moine;monk;20;200;90;1010;168
+Moine;monk;25;235;97;1127;168
+Moine;monk;30;269;104;1244;177
+Moine;monk;35;348;160;1810;250
+Moine;monk;40;404;184;1966;300
+Moine;monk;45;455;233;2278;353
+Moine;monk;50;490;241;2395;397

@@ -1,0 +1,13 @@
+tier;classId;atk;def;hp;dps
+starter;warrior;212;160;1335;150
+starter;mage;281;55;805;265
+starter;archer;214;58;801;189
+starter;healer;162;77;1316;171
+crafted;warrior;376;266;2115;326
+crafted;mage;441;162;1574;461
+crafted;archer;336;164;1401;332
+crafted;healer;279;216;2395;188
+maxed;warrior;459;320;2514;404
+maxed;mage;521;216;1963;546
+maxed;archer;398;218;1708;407
+maxed;healer;338;286;2939;240

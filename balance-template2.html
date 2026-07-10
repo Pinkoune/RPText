@@ -1,0 +1,198 @@
+<title>RPText — Équilibrage (v2, post-correctifs)</title>
+<style>
+  :root{
+    --bg:#f7f7f4;--surface:#fcfcfb;--card:#ffffff;--border:#e6e5df;
+    --ink:#141311;--ink2:#52514e;--ink3:#8a887f;
+    --s1:#2a78d6;--s2:#1baf7a;--s3:#eda100;--s4:#e34948;--s5:#4a3aa7;--s6:#eb6834;
+    --good:#008300;--bad:#e34948;--warn:#eda100;--grid:#ecebe5;
+  }
+  @media (prefers-color-scheme:dark){:root{--bg:#131312;--surface:#1a1a19;--card:#202020;--border:#33322e;--ink:#f6f5ef;--ink2:#c3c2b7;--ink3:#8f8e84;--s1:#3987e5;--s2:#199e70;--s3:#c98500;--s4:#e66767;--s5:#9085e9;--s6:#d95926;--good:#3fa63f;--warn:#c98500;--grid:#2a2a27;}}
+  :root[data-theme="dark"]{--bg:#131312;--surface:#1a1a19;--card:#202020;--border:#33322e;--ink:#f6f5ef;--ink2:#c3c2b7;--ink3:#8f8e84;--s1:#3987e5;--s2:#199e70;--s3:#c98500;--s4:#e66767;--s5:#9085e9;--s6:#d95926;--good:#3fa63f;--warn:#c98500;--grid:#2a2a27;}
+  :root[data-theme="light"]{--bg:#f7f7f4;--surface:#fcfcfb;--card:#ffffff;--border:#e6e5df;--ink:#141311;--ink2:#52514e;--ink3:#8a887f;--s1:#2a78d6;--s2:#1baf7a;--s3:#eda100;--s4:#e34948;--s5:#4a3aa7;--s6:#eb6834;--good:#008300;--warn:#eda100;--grid:#ecebe5;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:30px;line-height:1.15;margin:0 0 6px;letter-spacing:-.02em;text-wrap:balance}
+  h2{font-size:21px;margin:44px 0 4px;letter-spacing:-.01em;padding-top:10px;border-top:1px solid var(--border)}
+  h3{font-size:16px;margin:22px 0 2px}
+  .sub{color:var(--ink2);font-size:15px;margin:0 0 4px}
+  .lead{color:var(--ink2);max-width:72ch}
+  .tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 18px 14px;margin:16px 0}
+  .cap{font-size:12.5px;color:var(--ink3);margin:2px 0 12px}
+  .note{font-size:13px;color:var(--ink2);margin:6px 0 0}
+  .callout{border-left:3px solid var(--s3);background:color-mix(in srgb,var(--s3) 8%,transparent);padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:14px}
+  .callout.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent)}
+  .callout.good{border-color:var(--good);background:color-mix(in srgb,var(--good) 8%,transparent)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin:8px 0}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+  th{color:var(--ink3);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  .scroll{overflow-x:auto}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--ink2);margin:2px 0 8px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .pill{font-size:11px;font-weight:600;padding:1px 7px;border-radius:20px}
+  .toc{font-size:13.5px;color:var(--ink2);columns:2;gap:24px}
+  .toc a{color:var(--ink2);text-decoration:none}.toc a:hover{color:var(--s1)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .barlabel{font:600 12px sans-serif;fill:var(--ink)}
+  .axlabel{font:11px sans-serif;fill:var(--ink3)}
+  .rec{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:12px 0}
+  code{background:color-mix(in srgb,var(--ink) 8%,transparent);padding:1px 5px;border-radius:4px;font-size:12.5px}
+  .foot{color:var(--ink3);font-size:12px;margin-top:40px;border-top:1px solid var(--border);padding-top:14px}
+  .fix{display:grid;grid-template-columns:1fr auto auto;gap:8px 16px;align-items:center;font-size:13.5px;padding:8px 0;border-bottom:1px solid var(--border)}
+  .fix b{color:var(--ink)}.fix .arrow{color:var(--ink3)}
+  .ba{font-variant-numeric:tabular-nums;font-weight:600}
+</style>
+
+<div class="wrap">
+  <span class="tag">RPText · Équilibrage · v2 post-correctifs</span>
+  <h1>Simulation d'équilibrage — mesures réelles & corrections appliquées</h1>
+  <p class="lead">Version à jour : mesures <b>tour-par-tour</b> (compétences actives, ressources, potions, co-op donjon) sur le vrai moteur de combat, après application des correctifs. Remplace la v1 (qui mesurait la puissance passive et faussait les soigneurs).</p>
+
+  <div class="callout good"><b>2 correctifs appliqués</b> après localisation par la simulation : lissage du <b>mur de chasse Nv.24-30</b> et <b>scaling de groupe des donjons</b> rendu quasi-linéaire. Détail §5. Un léger <b>nerf Berserker</b> (vol de vie 15%→12%). Le challenge de fin de jeu (Abysses, donjons Nv.30+) est <b>préservé volontairement</b>.</div>
+
+  <div class="card"><h3 style="margin-top:2px">Sommaire</h3>
+    <div class="toc">
+      <a href="#tldr">① Synthèse</a><br>
+      <a href="#surv">② Survie réelle par classe</a><br>
+      <a href="#dps">③ DPS offensif</a><br>
+      <a href="#hunt">④ Difficulté chasse (corrigée)</a><br>
+      <a href="#fixes">⑤ Correctifs : avant / après</a><br>
+      <a href="#dungeon">⑥ Donjons co-op</a><br>
+      <a href="#gear">⑦ Gear, éléments, compétences</a><br>
+      <a href="#reco">⑧ Suites possibles</a>
+    </div>
+  </div>
+
+  <h2 id="tldr">① Synthèse</h2>
+  <div id="tldrcards"></div>
+
+  <h2 id="surv">② Survie réelle par classe — Nv.50, avec compétences & potions</h2>
+  <p class="cap">% PV restants après un combat contre le boss d'attrition (winrate 100% pour toutes les classes viables — la survie se lit sur les PV restants). Mesuré au tour-par-tour : les soins actifs comptent, contrairement à la v1.</p>
+  <div class="card"><div id="survChart"></div></div>
+  <div class="callout"><b>Correction majeure vs v1 :</b> les 4 Soigneurs ne sont <b>pas</b> en difficulté — la v1 les affichait à 0% car elle n'exécutait pas leurs boutons de soin. Avec les compétences, toutes les sous-classes sont saines. Berserker/Prêtre/Moine/Chevalier Noir sont les plus increvables (sustain), les DPS purs (Pyro/Arca) plus exposés — équilibre attendu.</div>
+
+  <h2 id="dps">③ DPS offensif par classe</h2>
+  <p class="cap">Dégâts/tour en auto-combat (backbone offensif, hors nukes actifs). Écart ~4× — les casters ATK en tête, assumé (glass cannons).</p>
+  <div class="card"><div id="dpsChart"></div></div>
+
+  <h2 id="hunt">④ Difficulté de la chasse — après correctif</h2>
+  <p class="cap">Winrate d'un build de référence (archer craft, compétences+potions) par biome de son niveau. Volontairement exigeant à partir du volcan, mur assumé aux Abysses.</p>
+  <div class="card"><div id="huntChart"></div></div>
+  <div class="callout good"><b>Falaise du Nv.20 supprimée, challenge conservé.</b> Avant : 100%→62%(volcan)→<b>1%</b>(Nécropole) à cause d'un saut d'échelle brutal pile à l'ascension. Après : montée régulière — volcan 80%, Nécropole 35-54% (exigeant mais jouable), Abysses toujours 0-2% (fin de jeu, on out-niveau/optimise l'élément).</div>
+
+  <h2 id="fixes">⑤ Correctifs appliqués — avant / après</h2>
+  <div class="card">
+    <div class="fix" style="border-bottom:2px solid var(--border);font-size:12px;text-transform:uppercase;color:var(--ink3)"><span>Correctif</span><span class="n">Avant</span><span class="n">Après</span></div>
+    <div class="fix"><div><b>Chasse — falaise Nv.20→30</b><div class="note">Exposant de scaling monstre : saut 1.5→2.0 au Nv.20 remplacé par 1.75 continu.</div></div><span class="ba" style="color:var(--bad)">1%</span><span class="ba" style="color:var(--good)">35-54%</span></div>
+    <div class="fix"><div><b>Donjon — groupe 4 joueurs (Sanctuaire du Dragon)</b><div class="note">PV boss ∝ joueurs^1.4 (super-linéaire, punissait les groupes) → quasi-linéaire. Solo inchangé.</div></div><span class="ba" style="color:var(--bad)">0%</span><span class="ba" style="color:var(--good)">47%</span></div>
+    <div class="fix"><div><b>Berserker — auto-suffisance (PV restants, sim passif)</b><div class="note">Vol de vie 15%→12% max. Garde son DPS top-3, moins increvable sans skill.</div></div><span class="ba" style="color:var(--warn)">94%</span><span class="ba" style="color:var(--good)">85%</span></div>
+  </div>
+
+  <h2 id="dungeon">⑥ Donjons co-op — winrate après correctif</h2>
+  <p class="cap">Party mixte (guerrier/mage/soigneur/archer), gear craft au niveau du donjon, run complet.</p>
+  <div class="card scroll"><table id="dungeonTable"></table></div>
+  <div class="callout"><b>Solo & petits groupes inchangés ; les groupes de 3-4 ne sont plus punis.</b> Les donjons Nv.30+ (Forge, Citadelle) restent difficiles — normal, ils exigent le soin de groupe des soigneurs (non modélisé par le sim, d'où leurs 0% affichés : chiffre pessimiste, pas une cible). Le challenge de fin de jeu est intact.</div>
+
+  <h2 id="gear">⑦ Gear, éléments & compétences</h2>
+  <div class="grid2">
+    <div class="card"><h3 style="margin-top:2px">Tiers de gear (DPS)</h3><p class="cap">starter → craft q150 → maxé 5★, Nv.50.</p><div class="legend" id="gearLegend"></div><div id="gearChart"></div></div>
+    <div class="card"><h3 style="margin-top:2px">Étoiles 0★→5★ (DPS)</h3><p class="cap">Archer, gear craft.</p><div id="starChart"></div></div>
+  </div>
+  <div class="callout good"><b>Craft ≈ ×2 DPS, étoiles ≈ +20% : progression saine, on garde.</b></div>
+  <h3>Matrice élémentaire (arme → monstre)</h3>
+  <p class="cap">Vert ×1.5, rouge ×0.7, gris neutre. La résistance de type (phys/mag) se cumule par-dessus.</p>
+  <div class="card scroll" id="elemHeat"></div>
+  <h3>Compétences actives par classe</h3>
+  <div class="card scroll"><table id="skillTable"></table></div>
+
+  <h2 id="reco">⑧ Suites possibles</h2>
+  <div id="recos"></div>
+  <p class="foot">Mesuré au tour-par-tour sur la logique de combat réelle (<code>scripts/balance-sim-turns.ts</code>). Le sim co-op ne modélise pas encore le soin de groupe des soigneurs → winrates des donjons Nv.30+ pessimistes. Palette data-viz validée CVD-safe. Bandes d'équilibrage cibles pour classes futures : <code>scripts/README-balance.md</code>.</p>
+</div>
+
+<script>
+const DATA=/*__DATA__*/;
+const $=id=>document.getElementById(id);
+const C=['--s1','--s2','--s3','--s4','--s5','--s6'].map(v=>`var(${v})`);
+const NS='http://www.w3.org/2000/svg';
+function el(t,a,x){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;return e;}
+function svg(w,h){return el('svg',{viewBox:`0 0 ${w} ${h}`});}
+
+const tldr=[
+  {c:'good',t:'2 murs de difficulté corrigés',d:"La falaise de chasse au Nv.20 (saut d'échelle brutal) et le scaling de groupe super-linéaire des donjons sont réglés. Solo et fin de jeu préservés."},
+  {c:'',t:'Toutes les sous-classes sont saines',d:"Mesuré avec les compétences : 100% de survie pour les 16 classes viables. La v1 (passive) faussait les soigneurs à 0%."},
+  {c:'',t:'Berserker recadré',d:"Vol de vie 15%→12%. Reste top-3 DPS mais moins auto-suffisant sans compétence. Nerf léger, identité intacte."},
+  {c:'good',t:'Progression de gear saine',d:"Craft ≈ ×2 DPS, étoiles ≈ +20%. On avance de tier plutôt qu'on sur-optimise. Rien à toucher."},
+  {c:'',t:'Challenge de fin de jeu intact',d:"Abysses 0-2%, donjons Nv.30+ exigeants. Les correctifs ne rendent pas le jeu facile — ils suppriment des pics injustes."},
+];
+$('tldrcards').innerHTML=tldr.map((x,i)=>`<div class="rec"><b>${i+1}. ${x.t}</b> ${x.c?`<span class="pill" style="background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)">✓</span>`:''}<div class="note">${x.d}</div></div>`).join('');
+
+// survival (turn-based endHP)
+(function(){const rows=[...DATA.classTurn].sort((a,b)=>b.endHP-a.endHP);const W=880,rh=24,top=8,left=150,right=70,h=top+rows.length*rh+8;const s=svg(W,h);
+rows.forEach((r,i)=>{const y=top+i*rh,bw=(r.endHP/100)*(W-left-right);const col=r.endHP>=70?'var(--good)':r.endHP>=40?'var(--warn)':'var(--s1)';
+ s.appendChild(el('text',{x:left-8,y:y+rh/2+4,'text-anchor':'end',class:'axlabel',style:'fill:var(--ink2);font-size:12.5px'},r.name));
+ s.appendChild(el('rect',{x:left,y:y+3,width:Math.max(2,bw),height:rh-9,rx:4,fill:col}));
+ s.appendChild(el('text',{x:left+Math.max(2,bw)+7,y:y+rh/2+4,class:'barlabel'},r.endHP+'%'));});
+$('survChart').appendChild(s);})();
+
+// dps
+(function(){const rows=[...DATA.classDps].sort((a,b)=>b.dps-a.dps);const W=880,rh=24,top=8,left=150,right=60,h=top+rows.length*rh+8;const s=svg(W,h);const max=Math.max(...rows.map(r=>r.dps))*1.02;
+rows.forEach((r,i)=>{const y=top+i*rh,bw=(r.dps/max)*(W-left-right);const col=r.dps>700?'var(--s6)':r.dps>500?'var(--s1)':'var(--s3)';
+ s.appendChild(el('text',{x:left-8,y:y+rh/2+4,'text-anchor':'end',class:'axlabel',style:'fill:var(--ink2);font-size:12.5px'},r.name));
+ s.appendChild(el('rect',{x:left,y:y+3,width:Math.max(2,bw),height:rh-9,rx:4,fill:col}));
+ s.appendChild(el('text',{x:left+bw+7,y:y+rh/2+4,class:'barlabel'},r.dps));});
+$('dpsChart').appendChild(s);})();
+
+// hunt cliff
+(function(){const pts=DATA.hunt;const W=880,H=280,padL=40,padR=20,padT=14,padB=34;const xs=pts.map(p=>p.lvl);const X=v=>padL+((v-xs[0])/(xs.at(-1)-xs[0]))*(W-padL-padR);const Y=v=>H-padB-(v/100)*(H-padT-padB);const s=svg(W,H);
+for(let t=0;t<=4;t++){const v=25*t,y=Y(v);s.appendChild(el('line',{x1:padL,x2:W-padR,y1:y,y2:y,stroke:'var(--grid)'}));s.appendChild(el('text',{x:padL-6,y:y+4,'text-anchor':'end',class:'axlabel'},v+'%'));}
+pts.forEach(p=>s.appendChild(el('text',{x:X(p.lvl),y:H-8,'text-anchor':'middle',class:'axlabel'},'Nv'+p.lvl)));
+const d=pts.map((p,i)=>(i?'L':'M')+X(p.lvl)+' '+Y(p.wr)).join(' ');
+s.appendChild(el('path',{d:d+` L ${X(xs.at(-1))} ${Y(0)} L ${X(xs[0])} ${Y(0)} Z`,fill:'color-mix(in srgb,var(--s2) 12%,transparent)'}));
+s.appendChild(el('path',{d,fill:'none',stroke:'var(--s2)','stroke-width':2.5,'stroke-linejoin':'round'}));
+pts.forEach(p=>{s.appendChild(el('circle',{cx:X(p.lvl),cy:Y(p.wr),r:3.5,fill:'var(--s2)',stroke:'var(--surface)','stroke-width':2}));s.appendChild(el('text',{x:X(p.lvl),y:Y(p.wr)-9,'text-anchor':'middle',class:'barlabel',style:'font-size:11px'},p.wr+'%'));});
+$('huntChart').appendChild(s);})();
+
+// dungeon table
+(function(){const rows=DATA.dungeon;const names=[...new Set(rows.map(r=>r.name))];let html='<tr><th>Donjon</th><th class="n">Solo</th><th class="n">2 j.</th><th class="n">3 j.</th><th class="n">4 j.</th></tr>';
+names.forEach(n=>{const cells=[1,2,3,4].map(np=>{const r=rows.find(x=>x.name===n&&x.np===np);const wr=r?r.cur:0;const col=wr>=70?'var(--good)':wr>=25?'var(--warn)':'var(--bad)';return `<td class="n" style="color:${col};font-weight:600">${wr}%</td>`;}).join('');html+=`<tr><td>${n}</td>${cells}</tr>`;});
+$('dungeonTable').innerHTML=html;})();
+
+// gear + stars
+(function(){const tiers=['starter','crafted','maxed'],tl={starter:'Starter',crafted:'Craft q150',maxed:'Maxé 5★'},cls=['warrior','mage','archer','healer'],cn={warrior:'Guer.',mage:'Mage',archer:'Arch.',healer:'Soig.'};
+$('gearLegend').innerHTML=tiers.map((t,i)=>`<span><span class="sw" style="background:${C[i]}"></span>${tl[t]}</span>`).join('');
+const W=430,H=250,padL=34,padR=8,padT=10,padB=28,max=Math.max(...DATA.gear.map(g=>g.dps))*1.08,s=svg(W,H),gw=(W-padL-padR)/cls.length,bw=gw/4;
+for(let t=0;t<=3;t++){const v=Math.round(max*t/3),y=H-padB-(v/max)*(H-padT-padB);s.appendChild(el('line',{x1:padL,x2:W-padR,y1:y,y2:y,stroke:'var(--grid)'}));s.appendChild(el('text',{x:padL-5,y:y+4,'text-anchor':'end',class:'axlabel'},v));}
+cls.forEach((c,ci)=>{tiers.forEach((t,ti)=>{const g=DATA.gear.find(x=>x.classId===c&&x.tier===t);const x=padL+ci*gw+bw*0.5+ti*bw,bh=(g.dps/max)*(H-padT-padB);s.appendChild(el('rect',{x,y:H-padB-bh,width:bw-3,height:bh,rx:3,fill:C[ti]}));});s.appendChild(el('text',{x:padL+ci*gw+gw/2,y:H-9,'text-anchor':'middle',class:'axlabel'},cn[c]));});
+$('gearChart').appendChild(s);})();
+(function(){const rows=DATA.stars,W=430,H=250,padL=34,padR=30,padT=14,padB=28,max=Math.max(...rows.map(r=>r.dps))*1.06,s=svg(W,H),gw=(W-padL-padR)/rows.length;
+for(let t=0;t<=3;t++){const v=Math.round(max*t/3),y=H-padB-(v/max)*(H-padT-padB);s.appendChild(el('line',{x1:padL,x2:W-padR,y1:y,y2:y,stroke:'var(--grid)'}));s.appendChild(el('text',{x:padL-5,y:y+4,'text-anchor':'end',class:'axlabel'},v));}
+rows.forEach((r,i)=>{const x=padL+i*gw+gw*0.18,bw=gw*0.64,bh=(r.dps/max)*(H-padT-padB);s.appendChild(el('rect',{x,y:H-padB-bh,width:bw,height:bh,rx:3,fill:C[1]}));s.appendChild(el('text',{x:x+bw/2,y:H-padB-bh-6,'text-anchor':'middle',class:'barlabel',style:'font-size:11px'},r.dps));s.appendChild(el('text',{x:x+bw/2,y:H-9,'text-anchor':'middle',class:'axlabel'},r.stars+'★'));});
+$('starChart').appendChild(s);})();
+
+// element heat
+(function(){const order=['fire','water','earth','wind','frost','light','dark','neutral'],fr={fire:'Feu',water:'Eau',earth:'Terre',wind:'Vent',frost:'Givre',light:'Lum.',dark:'Tén.',neutral:'Neut.'};const cell=44,lab=52,W=lab+order.length*cell+4,H=lab+order.length*cell+4,s=svg(W,H);
+s.appendChild(el('text',{x:lab-6,y:14,'text-anchor':'end',class:'axlabel',style:'font-weight:600'},'arme↓'));
+order.forEach((m,j)=>s.appendChild(el('text',{x:lab+j*cell+cell/2,y:lab-6,'text-anchor':'middle',class:'axlabel'},fr[m])));
+order.forEach((w,i)=>{s.appendChild(el('text',{x:lab-6,y:lab+i*cell+cell/2+4,'text-anchor':'end',class:'axlabel'},fr[w]));order.forEach((m,j)=>{const r=DATA.elements.find(x=>x.weapon===w&&x.monster===m),v=r?r.mult:1,col=v>1?'var(--good)':v<1?'var(--bad)':'color-mix(in srgb,var(--ink) 6%,transparent)';s.appendChild(el('rect',{x:lab+j*cell+1,y:lab+i*cell+1,width:cell-2,height:cell-2,rx:5,fill:col,'fill-opacity':v!==1?0.82:1}));if(v!==1)s.appendChild(el('text',{x:lab+j*cell+cell/2,y:lab+i*cell+cell/2+4,'text-anchor':'middle',style:'font:600 11px sans-serif;fill:#fff'},'×'+v));});});
+$('elemHeat').appendChild(s);})();
+
+// skills
+(function(){const rn={cooldown:'⏱ CD',rage:'🔥 Rage',combo:'⚡ Combo',grace:'✨ Grâce',mana:'🔷 Mana',sap:'🌿 Sève',zeal:'🕊 Ferveur',tempo:'🎵 Tempo',overcharge:'🌌 Surcharge',instinct:'🎯 Traque',corruption:'💀 Corrupt.'};
+let html='<tr><th>Classe</th><th>Ressource</th><th class="n">Mult.</th><th class="n">Soin</th><th class="n">Bouclier</th><th>Contrôle</th></tr>';
+DATA.skills.forEach(s=>html+=`<tr><td>${s.name}</td><td style="font-size:12.5px;color:var(--ink2)">${rn[s.resource]||s.resource}</td><td class="n">×${s.bestAtkMult||'—'}</td><td class="n">${s.bestHealFrac?Math.round(s.bestHealFrac*100)+'%':'—'}</td><td class="n">${s.bestShield?Math.round(s.bestShield*100)+'%':'—'}</td><td style="font-size:12.5px">${s.hasStun?'Étourdit':s.hasCC?'Gel':'—'}</td></tr>`);
+$('skillTable').innerHTML=html;})();
+
+// recos
+const recos=[
+  {p:'watch',t:'Soin de groupe dans le simulateur',d:"Le sim co-op ne modélise pas encore l'AoE de soin des soigneurs en donjon → les winrates Nv.30+ sont pessimistes. L'ajouter donnerait les vrais chiffres de Forge/Citadelle. Prochain palier si tu veux pousser."},
+  {p:'ok',t:'Cadre pour les classes futures',d:"Toute nouvelle classe ajoutée à CLASS_LIST est testée automatiquement par le harness. Bandes cibles (survie 100%, endHP 35-100%, DPS 330-900) dans scripts/README-balance.md. Valider avant publication."},
+  {p:'watch',t:'Berserker — re-mesurer après quelques semaines',d:"Le nerf est léger (vol de vie -3pts). Si le PvP ou l'endless le montrent encore trop fort, baisser encore le vol de vie ou la croissance d'ATK (6→5/niveau)."},
+];
+$('recos').innerHTML=recos.map(r=>{const c=r.p==='ok'?'good':'warn',lab=r.p==='ok'?'Sain':'À surveiller';return `<div class="rec"><b>${r.t}</b> <span class="pill" style="background:color-mix(in srgb,var(--${c}) 18%,transparent);color:var(--${c})">${lab}</span><div class="note">${r.d}</div></div>`;}).join('');
+</script>

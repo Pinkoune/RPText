@@ -1,0 +1,182 @@
+<title>RPText — Équilibrage des classes (Nv.50)</title>
+<style>
+  :root {
+    --bg: #f4f1ea; --surface: #fcfbf7; --ink: #1c1a17; --ink-2: #57534a;
+    --muted: #8b877d; --grid: #e4e0d6; --axis: #c8c3b6; --ring: rgba(28,26,23,.12);
+    --band: rgba(42,120,214,.06); --band-line: rgba(42,120,214,.28);
+    --warrior: #2a78d6; --mage: #6a4bd0; --archer: #d9642a; --healer: #1f8a3b;
+    --new: #c99a1e; --accent: #7a2e2e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #131210; --surface: #1c1a17; --ink: #f3efe6; --ink-2: #bdb7a8;
+      --muted: #8f8a7e; --grid: #2a2824; --axis: #3a372f; --ring: rgba(243,239,230,.14);
+      --band: rgba(57,135,229,.10); --band-line: rgba(57,135,229,.4);
+      --warrior: #4f93e6; --mage: #9d84ee; --archer: #e5854f; --healer: #35a556;
+      --new: #e3c057; --accent: #d98a6b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #131210; --surface: #1c1a17; --ink: #f3efe6; --ink-2: #bdb7a8;
+    --muted: #8f8a7e; --grid: #2a2824; --axis: #3a372f; --ring: rgba(243,239,230,.14);
+    --band: rgba(57,135,229,.10); --band-line: rgba(57,135,229,.4);
+    --warrior: #4f93e6; --mage: #9d84ee; --archer: #e5854f; --healer: #35a556;
+    --new: #e3c057; --accent: #d98a6b;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f1ea; --surface: #fcfbf7; --ink: #1c1a17; --ink-2: #57534a;
+    --muted: #8b877d; --grid: #e4e0d6; --axis: #c8c3b6; --ring: rgba(28,26,23,.12);
+    --band: rgba(42,120,214,.06); --band-line: rgba(42,120,214,.28);
+    --warrior: #2a78d6; --mage: #6a4bd0; --archer: #d9642a; --healer: #1f8a3b;
+    --new: #c99a1e; --accent: #7a2e2e;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 32px 24px 56px; }
+  .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: 12px;
+    font-weight: 600; color: var(--accent); margin: 0 0 6px; }
+  h1 { font-size: 27px; margin: 0 0 8px; letter-spacing: -.01em; text-wrap: balance; }
+  .lede { color: var(--ink-2); font-size: 15px; line-height: 1.55; margin: 0 0 24px; max-width: 62ch; }
+  .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 14px;
+    padding: 20px 20px 8px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 4px 4px 16px; font-size: 13px; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .axis { stroke: var(--axis); stroke-width: 1.5; }
+  .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .axlabel { fill: var(--ink-2); font-size: 12px; font-weight: 600; }
+  .plabel { fill: var(--ink-2); font-size: 10.5px; }
+  .bandtext { fill: var(--band-line); font-size: 10.5px; font-weight: 600; letter-spacing: .04em; }
+  .pt { cursor: pointer; transition: transform .1s; }
+  .pt:hover circle, .pt:hover path { filter: brightness(1.15); }
+  .tip { position: fixed; pointer-events: none; z-index: 9; background: var(--ink);
+    color: var(--bg); font-size: 12px; padding: 7px 10px; border-radius: 8px;
+    opacity: 0; transition: opacity .1s; line-height: 1.4; white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+  .tip b { font-size: 12.5px; }
+  .foot { color: var(--muted); font-size: 12.5px; line-height: 1.55; margin: 18px 2px 0; max-width: 66ch; }
+  .foot b { color: var(--ink-2); font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+  th, td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--grid);
+    font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; font-variant-numeric: normal; }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  details { margin-top: 20px; }
+  summary { cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 600; }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Simulation tour-par-tour · toolkit balance-sim-turns</p>
+  <h1>Équilibrage des 20 classes au Niveau 50</h1>
+  <p class="lede">Chaque classe maxée (talents + gear cible) affronte un boss calibré. Deux mesures :
+    l'<b>ATK</b> effective (proxy de DPS, axe horizontal) et la <b>Survie</b> — PV restants en fin de combat
+    (axe vertical). La bande bleue est la zone saine visée. Toutes les sous-classes y logent ;
+    seules les <b>bases Mage/Archer</b> tombent dessous — attendu, on ascensionne dès le Nv.20.</p>
+
+  <div class="card">
+    <div class="legend" id="legend"></div>
+    <svg id="chart" viewBox="0 0 900 540" role="img"
+      aria-label="Nuage de points ATK contre Survie par classe, groupé par famille"></svg>
+  </div>
+
+  <p class="foot">
+    ★ <b>Nouvelles classes de ce patch</b> — Piégeur (Archer), Oracle (Soigneur), Nécromancien (Mage, + invocation « Lever un mort »).
+    Toutes atterrissent dans la bande. ◇ <b>bases</b> non-ascensionnées.
+    Lecture : haut = increvable (tanks/soigneurs), droite = gros dégâts (Pyromancien 877 ATK, Berserker/Nécromancien ~720).
+  </p>
+
+  <details>
+    <summary>Voir le tableau des valeurs</summary>
+    <table id="tbl">
+      <thead><tr><th>Classe</th><th>Famille</th><th>ATK</th><th>Survie</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </details>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+const DATA = [
+  ["Guerrier","warrior",459,47,"base"],["Paladin","warrior",583,46],["Berserker","warrior",725,99],
+  ["Chevalier Noir","warrior",654,94],["Sentinelle","warrior",459,51,"new"],
+  ["Mage","mage",521,14,"base"],["Pyromancien","mage",877,38],["Cryomancien","mage",653,81],
+  ["Arcaniste","mage",798,47],["Nécromancien","mage",707,38,"new"],
+  ["Archer","archer",398,29,"base"],["Voleur","archer",496,46],["Barde","archer",517,44],
+  ["Chasseur","archer",514,45],["Piégeur","archer",458,46,"new"],
+  ["Soigneur","healer",338,49,"base"],["Prêtre de l'Aube","healer",445,100],["Druide","healer",436,43],
+  ["Moine","healer",558,100],["Oracle","healer",387,97,"new"],
+];
+const FAM = { warrior:["Guerrier","--warrior"], mage:["Mage","--mage"], archer:["Archer","--archer"], healer:["Soigneur","--healer"] };
+const cv = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+const W=900,H=540, m={l:64,r:210,t:34,b:56};
+const px=(a)=> m.l + (a-320)/(900-320) * (W-m.l-m.r);
+const py=(s)=> m.t + (100-s)/100 * (H-m.t-m.b);
+const SVG="http://www.w3.org/2000/svg";
+const el=(n,a)=>{const e=document.createElementNS(SVG,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+function draw(){
+  const s=document.getElementById('chart'); s.textContent='';
+  // target band survie 35..100
+  s.appendChild(el('rect',{x:m.l,y:py(100),width:W-m.l-m.r,height:py(35)-py(100),fill:cv('--band')}));
+  s.appendChild(el('line',{x1:m.l,y1:py(35),x2:W-m.r,y2:py(35),stroke:cv('--band-line'),'stroke-width':1.5,'stroke-dasharray':'5 4'}));
+  const bt=el('text',{x:W-m.r-6,y:py(35)-6,class:'bandtext','text-anchor':'end'}); bt.textContent='seuil de survie saine · 35%'; s.appendChild(bt);
+  // y grid + ticks
+  [0,25,50,75,100].forEach(v=>{
+    s.appendChild(el('line',{x1:m.l,y1:py(v),x2:W-m.r,y2:py(v),class:'gridline'}));
+    const t=el('text',{x:m.l-10,y:py(v)+4,class:'tick','text-anchor':'end'}); t.textContent=v+'%'; s.appendChild(t);
+  });
+  // x ticks
+  [400,500,600,700,800,900].forEach(v=>{
+    const t=el('text',{x:px(v),y:H-m.b+20,class:'tick','text-anchor':'middle'}); t.textContent=v; s.appendChild(t);
+  });
+  // axes
+  s.appendChild(el('line',{x1:m.l,y1:m.t,x2:m.l,y2:H-m.b,class:'axis'}));
+  s.appendChild(el('line',{x1:m.l,y1:H-m.b,x2:W-m.r,y2:H-m.b,class:'axis'}));
+  const xl=el('text',{x:(m.l+W-m.r)/2,y:H-m.b+42,class:'axlabel','text-anchor':'middle'}); xl.textContent='ATK effective  (proxy de DPS →)'; s.appendChild(xl);
+  const yl=el('text',{x:-((m.t+H-m.b)/2),y:18,class:'axlabel','text-anchor':'middle',transform:'rotate(-90)'}); yl.textContent='Survie  (PV restants en fin de combat ↑)'; s.appendChild(yl);
+
+  const tip=document.getElementById('tip');
+  DATA.forEach(([name,fam,atk,surv,tag])=>{
+    const c=cv(FAM[fam][1]), x=px(atk), y=py(surv);
+    const g=el('g',{class:'pt',tabindex:'0'});
+    if(tag==='new'){
+      // star marker in gold
+      const pts=starPts(x,y,9,4.2); g.appendChild(el('circle',{cx:x,cy:y,r:12,fill:'none',stroke:cv('--new'),'stroke-width':1.4,opacity:.5}));
+      g.appendChild(el('polygon',{points:pts,fill:c,stroke:cv('--new'),'stroke-width':2}));
+    } else if(tag==='base'){
+      g.appendChild(el('circle',{cx:x,cy:y,r:7,fill:cv('--surface'),stroke:c,'stroke-width':2,'stroke-dasharray':'3 2.5'}));
+    } else {
+      g.appendChild(el('circle',{cx:x,cy:y,r:7,fill:c,stroke:cv('--surface'),'stroke-width':1.5}));
+    }
+    // label
+    const right = atk<560; const lx = right? x+13 : x-13;
+    const t=el('text',{x:lx,y:y+3.5,class:'plabel','text-anchor':right?'start':'end'}); t.textContent=name; g.appendChild(t);
+    g.addEventListener('pointermove',e=>{tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';
+      tip.innerHTML=`<b>${name}</b> · ${FAM[fam][0]}${tag==='new'?' ★':tag==='base'?' ◇ base':''}<br>ATK ${atk} · Survie ${surv}%`;});
+    g.addEventListener('pointerleave',()=>tip.style.opacity=0);
+    s.appendChild(g);
+  });
+}
+function starPts(cx,cy,R,r){let p=[];for(let i=0;i<10;i++){const a=Math.PI/5*i-Math.PI/2;const rad=i%2?r:R;p.push((cx+rad*Math.cos(a)).toFixed(1)+','+(cy+rad*Math.sin(a)).toFixed(1));}return p.join(' ');}
+
+// legend
+const lg=document.getElementById('legend');
+Object.entries(FAM).forEach(([k,[label,varn]])=>{
+  const sp=document.createElement('span'); sp.innerHTML=`<i class="dot" style="background:${cv(varn)}"></i>${label}`; lg.appendChild(sp);
+});
+["★ Nouvelle","◇ Base non-ascensionnée"].forEach(x=>{const sp=document.createElement('span');sp.style.color='var(--muted)';sp.textContent=x;lg.appendChild(sp);});
+
+// table
+const tb=document.querySelector('#tbl tbody');
+DATA.slice().sort((a,b)=>b[3]-a[3]).forEach(([n,f,a,s,t])=>{const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${n}${t==='new'?' ★':t==='base'?' ◇':''}</td><td style="text-align:left;color:var(--ink-2)">${FAM[f][0]}</td><td>${a}</td><td>${s}%</td>`;tb.appendChild(tr);});
+
+draw();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+</script>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useGame } from '../../store/gameStore';
 import { combatTurn, freshCombatState, type CombatState } from '../../game/combat';
 import { deriveStats, grantXp, removeItem } from '../../game/player';
-import { talentMods, getAllActiveSkills } from '../../game/talents';
+import { talentMods, getAllActiveSkills, classResourceType, RESOURCE_INFO } from '../../game/talents';
 import { CLASSES } from '../../game/classes';
 import { item, HP_CONSUMABLES } from '../../game/items';
 import { playSound } from '../../game/sound';
@@ -37,6 +37,10 @@ interface RunState {
   accumulatedGems: number;
   skillCds: Record<string, number>;
   bonusAtk: number;
+  /** Ressource d'archétype (rage/combo/mana…) accumulée pendant le run. */
+  pool: number;
+  /** Dernière action (pour le Tempo du Barde). */
+  lastAction: string;
 }
 
 export default function EndlessCard() {
@@ -138,7 +142,7 @@ export default function EndlessCard() {
       php: player.hp, mhp: firstMonster.hp,
       logs: ['Vous entrez dans les Abysses Infinis…'],
       accumulatedGold: 0, accumulatedXp: 0, accumulatedGems: 0,
-      skillCds: {}, bonusAtk: 0,
+      skillCds: {}, bonusAtk: 0, pool: 0, lastAction: '',
     });
   };
 
@@ -146,10 +150,18 @@ export default function EndlessCard() {
     if (!run) return;
     if (action === 'flee') { endRun('flee'); return; }
 
+    const resourceType = classResourceType(player.classId);
+    const resourceMax = resourceType === 'combo' ? 5 : 100;
+
     let skill = undefined;
     if (action !== 'attack' && action !== 'potion' && action !== 'flee') {
       skill = getAllActiveSkills().find(s => s.id === action);
       if (skill && (run.skillCds[skill.id] || 0) > 0) return;
+      // Gating par ressource d'archétype (rage/mana/combo/ferveur…).
+      if (skill?.resource && run.pool < skill.resource.cost) {
+        toast(`Pas assez de ressource (${run.pool}/${skill.resource.cost}).`, 'bad');
+        return;
+      }
     }
 
     // Bug corrigé : la potion n'était jamais retirée de l'inventaire (spammable
@@ -163,9 +175,16 @@ export default function EndlessCard() {
     }
 
     const runStats = { ...stats, atk: stats.atk + run.bonusAtk };
-    const res = combatTurn(runStats, mods, run.monster, run.php, run.mhp, action, { potionHeal, activeSkill: skill }, run.combat);
+    const res = combatTurn(runStats, mods, run.monster, run.php, run.mhp, action, { potionHeal, activeSkill: skill, resourceAmount: run.pool, resourceType }, run.combat);
     const newLogs = [...run.logs, ...res.events.map(l => l.text)];
     if (newLogs.length > 10) newLogs.splice(0, newLogs.length - 10);
+
+    // Ressource : gain du tour (tempo/overcharge calculés côté client comme en chasse).
+    let resourceGained = res.resourceGained;
+    if (resourceType === 'tempo') resourceGained = run.lastAction && run.lastAction !== action ? 30 : 0;
+    else if (resourceType === 'overcharge') resourceGained = res.abilityUsed ? 30 : 0;
+    const nextPool = Math.max(0, Math.min(resourceMax, run.pool - res.resourceSpent + resourceGained));
+    const nextLastAction = action;
 
     const nextCds = { ...run.skillCds };
     for (const id in nextCds) nextCds[id] = Math.max(0, nextCds[id] - 1);
@@ -183,7 +202,7 @@ export default function EndlessCard() {
     const goldFromSteal = res.goldStolen ?? 0;
 
     if (res.php <= 0) {
-      setRun(prev => prev ? { ...prev, php: 0, mhp: res.mhp, logs: newLogs, combat: res.state, skillCds: nextCds, bonusAtk: nextBonusAtk, accumulatedGold: prev.accumulatedGold + goldFromSteal } : null);
+      setRun(prev => prev ? { ...prev, php: 0, mhp: res.mhp, logs: newLogs, combat: res.state, skillCds: nextCds, bonusAtk: nextBonusAtk, pool: nextPool, lastAction: nextLastAction, accumulatedGold: prev.accumulatedGold + goldFromSteal } : null);
       setTimeout(() => endRun('death'), 1000);
       return;
     }
@@ -199,7 +218,7 @@ export default function EndlessCard() {
         accumulatedGold: prev.accumulatedGold + rewards.gold + goldFromSteal,
         accumulatedXp: prev.accumulatedXp + rewards.xp,
         accumulatedGems: prev.accumulatedGems + rewards.gems,
-        skillCds: nextCds, bonusAtk: nextBonusAtk,
+        skillCds: nextCds, bonusAtk: nextBonusAtk, pool: nextPool, lastAction: nextLastAction,
       } : null);
       // endlessBest = étage RÉELLEMENT vaincu (run.floor), pas l'étage suivant
       // qu'on s'apprête juste à affronter — sinon un joueur qui meurt aussitôt
@@ -207,7 +226,7 @@ export default function EndlessCard() {
       if (run.floor > (player.endlessBest || 0)) mutate(p => { p.endlessBest = run.floor; });
       return;
     }
-    setRun(prev => prev ? { ...prev, php: res.php, mhp: res.mhp, combat: res.state, logs: newLogs, skillCds: nextCds, bonusAtk: nextBonusAtk, accumulatedGold: prev.accumulatedGold + goldFromSteal } : null);
+    setRun(prev => prev ? { ...prev, php: res.php, mhp: res.mhp, combat: res.state, logs: newLogs, skillCds: nextCds, bonusAtk: nextBonusAtk, pool: nextPool, lastAction: nextLastAction, accumulatedGold: prev.accumulatedGold + goldFromSteal } : null);
   };
 
   const endRun = async (reason: 'death' | 'flee') => {
@@ -381,6 +400,14 @@ export default function EndlessCard() {
           <div ref={logEnd} />
         </div>
 
+        {/* Ressource d'archétype du joueur */}
+        {me && classResourceType(me.classId) && (() => { const rt = classResourceType(me.classId)!; const rmax = rt === 'combo' ? 5 : 100; return (
+          <div className="rounded-lg bg-black/25 px-3 py-1.5">
+            <div className="flex justify-between text-[10px] text-slate-400"><span>{RESOURCE_INFO[rt]?.icon} {RESOURCE_INFO[rt]?.name}</span><span className="tabular-nums">{me.pool ?? 0}/{rmax}</span></div>
+            <div className="mt-0.5 h-1.5 overflow-hidden rounded bg-black/40"><div className="h-1.5 rounded bg-fuchsia-400 transition-all" style={{ width: `${((me.pool ?? 0) / rmax) * 100}%` }} /></div>
+          </div>
+        ); })()}
+
         {/* Actions */}
         {myTurn && !me?.isDead ? (
           showPotions ? (
@@ -401,9 +428,10 @@ export default function EndlessCard() {
               <button onClick={() => multiAct('attack')} className="rounded-lg bg-rose-500/40 py-2.5 text-sm font-bold hover:bg-rose-500/60">⚔️ Attaquer</button>
               {getAllActiveSkills().filter(s => player.equippedSkills.includes(s.id)).map(skill => {
                 const cd = me?.skillCds?.[skill.id] || 0;
+                const lacks = !!skill.resource && (me?.pool ?? 0) < skill.resource.cost;
                 return (
-                  <button key={skill.id} onClick={() => multiAct(skill.id)} disabled={cd > 0} title={skill.desc} className="rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40">
-                    {cd > 0 ? `${skill.icon} ${skill.name} (${cd})` : `${skill.icon} ${skill.name}`}
+                  <button key={skill.id} onClick={() => multiAct(skill.id)} disabled={cd > 0 || lacks} title={skill.desc} className="rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40">
+                    {cd > 0 ? `${skill.icon} ${skill.name} (${cd})` : skill.resource ? `${skill.icon} ${skill.name} (${skill.resource.cost})` : `${skill.icon} ${skill.name}`}
                   </button>
                 );
               })}
@@ -468,6 +496,12 @@ export default function EndlessCard() {
         <div className="rounded-xl bg-black/25 p-3">
           <div className="mb-1 flex justify-between text-[11px] text-slate-400"><span className="font-semibold text-emerald-300">{player.name}</span><span className="tabular-nums">{run.php} / {stats.maxHp} PV</span></div>
           <Bar current={run.php} max={stats.maxHp} color="bg-emerald-500" blink />
+          {classResourceType(player.classId) && (() => { const rt = classResourceType(player.classId)!; const rmax = rt === 'combo' ? 5 : 100; return (
+            <>
+              <div className="mt-1.5 flex justify-between text-[10px] text-slate-400"><span>{RESOURCE_INFO[rt]?.icon} {RESOURCE_INFO[rt]?.name ?? 'Ressource'}</span><span className="tabular-nums">{run.pool}/{rmax}</span></div>
+              <div className="h-1.5 overflow-hidden rounded bg-black/40"><div className="h-1.5 rounded bg-fuchsia-400 transition-all" style={{ width: `${(run.pool / rmax) * 100}%` }} /></div>
+            </>
+          ); })()}
         </div>
         <div className="h-28 space-y-1 overflow-y-auto rounded-xl bg-black/25 p-2 text-xs">
           {run.logs.map((l, i) => (<div key={i} className="opacity-80 last:font-medium last:opacity-100">{l}</div>))}
@@ -490,9 +524,10 @@ export default function EndlessCard() {
             <button onClick={() => handleAction('attack')} className="rounded-lg bg-rose-500/40 py-2.5 text-sm font-bold hover:bg-rose-500/60">⚔️ Attaquer</button>
             {getAllActiveSkills().filter(s => player.equippedSkills.includes(s.id)).map(skill => {
               const cd = run.skillCds[skill.id] || 0;
+              const lacks = !!skill.resource && run.pool < skill.resource.cost;
               return (
-                <button key={skill.id} onClick={() => handleAction(skill.id)} disabled={cd > 0} title={skill.desc} className="rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40">
-                  {cd > 0 ? `${skill.icon} ${skill.name} (${cd})` : `${skill.icon} ${skill.name}`}
+                <button key={skill.id} onClick={() => handleAction(skill.id)} disabled={cd > 0 || lacks} title={skill.desc} className="rounded-lg bg-purple-500/40 py-2.5 text-sm font-bold hover:bg-purple-500/60 disabled:opacity-40">
+                  {cd > 0 ? `${skill.icon} ${skill.name} (${cd})` : skill.resource ? `${skill.icon} ${skill.name} (${skill.resource.cost})` : `${skill.icon} ${skill.name}`}
                 </button>
               );
             })}

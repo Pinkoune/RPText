@@ -238,11 +238,26 @@ export async function leaveDungeon(id: string, uid: string): Promise<void> {
 function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1, avgLevel: number = 1): DungeonMonster {
   const m = def.stages[idx];
   
-  // Scaling renforcé : les monstres résistent mieux aux groupes nombreux
-  const lvlMult = Math.pow(1 + Math.max(0, avgLevel - 1) / 30, avgLevel >= 20 ? 1.8 : 1.4);
-  const hpMult  = Math.pow(numPlayers, 1.4) * (1 + (numPlayers - 1) * 0.1) * lvlMult; // HP +
-  const atkMult = (1 + (numPlayers - 1) * 0.5) * lvlMult; // ATK 0.3→0.5
-  const defMult = (1 + (numPlayers - 1) * 0.25) * lvlMult; // DEF 0.15→0.25 
+  // Scaling par nombre de joueurs. AVANT : PV ∝ numPlayers^1.4 → super-linéaire,
+  // donc la PART de PV à abattre PAR joueur grimpait avec la taille du groupe
+  // (rejoindre à 4 rendait le donjon plus dur par tête, pas plus facile). Une
+  // simulation co-op tour-par-tour l'a confirmé : Sanctuaire du Dragon passait de
+  // 100% en solo à ~0% à 3-4 joueurs. Corrigé en scaling QUASI-LINÉAIRE : les PV
+  // du boss montent ~proportionnellement au groupe (+12%/membre au-delà du 1er
+  // pour garder une légère prime de coop), et l'ATK/DEF montent plus doucement.
+  // Le solo (numPlayers=1) est strictement inchangé.
+  // Exposant de niveau adouci 1.8→1.6 : le 1.8 se COMPOSAIT avec les PV de base
+  // élevés des boss end-game (forge_lord/void_king) → éponges de PV intuables
+  // (combats de 100-300 tours). 1.6 garde une vraie montée sans exploser.
+  const lvlMult = Math.pow(1 + Math.max(0, avgLevel - 1) / 30, avgLevel >= 20 ? 1.6 : 1.4);
+  const hpMult  = numPlayers * (1 + (numPlayers - 1) * 0.12) * lvlMult; // ~linéaire (avant : ^1.4)
+  const atkMult = (1 + (numPlayers - 1) * 0.35) * lvlMult; // 0.5→0.35
+  // La DEF scale en RACINE du lvlMult, pas plein : les dégâts sont `atk - def`
+  // (soustraction plate), donc une DEF qui grimpait au même rythme que les PV
+  // finissait par DÉPASSER l'ATK des joueurs (boss Nv40+ → dégâts floorés à 1,
+  // boss intouchable, pas juste tanky). En racine, la DEF reste pertinente sans
+  // jamais rendre le boss immunisé.
+  const defMult = (1 + (numPlayers - 1) * 0.20) * Math.sqrt(lvlMult);
 
   const hp = Math.floor(m.hp * hpMult);
   const atk = Math.floor(m.atk * atkMult);

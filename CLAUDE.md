@@ -120,6 +120,59 @@ Remplace l'ancien duel instantané (pile/face Firestore, `pvp.ts simulateDuel`) 
 
 À Nv.50 le joueur gagne 49 points de talent (`level-1`). Un premier passage avait ajouté des passifs « absorbeurs » (2×5 rangs + 1×3 rang) pour les bases Guerrier/Mage/Archer/Soigneur + les sous-classes Moine/Druide/Prêtre de l'Aube, mais **oubliait 9 sous-classes** (Paladin/Berserker/Dark Knight/Pyromancer/Cryomancer/Arcanist/Rogue/Barde/Chasseur), qui plafonnaient à 35 rangs dépensables → **14 points gaspillés** à Nv.50. Corrigé (`talents.ts`) : mêmes gabarits ajoutés à ces 9 sous-classes → toutes à 48 rangs (1 point de marge, comme le Moine). Prêtre de l'Aube/Druide restent à 43 (6 de marge, non touché — pas cassé, juste un peu plus généreux).
 
+## Simulation d'équilibrage & fixes de courbes (fait, C)
+
+Deux harness dans `scripts/` (voir `scripts/README-balance.md`) importent la logique de combat **réelle** (bundlés esbuild, `import.meta.env` stubé → pas de Firebase, exécutés node) : `balance-sim.ts` (passif/auto-combat, DPS backbone) et `balance-sim-turns.ts` (**tour-par-tour avec compétences actives, ressources, potions, co-op donjon N joueurs** — la mesure fiable). Rapport interactif publié en Artifact + CSV Excel dans `scripts/balance-output/`. **Le harness teste chaque classe de `CLASS_LIST` sans code sup → garde-fou pour toute classe future** (bandes cibles Nv.50 dans le README).
+
+Murs de difficulté localisés par la simu et corrigés :
+- **Falaise de chasse Nv.24-30** (`monsters.ts` `pickMonster`) : l'exposant de scaling **sautait de 1.5 à 2.0 pile au Nv.20** (+32% stats monstre en un niveau, à l'ascension) puis explosait. Winrate simulé : 100% jusqu'à Nv.20 → 62% volcan(24) → 1% Nécropole(30). Corrigé en **exposant continu 1.75** (ni discontinuité ni explosion) → volcan 80%, crypte 45-53%. L'Abysse (Nv.38+) reste volontairement un mur de fin de jeu.
+- **Scaling donjon super-linéaire** (`dungeonService.ts` `initMonster`) : PV boss ∝ `numPlayers^1.4` → part de PV **par joueur** grimpait avec la taille du groupe. Co-op simulé : Sanctuaire du Dragon 100% solo → ~0% à 3-4 joueurs. Corrigé en **quasi-linéaire** (`hpMult = np*(1+(np-1)*0.12)*lvlMult`, atkMult 0.5→0.35), solo inchangé. Aussi : **exposant de niveau `lvlMult` 1.8→1.6** (se composait avec les gros PV de base des boss end-game) et **DEF en `sqrt(lvlMult)`** — la DEF montait au même rythme que les PV et finissait par DÉPASSER l'ATK des joueurs (dégâts `atk-def` floorés à 1 → boss Nv40+ **intouchable**, pas juste tanky). Le raid (même `initMonster`) en bénéficie.
+- **Boss finaux surtunés** (`dungeons.ts`) : forge_lord (PV 2800→1600, atk 110→90) et void_king (PV **7000**→2000, atk 220→100) étaient des éponges (void_king scalé à ~180k PV à 4j, combats de 100-300 tours). Leur **double-résistance (phys+mag → ÷2 dégâts pour tous)** réduite à **une seule** (parties mono-type pénalisées, parties mixtes à plein). Forge est désormais jouable par une party équipée ; Citadelle reste le donjon final le plus dur.
+- **Nerf Berserker** (`talents.ts`) : vol de vie 15%→12% max (`ber_life` 0.05→0.04/rang) — recadre son auto-suffisance (top DPS + survie parfaite en sim passif) sans toucher son identité DPS.
+
+**Trous de progression d'items comblés** (`analyze-progression.ts` les a localisés) : **aucune arme entre Nv20 et Nv30**, **aucune armure entre Nv15 et Nv32** — on entrait au volcan (Nv24) avec le gear du Nv15, ce qui aggravait le mur. Ajout d'un **set de transition « Marais-Braise » Nv22-24** (`items.ts`+`crafting.ts`+`icons.ts`) : 4 armes (warlord_axe/swiftwind_bow/emberflow_staff/marsh_cane, ATK ~44) + 3 armures par poids (warplate/scout_leathers/mystic_garb), craftables avec des matériaux du marais + entrée du volcan. Courbe lissée : armes 32→46→62, armures 158→204→260.
+
+**Constats de progression (analyse, non « corrigés » — à surveiller)** : courbes d'**artisanat** et de **récolte** saines (~4-5 actions par niveau de métier). Mais l'**XP global est très end-loaded** : Nv40-50 = **81% du grind total** (Nv45→50 seul = 56%), et tous les biomes sont débloqués dès Nv28 → le end-game (Nv40-50) est un très long grind sans nouvelle zone. Piste si trop punitif : adoucir le multiplicateur `1.18` post-Nv30 dans `xpToNext`.
+
+Constats clés (tour-par-tour, Nv.50 maxé) : toutes les **sous-classes** sont saines (100% survie, endHP 36-100%) ; les **bases** Mage/Archer faibles à 50 mais normal (on ascensionne à 20) ; **Berserker** cumule top-3 DPS + survie parfaite (vol de vie passif) = à surveiller sans nerf urgent ; les 4 Soigneurs paraissent 0% en sim **passif** (leur kit est 100% actif) → juger au tour-par-tour uniquement. ⚠️ Le sim co-op ne modélise pas encore le **soin de groupe** des soigneurs en donjon → winrates absolus des donjons Nv.30+ pessimistes (le fix de scaling reste valide, mesuré en relatif).
+
+## Amusement — 3 features (fait, C)
+
+- **Maîtrise des biomes** (`game/mastery.ts`, nouveau) : chaque kill compte pour le biome courant (`p.biomeKills`, migré). Paliers 100/500/1500/4000 → titre (`Novice/Familier/Vétéran/Maître/Légende · <Biome>`, ajouté à `unlockedTitles`) + **bonus permanent XP/Or dans ce biome** (+5/10/15/25%, appliqué dans `grantMonsterRewards`). But concret au farm end-game (Nv.40-50 = 81% du temps, sans nouvelle zone). Affiché : bandeau dans HuntCard (biome courant) + liste complète dans MapCard + toast au palier franchi (`HuntRewards.masteryUp`).
+- **Faille (combat moins passif)** (`combat.ts` `combatTurn`, `VULN_MULT=1.5`) : quand le monstre est **gelé/étourdi** en début de tour, les dégâts offensifs sont ×1.5. Récompense poser un contrôle puis burst (gel cryo, étourdissement moine à Combo plein, sets givre). Badge « ⚡ FAILLE » clignotant dans HuntCard. Hunt/adventure uniquement (le donjon a déjà son stagger).
+- **Lisibilité phys/mag** : indicateur d'**efficacité d'arme** 🟢/⚪/🔴 dans HuntCard (calcul `getElementMult × getDmgTypeMult` de l'arme vs le monstre en cours) — le joueur voit s'il tape fort/faible avant d'agir. Explication (éléments + faille) dans le Wiki (onglet Bestiaire).
+
+## Objectif de guilde collectif (fait, C)
+
+Objectif hebdo partagé par toute la guilde (`groupsService.ts` `GuildGoal`/`freshGuildGoal`/`contributeGuildGoal`, tourne par `weekId % roster`, cible qui s'adapte à la taille de guilde). Métrique = kills. **Écriture Firestore économe** : chaque kill incrémente un compteur LOCAL (`p.guildGoalKills`, combat.ts), flushé par **delta à la sauvegarde débounced** (`savePlayer`, delta capturé+remis à zéro AVANT le `setDoc` joueur pour éviter le double-comptage au reload) — pas une écriture par kill (quota). Atteint → coffre réclamable 1×/membre ayant contribué (`p.settledGuildGoals`, reward or+fateCoins+matrice + XP de guilde), UI dans `GuildCard` (barre de progression + bouton réclamer). Règle RTDB/Firestore `guilds` update déjà permissive.
+
+## Anti-macro chasse retiré (C)
+
+La détection de « rythme de clics robotique » (variance des intervalles) dans `HuntCard` bloquait le spam-clic légitime (annulait le combat + réappliquait le cooldown). Retirée à la demande — le jeu reste client-authoritative de toute façon (voir Sécurité), la triche solo n'était pas empêchée par ça.
+
+## Ressources d'archétype en Endless (fix, C)
+
+Les ressources (mana/rage/combo/ferveur/…) ne fonctionnaient PAS en Abysses : le solo (`EndlessCard`) appelait `combatTurn` **sans** `resourceType`/`resourceAmount`, et le multi (`endlessService`) a un combat maison qui gate les skills au cooldown seul. Corrigé des deux côtés : `RunState.pool`/`lastAction` (solo) et `EndlessPlayer.pool`/`lastAction` (multi) threadés, gating par ressource (bouton grisé si insuffisant), scaling combo/grâce (consomment tout le pool), gains par tour (combo/mana/surcharge/tempo/grâce/corruption/traque au tour joueur ; rage/ferveur/sève au tour du monstre dans `executeEndlessMonsterTurn`). Barres de ressource ajoutées aux UI solo+multi.
+
+## Nouvelles sous-classes (fait, C)
+
+Deux ascensions ajoutées, **entièrement data-driven** (auto dans l'écran d'ascension `TalentCard` et le Wiki via `getAscensions`/`CLASS_LIST`, aucun câblage UI) :
+- **Sentinelle** (🛡️, ascension Guerrier) : tank de CONTRÔLE (vs le Paladin protecteur) — épines (renvoi ×6%/rang), Rempart d'épines (bouclier+taunt), Représailles (×2.2+soin). Plus haute DEF/PV des guerriers.
+- **Nécromancien** (💀, ascension Mage) : caster DoT/poison + drain (vs Pyro burst / Cryo contrôle) — Éclat nécrotique (poison), Putréfaction (armorPen +6%/rang), Vague d'âmes (×2.8 + poison + 15% drain), **+ invocation « Lever un mort »** (serviteur qui frappe 0.5×ATK/tour, 4 tours).
+- **Piégeur** (🪤, ascension Archer) : skirmisher poison/esquive (vs Voleur combo/crit, Chasseur armorPen, Barde support) — Piège explosif (×2.0+poison) → Embuscade (×2.6+poison fort), esquive cumulée +21%. Inné = famille archer (+6% double frappe).
+- **Oracle** (🔮, ascension Soigneur) : healer de protection (vs Prêtre grâce, Druide sève, Moine combo) — Bouclier prophétique (18% PV), Clairvoyance/Foi (DEF/réduc, le plus solide), Jugement (×1.8 lumière + 15% soin). Inné = famille soigneur (+5 régén).
+
+**Ressources d'archétype des 4 nouvelles (C)** : elles ont désormais chacune leur jauge exotique (comme les 12 sous-classes d'origine), plus de simple cooldown. Câblé partout (`classResourceType`, `RESOURCE_INFO`, `RESOURCE_META` HuntCard, gains dans `combat.ts` = hunt/aventure/endless-solo + `endlessService.ts` = endless-multi approximé) :
+- **Vindicte** 🌵 (Sentinelle) : se charge en encaissant (comme la Rage, tank vengeur) → Représailles 50.
+- **Âmes** 👻 (Nécromancien) : se charge quand le **poison ronge** la cible (chaque tick, flag `poisonTicked`) → Vague d'âmes 40. **Corrige le bug** : la Vague coûtait 40 Mana mais `classResourceType('necromancer')` renvoyait `null` → jauge jamais chargée.
+- **Pièges** 🪤 (Piégeur) : se charge en **frappant une cible empoisonnée** (`hitsDealt && wasPoisoned`) → Embuscade 60.
+- **Présage** 🔮 (Oracle) : se charge quand un **bouclier absorbe** ou qu'un **soin** passe (`shieldAbsorbed || healDone`) → Jugement 50.
+En multi (endlessService), Âmes/Pièges approximés sur l'action offensive (le combat multi ne modélise pas le poison sur le monstre), Présage sur le soin, Vindicte sur l'encaissement.
+
+**Invocation Nécromancien (C)** : nouveau mécanisme `CombatState.minion`/`minionPow` dans `combat.ts` — un serviteur frappe en fin de tour (comme brûlure/poison), posé par `ActiveSkillDef.summon`. Actif hunt/aventure/endless-solo (le donjon serveur n'a pas les altérations d'état).
+
+Chaque arbre = **+21 rangs propres** (base 27 → 48, budget cible du Nv.50, cf. équilibrage des arbres ; `necro_grave` 5→4 pour caser le nœud d'invocation). Innés câblés dans `talentMods` (sentinel=guerrier -10% dégâts, necromancer=mage +6% crit ; trapper/oracle héritent des innés de famille). Validés par le harness (finishers gated par ressource) : Sentinelle 100%/endHP 51%, Nécromancien 100%/38%, **Piégeur 100%/46%**, **Oracle 100%/97%** — tous dans les bandes cibles.
+
 ## Combat — bouclier & états (fait)
 
 `combat.ts` : `CombatState { shield, burn/burnPow, poison/poisonPow, chill }` threadé dans `combatTurn` (in/out via `TurnResult.state`). Compétences (`ActiveSkillDef.status`) et procs de set (`sets.ts`) posent brûlure/gel/poison/bouclier. **Uniquement hunt/adventure** — le donjon serveur n'a pas encore ces mécaniques.
