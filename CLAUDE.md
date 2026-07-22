@@ -27,6 +27,31 @@ Objectif : rendre le end-game (niv.22→50) attractif. 5 features :
 
 ---
 
+## Pont Epigames (portail)
+
+RPText est listé sur le portail **Epigames** en `kind: 'web'` (onglet séparé).
+Quand le joueur le lance **depuis le portail**, un pont `postMessage` s'ouvre
+via `window.opener` :
+
+- `index.html` charge le SDK du portail (`epigames-sdk.js`) ;
+- `hooks/useEpigames.ts` (appelé une fois dans `App.tsx`) fait deux choses :
+  1. **miroite les succès** — l'`id` de `ACHIEVEMENTS` (`game/achievements.ts`)
+     EST le `code` côté portail ; on envoie l'état **atteint** (`isUnlocked`,
+     `value >= goal`), pas le « réclamé », dédupliqué par un `Set` local ;
+  2. **affiche les notifications du portail** (ami en ligne, MP, invitation)
+     dans les toasts RPText — obligatoire ici, le portail est dans un AUTRE
+     onglet, ses propres bulles sont invisibles pour le joueur.
+
+⚠️ RPText n'écrit **jamais** dans la base du portail : il poste un message, le
+portail écrit avec le compte du joueur connecté chez lui. Donc pas de SSO, pas
+de Firebase partagé, **rien à configurer** dans ce repo. Hors portail (URL
+directe, favori), `Epigames.available` est false et tout devient no-op — un
+seul build sert les deux cas.
+
+Ajouter un succès visible sur le portail = créer là-bas un succès avec le
+**même code** que l'id RPText, et le faire approuver. Doc complète :
+`EpiGames/docs/INTEGRATION.md`.
+
 ## Architecture (où vit quoi)
 
 ```

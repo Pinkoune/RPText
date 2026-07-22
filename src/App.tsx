@@ -10,6 +10,7 @@ import CommandBar from './components/CommandBar';
 import MobileNav from './components/MobileNav';
 import WindowManager from './components/WindowManager';
 import { useIsMobile } from './hooks/useIsMobile';
+import { useEpigames } from './hooks/useEpigames';
 import Toasts from './components/Toasts';
 import ChatNotifs from './components/ChatNotifs';
 import LevelUpFx from './components/LevelUpFx';
@@ -31,6 +32,10 @@ export default function App() {
   const initAuth = useGame((s) => s.initAuth);
   const { phase } = useClock();
   const isMobile = useIsMobile();
+
+  // Pont Epigames : succès miroités + notifications du portail en toasts.
+  // No-op si le jeu n'a pas été lancé depuis le portail.
+  useEpigames();
 
   useEffect(() => {
     // initAuth() renvoie le désabonnement onAuthStateChanged : sans ce cleanup,

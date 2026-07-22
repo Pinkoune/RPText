@@ -6,6 +6,12 @@
     <meta name="theme-color" content="#0b1020" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
     <title>RPText — RPG textuel</title>
+    <!--
+      Pont Epigames : sert uniquement quand le jeu est lancé depuis le portail
+      (succès + notifications). Hors portail, le SDK se met en no-op tout seul.
+      Chargé depuis le portail pour rester à jour sans redéployer RPText.
+    -->
+    <script src="https://pinkoune.github.io/EpiGames/epigames-sdk.js"></script>
   </head>
   <body>
     <div id="root"></div>
