@@ -66,6 +66,28 @@
   th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
   details { margin-top: 20px; }
   summary { cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 600; }
+  h2 { font-size: 19px; margin: 44px 0 4px; letter-spacing: -.01em; }
+  .sub { color: var(--ink-2); font-size: 14px; line-height: 1.55; margin: 0 0 16px; max-width: 64ch; }
+  td.l, th.l { text-align: left; }
+  .star { color: var(--new); font-weight: 700; }
+  .fam-chip { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: baseline; margin-right: 6px; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--ink);
+    padding: 1px 5px; border-radius: 5px; }
+  pre { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12.5px; line-height: 1.6; color: var(--ink-2); margin: 0 0 8px; }
+  ol.steps { padding-left: 0; list-style: none; counter-reset: s; margin: 0 0 8px; }
+  ol.steps > li { counter-increment: s; position: relative; padding: 10px 0 10px 40px;
+    border-bottom: 1px solid var(--grid); font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+  ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 9px;
+    width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff;
+    font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  ol.steps > li b { color: var(--ink); }
+  .note { border-left: 3px solid var(--band-line); background: var(--band);
+    padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 13px; line-height: 1.55;
+    color: var(--ink-2); margin: 14px 0; }
+  .note b { color: var(--ink); }
 </style>
 
 <div class="wrap">
@@ -95,6 +117,51 @@
       <tbody></tbody>
     </table>
   </details>
+
+  <h2>Roster complet — ressources d'archétype</h2>
+  <p class="sub">Chaque sous-classe a une jauge exotique avec un déclencheur propre à son kit ;
+    les 4 classes de base gardent le cooldown classique. ★ = ajoutée dans ce patch.</p>
+  <div style="overflow-x:auto">
+    <table id="roster">
+      <thead><tr><th class="l">Classe</th><th class="l">Famille</th><th class="l">Ressource</th><th class="l">Se charge quand…</th><th class="l">Dépensée sur</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>Reprendre la tâche — pour l'agent suivant</h2>
+  <p class="sub">Le système de classes est <b>entièrement data-driven</b> : une sous-classe apparaît
+    automatiquement dans l'écran d'ascension (<code>TalentCard</code>) et le Wiki via
+    <code>getAscensions(base.id)</code> / <code>CLASS_LIST</code> — aucun câblage UI. Pour en ajouter une :</p>
+  <ol class="steps">
+    <li><b>Type</b> — ajoute l'id à l'union <code>ClassId</code> dans <code>src/game/types.ts</code> (dans le groupe de sa famille).</li>
+    <li><b>Définition</b> — entrée dans <code>CLASSES</code> (<code>src/game/classes.ts</code>) : <code>parent</code> (classe de base), <code>base</code>, <code>growth</code>, <code>emoji</code>, <code>desc</code>, <code>playstyle</code> (texte Wiki).</li>
+    <li><b>Arbre de talents</b> — <code>src/game/talents.ts</code> : ~21 rangs propres (budget Nv.50 = base&nbsp;27 + sous-classe&nbsp;21 = 48). Gabarit : 1 skill d'ouverture + branches passives + 1 finisher gated par ressource + régén. Ajoute aussi l'inné dans <code>talentMods</code> (ou hérite de la famille), et l'entrée dans <code>classResourceType</code> + <code>RESOURCE_INFO</code>.</li>
+    <li><b>Ressource</b> (si exotique) — le finisher porte <code>resource:{type,cost}</code>. Ajoute le nom au type union de <code>ActiveSkillDef.resource</code> ET du param <code>resourceType</code> de <code>combatTurn</code>, puis le <b>déclencheur de gain</b> dans <code>combat.ts</code> (bloc <code>resourceGained</code>, sert chasse + aventure + endless-solo) et son miroir dans <code>endlessService.ts</code> (2 blocs : tour monstre / tour joueur, endless-multi). Enfin <code>RESOURCE_META</code> dans <code>HuntCard.tsx</code> (label + couleur de barre).</li>
+    <li><b>Valide</b> — lance la simulation tour-par-tour (voir ci-dessous). Elle teste <b>chaque classe de <code>CLASS_LIST</code> sans code sup</b> → toute classe future est couverte d'office.</li>
+  </ol>
+
+  <p class="sub" style="margin-top:20px">Simulation (bundlée esbuild, Firebase stubé, exécutée node) :</p>
+  <pre>node_modules/.bin/esbuild scripts/balance-sim-turns.ts --bundle --platform=node \
+  --format=cjs --define:import.meta.env='{}' --outfile=/tmp/bt.cjs \
+  &amp;&amp; node /tmp/bt.cjs</pre>
+  <p class="sub"><b>Bandes cibles Nv.50</b> (tour-par-tour, classe maxée) : Winrate <b>100%</b>,
+    Survie (endHP) <b>35–100%</b>. En dessous de 35% = trop fragile ; les bases Mage/Archer
+    y échappent volontairement (on ascensionne au Nv.20). Détails dans <code>scripts/README-balance.md</code>.</p>
+
+  <div class="note">
+    <b>Répartition Claude ↔ Gemini (éviter les conflits de merge).</b> Le système de classes,
+    le combat (<code>combat.ts</code>, <code>talents.ts</code>) et les ressources sont côté <b>Claude</b>.
+    Fichiers partagés à haut risque (<code>types.ts</code>, <code>player.ts</code>, <code>items.ts</code>) :
+    un seul owner à la fois, annoncer avant d'éditer. <code>npx tsc -b</code> doit passer avant de conclure.
+    Détails complets dans <code>CLAUDE.md</code> (section « Collaboration Claude ↔ Gemini »).
+  </div>
+
+  <div class="note">
+    <b>Invocation (Nécromancien).</b> Mécanisme <code>CombatState.minion</code> / <code>minionPow</code>
+    dans <code>combat.ts</code> : un serviteur frappe en fin de tour (comme brûlure/poison), posé par
+    <code>ActiveSkillDef.summon:{turns,pow}</code>. Actif hunt / aventure / endless-solo uniquement —
+    le combat serveur (donjon) ne modélise pas les altérations d'état.
+  </div>
 </div>
 
 <div class="tip" id="tip"></div>
@@ -175,6 +242,35 @@ Object.entries(FAM).forEach(([k,[label,varn]])=>{
 const tb=document.querySelector('#tbl tbody');
 DATA.slice().sort((a,b)=>b[3]-a[3]).forEach(([n,f,a,s,t])=>{const tr=document.createElement('tr');
   tr.innerHTML=`<td>${n}${t==='new'?' ★':t==='base'?' ◇':''}</td><td style="text-align:left;color:var(--ink-2)">${FAM[f][0]}</td><td>${a}</td><td>${s}%</td>`;tb.appendChild(tr);});
+
+// roster / ressources
+const ROSTER = [
+  ["Guerrier","warrior","— (cooldown)","Classe de base","—"],
+  ["Paladin","warrior","🕊️ Ferveur","son bouclier (Rempart) absorbe un coup","Châtiment (40)"],
+  ["Berserker","warrior","🔥 Rage","il encaisse des coups","Exécution (50)"],
+  ["Chevalier Noir","warrior","💀 Corruption","il frappe sous 30% PV","Drain Noir (45)"],
+  ["Sentinelle","warrior","🌵 Vindicte","il encaisse des coups","Représailles (50)",1],
+  ["Mage","mage","— (cooldown)","Classe de base","—"],
+  ["Pyromancien","mage","🔷 Mana","régén passive (+15/tour)","Enfer (40)"],
+  ["Cryomancien","mage","🔷 Mana","régén passive (+15/tour)","Blizzard (40)"],
+  ["Arcaniste","mage","🌌 Surcharge","une compétence est lancée","Distorsion (50)"],
+  ["Nécromancien","mage","👻 Âmes","le poison ronge la cible (tick)","Vague d'âmes (40)",1],
+  ["Archer","archer","— (cooldown)","Classe de base","—"],
+  ["Voleur","archer","⚡ Combo","chaque coup porté (max 5)","Assassinat (tout)"],
+  ["Barde","archer","🎵 Tempo","il alterne ses actions","Crescendo (60)"],
+  ["Chasseur","archer","🎯 Traque","un coup CRIT","Tir de précision (60)"],
+  ["Piégeur","archer","🪤 Pièges","il frappe une cible empoisonnée","Embuscade (60)",1],
+  ["Soigneur","healer","— (cooldown)","Classe de base","—"],
+  ["Prêtre de l'Aube","healer","✨ Grâce","il soigne (soi ou l'équipe)","Nova sacrée (tout)"],
+  ["Druide","healer","🌿 Sève","les Épines renvoient des dégâts","Colère (40)"],
+  ["Moine","healer","⚡ Combo","chaque coup porté (max 5)","Coup du Dragon (tout)"],
+  ["Oracle","healer","🔮 Présage","un bouclier absorbe / un soin passe","Jugement (50)",1],
+];
+const rb = document.querySelector('#roster tbody');
+ROSTER.forEach(([n,f,res,trig,fin,isNew])=>{const tr=document.createElement('tr');
+  tr.innerHTML=`<td class="l"><span class="fam-chip" style="background:${cv(FAM[f][1])}"></span>${n}${isNew?' <span class="star">★</span>':''}</td>`+
+    `<td class="l" style="color:var(--ink-2)">${FAM[f][0]}</td><td class="l">${res}</td>`+
+    `<td class="l" style="color:var(--ink-2)">${trig}</td><td class="l">${fin}</td>`;rb.appendChild(tr);});
 
 draw();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);

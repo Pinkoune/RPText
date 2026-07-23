@@ -289,8 +289,15 @@ export function getItem(id: string): ItemDef | undefined {
   }
   
   const qStr = qualityTag.slice(1);
-  const qVal = parseInt(qStr, 10);
-  if (isNaN(qVal) || qVal === 100) return base;
+  const qValRaw = parseInt(qStr, 10);
+  if (isNaN(qValRaw) || qValRaw === 100) return base;
+  // Plafond dur : le craft légitime ne génère JAMAIS plus de q150 (100% qualité
+  // au minijeu = +50% stats, voir `finishCraft` dans crafting.ts — `maxQuality`
+  // de la recette est un seuil de difficulté du minijeu, pas un plafond de
+  // pourcentage). Cette borne n'existait qu'au moment du craft, jamais revérifiée
+  // à la lecture — une clé d'inventaire forgée à la main passait telle quelle
+  // (constaté : q99900, ATK 36563).
+  const qVal = Math.min(150, Math.max(1, qValRaw));
 
   const mult = qVal / 100;
   
