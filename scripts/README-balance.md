@@ -67,3 +67,25 @@ Une classe = une entrée `CLASSES` + son arbre `TALENTS` + câblage. Ordre :
 
 Le harness teste chaque classe de `CLASS_LIST` sans code supplémentaire — c'est
 le garde-fou d'équilibrage pour toute classe future.
+
+---
+
+## `check-talent-layout.ts` — disposition des arbres de talents
+
+    npx tsx scripts/check-talent-layout.ts
+
+Passe les **20 arbres** (4 classes de base + 16 sous-classes, base et
+spécialisation) dans `layoutTree` (`src/components/cards/talentLayout.ts`) et
+vérifie trois choses qu'une capture d'écran d'un seul arbre ne peut pas
+garantir :
+
+- **aucune superposition** — deux nœuds sur la même case ;
+- **aucun croisement** de liens de prérequis (les liens partageant un nœud ne
+  comptent évidemment pas) ;
+- **largeur ≤ 7 colonnes**, pour que l'arbre tienne dans la fenêtre (680px)
+  sans défilement horizontal.
+
+À relancer après tout ajout ou modification de nœud dans `talents.ts`. La
+disposition étant déduite du graphe de prérequis (et non des `pos.x`/`pos.y`
+écrits à la main), un nœud ajouté se place tout seul — ce script confirme que
+le résultat reste propre.

@@ -6,6 +6,7 @@ import { ascendPlayer } from '../../game/player';
 import { playSound } from '../../game/sound';
 import type { ClassId } from '../../game/types';
 import ItemIcon from '../ItemIcon';
+import { layoutTree } from './talentLayout';
 
 const NODE_W = 56;
 const NODE_H = 56;
@@ -126,11 +127,10 @@ function NodeDetail({ t, talents, rankOf, reqMet, points, equipped, onLearn, onT
   );
 }
 
-// Grille de l'arbre : les nœuds portent déjà des coordonnées (pos.x ∈ -2..2,
-// pos.y = palier), on les positionne donc réellement plutôt que d'empiler des
-// rangées. C'est ce qui permet de TRACER les liens de prérequis — auparavant
-// un simple trait vertical décoratif suggérait un enchaînement qui n'existait
-// pas visuellement, et rien ne disait quel nœud débloquait quel autre.
+// Grille de l'arbre : les nœuds sont positionnés en (colonne, palier), ce qui
+// permet de TRACER les liens de prérequis — auparavant un simple trait vertical
+// décoratif suggérait un enchaînement qui n'existait pas visuellement, et rien
+// ne disait quel nœud débloquait quel autre.
 function Tree({ nodes, rankOf, reqMet, selectedId, onSelect }: {
   nodes: TalentDef[];
   rankOf: (id: string) => number;
@@ -139,41 +139,18 @@ function Tree({ nodes, rankOf, reqMet, selectedId, onSelect }: {
   onSelect: (id: string) => void;
 }) {
   if (nodes.length === 0) return null;
-  const xs = nodes.map((t) => t.pos.x);
-  const ys = nodes.map((t) => t.pos.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const rows = maxY - minY + 1;
+  const { col, row, rows } = layoutTree(nodes);
+  const cols = [...col.values()];
+  const minCol = Math.min(...cols);
+  const maxCol = Math.max(...cols);
   const height = rows * CELL_H - GAP_Y;
+  const width = (maxCol - minCol + 1) * CELL_W - GAP_X;
 
-  // Garde-fou anti-superposition. Les coordonnées sont écrites à la main dans
-  // talents.ts, et 12 sous-classes sur 16 avaient deux nœuds sur la MÊME case
-  // — invisible tant que l'affichage empilait des rangées, mais superposé dès
-  // qu'on positionne vraiment. Les données sont corrigées, et ici on décale en
-  // plus tout doublon vers la colonne libre la plus proche : une erreur de
-  // saisie future rendra l'arbre un peu asymétrique, jamais illisible.
-  const colOf = new Map<string, number>();
-  const takenByRow = new Map<number, Set<number>>();
-  for (const t of [...nodes].sort((a, b) => a.pos.y - b.pos.y || a.pos.x - b.pos.x)) {
-    const taken = takenByRow.get(t.pos.y) ?? new Set<number>();
-    let col = t.pos.x;
-    for (let d = 1; taken.has(col); d++) col = taken.has(t.pos.x + d) ? t.pos.x - d : t.pos.x + d;
-    taken.add(col);
-    takenByRow.set(t.pos.y, taken);
-    colOf.set(t.id, col);
-  }
-  const allCols = [...colOf.values()];
-  const gridMinX = Math.min(minX, ...allCols);
-  const gridMaxX = Math.max(maxX, ...allCols);
-
-  const left = (t: TalentDef) => ((colOf.get(t.id) ?? t.pos.x) - gridMinX) * CELL_W;
-  const top = (t: TalentDef) => (t.pos.y - minY) * CELL_H;
+  const left = (t: TalentDef) => (col.get(t.id)! - minCol) * CELL_W;
+  const top = (t: TalentDef) => row.get(t.id)! * CELL_H;
   const cx = (t: TalentDef) => left(t) + NODE_W / 2;
 
   const byId = new Map(nodes.map((t) => [t.id, t]));
-  const width = (gridMaxX - gridMinX + 1) * CELL_W - GAP_X;
 
   return (
     <div className="overflow-x-auto pb-1">
@@ -186,11 +163,14 @@ function Tree({ nodes, rankOf, reqMet, selectedId, onSelect }: {
               const from = byId.get(reqId);
               if (!from) return null;
               const active = rankOf(reqId) >= 1;
+              const y1 = top(from) + NODE_H;
+              const y2 = top(t);
+              const mid = (y1 + y2) / 2;
               return (
-                <line
+                <path
                   key={`${reqId}->${t.id}`}
-                  x1={cx(from)} y1={top(from) + NODE_H}
-                  x2={cx(t)} y2={top(t)}
+                  d={`M ${cx(from)} ${y1} C ${cx(from)} ${mid}, ${cx(t)} ${mid}, ${cx(t)} ${y2}`}
+                  fill="none"
                   stroke={active ? '#38bdf8' : '#334155'}
                   strokeWidth={active ? 2 : 1.5}
                   strokeDasharray={active ? undefined : '4 4'}
