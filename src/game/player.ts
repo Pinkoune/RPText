@@ -1,5 +1,5 @@
 import type { PlayerState, ClassId, Stats, QuestState, ItemDef, EquipmentBuild, EquippedGear } from './types';
-import { CLASSES, xpToNext, xpToNextV3, MAX_LEVEL } from './classes';
+import { CLASSES, xpToNext, xpToNextV3, xpToNextV4, MAX_LEVEL } from './classes';
 import { getTeamBonus, getGuildBonus, getGuildGoldBonus } from '../firebase/groupsService';
 import { item, isGearId, hasInstanceTag, mintInstanceId, addItemToInventory } from './items';
 import { RECIPES, getCraftLevel } from './crafting';
@@ -61,20 +61,37 @@ export function freshQuestState(now = Date.now()): QuestState {
 
 /** Complète les champs manquants des anciennes sauvegardes (migration douce). */
 export function migratePlayer(p: PlayerState): PlayerState {
-  // Courbe v4 (niveau max 50) : reconstitue l'XP totale sous l'ancienne courbe (v3,
-  // plafond 30) puis re-nivelle sous la nouvelle. Une seule fois par joueur.
-  if (p.curveVersion !== 4) {
+  // ─── Migrations de courbe d'XP ────────────────────────────────────────────
+  // Principe commun : on reconstitue l'XP TOTALE accumulée sous l'ancienne
+  // courbe, puis on re-nivelle sous la nouvelle. Les niveaux gagnés au passage
+  // créditent leurs points de talent (1 par niveau, comme grantXp).
+  const relevel = (oldCurve: (l: number) => number, newCurve: (l: number) => number) => {
+    const prevLevel = Math.max(1, p.level || 1);
     let totalXp = Math.max(0, p.xp || 0);
-    for (let l = 1; l < (p.level || 1); l++) {
-      const step = xpToNextV3(l);
+    for (let l = 1; l < prevLevel; l++) {
+      const step = oldCurve(l);
       if (Number.isFinite(step)) totalXp += step;
     }
     let lvl = 1;
     let rem = totalXp;
-    while (lvl < MAX_LEVEL && rem >= xpToNext(lvl)) { rem -= xpToNext(lvl); lvl += 1; }
+    while (lvl < MAX_LEVEL && rem >= newCurve(lvl)) { rem -= newCurve(lvl); lvl += 1; }
     p.level = lvl;
     p.xp = Math.max(0, Math.floor(rem));
+    const gained = lvl - prevLevel;
+    if (gained > 0) p.talentPoints = Math.max(0, (p.talentPoints ?? 0) + gained);
+  };
+
+  // v3 (plafond 30) → v4 (plafond 50).
+  if ((p.curveVersion ?? 0) < 4) {
+    relevel(xpToNextV3, xpToNextV4);
     p.curveVersion = 4;
+  }
+  // v4 → v5 : end-game adouci (×1.18 → ×1.10). Les joueurs bloqués dans la
+  // tranche 40-50 récupèrent d'un coup les niveaux que leur XP déjà accumulée
+  // valait sous l'ancienne courbe — et les points de talent qui vont avec.
+  if (p.curveVersion === 4) {
+    relevel(xpToNextV4, xpToNext);
+    p.curveVersion = 5;
   }
   if (!p.quests) p.quests = freshQuestState();
   if (!p.settledDuels) p.settledDuels = [];
@@ -91,6 +108,8 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (!p.settledPvpDuels) p.settledPvpDuels = [];
   if (p.pvpDuelSessionId === undefined) p.pvpDuelSessionId = null;
   if (p.prestigeLevel === undefined) p.prestigeLevel = 0;
+  if (p.neantVictories === undefined) p.neantVictories = 0;
+  if (p.rebirthAvailable === undefined) p.rebirthAvailable = false;
   if (p.classChangeTokens === undefined) p.classChangeTokens = 0;
   if (p.playtimeMs === undefined) p.playtimeMs = 0;
   if (p.cjWins == null) p.cjWins = 0;

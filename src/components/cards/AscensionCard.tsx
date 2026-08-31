@@ -159,7 +159,8 @@ export default function AscensionCard() {
         </p>
         <p className="text-xs text-rose-300/80">
           Si tu échoues, le Néant t'arrachera des années de vie (jusqu'à <b>3 niveaux</b>) et se refermera pour un temps.
-          Si tu triomphes... tu renaîtras au commencement, marqué à jamais du <b className="text-amber-300">Prestige</b>.
+          Si tu triomphes, tu ne perds <b>rien</b> : le titre de <b className="text-amber-300">Vainqueur du Néant</b> est à toi,
+          et la <b className="text-purple-300">Renaissance</b> s'ouvre — à saisir quand tu le voudras.
         </p>
         <button onClick={() => setPhase('confirm')} className="w-full rounded-xl bg-purple-900/70 py-3 text-sm font-bold text-purple-100 ring-1 ring-purple-500/50 hover:bg-purple-800/70">
           Affronter le mal
@@ -188,13 +189,29 @@ export default function AscensionCard() {
       <div className="space-y-4 text-center">
         <div className="text-5xl">{result.won ? '🌅' : '🕳️'}</div>
         <div className={`text-lg font-bold ${result.won ? 'text-amber-300' : 'text-purple-300'}`}>
-          {result.won ? 'PRESTIGE ATTEINT' : 'Le Néant te rejette'}
+          {result.won ? 'LE NÉANT EST VAINCU' : 'Le Néant te rejette'}
         </div>
         <p className="text-sm text-slate-300">{result.message}</p>
         {!result.won && (result.levelsLost ?? 0) > 0 && (
           <p className="text-xs text-rose-300">-{result.levelsLost} niveau(x). Reviens plus fort.</p>
         )}
-        {result.won && <p className="text-xs text-amber-200/80">Tu renais au niveau 1 avec un bonus permanent de prestige. Ta collection de familiers est conservée. 🎫 Un <b>jeton de changement de classe</b> t'attend dans ton <b>Profil</b>.</p>}
+        {result.won && (
+          <>
+            <p className="text-xs text-amber-200/80">
+              Tu gardes <b>tout</b> : ton niveau, ton équipement, tes métiers. Le titre
+              <b className="text-amber-300"> Vainqueur du Néant</b> est à toi.
+            </p>
+            <div className="rounded-xl border border-purple-500/30 bg-purple-950/30 p-3 text-left">
+              <div className="text-xs font-bold text-purple-200">🔮 La Renaissance t'est ouverte</div>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                Tu peux, <b>quand tu le voudras</b>, tout recommencer au niveau 1 en échange d'un
+                niveau de <b className="text-amber-300">Prestige</b> (bonus permanent + jeton de
+                changement de classe). Rien ne presse : l'offre reste ouverte dans ta carte
+                <b> Prestige</b>. Tu peux aussi simplement continuer ta partie.
+              </p>
+            </div>
+          </>
+        )}
         <button onClick={() => { const w = useUi.getState().windows.find((x) => x.kind === 'ascension'); if (w) closeWindow(w.id); }} className="w-full rounded-lg bg-white/10 py-2 text-sm hover:bg-white/20">
           Fermer
         </button>

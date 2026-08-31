@@ -59,8 +59,15 @@ export function claimDailyLogin(p: PlayerState, now = Date.now()): DailyReward |
   const yd = new Date(now);
   yd.setDate(yd.getDate() - 1);
   const yesterday = dayKey(yd);
+  // Jour de grâce : une absence d'UN jour ne casse pas la série. Retomber à 1
+  // après un seul oubli est une raison d'arrêter, pas de revenir — surtout quand
+  // on joue entre deux cours. Deux jours manqués remettent bien à zéro.
+  const bd = new Date(now);
+  bd.setDate(bd.getDate() - 2);
+  const beforeYesterday = dayKey(bd);
 
-  p.loginStreak = p.lastLoginDay === yesterday ? (p.loginStreak ?? 0) + 1 : 1;
+  const continued = p.lastLoginDay === yesterday || p.lastLoginDay === beforeYesterday;
+  p.loginStreak = continued ? (p.loginStreak ?? 0) + 1 : 1;
   p.lastLoginDay = today;
 
   const idx = (p.loginStreak - 1) % DAILY_CYCLE.length;

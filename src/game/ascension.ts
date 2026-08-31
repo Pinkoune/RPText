@@ -99,7 +99,7 @@ export type AscensionResult =
 /** Décide le résultat selon les PV restants du boss (0..1) et la victoire. */
 export function ascensionOutcome(bossHpFraction: number, won: boolean): AscensionResult {
   if (won) {
-    return { won: true, message: 'Tu terrasses le Néant. Le monde renaît autour de toi... et toi avec.' };
+    return { won: true, message: 'Tu terrasses le Néant Originel. Le monde respire — et tu es toujours debout.' };
   }
   const frac = Math.max(0, Math.min(1, bossHpFraction));
   const drain = 'Le néant t\'aspire de l\'espérance de vie...';
@@ -111,52 +111,72 @@ export function ascensionOutcome(bossHpFraction: number, won: boolean): Ascensio
 
 /**
  * Applique le résultat au joueur (à appeler dans `mutate`).
- * - Victoire : PRESTIGE — reset de la progression, prestigeLevel++, bonus permanent.
- *   On conserve l'identité, les familiers, les titres et le compteur de prestige.
- * - Échec : perte de niveaux + cooldown de 8h.
+ *
+ * - Victoire : TRIOMPHE, sans aucune perte. On crédite la victoire, le titre et
+ *   l'accès à la Renaissance — mais on ne touche NI au niveau, NI à l'équipement,
+ *   NI aux métiers. Auparavant la victoire déclenchait un wipe complet : vaincre
+ *   le boss ultime et se réveiller nu au Nv.1 dans la forêt de départ était une
+ *   gifle au moment exact du triomphe. Le reset existe toujours, mais il est
+ *   devenu un choix explicite du joueur (voir `applyRebirth`).
+ * - Échec : perte de niveaux + cooldown de 8h (inchangé).
  */
 export function applyAscensionResult(d: PlayerState, res: AscensionResult): void {
   if (res.won) {
-    const keptFamiliars = d.familiars ?? {};
-    const keptTitles = d.unlockedTitles ?? [];
-    const newPrestige = (d.prestigeLevel ?? 0) + 1;
-
-    d.prestigeLevel = newPrestige;
-    // Jeton de changement de classe : le prestige rebat les cartes.
-    d.classChangeTokens = (d.classChangeTokens ?? 0) + 1;
-    d.level = 1;
-    d.xp = 0;
-    d.talents = {};
-    d.talentPoints = 0;
-    d.equippedSkills = [];
-    // Arme de départ neuve (instanciée) + soin complet.
-    const startKey = mintInstanceId(starterWeapon(d.classId));
-    d.equipped = { weapon: startKey, armor: null, trinket: null, tool: null, profession_armor: null };
-    d.gearDurability = {};
-    d.inventory = { potion: 3 };
-    d.hp = CLASSES[d.classId].base.maxHp;
-    d.gearStars = {};
-    d.gearDurability = {};
-    d.enchants = {};
-    d.gold = 100;
-    d.biome = 'forest';
-    d.unlockedBiomes = ['forest'];
-    // Toute la progression de métiers repart de zéro, comme le niveau de combat.
-    d.farmXp = 0;
-    d.gatherXp = { chop: 0, mine: 0, fish: 0, forage: 0 };
-    d.craftXp = 0;
-    d.concoctionXp = 0;
-    d.familiars = keptFamiliars;      // la collection de familiers est long-terme
-    d.unlockedTitles = keptTitles;
+    d.neantVictories = (d.neantVictories ?? 0) + 1;
+    d.rebirthAvailable = true;
     d.ascensionCooldownUntil = 0;
-    // Un titre de prestige débloqué au passage.
-    const title = `Prestige ${newPrestige}`;
+    if (!d.unlockedTitles) d.unlockedTitles = [];
+    const title = 'Vainqueur du Néant';
     if (!d.unlockedTitles.includes(title)) d.unlockedTitles.push(title);
     d.title = title;
-    // migratePlayer réequipera une arme de départ neuve (instanciée).
   } else {
     d.level = Math.max(1, 50 - res.levelsLost);
     d.xp = 0;
     d.ascensionCooldownUntil = Date.now() + ASCENSION_FAIL_COOLDOWN;
   }
+}
+
+/**
+ * RENAISSANCE (ex-prestige automatique) — désormais déclenchée uniquement si le
+ * joueur la demande, après avoir vaincu le Néant. Remet la progression à zéro en
+ * échange d'un niveau de prestige et de ses bonus permanents. On conserve
+ * l'identité, les familiers, les titres et le compteur de prestige.
+ */
+export function applyRebirth(d: PlayerState): void {
+  const keptFamiliars = d.familiars ?? {};
+  const keptTitles = d.unlockedTitles ?? [];
+  const newPrestige = (d.prestigeLevel ?? 0) + 1;
+
+  d.prestigeLevel = newPrestige;
+  // Jeton de changement de classe : la renaissance rebat les cartes.
+  d.classChangeTokens = (d.classChangeTokens ?? 0) + 1;
+  d.rebirthAvailable = false;
+  d.level = 1;
+  d.xp = 0;
+  d.talents = {};
+  d.talentPoints = 0;
+  d.equippedSkills = [];
+  // Arme de départ neuve (instanciée) + soin complet.
+  const startKey = mintInstanceId(starterWeapon(d.classId));
+  d.equipped = { weapon: startKey, armor: null, trinket: null, tool: null, profession_armor: null };
+  d.inventory = { potion: 3 };
+  d.hp = CLASSES[d.classId].base.maxHp;
+  d.gearStars = {};
+  d.gearDurability = {};
+  d.enchants = {};
+  d.gold = 100;
+  d.biome = 'forest';
+  d.unlockedBiomes = ['forest'];
+  // Toute la progression de métiers repart de zéro, comme le niveau de combat.
+  d.farmXp = 0;
+  d.gatherXp = { chop: 0, mine: 0, fish: 0, forage: 0 };
+  d.craftXp = 0;
+  d.concoctionXp = 0;
+  d.familiars = keptFamiliars;      // la collection de familiers est long-terme
+  d.unlockedTitles = keptTitles;
+  d.ascensionCooldownUntil = 0;
+  // Un titre de prestige débloqué au passage.
+  const title = `Prestige ${newPrestige}`;
+  if (!d.unlockedTitles.includes(title)) d.unlockedTitles.push(title);
+  d.title = title;
 }

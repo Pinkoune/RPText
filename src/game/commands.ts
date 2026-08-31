@@ -67,6 +67,7 @@ export const COMMANDS: CommandDef[] = [
   { name: 'cooldown', aliases: ['cd', 'cooldowns', 'recup'], desc: 'Affiche les récupérations en cours.', category: 'Jeu', reqLevel: 1 },
   { name: 'experience', aliases: ['xp', 'exp', 'niveau', 'level'], desc: 'Expérience d\'aventure et de farm.', category: 'Jeu', reqLevel: 1 },
   { name: 'heal', aliases: ['soin', 'potion'], desc: 'Bois une potion pour récupérer des PV.', category: 'Combat', reqLevel: 1 },
+  { name: 'rest', aliases: ['repos', 'reposer', 'dormir'], desc: 'Repose-toi au camp : PV restaurés à fond (hors combat, 10 min).', category: 'Combat', reqLevel: 1 },
   { name: 'stats', aliases: ['statistiques', 'stat', 'st'], desc: 'Affiche toutes tes statistiques.', category: 'Jeu', reqLevel: 1 },
   { name: 'help', aliases: ['aide', 'commands', '?'], desc: 'Liste toutes les commandes.', category: 'Système', reqLevel: 1 },
   { name: 'wiki', aliases: ['bestiaire', 'items', 'encyclopedie'], desc: "Consulte l'encyclopédie des objets et des monstres.", category: 'Système', reqLevel: 1 },
@@ -151,6 +152,15 @@ export function resolveCommand(input: string): string | null {
 
 export const HUNT_COOLDOWN = 20_000; // 20s (Façon EPIC RPG)
 export const DAILY_COOLDOWN = 20 * 60 * 60 * 1000; // 20h
+/**
+ * Repos au camp : soin complet gratuit, mais HORS COMBAT uniquement.
+ * C'est cette restriction — pas la durée — qui protège l'économie des potions :
+ * la potion reste la seule option instantanée quand un combat tourne mal, le
+ * repos est l'option gratuite mais lente entre deux combats. Avec 20s de CD sur
+ * la chasse, 10 min ≈ 30 chasses, ce qui cale bien le rythme. Règle aussi le vrai
+ * point de blocage : plus de potions, plus d'or, donc plus rien à faire.
+ */
+export const REST_COOLDOWN = 10 * 60 * 1000; // 10 min
 
 export function runCommand(input: string, ctx: CommandCtx): void {
   const cmd = resolveCommand(input);
@@ -459,6 +469,32 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       break;
     }
 
+    case 'rest': {
+      if (useGame.getState().inCombat) {
+        ctx.toast('Impossible de se reposer en plein combat ! Utilise une potion.', 'bad');
+        break;
+      }
+      const left = cooldownLeft(p!, 'rest', REST_COOLDOWN);
+      if (left > 0) {
+        const mins = Math.floor(left / 60_000);
+        const secs = Math.ceil((left % 60_000) / 1000);
+        ctx.toast(`Tu viens à peine de te reposer. Encore ${mins > 0 ? `${mins} min ` : ''}${secs}s.`, 'bad');
+        break;
+      }
+      const maxHp = deriveStats(p!).maxHp;
+      if (p!.hp >= maxHp) {
+        ctx.toast('Tu es déjà en pleine forme.', 'info');
+        break;
+      }
+      const gained = maxHp - p!.hp;
+      ctx.mutate((d) => {
+        d.hp = deriveStats(d).maxHp;
+        d.cooldowns.rest = Date.now();
+      });
+      ctx.toast(`🏕️ Tu montes le camp et reprends des forces (+${gained} PV).`, 'good');
+      break;
+    }
+
     case 'hunt': {
       const left = cooldownLeft(p!, 'hunt', HUNT_COOLDOWN);
       if (left > 0) {
@@ -466,7 +502,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         break;
       }
       if (p!.hp <= 0) {
-        ctx.toast('Tu es K.O. ! Soigne-toi (heal) avant de chasser.', 'bad');
+        ctx.toast('Tu es K.O. ! Bois une potion (heal) ou repose-toi au camp (rest).', 'bad');
         break;
       }
       const now = Date.now();

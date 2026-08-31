@@ -219,6 +219,14 @@ export interface PlayerState {
   prestigeLevel?: number;
   /** Cooldown (ms) avant nouvel essai du rituel de prestige après un échec. */
   ascensionCooldownUntil?: number;
+  /** Nombre de fois où le Néant Originel a été vaincu (le triomphe, sans reset). */
+  neantVictories?: number;
+  /**
+   * Renaissance disponible : posé par une victoire sur le Néant, consommé quand le
+   * joueur CHOISIT de repartir de zéro contre un niveau de prestige. La victoire
+   * ne remet plus rien à zéro d'elle-même.
+   */
+  rebirthAvailable?: boolean;
   /** Jetons de changement de classe (gagnés au prestige), utilisables depuis le Profil. */
   classChangeTokens?: number;
   /** Temps de jeu cumulé (ms), compté seulement onglet visible (PresenceTracker). */
