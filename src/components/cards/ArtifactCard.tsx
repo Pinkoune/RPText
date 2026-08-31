@@ -52,9 +52,9 @@ export default function ArtifactCard() {
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/50">
           <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: theme.color }} />
         </div>
-        <div className="mt-1 flex justify-between text-[10px] tabular-nums text-slate-500">
-          <span>{a.xp.toLocaleString('fr-FR')} / {need.toLocaleString('fr-FR')} XP</span>
-          <span>Progression sans fin — elle monte sur toutes tes activités</span>
+        <div className="mt-1 flex items-baseline justify-between gap-3 text-[10px] text-slate-500">
+          <span className="shrink-0 tabular-nums">{a.xp.toLocaleString('fr-FR')} / {need.toLocaleString('fr-FR')} XP</span>
+          <span className="truncate">Monte sur toutes tes activités</span>
         </div>
       </div>
 
