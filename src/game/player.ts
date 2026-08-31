@@ -118,6 +118,7 @@ export function migratePlayer(p: PlayerState): PlayerState {
   // personnage, sinon un compte inactif depuis des mois recolterait
   // instantanement le plafond des 12h a sa premiere reconnexion.
   if (p.campCollectedAt === undefined) p.campCollectedAt = Date.now();
+  if (!p.dungeonTiers) p.dungeonTiers = {};
   if (p.huntStreak === undefined) p.huntStreak = 0;
   if (p.bestHuntStreak === undefined) p.bestHuntStreak = 0;
   if (p.rebirthAvailable === undefined) p.rebirthAvailable = false;

@@ -14,6 +14,7 @@ import { addQuestMetric } from '../../game/quests';
 import { listenTeams, setTeamDungeon, type Team } from '../../firebase/groupsService';
 import {
   listenDungeon, listenAllDungeons, createDungeonLobby, joinDungeon, toggleReady, leaveDungeon,
+  tierMult, MAX_DUNGEON_TIER,
   startDungeon, submitDungeonAction, cleanupDungeon, broadcastDungeonOpen, type DungeonSession
 } from '../../firebase/dungeonService';
 
@@ -156,8 +157,12 @@ export default function DungeonCard() {
         // Pénalité pour les joueurs bas niveau (anti-carry)
         const lvlPenalty = Math.pow(Math.min(1, Math.max(1, p.level) / def.minLevel), 2);
 
-        const xpMult = groupMult * lvlPenalty;
-        const goldMult = groupMult * lvlPenalty;
+        // Le palier renforce le donjon ET sa recompense, sinon monter en palier
+        // serait une punition. Meme facteur que le renforcement du monstre.
+        const tier = session.tier ?? 1;
+        const tMult = tierMult(tier);
+        const xpMult = groupMult * lvlPenalty * tMult;
+        const goldMult = groupMult * lvlPenalty * tMult;
         
         const baseReward = { 
           xp: Math.floor(totalXp * xpMult), 
@@ -183,6 +188,9 @@ export default function DungeonCard() {
             toast(`+${souls} 💎 Âme de Boss !`, 'gold');
           }
           d.dungeonClears[def.id] = (d.dungeonClears[def.id] ?? 0) + 1;
+          // Meilleur palier reussi : c'est lui qui ouvre le palier suivant.
+          if (!d.dungeonTiers) d.dungeonTiers = {};
+          if ((d.dungeonTiers[def.id] ?? 0) < tier) d.dungeonTiers[def.id] = tier;
           addQuestMetric(d, 'dungeons', 1); // quêtes « Terminer 1 donjon » / contrat hebdo
           
           if (d.gearDurability) {
@@ -220,13 +228,14 @@ export default function DungeonCard() {
   if (!p) return null;
 
   const myTeam = teams.find(t => p.uid in (t.members ?? {}));
+  const [tiers, setTiers] = useState<Record<string, number>>({});
 
-  async function createLobby(def: DungeonDef) {
+  async function createLobby(def: DungeonDef, tier = 1) {
     if (p!.hp <= 0) return toast('Soigne-toi d\'abord.', 'bad');
     const stats = deriveStats(p!);
     const mods = talentMods(p!);
     try {
-      const id = await createDungeonLobby(p!.uid, p!.name, p!.classId, def.id, stats, mods, p!.level, p!.prestigeAura, p!.auraColorOn, activeSetProc(p!));
+      const id = await createDungeonLobby(p!.uid, p!.name, p!.classId, def.id, stats, mods, p!.level, p!.prestigeAura, p!.auraColorOn, activeSetProc(p!), tier);
       mutate(d => { d.dungeonSessionId = id; });
       if (myTeam) await setTeamDungeon(myTeam.id, id);
       setPendingNotify({ at: Date.now() + 10_000, hostUid: p!.uid, hostName: p!.name, dungeonName: def.name, minLevel: def.minLevel });
@@ -661,6 +670,10 @@ export default function DungeonCard() {
         const locked = p.level < def.minLevel;
         const left = dungeonCooldownLeft(p, def);
         const clears = p.dungeonClears?.[def.id] ?? 0;
+        // Un palier de plus que le meilleur reussi : la progression reste par
+        // paliers francs, on ne saute pas directement au bout.
+        const maxTier = Math.min(MAX_DUNGEON_TIER, (p.dungeonTiers?.[def.id] ?? 0) + 1);
+        const tier = Math.min(maxTier, tiers[def.id] ?? 1);
         return (
           <div key={def.id} className="rounded-xl bg-black/25 p-3">
             <div className="flex items-start justify-between gap-2">
@@ -677,13 +690,29 @@ export default function DungeonCard() {
                   {def.reward.gems > 0 && <span className="rounded bg-sky-500/15 px-1.5 py-0.5 text-sky-200">+{def.reward.gems} 💎</span>}
                 </div>
               </div>
-              <button
-                onClick={() => createLobby(def)}
-                disabled={locked || left > 0 || !!myTeam?.dungeonId}
-                className="shrink-0 rounded-lg bg-purple-500/40 px-3 py-1.5 text-xs font-semibold hover:bg-purple-500/60 disabled:opacity-40"
-              >
-                {locked ? `🔒 Nv.${def.minLevel}` : left > 0 ? `⏳ ${fmt(left)}` : 'Créer un groupe'}
-              </button>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <button
+                  onClick={() => createLobby(def, tier)}
+                  disabled={locked || left > 0 || !!myTeam?.dungeonId}
+                  className="rounded-lg bg-purple-500/40 px-3 py-1.5 text-xs font-semibold hover:bg-purple-500/60 disabled:opacity-40"
+                >
+                  {locked ? `🔒 Nv.${def.minLevel}` : left > 0 ? `⏳ ${fmt(left)}` : 'Créer un groupe'}
+                </button>
+                {/* Paliers : on peut toujours retenter le plus haut palier reussi,
+                    et tenter le suivant. Le donjon et sa recompense montent ensemble. */}
+                {!locked && maxTier > 1 && (
+                  <select
+                    value={tier}
+                    onChange={(e) => setTiers((t) => ({ ...t, [def.id]: Number(e.target.value) }))}
+                    className="rounded bg-black/40 px-1.5 py-1 text-[11px] text-slate-300 outline-none"
+                    title="Palier de difficulté : monstres et récompenses renforcés"
+                  >
+                    {Array.from({ length: maxTier }, (_, i) => i + 1).map((t) => (
+                      <option key={t} value={t}>Palier {t} · ×{tierMult(t).toFixed(2)}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </div>
           </div>
         );

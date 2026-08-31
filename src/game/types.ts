@@ -185,6 +185,8 @@ export interface PlayerState {
   masteredRecipes?: string[];
   /** Nombre de clears par donjon. */
   dungeonClears: Record<string, number>;
+  /** Meilleur palier de difficulté réussi par donjon (débloque le suivant). */
+  dungeonTiers?: Record<string, number>;
   /** Points de talent non dépensés. */
   talentPoints: number;
   /** Rang investi par talent (id -> rang). */
