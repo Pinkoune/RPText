@@ -14,6 +14,10 @@ import {
   grantMonsterRewards,
   applyDeathPenalty,
   freshCombatState,
+  INTENT_INFO,
+  huntStreakMult,
+  HUNT_STREAK_CAP,
+  breakHuntStreak,
   getElementMult,
   getDmgTypeMult,
   type CombatState,
@@ -198,6 +202,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     }
 
     let newStatus: Status = 'fighting';
+    let lostStreak = 0;
     if (res.fled) newStatus = 'fled';
     else if (res.mhp <= 0) newStatus = 'won';
     else if (res.php <= 0) newStatus = 'lost';
@@ -225,6 +230,9 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       }
       if (newStatus === 'lost') {
         applyDeathPenalty(d);
+        // La série de chasse ne survit pas à la mort : c'est tout l'enjeu du
+        // « je continue ou je vais me soigner » quand elle est haute.
+        lostStreak = breakHuntStreak(d);
         if (encounter.isAdventure && d.cooldowns.adventure) {
           d.cooldowns.adventure = Date.now() - 10 * 60 * 1000; // CD devient 5 min
         }
@@ -272,7 +280,10 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
         playSound('levelup');
         useGame.getState().celebrateLevelUp();
       } else playSound('win');
-    } else if (newStatus === 'lost') playSound('lose');
+    } else if (newStatus === 'lost') {
+      playSound('lose');
+      if (lostStreak >= 3) toast(`💔 Série de ${lostStreak} kills perdue.`, 'bad');
+    }
   }
 
   const phpPct = Math.max(0, (p.hp / stats.maxHp) * 100);
@@ -297,6 +308,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       : { txt: '⚪ Arme neutre', cls: 'bg-white/10 text-slate-300', tip: `×${effMultVsMonster.toFixed(2)} dégâts` };
   // « Faille » : le monstre est sous contrôle → prochains coups amplifiés.
   const vulnActive = cstate.chill > 0 || cstate.stun > 0;
+  const intent = cstate.intent;
   // Maîtrise du biome courant (progression vers le palier suivant).
   const mastery = masteryProgress(biomeKills(p, p.biome));
 
@@ -395,9 +407,35 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
         </div>
       )}
 
+      {/* Télégraphe : ce que le monstre s'apprête à faire au prochain tour.
+          C'est l'information qui rend Parer/Interrompre pertinents. */}
+      {fighting && intent && (
+        <div
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
+          style={{ background: `${INTENT_INFO[intent].color}1f`, border: `1px solid ${INTENT_INFO[intent].color}55` }}
+        >
+          <span className={`text-lg leading-none ${intent === 'heavy' ? 'animate-pulse' : ''}`}>{INTENT_INFO[intent].icon}</span>
+          <div className="min-w-0">
+            <div className="font-bold" style={{ color: INTENT_INFO[intent].color }}>{m.name} — {INTENT_INFO[intent].label}</div>
+            <div className="text-[11px] text-slate-400">{INTENT_INFO[intent].hint}</div>
+          </div>
+        </div>
+      )}
+
       {/* Bandeau tactique : efficacité d'arme + faille + maîtrise du biome */}
       {fighting && (
         <div className="flex flex-wrap items-center gap-2 text-[11px]">
+          {(p.huntStreak ?? 0) > 0 && (
+            <span
+              className="rounded px-2 py-0.5 font-bold"
+              style={{ background: 'rgba(226,145,63,0.2)', color: '#e2913f' }}
+              title={`Série de ${p.huntStreak} kills sans mourir — XP et or multipliés. Elle se perd à la mort.`}
+            >
+              🔥 Série ×{p.huntStreak}
+              {` (+${Math.round((huntStreakMult(p) - 1) * 100)}%)`}
+              {(p.huntStreak ?? 0) >= HUNT_STREAK_CAP ? ' MAX' : ''}
+            </span>
+          )}
           <span className={`rounded px-2 py-0.5 font-medium ${effBadge.cls}`} title={effBadge.tip}>{effBadge.txt}</span>
           {vulnActive && <span className="rounded px-2 py-0.5 font-bold bg-amber-400 text-black animate-pulse" title="Monstre sous contrôle : tes coups infligent +50% de dégâts">⚡ FAILLE — burst !</span>}
           <span className="ml-auto inline-flex items-center gap-1.5 text-slate-400" title={mastery.next ? `${mastery.into}/${mastery.need} vers le palier suivant` : 'Maîtrise maximale'}>
@@ -446,6 +484,22 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
           ) : (
             <>
               <button onClick={() => act('attack')} className="col-span-1 rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
+              {/* Réponses au télégraphe : elles n'ont d'intérêt que face à une
+                  intention annoncée, d'où le surlignage quand elle tombe bien. */}
+              <button
+                onClick={() => act('parry')}
+                title="Tu ne frappes pas, mais tu n'encaisses que 30% des dégâts ce tour-ci."
+                className={`col-span-1 rounded-lg py-2.5 text-sm font-bold ${intent === 'heavy' ? 'bg-sky-500/60 ring-1 ring-sky-300 hover:bg-sky-500/80' : 'bg-sky-500/25 hover:bg-sky-500/45'}`}
+              >
+                🛡️ Parer
+              </button>
+              <button
+                onClick={() => act('interrupt')}
+                title="Peu de dégâts, mais annule un coup lourd ou une incantation."
+                className={`col-span-1 rounded-lg py-2.5 text-sm font-bold ${intent === 'special' || intent === 'heavy' ? 'bg-amber-500/60 ring-1 ring-amber-300 hover:bg-amber-500/80' : 'bg-amber-500/25 hover:bg-amber-500/45'}`}
+              >
+                ⚡ Interrompre
+              </button>
               {activeSkills.map(skill => {
                 const onCd = (skillCds[skill.id] || 0) > 0;
                 const lacksResource = !!skill.resource && resourcePool < skill.resource.cost;

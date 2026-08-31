@@ -162,7 +162,27 @@ export function simulateCombat(
 
 // ─── Combat interactif (chasse au tour par tour) ───────────────────────────
 
-export type HuntAction = 'attack' | 'potion' | 'flee' | string;
+export type HuntAction = 'attack' | 'potion' | 'flee' | 'parry' | 'interrupt' | string;
+
+/**
+ * Intention du monstre pour le TOUR SUIVANT, annoncée au joueur.
+ *
+ * C'est ce qui transforme la chasse en suite de décisions : sans elle, chaque
+ * tour avait la même réponse optimale (compétence si dispo, sinon Attaquer) et
+ * le monstre n'était qu'un sac de PV qui ripostait.
+ *  - `heavy`   : gros coup — parer ou interrompre, sinon ça fait très mal
+ *  - `guard`   : le monstre se protège — inutile de dépenser un gros coup
+ *  - `special` : il prépare une altération — l'interruption l'annule
+ *  - `quick`   : attaque banale — c'est le moment d'être gourmand
+ */
+export type MonsterIntent = 'quick' | 'heavy' | 'guard' | 'special';
+
+export const INTENT_INFO: Record<MonsterIntent, { icon: string; label: string; hint: string; color: string }> = {
+  quick:   { icon: '👊', label: 'Attaque simple', hint: 'Rien à craindre — sois gourmand.', color: '#94a3b8' },
+  heavy:   { icon: '💢', label: 'Coup lourd',     hint: 'Gros dégâts. Pare ou interromps !', color: '#f4738d' },
+  guard:   { icon: '🛡️', label: 'Garde',          hint: 'Il encaisse mieux : garde ton gros coup.', color: '#8cb4ff' },
+  special: { icon: '🌀', label: 'Incantation',    hint: 'Il prépare une altération. Interromps-le.', color: '#b088ff' },
+};
 
 export interface TurnEvent {
   text: string;
@@ -188,10 +208,12 @@ export interface CombatState {
   minionPow: number;
   /** Sursis (artefact) deja consomme sur ce combat. */
   secondWindUsed?: boolean;
+  /** Ce que le monstre s'apprete a faire au prochain tour (telegraphe). */
+  intent?: MonsterIntent;
 }
 
 export function freshCombatState(): CombatState {
-  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, chill: 0, stun: 0, minion: 0, minionPow: 0, secondWindUsed: false };
+  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, chill: 0, stun: 0, minion: 0, minionPow: 0, secondWindUsed: false, intent: 'quick' };
 }
 
 export interface TurnResult {
@@ -283,6 +305,23 @@ export function combatTurn(
   } else if (action === 'potion') {
     php = Math.min(maxHp, php + (opts.potionHeal ?? 0));
     events.push({ text: `Tu te soignes (+${opts.potionHeal} PV).`, side: 'info' });
+  } else if (action === 'parry') {
+    // Parade : on renonce à frapper pour encaisser bien moins ce tour-ci.
+    // Le calcul de réduction se fait en phase monstre (voir `parried`).
+    events.push({ text: 'Tu te mets en garde, prêt à encaisser.', side: 'info' });
+  } else if (action === 'interrupt') {
+    // Interruption : peu de dégâts, mais annule un coup lourd ou une incantation.
+    const dmg = Math.max(1, Math.round((roll(stats.atk, stats.atk + 3) - effDef) * atkMult * 0.6));
+    mhp = Math.max(0, mhp - dmg);
+    hitsDealt++;
+    const telegraphed = state.intent === 'heavy' || state.intent === 'special';
+    if (telegraphed) {
+      state.intent = 'quick';
+      state.stun = Math.max(state.stun, 1);
+      events.push({ text: `⚡ Tu coupes son élan ! ${monster.name} perd son attaque (${dmg} dégâts).`, side: 'you' });
+    } else {
+      events.push({ text: `Tu le bouscules (${dmg} dégâts), mais il ne préparait rien.`, side: 'you' });
+    }
   } else if (action !== 'attack') {
     // action est l'ID de la compétence (ex: 'skill_meteor')
     const skill = opts.activeSkill;
@@ -362,9 +401,12 @@ export function combatTurn(
       if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
       const crit = Math.random() < mods.crit;
       if (crit) { dmg = Math.round(dmg * (2 + mods.critMult)); critLanded = true; }
+      // Le monstre annonce sa garde : frapper maintenant, c'est frapper dans le
+      // bouclier. L'information avait été donnée au tour précédent.
+      if (state.intent === 'guard') dmg = Math.max(1, Math.round(dmg * 0.5));
       mhp -= dmg;
       if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
-      events.push({ text: `${h > 0 ? 'Tir double ! ' : ''}Tu infliges ${dmg}${crit ? ' (CRIT !)' : ''}${vuln ? ' ⚡Faille' : ''}.`, side: 'you' });
+      events.push({ text: `${h > 0 ? 'Tir double ! ' : ''}Tu infliges ${dmg}${crit ? ' (CRIT !)' : ''}${vuln ? ' ⚡Faille' : ''}${state.intent === 'guard' ? ' 🛡️(garde)' : ''}.`, side: 'you' });
     }
   }
 
@@ -416,6 +458,22 @@ export function combatTurn(
     let mdmg = Math.max(1, Math.round(roll(monster.atk, monster.atk + 4) - stats.def * 0.8));
     mdmg = Math.round(mdmg * defMult);
     mdmg = Math.max(1, Math.round(mdmg * (1 - mods.dmgReduction)));
+    // L'intention annoncée au tour précédent se concrétise maintenant.
+    if (state.intent === 'heavy') {
+      mdmg = Math.round(mdmg * 1.8);
+      events.push({ text: `💢 ${monster.name} abat son coup lourd !`, side: 'enemy' });
+    } else if (state.intent === 'special') {
+      // L'incantation aboutit : altération posée sur le joueur (dégâts réduits
+      // mais il ripostera mieux au tour suivant via le gel/l'étourdissement).
+      state.chill = Math.max(state.chill, 0);
+      mdmg = Math.round(mdmg * 0.7);
+      events.push({ text: `🌀 ${monster.name} achève son incantation et te déstabilise.`, side: 'enemy' });
+    }
+    // Parade : l'action du joueur ce tour-ci était de se protéger.
+    if (action === 'parry') {
+      mdmg = Math.max(1, Math.round(mdmg * 0.3));
+      events.push({ text: '🛡️ Tu pares : les dégâts sont largement absorbés.', side: 'info' });
+    }
     if (state.chill > 0) mdmg = Math.max(1, Math.round(mdmg * 0.6)); // gel : dégâts réduits
     // Absorption par le bouclier avant les PV.
     if (state.shield > 0) {
@@ -488,6 +546,23 @@ export function combatTurn(
   if (state.stun > 0) state.stun -= 1;
   if (state.minion > 0) state.minion -= 1;
 
+  // ── Télégraphe : on décide (et on annonce) ce que fera le monstre au tour
+  // suivant. C'est ce qui donne au joueur une information à exploiter, et donc
+  // une vraie décision à prendre au tour d'après.
+  if (mhp > 0 && php > 0 && !fled) {
+    const r = Math.random();
+    let next: MonsterIntent;
+    if (r < 0.30) next = 'heavy';
+    else if (r < 0.45) next = 'guard';
+    else if (r < 0.60) next = 'special';
+    else next = 'quick';
+    // Deux coups lourds d'affilée seraient injustes autant qu'illisibles.
+    if (next === 'heavy' && state.intent === 'heavy') next = 'quick';
+    state.intent = next;
+    const info = INTENT_INFO[next];
+    events.push({ text: `${info.icon} ${monster.name} — ${info.label.toLowerCase()} en préparation.`, side: 'enemy' });
+  }
+
   // Ressource d'archétype passive : rage se charge en encaissant, combo en touchant.
   let resourceGained = 0;
   // Gain normalisé en % des PV max encaissés (pas en dégâts bruts, qui explosent
@@ -535,6 +610,21 @@ export function combatTurn(
 }
 
 /** Récompenses de victoire (mute le joueur). */
+/** Plafond de la série : au-delà, le multiplicateur n'augmente plus. */
+export const HUNT_STREAK_CAP = 20;
+
+/** Multiplicateur d'XP et d'or apporté par la série de chasse en cours. */
+export function huntStreakMult(p: PlayerState): number {
+  return 1 + Math.min(p.huntStreak ?? 0, HUNT_STREAK_CAP) * 0.02;
+}
+
+/** Brise la série (mort ou fuite). Retourne la série perdue, pour l'affichage. */
+export function breakHuntStreak(p: PlayerState): number {
+  const lost = p.huntStreak ?? 0;
+  p.huntStreak = 0;
+  return lost;
+}
+
 export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRewards {
   const phase = currentPhase();
   const mod = PHASE_MODIFIERS[phase];
@@ -543,9 +633,13 @@ export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRe
   const biomeXpMult = biome?.xpMult ?? 1.0;
   // Bonus de maîtrise du biome courant (palier atteint) appliqué à l'XP et l'Or.
   const mMult = masteryMult(p, p.biome);
+  // Série de chasse : chaque kill consécutif sans mourir renforce la récolte.
+  // Plafonnée à 20 kills (+40%) pour rester une tension, pas une obligation de
+  // farm parfait — et entièrement perdue à la mort (voir `breakHuntStreak`).
+  const streakMult = huntStreakMult(p);
   const base = {
-    xp: Math.round(monster.xp * mod.xp * biomeXpMult * mMult),
-    gold: Math.round(roll(monster.gold[0], monster.gold[1]) * mod.gold * mMult)
+    xp: Math.round(monster.xp * mod.xp * biomeXpMult * mMult * streakMult),
+    gold: Math.round(roll(monster.gold[0], monster.gold[1]) * mod.gold * mMult * streakMult)
   };
   const { xp, gold } = applyBonuses(p, base);
 
@@ -564,6 +658,8 @@ export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRe
     masteryUp = { biome: p.biome, tier: mUp.newTier, title };
   }
   p.kills += 1;
+  p.huntStreak = (p.huntStreak ?? 0) + 1;
+  if (p.huntStreak > (p.bestHuntStreak ?? 0)) p.bestHuntStreak = p.huntStreak;
   // Objectif de guilde : compte le kill localement (flushé à la sauvegarde).
   if (p.guildId) {
     const wk = String(Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)));

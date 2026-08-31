@@ -244,6 +244,14 @@ export interface PlayerState {
   classChangeTokens?: number;
   /** Temps de jeu cumulé (ms), compté seulement onglet visible (PresenceTracker). */
   playtimeMs?: number;
+  /**
+   * Série de chasse : kills consécutifs sans mourir. Multiplie XP et or, et
+   * se perd entièrement à la mort — la tension passe du combat isolé à la
+   * session entière.
+   */
+  huntStreak?: number;
+  /** Meilleure série atteinte (fierté, affichée dans les stats). */
+  bestHuntStreak?: number;
   /** Dernière récolte du camp (accumulation hors-ligne, voir camp.ts). */
   campCollectedAt?: number;
   /** Expédition de familier en cours : fin (ms) + biome ciblé. */
