@@ -39,7 +39,7 @@ export const PATCH_HISTORY: PatchRelease[] = [
         items: [
           'Tu peux désormais mener <b>jusqu\'à trois héros</b> en parallèle, chacun avec sa classe, son niveau et son équipement.',
           'Envie d\'essayer une autre voie ? On crée un personnage — on ne détruit plus celui qu\'on a monté. Le changement de classe disparaît, remplacé par ça.',
-          'Un écran de sélection s\'affiche à la connexion, et le bouton 🔄 de la barre du haut permet d\'en changer en cours de partie.',
+          'Un écran de sélection s\'affiche à la connexion, et on peut changer de personnage à tout moment depuis les <b>Paramètres</b>.',
         ],
       },
       {
@@ -91,9 +91,10 @@ export const PATCH_HISTORY: PatchRelease[] = [
         title: '✨ Interface',
         kind: 'new',
         items: [
-          'La carte <b>Équipement</b> est refondue : silhouette au centre, emplacements autour, anneau de set, usure visible sur l\'icône, et comparaison des stats avant d\'équiper.',
+          'La carte <b>Équipement</b> est entièrement refaite : ta fiche et tes stats en tête, tes cinq emplacements visibles d\'un seul coup d\'œil, et le détail de celui que tu choisis juste en dessous — avec la comparaison des stats avant d\'équiper.',
           'L\'<b>arbre de talents</b> trace enfin ses liens de prérequis et affiche le gain réel du prochain point.',
-          'Les <b>nouveautés</b> ne s\'imposent plus au démarrage : une pastille 📰 discrète les signale (réactivable dans les Paramètres).',
+          'Un bouton <b>🔔 Notifications</b> permanent regroupe messages et mises à jour au même endroit — fini les icônes qui apparaissent et disparaissent de la barre.',
+          'La barre du haut est allégée : son, changement de personnage et déconnexion ont rejoint les <b>Paramètres</b>, et l\'artefact y gagne un accès direct.',
           'Un petit rail d\'infos apparaît en bas à droite : équipe, joueurs en ligne, artefact, raid ouvert.',
         ],
       },
