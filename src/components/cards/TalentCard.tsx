@@ -67,6 +67,21 @@ export default function TalentCard() {
 
   const ascensions = Object.entries(CLASSES).filter(([, c]) => c.parent === p.classId) as [ClassId, typeof cls][];
 
+  /**
+   * Aperçu du gain réel : « 7% → 12% » plutôt que « +5% par rang ».
+   * Le joueur voit ce que le point ACHÈTE, pas seulement ce qu'il coûte.
+   */
+  const FLAT_KEYS = new Set(['regen', 'flatDmg']);
+  function gainPreview(t: TalentDef, rank: number): string | null {
+    if (!t.perRank) return null;
+    const [key, per] = Object.entries(t.perRank)[0] ?? [];
+    if (!key || typeof per !== 'number') return null;
+    const cur = per * rank;
+    const next = per * (rank + 1);
+    const f = (v: number) => (FLAT_KEYS.has(key) ? `${Math.round(v)}` : `${Math.round(v * 100)}%`);
+    return `${f(cur)} → ${f(next)}`;
+  }
+
   const renderNode = (t: TalentDef) => {
     const rank = rankOf(t.id);
     const maxed = rank >= t.maxRank;
@@ -76,7 +91,7 @@ export default function TalentCard() {
     return (
       <div
         key={t.id}
-        className={`w-[150px] shrink-0 rounded-xl border p-2.5 transition-all ${
+        className={`flex h-[136px] w-[150px] shrink-0 flex-col rounded-xl border p-2.5 transition-all ${
           maxed ? 'border-sky-400/60 bg-sky-500/10'
           : rank > 0 ? 'border-sky-500/30 bg-black/40'
           : ok ? 'border-slate-700 bg-black/30'
@@ -97,7 +112,12 @@ export default function TalentCard() {
           <span className="ml-1 text-[9px] tabular-nums text-slate-400">{rank}/{t.maxRank}</span>
         </div>
 
-        <div className="mt-1 h-8 text-[10px] leading-tight text-slate-400">{t.desc}</div>
+        <div className="mt-1 h-8 overflow-hidden text-[10px] leading-tight text-slate-400">{t.desc}</div>
+        {/* Ce que le prochain point achete concretement. */}
+        <div className="mb-1 h-3 text-[9px] font-semibold tabular-nums text-sky-300/80">
+          {!maxed && gainPreview(t, rank)}
+        </div>
+        <div className="mt-auto" />
 
         {maxed ? (
           isSkill ? (
@@ -131,21 +151,67 @@ export default function TalentCard() {
     );
   };
 
+  // Grille de l'arbre : les nœuds portent déjà des coordonnées (pos.x ∈ -2..2,
+  // pos.y = palier), on les positionne donc réellement plutôt que d'empiler des
+  // rangées. C'est ce qui permet de TRACER les liens de prérequis — auparavant
+  // un simple trait vertical décoratif suggérait un enchaînement qui n'existait
+  // pas visuellement, et rien ne disait quel nœud débloquait quel autre.
+  const NODE_W = 150;
+  const NODE_H = 136;
+  const GAP_X = 14;
+  const GAP_Y = 40;
+  const CELL_W = NODE_W + GAP_X;
+  const CELL_H = NODE_H + GAP_Y;
+
   function Tree({ nodes }: { nodes: TalentDef[] }) {
-    const tiers = [...new Set(nodes.map((t) => t.pos.y))].sort((a, b) => a - b);
+    if (nodes.length === 0) return null;
+    const xs = nodes.map((t) => t.pos.x);
+    const ys = nodes.map((t) => t.pos.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const cols = maxX - minX + 1;
+    const rows = maxY - minY + 1;
+    const width = cols * CELL_W - GAP_X;
+    const height = rows * CELL_H - GAP_Y;
+
+    const left = (t: TalentDef) => (t.pos.x - minX) * CELL_W;
+    const top = (t: TalentDef) => (t.pos.y - minY) * CELL_H;
+    const cx = (t: TalentDef) => left(t) + NODE_W / 2;
+
+    const byId = new Map(nodes.map((t) => [t.id, t]));
+
     return (
-      <div className="space-y-3">
-        {tiers.map((y, idx) => {
-          const row = nodes.filter((t) => t.pos.y === y).sort((a, b) => a.pos.x - b.pos.x);
-          return (
-            <div key={y}>
-              {idx > 0 && <div className="mx-auto mb-3 h-3 w-px bg-slate-700" />}
-              <div className="flex flex-wrap justify-center gap-2">
-                {row.map((t) => renderNode(t))}
-              </div>
+      <div className="overflow-x-auto pb-1">
+        <div className="relative mx-auto" style={{ width, height }}>
+          {/* Liens de prérequis, sous les nœuds. Un lien s'allume dès que son
+              prérequis est investi : on voit d'un coup d'œil les chemins ouverts. */}
+          <svg className="pointer-events-none absolute inset-0" width={width} height={height}>
+            {nodes.flatMap((t) =>
+              (t.requires ?? []).map((reqId) => {
+                const from = byId.get(reqId);
+                if (!from) return null;
+                const active = rankOf(reqId) >= 1;
+                return (
+                  <line
+                    key={`${reqId}->${t.id}`}
+                    x1={cx(from)} y1={top(from) + NODE_H}
+                    x2={cx(t)} y2={top(t)}
+                    stroke={active ? '#38bdf8' : '#334155'}
+                    strokeWidth={active ? 2 : 1.5}
+                    strokeDasharray={active ? undefined : '4 4'}
+                  />
+                );
+              }),
+            )}
+          </svg>
+          {nodes.map((t) => (
+            <div key={t.id} className="absolute" style={{ left: left(t), top: top(t) }}>
+              {renderNode(t)}
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
     );
   }
