@@ -17,6 +17,7 @@ import ChatNotifs from './components/ChatNotifs';
 import LevelUpFx from './components/LevelUpFx';
 import PatchNotesModal from './components/PatchNotesModal';
 import DailyRewardModal from './components/DailyRewardModal';
+import WelcomeBackModal from './components/WelcomeBackModal';
 import SeasonRewardModal from './components/SeasonRewardModal';
 import { setAmbient, stopAmbientMusic } from './game/sound';
 import { deriveStats } from './game/player';
@@ -138,6 +139,7 @@ export default function App() {
       <LevelUpFx />
       <PatchNotesModal />
       <DailyRewardModal />
+      <WelcomeBackModal />
       <SeasonRewardModal />
       <BaitTimer />
       <RaidBanner />

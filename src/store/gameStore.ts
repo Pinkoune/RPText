@@ -44,6 +44,13 @@ interface GameState {
   dailyReward: DailyReward | null;
   setDailyReward: (reward: DailyReward) => void;
   clearDailyReward: () => void;
+  /**
+   * Durée d'absence depuis la dernière session (ms), capturée AU CHARGEMENT.
+   * Indispensable : `savePlayer` écrase `lastSeen` avec l'heure courante dès
+   * l'entrée en jeu, donc la lire plus tard donnerait toujours zéro.
+   */
+  awayMs: number;
+  clearAway: () => void;
   /** Récompense de fin de saison PvP à afficher (null = rien). */
   seasonReward: { tierName: string; reward: SeasonReward } | null;
   clearSeasonReward: () => void;
@@ -100,6 +107,8 @@ export const useGame = create<GameState>((set, get) => ({
   levelCelebration: 0,
   dailyReward: null,
   seasonReward: null,
+  awayMs: 0,
+  clearAway: () => set({ awayMs: 0 }),
   inCombat: false,
   setInCombat: (val) => set({ inCombat: val }),
 
@@ -173,6 +182,9 @@ export const useGame = create<GameState>((set, get) => ({
         set({ status: 'create', pendingSlot: slot });
         return;
       }
+      // Capturé AVANT toute sauvegarde : savePlayer met `lastSeen` à l'heure
+      // courante, ce qui effacerait la trace de l'absence.
+      const awayMs = Math.max(0, Date.now() - (existing.lastSeen ?? Date.now()));
       migratePlayer(existing);
       // Resync identité Google (l'avatar peut changer ; le nom, lui, appartient
       // au personnage — deux persos du même compte ont des pseudos distincts).
@@ -188,7 +200,7 @@ export const useGame = create<GameState>((set, get) => ({
         delete existing.lastSeasonReward;
       }
       try { localStorage.setItem(lastSlotKey(user.uid), String(slot)); } catch { /* ignore */ }
-      set({ player: existing, status: 'ready', dailyReward: reward, seasonReward });
+      set({ player: existing, status: 'ready', dailyReward: reward, seasonReward, awayMs });
       // La migration peut avoir changé le personnage (courbe d'XP, defaults) :
       // on persiste dans tous les cas, pas seulement s'il y a une récompense.
       void savePlayer(existing);
