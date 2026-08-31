@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useGame } from '../store/gameStore';
 import { useClock } from '../hooks/useClock';
 import { isMuted, toggleMute } from '../game/sound';
@@ -9,6 +9,7 @@ import { deriveStats } from '../game/player';
 import { useUi } from '../store/uiStore';
 import { currentGlobalEvent, currentBiomeEvent, type EventDef } from '../game/events';
 import { auraColor } from '../game/prestige';
+import { hasUnreadPatch } from './PatchNotesModal';
 
 function Pill({ icon, value, title, className = '' }: { icon: string; value: string | number; title: string; className?: string }) {
   return (
@@ -49,6 +50,14 @@ export default function Topbar() {
   const player = useGame((s) => s.player);
   const logout = useGame((s) => s.logout);
   const backToSelect = useGame((s) => s.backToSelect);
+  const [unread, setUnread] = useState(hasUnreadPatch());
+  // La lecture peut venir d'ailleurs (ouverture de la carte News par commande) :
+  // on ecoute l'evenement plutot que de dupliquer l'etat.
+  useEffect(() => {
+    const h = () => setUnread(false);
+    window.addEventListener('rptext:patch-seen', h);
+    return () => window.removeEventListener('rptext:patch-seen', h);
+  }, []);
   const hasUnreadChat = useGame((s) => s.hasUnreadChat);
   const open = useUi((s) => s.open);
   const { now, phase } = useClock();
@@ -179,6 +188,15 @@ export default function Topbar() {
             className="rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
           >
             {muted ? '🔇' : '🔊'}
+          </button>
+          {/* Nouveautes : pastille discrete au lieu d'une modale bloquante. */}
+          <button
+            onClick={() => { open('news', undefined, { singleton: true }); setUnread(false); }}
+            title={unread ? 'Nouveautés non lues' : 'Nouveautés'}
+            className="relative rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
+          >
+            📰
+            {unread && <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-sky-400 ring-1 ring-[#0b1020]" />}
           </button>
           <button
             onClick={() => void backToSelect()}

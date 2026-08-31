@@ -15,6 +15,9 @@ export default function SettingsCard() {
     muteSound: false,
     compactMode: false,
     disableAnimations: false,
+    // Desactive par defaut : voir PatchNotesModal. La pastille de la barre du
+    // haut signale les nouveautes sans bloquer l'entree en jeu.
+    showPatchModal: false,
   });
 
   useEffect(() => {
@@ -64,6 +67,11 @@ export default function SettingsCard() {
         <label className="flex items-start justify-between gap-3 hover:text-sky-300 cursor-pointer">
           <span>Réduire les animations <span className="block text-[10px] text-slate-500">Coupe le fond animé, les particules et les flous. Recommandé si le PC chauffe ou rame.</span></span>
           <input type="checkbox" checked={settings.disableAnimations} onChange={(e) => updateSetting('disableAnimations', e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded bg-black/40 accent-sky-500" />
+        </label>
+
+        <label className="flex items-start justify-between gap-3 hover:text-sky-300 cursor-pointer">
+          <span>Annoncer les nouveautés au démarrage <span className="block text-[10px] text-slate-500">Réaffiche la fenêtre « Quoi de neuf ? » à chaque nouvelle version. Désactivé, une pastille 📰 apparaît simplement dans la barre du haut.</span></span>
+          <input type="checkbox" checked={settings.showPatchModal} onChange={(e) => updateSetting('showPatchModal', e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded bg-black/40 accent-sky-500" />
         </label>
 
         <label className="flex items-center justify-between hover:text-sky-300 cursor-pointer">

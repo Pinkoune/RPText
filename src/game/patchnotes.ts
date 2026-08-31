@@ -4,9 +4,21 @@
 // chaque vague de modifs ; l'utilisateur indique quand marquer une version
 // comme "vue" pour tous (au push).
 
+/** Nature d'une section, pour la pastille de couleur dans l'historique. */
+export type PatchKind = 'new' | 'content' | 'balance' | 'fix';
+
+export const PATCH_KIND_META: Record<PatchKind, { label: string; color: string }> = {
+  new: { label: 'Nouveauté', color: '#5fd0a0' },
+  content: { label: 'Contenu', color: '#8cb4ff' },
+  balance: { label: 'Équilibrage', color: '#f0b543' },
+  fix: { label: 'Correction', color: '#b088ff' },
+};
+
 export interface PatchSection {
   title: string;
   items: string[];
+  /** Absent = pas de pastille (anciennes entrées). */
+  kind?: PatchKind;
 }
 
 export interface PatchRelease {
