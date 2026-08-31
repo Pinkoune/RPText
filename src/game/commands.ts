@@ -39,6 +39,7 @@ function applyZonePenalty(p: PlayerState, monster: any): void {
 import { getRaidWindow } from './raid';
 import { joinOrCreateRaid } from '../firebase/dungeonService';
 import { activeSetProc } from './sets';
+import { campReady, campElapsed, previewCamp, collectCamp, campSummary } from './camp';
 
 export interface CommandCtx {
   getPlayer: () => PlayerState | null;
@@ -68,6 +69,7 @@ export const COMMANDS: CommandDef[] = [
   { name: 'experience', aliases: ['xp', 'exp', 'niveau', 'level'], desc: 'Expérience d\'aventure et de farm.', category: 'Jeu', reqLevel: 1 },
   { name: 'heal', aliases: ['soin', 'potion'], desc: 'Bois une potion pour récupérer des PV.', category: 'Combat', reqLevel: 1 },
   { name: 'rest', aliases: ['repos', 'reposer', 'dormir'], desc: 'Repose-toi au camp : PV restaurés à fond (hors combat, 10 min).', category: 'Combat', reqLevel: 1 },
+  { name: 'camp', aliases: ['bivouac', 'collecte'], desc: 'Ton camp produit pendant ton absence — reviens y récolter.', category: 'Jeu', reqLevel: 5 },
   { name: 'stats', aliases: ['statistiques', 'stat', 'st'], desc: 'Affiche toutes tes statistiques.', category: 'Jeu', reqLevel: 1 },
   { name: 'help', aliases: ['aide', 'commands', '?'], desc: 'Liste toutes les commandes.', category: 'Système', reqLevel: 1 },
   { name: 'wiki', aliases: ['bestiaire', 'items', 'encyclopedie'], desc: "Consulte l'encyclopédie des objets et des monstres.", category: 'Système', reqLevel: 1 },
@@ -661,6 +663,22 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       if (!p!.activeFamiliarId) { ctx.toast('Équipe un familier pour l\'envoyer en expédition.', 'bad'); break; }
       ctx.mutate((d) => { d.expeditionEndsAt = now + 4 * 60 * 60 * 1000; d.expeditionBiome = d.biome; });
       ctx.toast('🐾 Ton familier part en expédition (4h). Reviens avec « expedition » pour collecter.', 'good');
+      break;
+    }
+
+    case 'camp': {
+      const now = Date.now();
+      if (!campReady(p!, now)) {
+        const mins = Math.ceil((15 * 60 * 1000 - campElapsed(p!, now)) / 60_000);
+        ctx.toast(`🏕️ Ton camp n'a pas encore produit grand-chose. Repasse dans ~${Math.max(1, mins)} min.`, 'info');
+        break;
+      }
+      const preview = previewCamp(p!, now);
+      ctx.mutate((d) => { collectCamp(d, now); });
+      const hours = Math.floor(preview.elapsedMs / 3_600_000);
+      const mins = Math.round((preview.elapsedMs % 3_600_000) / 60_000);
+      const dur = hours > 0 ? `${hours}h${String(mins).padStart(2, '0')}` : `${mins} min`;
+      ctx.toast(`🏕️ Camp récolté (${dur}) : ${campSummary(preview)}.`, 'good');
       break;
     }
 

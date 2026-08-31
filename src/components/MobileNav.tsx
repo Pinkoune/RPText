@@ -19,7 +19,8 @@ const NAV: { cat: string; items: NavItem[] }[] = [
       { kind: 'hunt', emoji: '⚔️', label: 'Chasse' },
       // `cmd` prime sur `kind` dans go() : le repos exécute la commande sans
       // ouvrir de fenêtre (le retour se fait par toast).
-      { kind: 'cooldown', cmd: 'rest', emoji: '🏕️', label: 'Repos' },
+      { kind: 'cooldown', cmd: 'rest', emoji: '🛌', label: 'Repos' },
+      { kind: 'cooldown', cmd: 'camp', emoji: '🏕️', label: 'Camp', reqLevel: 5 },
       { kind: 'map', emoji: '🗺️', label: 'Carte' },
       { kind: 'dungeon', emoji: '🏰', label: 'Donjons' },
       { kind: 'endless', emoji: '🕳️', label: 'Abysses' },

@@ -114,6 +114,10 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (p.charSlot === undefined) p.charSlot = p.uid.includes('__') ? Number(p.uid.split('__')[1]) || 0 : 0;
   if (p.prestigeLevel === undefined) p.prestigeLevel = 0;
   if (p.neantVictories === undefined) p.neantVictories = 0;
+  // Camp : on demarre le compteur maintenant plutot qu'a la creation du
+  // personnage, sinon un compte inactif depuis des mois recolterait
+  // instantanement le plafond des 12h a sa premiere reconnexion.
+  if (p.campCollectedAt === undefined) p.campCollectedAt = Date.now();
   if (p.rebirthAvailable === undefined) p.rebirthAvailable = false;
   // Artefact de saison : créé au besoin, puis remis à zéro si la saison a
   // tourné depuis la dernière connexion (le personnage, lui, n'est pas touché).

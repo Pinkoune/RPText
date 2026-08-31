@@ -244,6 +244,8 @@ export interface PlayerState {
   classChangeTokens?: number;
   /** Temps de jeu cumulé (ms), compté seulement onglet visible (PresenceTracker). */
   playtimeMs?: number;
+  /** Dernière récolte du camp (accumulation hors-ligne, voir camp.ts). */
+  campCollectedAt?: number;
   /** Expédition de familier en cours : fin (ms) + biome ciblé. */
   expeditionEndsAt?: number;
   expeditionBiome?: BiomeId;
