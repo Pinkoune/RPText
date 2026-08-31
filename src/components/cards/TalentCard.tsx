@@ -7,6 +7,208 @@ import { playSound } from '../../game/sound';
 import type { ClassId } from '../../game/types';
 import ItemIcon from '../ItemIcon';
 
+const NODE_W = 56;
+const NODE_H = 56;
+const GAP_X = 30;
+const GAP_Y = 20;
+const CELL_W = NODE_W + GAP_X;
+const CELL_H = NODE_H + GAP_Y;
+
+/**
+ * Aperçu du gain réel : « 7% → 12% » plutôt que « +5% par rang ».
+ * Le joueur voit ce que le point ACHÈTE, pas seulement ce qu'il coûte.
+ */
+const FLAT_KEYS = new Set(['regen', 'flatDmg']);
+function gainPreview(t: TalentDef, rank: number): string | null {
+  if (!t.perRank) return null;
+  const [key, per] = Object.entries(t.perRank)[0] ?? [];
+  if (!key || typeof per !== 'number') return null;
+  const cur = per * rank;
+  const next = per * (rank + 1);
+  const f = (v: number) => (FLAT_KEYS.has(key) ? `${Math.round(v)}` : `${Math.round(v * 100)}%`);
+  return `${f(cur)} → ${f(next)}`;
+}
+
+/** Tuile compacte : icône + rang. Le détail vit dans un panneau dédié. */
+function Node({ t, rank, ok, selected, onSelect }: {
+  t: TalentDef; rank: number; ok: boolean; selected: boolean; onSelect: (id: string) => void;
+}) {
+  const maxed = rank >= t.maxRank;
+  const isSkill = !!t.activeSkill;
+  return (
+    <button
+      onClick={() => onSelect(t.id)}
+      title={t.name}
+      className={`relative grid h-[56px] w-[56px] place-items-center rounded-xl border transition ${
+        selected ? 'border-sky-300 ring-2 ring-sky-400/50'
+        : maxed ? 'border-sky-400/60'
+        : rank > 0 ? 'border-sky-500/40'
+        : ok ? 'border-slate-700 hover:border-slate-500'
+        : 'border-slate-800'
+      } ${
+        maxed ? 'bg-sky-500/20' : rank > 0 ? 'bg-sky-500/10' : ok ? 'bg-black/35' : 'bg-black/20 opacity-50'
+      }`}
+    >
+      <span className="text-2xl leading-none">{t.icon}</span>
+      {/* Rang en pastille : l'information la plus utile en un coup d'œil. */}
+      <span
+        className={`absolute -bottom-1 right-1 rounded px-1 text-[9px] font-bold tabular-nums ${
+          maxed ? 'bg-sky-400 text-black' : rank > 0 ? 'bg-sky-500/70 text-white' : 'bg-black/70 text-slate-400'
+        }`}
+      >
+        {rank}/{t.maxRank}
+      </span>
+      {isSkill && <span className="absolute -top-1 -left-1 rounded bg-purple-500 px-1 text-[8px] font-bold text-white">S</span>}
+    </button>
+  );
+}
+
+/** Panneau de détail du nœud sélectionné — remplace le texte dans chaque tuile. */
+function NodeDetail({ t, talents, rankOf, reqMet, points, equipped, onLearn, onToggleSkill }: {
+  t: TalentDef;
+  talents: TalentDef[];
+  rankOf: (id: string) => number;
+  reqMet: (t: TalentDef) => boolean;
+  points: number;
+  equipped: string[];
+  onLearn: (t: TalentDef) => void;
+  onToggleSkill: (skillId: string) => void;
+}) {
+  const rank = rankOf(t.id);
+  const maxed = rank >= t.maxRank;
+  const ok = reqMet(t);
+  const isSkill = !!t.activeSkill;
+  const canLearn = ok && !maxed && points > 0;
+  const missing = (t.requires ?? []).filter((r) => rankOf(r) < 1)
+    .map((r) => talents.find((x) => x.id === r)?.name ?? r);
+  return (
+    <div className="rounded-xl bg-black/35 p-3">
+      <div className="flex items-start gap-2.5">
+        <span className="text-2xl leading-none">{t.icon}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-bold text-slate-100">{t.name}</span>
+            {isSkill && <span className="shrink-0 rounded bg-purple-500/25 px-1.5 text-[9px] font-bold text-purple-200">COMPÉTENCE</span>}
+            <span className="ml-auto shrink-0 text-[11px] font-bold tabular-nums text-sky-300">{rank}/{t.maxRank}</span>
+          </div>
+          <p className="mt-0.5 text-[11px] leading-snug text-slate-400">{t.desc}</p>
+          {!maxed && gainPreview(t, rank) && (
+            <p className="mt-1 text-[11px] font-semibold tabular-nums text-sky-300">{gainPreview(t, rank)}</p>
+          )}
+          {missing.length > 0 && (
+            <p className="mt-1 text-[11px] text-rose-300">🔒 Requiert : {missing.join(', ')}</p>
+          )}
+        </div>
+      </div>
+      <div className="mt-2.5 flex gap-2">
+        {!maxed && (
+          <button
+            onClick={() => onLearn(t)}
+            disabled={!canLearn}
+            className="flex-1 rounded-lg bg-sky-500/35 py-2 text-xs font-bold hover:bg-sky-500/55 disabled:opacity-35"
+          >
+            {!ok ? '🔒 Prérequis manquants' : points <= 0 ? 'Aucun point disponible' : `＋ Investir (${points} restants)`}
+          </button>
+        )}
+        {maxed && !isSkill && (
+          <div className="flex-1 rounded-lg bg-sky-500/15 py-2 text-center text-xs font-bold text-sky-300">Maîtrisé</div>
+        )}
+        {isSkill && rank > 0 && (
+          <button
+            onClick={() => onToggleSkill(t.activeSkill!.id)}
+            className={`flex-1 rounded-lg py-2 text-xs font-bold ${equipped.includes(t.activeSkill!.id) ? 'bg-emerald-500/30 text-emerald-300' : 'bg-slate-700/60 text-slate-200 hover:bg-slate-600'}`}
+          >
+            {equipped.includes(t.activeSkill!.id) ? '✓ Équipée' : 'Équiper en combat'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Grille de l'arbre : les nœuds portent déjà des coordonnées (pos.x ∈ -2..2,
+// pos.y = palier), on les positionne donc réellement plutôt que d'empiler des
+// rangées. C'est ce qui permet de TRACER les liens de prérequis — auparavant
+// un simple trait vertical décoratif suggérait un enchaînement qui n'existait
+// pas visuellement, et rien ne disait quel nœud débloquait quel autre.
+function Tree({ nodes, rankOf, reqMet, selectedId, onSelect }: {
+  nodes: TalentDef[];
+  rankOf: (id: string) => number;
+  reqMet: (t: TalentDef) => boolean;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  if (nodes.length === 0) return null;
+  const xs = nodes.map((t) => t.pos.x);
+  const ys = nodes.map((t) => t.pos.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const rows = maxY - minY + 1;
+  const height = rows * CELL_H - GAP_Y;
+
+  // Garde-fou anti-superposition. Les coordonnées sont écrites à la main dans
+  // talents.ts, et 12 sous-classes sur 16 avaient deux nœuds sur la MÊME case
+  // — invisible tant que l'affichage empilait des rangées, mais superposé dès
+  // qu'on positionne vraiment. Les données sont corrigées, et ici on décale en
+  // plus tout doublon vers la colonne libre la plus proche : une erreur de
+  // saisie future rendra l'arbre un peu asymétrique, jamais illisible.
+  const colOf = new Map<string, number>();
+  const takenByRow = new Map<number, Set<number>>();
+  for (const t of [...nodes].sort((a, b) => a.pos.y - b.pos.y || a.pos.x - b.pos.x)) {
+    const taken = takenByRow.get(t.pos.y) ?? new Set<number>();
+    let col = t.pos.x;
+    for (let d = 1; taken.has(col); d++) col = taken.has(t.pos.x + d) ? t.pos.x - d : t.pos.x + d;
+    taken.add(col);
+    takenByRow.set(t.pos.y, taken);
+    colOf.set(t.id, col);
+  }
+  const allCols = [...colOf.values()];
+  const gridMinX = Math.min(minX, ...allCols);
+  const gridMaxX = Math.max(maxX, ...allCols);
+
+  const left = (t: TalentDef) => ((colOf.get(t.id) ?? t.pos.x) - gridMinX) * CELL_W;
+  const top = (t: TalentDef) => (t.pos.y - minY) * CELL_H;
+  const cx = (t: TalentDef) => left(t) + NODE_W / 2;
+
+  const byId = new Map(nodes.map((t) => [t.id, t]));
+  const width = (gridMaxX - gridMinX + 1) * CELL_W - GAP_X;
+
+  return (
+    <div className="overflow-x-auto pb-1">
+      <div className="relative mx-auto" style={{ width, height }}>
+        {/* Liens de prérequis, sous les nœuds. Un lien s'allume dès que son
+            prérequis est investi : on voit d'un coup d'œil les chemins ouverts. */}
+        <svg className="pointer-events-none absolute inset-0" width={width} height={height}>
+          {nodes.flatMap((t) =>
+            (t.requires ?? []).map((reqId) => {
+              const from = byId.get(reqId);
+              if (!from) return null;
+              const active = rankOf(reqId) >= 1;
+              return (
+                <line
+                  key={`${reqId}->${t.id}`}
+                  x1={cx(from)} y1={top(from) + NODE_H}
+                  x2={cx(t)} y2={top(t)}
+                  stroke={active ? '#38bdf8' : '#334155'}
+                  strokeWidth={active ? 2 : 1.5}
+                  strokeDasharray={active ? undefined : '4 4'}
+                />
+              );
+            }),
+          )}
+        </svg>
+        {nodes.map((t) => (
+          <div key={t.id} className="absolute" style={{ left: left(t), top: top(t) }}>
+            <Node t={t} rank={rankOf(t.id)} ok={reqMet(t)} selected={selectedId === t.id} onSelect={onSelect} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function TalentCard() {
   const p = useGame((s) => s.player);
   const mutate = useGame((s) => s.mutate);
@@ -84,180 +286,6 @@ export default function TalentCard() {
     const next = per * (rank + 1);
     const f = (v: number) => (FLAT_KEYS.has(key) ? `${Math.round(v)}` : `${Math.round(v * 100)}%`);
     return `${f(cur)} → ${f(next)}`;
-  }
-
-  /** Tuile compacte : icône + rang. Le détail vit dans un panneau dédié. */
-  const renderNode = (t: TalentDef) => {
-    const rank = rankOf(t.id);
-    const maxed = rank >= t.maxRank;
-    const ok = reqMet(t);
-    const isSkill = !!t.activeSkill;
-    const isSel = selectedId === t.id;
-    return (
-      <button
-        key={t.id}
-        onClick={() => setSelectedId(t.id)}
-        title={t.name}
-        className={`relative grid h-[56px] w-[56px] place-items-center rounded-xl border transition ${
-          isSel ? 'border-sky-300 ring-2 ring-sky-400/50'
-          : maxed ? 'border-sky-400/60'
-          : rank > 0 ? 'border-sky-500/40'
-          : ok ? 'border-slate-700 hover:border-slate-500'
-          : 'border-slate-800'
-        } ${
-          maxed ? 'bg-sky-500/20' : rank > 0 ? 'bg-sky-500/10' : ok ? 'bg-black/35' : 'bg-black/20 opacity-50'
-        }`}
-      >
-        <span className="text-2xl leading-none">{t.icon}</span>
-        {/* Rang en pastille : l'information la plus utile en un coup d'œil. */}
-        <span
-          className={`absolute -bottom-1 right-1 rounded px-1 text-[9px] font-bold tabular-nums ${
-            maxed ? 'bg-sky-400 text-black' : rank > 0 ? 'bg-sky-500/70 text-white' : 'bg-black/70 text-slate-400'
-          }`}
-        >
-          {rank}/{t.maxRank}
-        </span>
-        {isSkill && <span className="absolute -top-1 -left-1 rounded bg-purple-500 px-1 text-[8px] font-bold text-white">S</span>}
-      </button>
-    );
-  };
-
-  /** Panneau de détail du nœud sélectionné — remplace le texte dans chaque tuile. */
-  function NodeDetail({ t }: { t: TalentDef }) {
-    const rank = rankOf(t.id);
-    const maxed = rank >= t.maxRank;
-    const ok = reqMet(t);
-    const isSkill = !!t.activeSkill;
-    const canLearn = ok && !maxed && points > 0;
-    const missing = (t.requires ?? []).filter((r) => rankOf(r) < 1)
-      .map((r) => talents.find((x) => x.id === r)?.name ?? r);
-    return (
-      <div className="rounded-xl bg-black/35 p-3">
-        <div className="flex items-start gap-2.5">
-          <span className="text-2xl leading-none">{t.icon}</span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="truncate text-sm font-bold text-slate-100">{t.name}</span>
-              {isSkill && <span className="shrink-0 rounded bg-purple-500/25 px-1.5 text-[9px] font-bold text-purple-200">COMPÉTENCE</span>}
-              <span className="ml-auto shrink-0 text-[11px] font-bold tabular-nums text-sky-300">{rank}/{t.maxRank}</span>
-            </div>
-            <p className="mt-0.5 text-[11px] leading-snug text-slate-400">{t.desc}</p>
-            {!maxed && gainPreview(t, rank) && (
-              <p className="mt-1 text-[11px] font-semibold tabular-nums text-sky-300">{gainPreview(t, rank)}</p>
-            )}
-            {missing.length > 0 && (
-              <p className="mt-1 text-[11px] text-rose-300">🔒 Requiert : {missing.join(', ')}</p>
-            )}
-          </div>
-        </div>
-        <div className="mt-2.5 flex gap-2">
-          {!maxed && (
-            <button
-              onClick={() => learn(t)}
-              disabled={!canLearn}
-              className="flex-1 rounded-lg bg-sky-500/35 py-2 text-xs font-bold hover:bg-sky-500/55 disabled:opacity-35"
-            >
-              {!ok ? '🔒 Prérequis manquants' : points <= 0 ? 'Aucun point disponible' : `＋ Investir (${points} restants)`}
-            </button>
-          )}
-          {maxed && !isSkill && (
-            <div className="flex-1 rounded-lg bg-sky-500/15 py-2 text-center text-xs font-bold text-sky-300">Maîtrisé</div>
-          )}
-          {isSkill && rank > 0 && (
-            <button
-              onClick={() => toggleSkill(t.activeSkill!.id)}
-              className={`flex-1 rounded-lg py-2 text-xs font-bold ${equipped.includes(t.activeSkill!.id) ? 'bg-emerald-500/30 text-emerald-300' : 'bg-slate-700/60 text-slate-200 hover:bg-slate-600'}`}
-            >
-              {equipped.includes(t.activeSkill!.id) ? '✓ Équipée' : 'Équiper en combat'}
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Grille de l'arbre : les nœuds portent déjà des coordonnées (pos.x ∈ -2..2,
-  // pos.y = palier), on les positionne donc réellement plutôt que d'empiler des
-  // rangées. C'est ce qui permet de TRACER les liens de prérequis — auparavant
-  // un simple trait vertical décoratif suggérait un enchaînement qui n'existait
-  // pas visuellement, et rien ne disait quel nœud débloquait quel autre.
-  const NODE_W = 56;
-  const NODE_H = 56;
-  const GAP_X = 30;
-  const GAP_Y = 20;
-  const CELL_W = NODE_W + GAP_X;
-  const CELL_H = NODE_H + GAP_Y;
-
-  function Tree({ nodes }: { nodes: TalentDef[] }) {
-    if (nodes.length === 0) return null;
-    const xs = nodes.map((t) => t.pos.x);
-    const ys = nodes.map((t) => t.pos.y);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-    const rows = maxY - minY + 1;
-    const height = rows * CELL_H - GAP_Y;
-
-    // Garde-fou anti-superposition. Les coordonnées sont écrites à la main dans
-    // talents.ts, et 12 sous-classes sur 16 avaient deux nœuds sur la MÊME case
-    // — invisible tant que l'affichage empilait des rangées, mais superposé dès
-    // qu'on positionne vraiment. Les données sont corrigées, et ici on décale en
-    // plus tout doublon vers la colonne libre la plus proche : une erreur de
-    // saisie future rendra l'arbre un peu asymétrique, jamais illisible.
-    const colOf = new Map<string, number>();
-    const takenByRow = new Map<number, Set<number>>();
-    for (const t of [...nodes].sort((a, b) => a.pos.y - b.pos.y || a.pos.x - b.pos.x)) {
-      const taken = takenByRow.get(t.pos.y) ?? new Set<number>();
-      let col = t.pos.x;
-      for (let d = 1; taken.has(col); d++) col = taken.has(t.pos.x + d) ? t.pos.x - d : t.pos.x + d;
-      taken.add(col);
-      takenByRow.set(t.pos.y, taken);
-      colOf.set(t.id, col);
-    }
-    const allCols = [...colOf.values()];
-    const gridMinX = Math.min(minX, ...allCols);
-    const gridMaxX = Math.max(maxX, ...allCols);
-
-    const left = (t: TalentDef) => ((colOf.get(t.id) ?? t.pos.x) - gridMinX) * CELL_W;
-    const top = (t: TalentDef) => (t.pos.y - minY) * CELL_H;
-    const cx = (t: TalentDef) => left(t) + NODE_W / 2;
-
-    const byId = new Map(nodes.map((t) => [t.id, t]));
-    const width = (gridMaxX - gridMinX + 1) * CELL_W - GAP_X;
-
-    return (
-      <div className="overflow-x-auto pb-1">
-        <div className="relative mx-auto" style={{ width, height }}>
-          {/* Liens de prérequis, sous les nœuds. Un lien s'allume dès que son
-              prérequis est investi : on voit d'un coup d'œil les chemins ouverts. */}
-          <svg className="pointer-events-none absolute inset-0" width={width} height={height}>
-            {nodes.flatMap((t) =>
-              (t.requires ?? []).map((reqId) => {
-                const from = byId.get(reqId);
-                if (!from) return null;
-                const active = rankOf(reqId) >= 1;
-                return (
-                  <line
-                    key={`${reqId}->${t.id}`}
-                    x1={cx(from)} y1={top(from) + NODE_H}
-                    x2={cx(t)} y2={top(t)}
-                    stroke={active ? '#38bdf8' : '#334155'}
-                    strokeWidth={active ? 2 : 1.5}
-                    strokeDasharray={active ? undefined : '4 4'}
-                  />
-                );
-              }),
-            )}
-          </svg>
-          {nodes.map((t) => (
-            <div key={t.id} className="absolute" style={{ left: left(t), top: top(t) }}>
-              {renderNode(t)}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
   }
 
   // La spécialisation est l'arbre qu'on consulte le plus une fois ascensionné ;
@@ -353,10 +381,21 @@ export default function TalentCard() {
               visible pendant qu'on parcourt les tuiles. Les tuiles ne portent
               plus que l'icône et le rang : l'arbre tient en largeur, il ne reste
               qu'un défilement vertical au lieu de quatre directions. */}
-          {selectedNode && <NodeDetail t={selectedNode} />}
+          {selectedNode && (
+            <NodeDetail
+              t={selectedNode}
+              talents={talents}
+              rankOf={rankOf}
+              reqMet={reqMet}
+              points={points}
+              equipped={equipped}
+              onLearn={learn}
+              onToggleSkill={toggleSkill}
+            />
+          )}
 
           <div className="max-h-[52vh] overflow-y-auto rounded-xl bg-black/25 p-3">
-            <Tree nodes={shownTree} />
+            <Tree nodes={shownTree} rankOf={rankOf} reqMet={reqMet} selectedId={selectedId} onSelect={setSelectedId} />
           </div>
 
           {activeMods.length > 0 && (
