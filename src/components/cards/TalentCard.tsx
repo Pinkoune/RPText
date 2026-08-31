@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { getTalentsForClass, spendTalent, resetTalents, talentMods, type TalentDef } from '../../game/talents';
 import { useGame } from '../../store/gameStore';
 import { CLASSES } from '../../game/classes';
@@ -16,6 +17,9 @@ export default function TalentCard() {
   const baseId = cls.parent ?? p.classId;
   const isBaseClass = !cls.parent;
   const talents = getTalentsForClass(p.classId);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tab, setTab] = useState<'tree' | 'skills' | 'ascend'>('tree');
+  const [branch, setBranch] = useState<'base' | 'spec'>('spec');
   const mods = talentMods(p);
   const points = p.talentPoints ?? 0;
 
@@ -82,84 +86,105 @@ export default function TalentCard() {
     return `${f(cur)} → ${f(next)}`;
   }
 
+  /** Tuile compacte : icône + rang. Le détail vit dans un panneau dédié. */
   const renderNode = (t: TalentDef) => {
     const rank = rankOf(t.id);
     const maxed = rank >= t.maxRank;
     const ok = reqMet(t);
     const isSkill = !!t.activeSkill;
-    const canLearn = ok && !maxed && points > 0;
+    const isSel = selectedId === t.id;
     return (
-      <div
+      <button
         key={t.id}
-        className={`flex h-[136px] w-[150px] shrink-0 flex-col rounded-xl border p-2.5 transition-all ${
-          maxed ? 'border-sky-400/60 bg-sky-500/10'
-          : rank > 0 ? 'border-sky-500/30 bg-black/40'
-          : ok ? 'border-slate-700 bg-black/30'
-          : 'border-slate-800 bg-black/20 opacity-55'
+        onClick={() => setSelectedId(t.id)}
+        title={t.name}
+        className={`relative grid h-[56px] w-[56px] place-items-center rounded-xl border transition ${
+          isSel ? 'border-sky-300 ring-2 ring-sky-400/50'
+          : maxed ? 'border-sky-400/60'
+          : rank > 0 ? 'border-sky-500/40'
+          : ok ? 'border-slate-700 hover:border-slate-500'
+          : 'border-slate-800'
+        } ${
+          maxed ? 'bg-sky-500/20' : rank > 0 ? 'bg-sky-500/10' : ok ? 'bg-black/35' : 'bg-black/20 opacity-50'
         }`}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-lg leading-none">{t.icon}</span>
-          <span className="min-w-0 flex-1 truncate text-xs font-bold" title={t.name}>{t.name}</span>
-          {isSkill && <span className="rounded bg-purple-500/25 px-1 text-[9px] text-purple-200">SKILL</span>}
-        </div>
-
-        {/* Pips de rang */}
-        <div className="mt-1.5 flex items-center gap-1">
-          {Array.from({ length: t.maxRank }).map((_, i) => (
-            <span key={i} className={`h-1.5 flex-1 rounded-full ${i < rank ? 'bg-sky-400' : 'bg-slate-700'}`} />
-          ))}
-          <span className="ml-1 text-[9px] tabular-nums text-slate-400">{rank}/{t.maxRank}</span>
-        </div>
-
-        <div className="mt-1 h-8 overflow-hidden text-[10px] leading-tight text-slate-400">{t.desc}</div>
-        {/* Ce que le prochain point achete concretement. */}
-        <div className="mb-1 h-3 text-[9px] font-semibold tabular-nums text-sky-300/80">
-          {!maxed && gainPreview(t, rank)}
-        </div>
-        <div className="mt-auto" />
-
-        {maxed ? (
-          isSkill ? (
-            <button
-              onPointerDown={() => toggleSkill(t.activeSkill!.id)}
-              className={`w-full rounded py-1 text-[10px] font-bold ${equipped.includes(t.activeSkill!.id) ? 'bg-emerald-500/30 text-emerald-300' : 'bg-slate-700/60 text-slate-200 hover:bg-slate-600'}`}
-            >
-              {equipped.includes(t.activeSkill!.id) ? '✓ Équipé' : 'Équiper'}
-            </button>
-          ) : (
-            <div className="rounded bg-sky-500/15 py-1 text-center text-[10px] font-bold text-sky-300">Maîtrisé</div>
-          )
-        ) : (
-          <button
-            onPointerDown={(e) => { e.stopPropagation(); learn(t); }}
-            disabled={!canLearn}
-            className="w-full rounded bg-sky-500/30 py-1 text-[10px] font-bold hover:bg-sky-500/50 disabled:opacity-40"
-          >
-            {!ok ? '🔒 Prérequis' : points <= 0 ? 'Aucun point' : '＋ Investir'}
-          </button>
-        )}
-        {isSkill && rank > 0 && !maxed && (
-          <button
-            onPointerDown={() => toggleSkill(t.activeSkill!.id)}
-            className={`mt-1 w-full rounded py-1 text-[10px] font-bold ${equipped.includes(t.activeSkill!.id) ? 'bg-emerald-500/30 text-emerald-300' : 'bg-slate-700/60 text-slate-200 hover:bg-slate-600'}`}
-          >
-            {equipped.includes(t.activeSkill!.id) ? '✓ Équipé' : 'Équiper'}
-          </button>
-        )}
-      </div>
+        <span className="text-2xl leading-none">{t.icon}</span>
+        {/* Rang en pastille : l'information la plus utile en un coup d'œil. */}
+        <span
+          className={`absolute -bottom-1 right-1 rounded px-1 text-[9px] font-bold tabular-nums ${
+            maxed ? 'bg-sky-400 text-black' : rank > 0 ? 'bg-sky-500/70 text-white' : 'bg-black/70 text-slate-400'
+          }`}
+        >
+          {rank}/{t.maxRank}
+        </span>
+        {isSkill && <span className="absolute -top-1 -left-1 rounded bg-purple-500 px-1 text-[8px] font-bold text-white">S</span>}
+      </button>
     );
   };
+
+  /** Panneau de détail du nœud sélectionné — remplace le texte dans chaque tuile. */
+  function NodeDetail({ t }: { t: TalentDef }) {
+    const rank = rankOf(t.id);
+    const maxed = rank >= t.maxRank;
+    const ok = reqMet(t);
+    const isSkill = !!t.activeSkill;
+    const canLearn = ok && !maxed && points > 0;
+    const missing = (t.requires ?? []).filter((r) => rankOf(r) < 1)
+      .map((r) => talents.find((x) => x.id === r)?.name ?? r);
+    return (
+      <div className="rounded-xl bg-black/35 p-3">
+        <div className="flex items-start gap-2.5">
+          <span className="text-2xl leading-none">{t.icon}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm font-bold text-slate-100">{t.name}</span>
+              {isSkill && <span className="shrink-0 rounded bg-purple-500/25 px-1.5 text-[9px] font-bold text-purple-200">COMPÉTENCE</span>}
+              <span className="ml-auto shrink-0 text-[11px] font-bold tabular-nums text-sky-300">{rank}/{t.maxRank}</span>
+            </div>
+            <p className="mt-0.5 text-[11px] leading-snug text-slate-400">{t.desc}</p>
+            {!maxed && gainPreview(t, rank) && (
+              <p className="mt-1 text-[11px] font-semibold tabular-nums text-sky-300">{gainPreview(t, rank)}</p>
+            )}
+            {missing.length > 0 && (
+              <p className="mt-1 text-[11px] text-rose-300">🔒 Requiert : {missing.join(', ')}</p>
+            )}
+          </div>
+        </div>
+        <div className="mt-2.5 flex gap-2">
+          {!maxed && (
+            <button
+              onClick={() => learn(t)}
+              disabled={!canLearn}
+              className="flex-1 rounded-lg bg-sky-500/35 py-2 text-xs font-bold hover:bg-sky-500/55 disabled:opacity-35"
+            >
+              {!ok ? '🔒 Prérequis manquants' : points <= 0 ? 'Aucun point disponible' : `＋ Investir (${points} restants)`}
+            </button>
+          )}
+          {maxed && !isSkill && (
+            <div className="flex-1 rounded-lg bg-sky-500/15 py-2 text-center text-xs font-bold text-sky-300">Maîtrisé</div>
+          )}
+          {isSkill && rank > 0 && (
+            <button
+              onClick={() => toggleSkill(t.activeSkill!.id)}
+              className={`flex-1 rounded-lg py-2 text-xs font-bold ${equipped.includes(t.activeSkill!.id) ? 'bg-emerald-500/30 text-emerald-300' : 'bg-slate-700/60 text-slate-200 hover:bg-slate-600'}`}
+            >
+              {equipped.includes(t.activeSkill!.id) ? '✓ Équipée' : 'Équiper en combat'}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // Grille de l'arbre : les nœuds portent déjà des coordonnées (pos.x ∈ -2..2,
   // pos.y = palier), on les positionne donc réellement plutôt que d'empiler des
   // rangées. C'est ce qui permet de TRACER les liens de prérequis — auparavant
   // un simple trait vertical décoratif suggérait un enchaînement qui n'existait
   // pas visuellement, et rien ne disait quel nœud débloquait quel autre.
-  const NODE_W = 150;
-  const NODE_H = 136;
-  const GAP_X = 14;
-  const GAP_Y = 40;
+  const NODE_W = 56;
+  const NODE_H = 56;
+  const GAP_X = 30;
+  const GAP_Y = 20;
   const CELL_W = NODE_W + GAP_X;
   const CELL_H = NODE_H + GAP_Y;
 
@@ -235,7 +260,35 @@ export default function TalentCard() {
     );
   }
 
+  // La spécialisation est l'arbre qu'on consulte le plus une fois ascensionné ;
+  // sans elle on retombe sur la base.
+  const shownTree = specTree.length > 0 && branch === 'spec' ? specTree : baseTree;
+  const selectedNode = talents.find((t) => t.id === selectedId) ?? shownTree[0] ?? talents[0] ?? null;
+
   const pct = (v: number) => `${Math.round(v * 100)}%`;
+  const activeMods: string[] = [];
+  if (mods.crit > 0) activeMods.push(`💥 Critique ${pct(mods.crit)}`);
+  if (mods.critMult > 0) activeMods.push(`💢 Mult. crit +${mods.critMult.toFixed(2)}`);
+  if (mods.dmgReduction > 0) activeMods.push(`🛡️ Réduction ${pct(mods.dmgReduction)}`);
+  if (mods.dodge > 0) activeMods.push(`💨 Esquive ${pct(mods.dodge)}`);
+  if (mods.doubleHit > 0) activeMods.push(`🏹 Double ${pct(mods.doubleHit)}`);
+  if (mods.regen > 0) activeMods.push(`💚 Régén ${mods.regen}/tour`);
+  if (mods.berserkBonus > 0) activeMods.push(`😤 Furie +${pct(mods.berserkBonus)}`);
+  if (mods.flatDmg > 0) activeMods.push(`✨ Dégâts +${mods.flatDmg}`);
+  if (mods.lifesteal > 0) activeMods.push(`🩸 Vol de vie ${pct(mods.lifesteal)}`);
+  if (mods.armorPen > 0) activeMods.push(`🗡️ Perce-armure ${pct(mods.armorPen)}`);
+  if (mods.execute > 0) activeMods.push(`☠️ Exécution +${pct(mods.execute)}`);
+  if (mods.thorns > 0) activeMods.push(`🔩 Épines ${pct(mods.thorns)}`);
+  if (mods.atkPct > 0) activeMods.push(`⚔️ ATK +${pct(mods.atkPct)}`);
+  if (mods.defPct > 0) activeMods.push(`🛡️ DEF +${pct(mods.defPct)}`);
+  if (mods.hpPct > 0) activeMods.push(`❤️ PV +${pct(mods.hpPct)}`);
+
+  const showAscendTab = isBaseClass && ascensions.length > 0;
+  const TABS = [
+    { id: 'tree' as const, label: '🌳 Arbre' },
+    { id: 'skills' as const, label: `⚔️ Compétences ${equipped.length}/4` },
+    ...(showAscendTab ? [{ id: 'ascend' as const, label: '🌟 Ascension' }] : []),
+  ];
 
   return (
     <div className="space-y-3">
@@ -258,47 +311,129 @@ export default function TalentCard() {
         </div>
       </div>
 
-      {/* Note : l'arbre est plus grand que les points → on se spécialise. */}
-      {total > 0 && (
-        <p className="px-1 text-[11px] text-slate-500">
-          L'arbre compte <b className="text-slate-300">{total} points</b> à investir : impossible de tout prendre, choisis ta voie (le reset permet de re-tester).
-        </p>
-      )}
-
-      {/* Barre de compétences équipées (4 slots) */}
-      <div className="rounded-xl bg-black/25 p-3">
-        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Compétences en combat · {equipped.length}/4</div>
-        <div className="grid grid-cols-4 gap-2">
-          {Array.from({ length: 4 }).map((_, i) => {
-            const sid = equipped[i];
-            const sk = sid ? unlockedSkills.find((s) => s.id === sid) : null;
-            return (
-              <button
-                key={i}
-                onClick={() => sk && toggleSkill(sk.id)}
-                title={sk ? `${sk.name} — ${sk.desc}` : 'Emplacement libre'}
-                className={`flex h-14 flex-col items-center justify-center gap-0.5 rounded-lg border text-center ${sk ? 'border-purple-400/40 bg-purple-500/15' : 'border-dashed border-slate-700 bg-black/20'}`}
-              >
-                <span className="text-lg leading-none">{sk ? sk.icon : '＋'}</span>
-                <span className="max-w-full truncate px-1 text-[9px] text-slate-300">{sk ? sk.name : 'Vide'}</span>
-              </button>
-            );
-          })}
-        </div>
-        {unlockedSkills.length === 0 && (
-          <p className="mt-2 text-[10px] text-slate-500">Débloque des compétences (nœuds « SKILL ») dans l'arbre ci-dessous, puis équipe-les ici.</p>
-        )}
+      {/* Onglets : l'arbre, la barre de compétences et l'ascension s'empilaient
+          verticalement — il fallait traverser tout le reste avant de voir un
+          seul nœud. Séparés, chaque vue tient dans un écran. */}
+      <div className="flex gap-1 rounded-xl bg-black/30 p-1">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex-1 rounded-lg py-1.5 text-[11px] font-semibold transition ${
+              tab === t.id ? 'bg-sky-500/30 text-sky-100' : 'text-slate-400 hover:bg-white/5'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* Ascension */}
-      {isBaseClass && ascensions.length > 0 && (
+      {tab === 'tree' && (
+        <>
+          {/* Bascule base / spécialisation : les deux arbres bout à bout
+              doublaient la hauteur à parcourir. */}
+          {specTree.length > 0 && (
+            <div className="flex gap-1 text-[11px]">
+              <button
+                onClick={() => { setBranch('spec'); setSelectedId(null); }}
+                className={`flex-1 rounded-lg py-1.5 font-semibold transition ${branch === 'spec' ? 'bg-amber-500/25 text-amber-200' : 'bg-black/25 text-slate-400 hover:bg-white/5'}`}
+              >
+                {cls.emoji} {cls.name}
+              </button>
+              <button
+                onClick={() => { setBranch('base'); setSelectedId(null); }}
+                className={`flex-1 rounded-lg py-1.5 font-semibold transition ${branch === 'base' ? 'bg-sky-500/25 text-sky-200' : 'bg-black/25 text-slate-400 hover:bg-white/5'}`}
+              >
+                {CLASSES[baseId].emoji} {CLASSES[baseId].name}
+              </button>
+            </div>
+          )}
+
+          {/* Détail du nœud sélectionné — au-dessus de l'arbre pour rester
+              visible pendant qu'on parcourt les tuiles. Les tuiles ne portent
+              plus que l'icône et le rang : l'arbre tient en largeur, il ne reste
+              qu'un défilement vertical au lieu de quatre directions. */}
+          {selectedNode && <NodeDetail t={selectedNode} />}
+
+          <div className="max-h-[52vh] overflow-y-auto rounded-xl bg-black/25 p-3">
+            <Tree nodes={shownTree} />
+          </div>
+
+          {activeMods.length > 0 && (
+            <div className="rounded-lg bg-black/25 px-3 py-2 text-[11px] text-slate-300">
+              <div className="mb-1 font-semibold uppercase tracking-wide text-slate-400">Effets actifs</div>
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                {activeMods.map((m) => <span key={m}>{m}</span>)}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === 'skills' && (
+        <div className="space-y-3">
+          <div className="rounded-xl bg-black/25 p-3">
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Équipées · {equipped.length}/4</div>
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: 4 }).map((_, i) => {
+                const sid = equipped[i];
+                const sk = sid ? unlockedSkills.find((s) => s.id === sid) : null;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => sk && toggleSkill(sk.id)}
+                    title={sk ? `${sk.name} — ${sk.desc}` : 'Emplacement libre'}
+                    className={`flex h-16 flex-col items-center justify-center gap-0.5 rounded-lg border text-center ${sk ? 'border-purple-400/40 bg-purple-500/15' : 'border-dashed border-slate-700 bg-black/20'}`}
+                  >
+                    <span className="text-xl leading-none">{sk ? sk.icon : '＋'}</span>
+                    <span className="max-w-full truncate px-1 text-[9px] text-slate-300">{sk ? sk.name : 'Vide'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="max-h-[46vh] space-y-2 overflow-y-auto">
+            {unlockedSkills.length === 0 ? (
+              <button
+                onClick={() => setTab('tree')}
+                className="w-full rounded-xl bg-black/25 py-8 text-center text-sm text-slate-500 hover:bg-white/5"
+              >
+                Aucune compétence débloquée — ouvre l'arbre ›
+              </button>
+            ) : (
+              unlockedSkills.map((sk) => {
+                const on = equipped.includes(sk.id);
+                return (
+                  <button
+                    key={sk.id}
+                    onClick={() => toggleSkill(sk.id)}
+                    className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${on ? 'border-emerald-400/40 bg-emerald-500/10' : 'border-slate-800 bg-black/25 hover:bg-white/5'}`}
+                  >
+                    <span className="text-2xl leading-none">{sk.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-bold text-slate-100">{sk.name}</div>
+                      <div className="text-[11px] leading-snug text-slate-400">{sk.desc}</div>
+                    </div>
+                    <span className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold ${on ? 'bg-emerald-500/30 text-emerald-200' : 'bg-slate-700/60 text-slate-300'}`}>
+                      {on ? '✓ Équipée' : 'Équiper'}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'ascend' && showAscendTab && (
         <div className={`rounded-xl border p-3 ${p.level >= 20 ? 'border-amber-500/40 bg-amber-500/10' : 'border-slate-700 bg-black/20'}`}>
           <div className="mb-2 flex items-center gap-1 text-xs font-bold text-amber-300">
             🌟 Ascension {p.level >= 20 ? (
               <span className="inline-flex items-center gap-1">(1 <ItemIcon id="boss_soul" size={14} /> Âme de Boss requise)</span>
             ) : `(niveau 20 requis — tu es niv.${p.level})`}
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {ascensions.map(([id, c]) => (
               <button
                 key={id}
@@ -316,42 +451,6 @@ export default function TalentCard() {
           </div>
         </div>
       )}
-
-      {/* Arbre : base + spécialisation */}
-      <div className="max-h-[52vh] space-y-4 overflow-y-auto rounded-xl bg-black/25 p-3">
-        <div>
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Classe de base — {CLASSES[baseId].name}</div>
-          <Tree nodes={baseTree} />
-        </div>
-        {specTree.length > 0 && (
-          <div className="border-t border-slate-800 pt-3">
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-amber-300/80">Spécialisation — {cls.name}</div>
-            <Tree nodes={specTree} />
-          </div>
-        )}
-      </div>
-
-      {/* Effets actifs */}
-      <div className="rounded-lg bg-black/25 px-3 py-2 text-[11px] text-slate-300">
-        <div className="mb-1 font-semibold uppercase tracking-wide text-slate-400">Effets actifs</div>
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-          {mods.crit > 0 && <span>💥 Critique {pct(mods.crit)}</span>}
-          {mods.critMult > 0 && <span>💢 Mult. crit +{mods.critMult.toFixed(2)}</span>}
-          {mods.dmgReduction > 0 && <span>🛡️ Réduction {pct(mods.dmgReduction)}</span>}
-          {mods.dodge > 0 && <span>💨 Esquive {pct(mods.dodge)}</span>}
-          {mods.doubleHit > 0 && <span>🏹 Double {pct(mods.doubleHit)}</span>}
-          {mods.regen > 0 && <span>💚 Régén {mods.regen}/tour</span>}
-          {mods.berserkBonus > 0 && <span>😤 Furie +{pct(mods.berserkBonus)}</span>}
-          {mods.flatDmg > 0 && <span>✨ Dégâts +{mods.flatDmg}</span>}
-          {mods.lifesteal > 0 && <span>🩸 Vol de vie {pct(mods.lifesteal)}</span>}
-          {mods.armorPen > 0 && <span>🗡️ Perce-armure {pct(mods.armorPen)}</span>}
-          {mods.execute > 0 && <span>☠️ Exécution +{pct(mods.execute)}</span>}
-          {mods.thorns > 0 && <span>🔩 Épines {pct(mods.thorns)}</span>}
-          {mods.atkPct > 0 && <span>⚔️ ATK +{pct(mods.atkPct)}</span>}
-          {mods.defPct > 0 && <span>🛡️ DEF +{pct(mods.defPct)}</span>}
-          {mods.hpPct > 0 && <span>❤️ PV +{pct(mods.hpPct)}</span>}
-        </div>
-      </div>
     </div>
   );
 }

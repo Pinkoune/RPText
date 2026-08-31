@@ -9,7 +9,7 @@ import { useUi } from '../store/uiStore';
 import { currentGlobalEvent, currentBiomeEvent, type EventDef } from '../game/events';
 import { auraColor } from '../game/prestige';
 import { notificationCount } from './cards/NotificationsCard';
-import { seasonTheme } from '../game/artifact';
+import { seasonTheme, artifactXpToNext } from '../game/artifact';
 
 function Pill({ icon, value, title, className = '' }: { icon: string; value: string | number; title: string; className?: string }) {
   return (
@@ -82,6 +82,8 @@ export default function Topbar() {
   const globalEvent = currentGlobalEvent(now.getTime());
   const biomeEvent = currentBiomeEvent(player.biome, now.getTime());
   const artTheme = seasonTheme(player.artifact?.season);
+  const artLevel = player.artifact?.level ?? 0;
+  const artPct = player.artifact ? Math.min(100, (player.artifact.xp / artifactXpToNext(artLevel)) * 100) : 0;
   const stats = deriveStats(player); // stats.hp est déjà clampé à maxHp (contrairement à player.hp brut)
   const hpPct = Math.max(0, Math.min(100, Math.round((stats.hp / stats.maxHp) * 100)));
   const xpPct = Math.max(0, Math.min(100, Math.round((player.xp / xpToNext(player.level)) * 100)));
@@ -156,27 +158,30 @@ export default function Topbar() {
               la seule qui mérite un accès direct depuis la barre. */}
           <button
             onClick={() => open('artifact', undefined, { singleton: true })}
-            title={`${artTheme.artifactName} — niveau ${player.artifact?.level ?? 0}`}
-            className="flex items-center gap-1 rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
+            title={`${artTheme.artifactName} — niveau ${artLevel}`}
+            className="flex items-center gap-1.5 rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
           >
             <span>{artTheme.emoji}</span>
-            <span className="font-semibold tabular-nums" style={{ color: artTheme.color }}>{player.artifact?.level ?? 0}</span>
+            <span className="font-semibold tabular-nums" style={{ color: artTheme.color }}>Nv.{artLevel}</span>
+            <span className="h-1 w-8 overflow-hidden rounded-full bg-black/60">
+              <span className="block h-full rounded-full transition-all" style={{ width: `${artPct}%`, background: artTheme.color }} />
+            </span>
           </button>
-          {/* Bouton de notifications PERSISTANT : messages et mises à jour au
-              même endroit. Avant, chaque source avait son bouton qui
-              apparaissait puis disparaissait, et la barre bougeait sans cesse. */}
-          <button
-            onClick={() => open('notifications', undefined, { singleton: true })}
-            title={notifCount > 0 ? `${notifCount} notification${notifCount > 1 ? 's' : ''}` : 'Aucune notification'}
-            className="relative rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
-          >
-            🔔
-            {notifCount > 0 && (
+          {/* Notifications : messages et mises à jour au même endroit. Le bouton
+              n'apparaît QUE s'il y a quelque chose — une cloche vide en
+              permanence n'apporte rien et encombre la barre. */}
+          {notifCount > 0 && (
+            <button
+              onClick={() => open('notifications', undefined, { singleton: true })}
+              title={`${notifCount} notification${notifCount > 1 ? 's' : ''}`}
+              className="relative rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
+            >
+              🔔
               <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white ring-2 ring-[#0b1020]">
                 {notifCount}
               </span>
-            )}
-          </button>
+            </button>
+          )}
         </div>
       </div>
     </div>

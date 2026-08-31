@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useGame } from '../store/gameStore';
 import { useUi } from '../store/uiStore';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { seasonTheme, artifactXpToNext } from '../game/artifact';
 import { getRaidWindow } from '../game/raid';
 
 const SETTINGS_KEY = 'rptext.settings';
@@ -57,9 +56,6 @@ export default function AmbientRail() {
 
   const myTeam = teams.find((t) => p.uid in (t.members ?? {}));
   const members = myTeam ? Object.entries(myTeam.members) : [];
-  const theme = seasonTheme(p.artifact?.season);
-  const art = p.artifact;
-  const artPct = art ? Math.min(100, (art.xp / artifactXpToNext(art.level)) * 100) : 0;
   const raid = getRaidWindow();
 
   return (
@@ -89,16 +85,7 @@ export default function AmbientRail() {
         </Chip>
       )}
 
-      {/* 3. Artefact de saison : la jauge qui monte tout le temps. */}
-      {art && (
-        <Chip title={`${theme.artifactName} — niveau ${art.level}`} onClick={() => open('artifact', undefined, { singleton: true })}>
-          <span>{theme.emoji}</span>
-          <span className="tabular-nums" style={{ color: theme.color }}>Nv.{art.level}</span>
-          <span className="h-1 w-8 overflow-hidden rounded-full bg-black/60">
-            <span className="block h-full rounded-full" style={{ width: `${artPct}%`, background: theme.color }} />
-          </span>
-        </Chip>
-      )}
+      {/* L'artefact a rejoint la barre du haut : le garder ici ferait doublon. */}
 
       {/* 4. Rendez-vous de raid imminent (le seul rendez-vous a heure fixe). */}
       {raid.open && p.level >= 22 && (

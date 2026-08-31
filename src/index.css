@@ -145,3 +145,50 @@ body {
   100% { opacity: 1; transform: scale(1); }
 }
 .asc-vignette-dead { animation: ascVignetteDead 1.4s ease forwards; }
+
+/* ─── Punch de combat (chasse) ─────────────────────────────────────────────
+   Le tour de chasse renvoie désormais un résumé chiffré (`TurnFx`) : ces
+   animations lui donnent un corps. Rien ici ne porte d'information que le
+   journal ne dise déjà — c'est du ressenti, pas de l'interface. */
+
+/* Nombre qui s'envole au-dessus de la barre concernée. */
+@keyframes hitFloat {
+  0%   { opacity: 0; transform: translate(-50%, 4px) scale(0.7); }
+  18%  { opacity: 1; transform: translate(-50%, -6px) scale(1.15); }
+  70%  { opacity: 1; transform: translate(-50%, -22px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -34px) scale(0.95); }
+}
+.hit-float { animation: hitFloat 1s cubic-bezier(.22,.9,.3,1) forwards; }
+
+/* Secousse ponctuelle (un seul aller-retour, contrairement à .animate-shake
+   qui boucle) : coup lourd encaissé, ou punition d'une interruption ratée. */
+@keyframes hitJolt {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  15% { transform: translate3d(-6px, 1px, 0); }
+  30% { transform: translate3d(5px, -2px, 0); }
+  45% { transform: translate3d(-4px, 2px, 0); }
+  60% { transform: translate3d(3px, -1px, 0); }
+  80% { transform: translate3d(-2px, 0, 0); }
+}
+.hit-jolt { animation: hitJolt 0.45s cubic-bezier(.36,.07,.19,.97); }
+
+/* Voile coloré qui traverse la carte : bleu = parade, ambre = interruption,
+   rouge = coup encaissé de plein fouet. */
+@keyframes hitFlash {
+  0% { opacity: 0; }
+  20% { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+.hit-flash { animation: hitFlash 0.5s ease-out forwards; }
+
+/* Recul de la cible touchée. */
+@keyframes hitPunch {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.22) rotate(-5deg); }
+  100% { transform: scale(1); }
+}
+.hit-punch { animation: hitPunch 0.35s cubic-bezier(.34,1.56,.64,1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hit-float, .hit-jolt, .hit-flash, .hit-punch { animation-duration: 0.01ms !important; }
+}

@@ -56,7 +56,9 @@ export const PATCH_HISTORY: PatchRelease[] = [
         kind: 'new',
         items: [
           'Le monstre <b>annonce son intention</b> pour le tour suivant : coup lourd, garde, incantation ou attaque simple.',
-          'Deux nouvelles réponses : <b>Parer</b> (tu ne frappes pas, mais tu n\'encaisses que 30% des dégâts) et <b>Interrompre</b> (peu de dégâts, mais tu annules son coup lourd ou son incantation). Frapper une garde ne fait que la moitié des dégâts.',
+          'Deux nouvelles réponses, aux rôles opposés : <b>Parer</b> n\'encaisse qu\'un quart des dégâts et <b>renvoie 70% de ce qui a été bloqué</b> — sans risque, et d\'autant plus payant contre un gros coup. <b>Interrompre</b> annule le coup annoncé et <b>étourdit</b> (la Faille s\'ouvre), mais si le monstre ne préparait rien tu te découvres et prends 50% de dégâts en plus.',
+          'Frapper une garde ne fait que la moitié des dégâts.',
+          'Les coups portés, parades et interruptions se voient enfin : nombres qui s\'envolent, secousse sur les gros coups, voile coloré selon l\'issue du tour.',
           'Nouvelle <b>série de chasse</b> : chaque kill consécutif sans mourir renforce l\'XP et l\'or (jusqu\'à +40%). Elle est entièrement perdue si tu tombes.',
         ],
       },
@@ -92,8 +94,8 @@ export const PATCH_HISTORY: PatchRelease[] = [
         kind: 'new',
         items: [
           'La carte <b>Équipement</b> est entièrement refaite : ta fiche et tes stats en tête, tes cinq emplacements visibles d\'un seul coup d\'œil, et le détail de celui que tu choisis juste en dessous — avec la comparaison des stats avant d\'équiper.',
-          'L\'<b>arbre de talents</b> trace enfin ses liens de prérequis et affiche le gain réel du prochain point.',
-          'Un bouton <b>🔔 Notifications</b> permanent regroupe messages et mises à jour au même endroit — fini les icônes qui apparaissent et disparaissent de la barre.',
+          'L\'<b>arbre de talents</b> est réorganisé en onglets (arbre, compétences, ascension) : l\'arbre entier tient désormais à l\'écran, trace ses liens de prérequis et affiche le gain réel du prochain point dans un panneau fixe.',
+          'Un bouton <b>🔔 Notifications</b> regroupe messages et mises à jour au même endroit, et ne s\'affiche que s\'il y a quelque chose à lire.',
           'La barre du haut est allégée : son, changement de personnage et déconnexion ont rejoint les <b>Paramètres</b>, et l\'artefact y gagne un accès direct.',
           'Un petit rail d\'infos apparaît en bas à droite : équipe, joueurs en ligne, artefact, raid ouvert.',
         ],

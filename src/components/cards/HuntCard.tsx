@@ -62,6 +62,42 @@ const BOSS_THEME: Record<string, BossTheme> = {
 
 type Status = 'fighting' | 'won' | 'lost' | 'fled';
 
+/** Nombre volant au-dessus d'une barre de PV. `side` désigne la barre visée. */
+interface Floater {
+  id: number;
+  side: 'you' | 'enemy';
+  text: string;
+  color: string;
+  big?: boolean;
+}
+
+/**
+ * Nombres volants au-dessus d'une barre de PV.
+ *
+ * Plusieurs peuvent partir du même tour (dégâts + parade + riposte) : ils sont
+ * décalés en X ET dans le temps, sinon ils se superposent et deviennent
+ * illisibles au moment précis où ils devraient informer.
+ */
+function Floaters({ items }: { items: Floater[] }) {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-2 z-10 h-0">
+      {items.map((f, i) => (
+        <span
+          key={f.id}
+          className={`hit-float absolute left-1/2 whitespace-nowrap font-black tabular-nums drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)] ${f.big ? 'text-xl' : 'text-base'}`}
+          style={{
+            color: f.color,
+            animationDelay: `${i * 130}ms`,
+            marginLeft: `${(i - (items.length - 1) / 2) * 46}px`,
+          }}
+        >
+          {f.text}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const p = useGame((s) => s.player);
   const mutate = useGame((s) => s.mutate);
@@ -82,6 +118,24 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const [cstate, setCstate] = useState<CombatState>(freshCombatState());
   const [resourcePool, setResourcePool] = useState(0);
   const lastActionType = useRef<string | null>(null);
+
+  // ── Punch visuel ──
+  // `fx` du tour → nombres qui s'envolent, secousse, voile coloré. Purement
+  // décoratif : le journal reste la source de vérité, ces états n'influencent
+  // jamais le combat.
+  const [floaters, setFloaters] = useState<Floater[]>([]);
+  const [flash, setFlash] = useState<string | null>(null);
+  const [jolt, setJolt] = useState(false);
+  const [punch, setPunch] = useState(false);
+  const floaterId = useRef(0);
+
+  function pushFloaters(items: Omit<Floater, 'id'>[]) {
+    if (items.length === 0) return;
+    const withIds = items.map((f) => ({ ...f, id: ++floaterId.current }));
+    setFloaters((cur) => [...cur, ...withIds]);
+    const ids = new Set(withIds.map((f) => f.id));
+    setTimeout(() => setFloaters((cur) => cur.filter((f) => !ids.has(f.id))), 1000);
+  }
 
   // Réinitialise quand une nouvelle rencontre arrive (relance de hunt).
   useEffect(() => {
@@ -269,7 +323,46 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     setCstate(res.state);
     setResourcePool(newResourcePool);
 
+    // ── Retour visuel du tour ──
+    const fx = res.fx;
+    const flying: Omit<Floater, 'id'>[] = [];
+    if (fx.dealt > 0) {
+      flying.push({
+        side: 'enemy',
+        text: `-${fx.dealt}${fx.crit ? ' CRIT !' : ''}`,
+        color: fx.crit ? '#fbbf24' : '#fca5a5',
+        big: fx.crit || fx.dealt > monsterHp * 0.25,
+      });
+      setPunch(false); setTimeout(() => setPunch(true), 0); setTimeout(() => setPunch(false), 400);
+    }
+    if (fx.interrupted) flying.push({ side: 'enemy', text: 'INTERROMPU', color: '#fbbf24' });
+    if (fx.parried > 0) flying.push({ side: 'you', text: `paré -${fx.parried}`, color: '#7dd3fc' });
+    if (fx.taken > 0) {
+      flying.push({
+        side: 'you',
+        text: `-${fx.taken}`,
+        color: fx.heavy || fx.exposed ? '#fb7185' : '#f8a4b4',
+        big: fx.heavy || fx.exposed,
+      });
+    }
+    pushFloaters(flying);
+    if (fx.heavy || fx.exposed) { setJolt(true); setTimeout(() => setJolt(false), 470); }
+    const flashColor = fx.exposed
+      ? 'rgba(244,63,94,0.85)'
+      : fx.interrupted
+        ? 'rgba(251,191,36,0.8)'
+        : fx.parried > 0
+          ? 'rgba(56,189,248,0.75)'
+          : fx.heavy
+            ? 'rgba(244,63,94,0.7)'
+            : null;
+    if (flashColor) {
+      setFlash(flashColor);
+      setTimeout(() => setFlash(null), 500);
+    }
+
     if (action === 'attack' || action === 'ability') playSound('hit');
+    if (action === 'parry' || action === 'interrupt') playSound('hit');
     if (newStatus === 'won') {
       setOutcome(captured.rewards);
       if (captured.rewards?.masteryUp) {
@@ -313,14 +406,23 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const mastery = masteryProgress(biomeKills(p, p.biome));
 
   return (
-    <div className="space-y-3">
+    <div className={`relative space-y-3 ${jolt ? 'hit-jolt' : ''}`}>
+      {/* Voile coloré du tour : bleu = parade, ambre = interruption réussie,
+          rouge = coup pris de plein fouet. */}
+      {flash && (
+        <div
+          className="hit-flash pointer-events-none absolute -inset-3 z-20 rounded-2xl"
+          style={{ background: `radial-gradient(ellipse at center, transparent 35%, ${flash} 100%)` }}
+        />
+      )}
       {theme ? (
         <>
           {/* Arène de boss (dédiée, thématisée) */}
           <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${theme.grad} p-4 text-center ring-1 ${theme.ring}`}>
             <div className={`animate-pulse text-[11px] font-black uppercase tracking-[0.28em] ${theme.text}`}>{theme.label}</div>
-            <div className="mt-2 grid place-items-center">
-              <div className={`grid h-20 w-20 place-items-center rounded-full bg-black/40 text-5xl ring-2 ${theme.ring} ${phpPct > 0 && fighting ? 'animate-pulseGlow' : ''}`}>
+            <div className="relative mt-2 grid place-items-center">
+              <Floaters items={floaters.filter((f) => f.side === 'enemy')} />
+              <div className={`grid h-20 w-20 place-items-center rounded-full bg-black/40 text-5xl ring-2 ${theme.ring} ${punch ? 'hit-punch' : phpPct > 0 && fighting ? 'animate-pulseGlow' : ''}`}>
                 {m.emoji}
               </div>
             </div>
@@ -340,7 +442,8 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
           </div>
 
           {/* Barre du joueur (pleine largeur sous l'arène) */}
-          <div className="rounded-lg bg-black/25 p-2">
+          <div className="relative rounded-lg bg-black/25 p-2">
+            <Floaters items={floaters.filter((f) => f.side === 'you')} />
             <div className="mb-1 flex items-center justify-between text-xs">
               <span className="font-semibold">
                 ⚔️ Toi
@@ -368,7 +471,8 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       ) : (
         /* HUD classique de chasse */
         <div className="flex items-stretch gap-2">
-          <div className="flex-1 rounded-lg bg-black/25 p-2">
+          <div className="relative flex-1 rounded-lg bg-black/25 p-2">
+            <Floaters items={floaters.filter((f) => f.side === 'you')} />
             <div className="mb-1 flex items-center justify-between text-xs">
               <span className="font-semibold">
                 ⚔️ Toi
@@ -393,10 +497,13 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
             )}
           </div>
           <div className="grid place-items-center text-xs text-slate-500">VS</div>
-          <div className="flex-1 rounded-lg bg-black/25 p-2">
+          <div className="relative flex-1 rounded-lg bg-black/25 p-2">
+            <Floaters items={floaters.filter((f) => f.side === 'enemy')} />
             <div className="mb-1 flex items-center justify-between text-xs">
               <span className="inline-flex items-center gap-1 font-semibold">
-                <MonsterIcon id={m.id} emoji={m.emoji} size={16} title={m.name} /> {m.name} {statusBadges}
+                <span className={punch ? 'hit-punch inline-flex' : 'inline-flex'}>
+                  <MonsterIcon id={m.id} emoji={m.emoji} size={16} title={m.name} />
+                </span> {m.name} {statusBadges}
               </span>
               <span className="tabular-nums text-slate-400">{Math.max(0, Math.round(monsterHp))}/{m.hp}</span>
             </div>
@@ -476,24 +583,27 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
           ) : (
             <>
               <button onClick={() => act('attack')} className="col-span-2 rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
-              {/* Réponses au télégraphe. Volontairement plus petites que les
-                  actions principales : ce sont des réactions ponctuelles, pas le
-                  cœur du combat. Celle qui répond à l'intention annoncée
-                  s'allume — c'est ce qui enseigne quand s'en servir, sans
-                  phrase d'explication. */}
+              {/* Réponses au télégraphe. Chacune porte SON effet en sous-titre :
+                  sans ça les deux se ressemblaient, et rien ne disait que
+                  l'interruption est un pari (elle punit si le monstre ne
+                  préparait rien) là où la parade ne peut jamais mal tourner.
+                  La parade s'allume sur un coup lourd (gros blocage = grosse
+                  riposte), l'interruption sur tout ce qui est annoncé. */}
               <button
                 onClick={() => act('parry')}
-                title="Tu ne frappes pas ce tour-ci, mais tu n'encaisses que 30% des dégâts."
-                className={`col-span-1 rounded-lg py-1.5 text-xs font-semibold transition ${intent === 'heavy' ? 'bg-sky-500/60 text-white ring-1 ring-sky-300 hover:bg-sky-500/80' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
+                title="Tu ne frappes pas, tu n'encaisses qu'un quart des dégâts et tu renvoies 70% de ce que tu as bloqué. Sans risque."
+                className={`col-span-1 flex flex-col items-center rounded-lg py-1.5 leading-tight transition ${intent === 'heavy' ? 'bg-sky-500/60 text-white ring-1 ring-sky-300 hover:bg-sky-500/80' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
               >
-                🛡️ Parer
+                <span className="text-xs font-semibold">🛡️ Parer</span>
+                <span className="text-[9px] opacity-70">encaisse ¼ · riposte</span>
               </button>
               <button
                 onClick={() => act('interrupt')}
-                title="Peu de dégâts, mais annule un coup lourd ou une incantation."
-                className={`col-span-1 rounded-lg py-1.5 text-xs font-semibold transition ${intent === 'special' ? 'bg-amber-500/60 text-white ring-1 ring-amber-300 hover:bg-amber-500/80' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
+                title="Annule le coup annoncé et étourdit (ouvre la Faille). Mais s'il ne préparait rien, tu te découvres et prends 50% de dégâts en plus."
+                className={`col-span-1 flex flex-col items-center rounded-lg py-1.5 leading-tight transition ${intent === 'heavy' || intent === 'special' ? 'bg-amber-500/60 text-white ring-1 ring-amber-300 hover:bg-amber-500/80' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
               >
-                ⚡ Interrompre
+                <span className="text-xs font-semibold">⚡ Interrompre</span>
+                <span className="text-[9px] opacity-70">annule · risqué</span>
               </button>
               {activeSkills.map(skill => {
                 const onCd = (skillCds[skill.id] || 0) > 0;
