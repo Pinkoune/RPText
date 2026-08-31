@@ -4,6 +4,52 @@ RPG textuel multijoueur web. **Vite + React + TypeScript + Tailwind + Zustand**,
 
 ---
 
+## Refonte saisonnière (branche `feat/Refonte-saison`) — fait (C)
+
+Grosse MAJ de rentrée, conçue à partir des **données réelles de la bêta de juillet**
+(Nv.20 en 2-3 jours, Nv.40 en 2,5 semaines, meilleur joueur arrêté au Nv.45).
+**Claude possède tout ce lot** (plus de répartition avec Gemini, à la demande de
+l'utilisateur). ⚠️ `firestore.rules` a changé → **à redéployer**.
+
+- **Courbe d'XP v5** (`classes.ts`) : end-game ×1.18 → **×1.12**. La tranche 40-50
+  pesait 81% du grind et 45→50 coûtait 1,3× le trajet 1→45 (≈7,5 semaines au rythme
+  observé). Divisé par ~2. Phases 1-30 inchangées (le Nv.20 ne pèse que 0,5%, sain).
+  ×1.10 écarté : il propulsait les joueurs de fin de bêta directement au niveau max.
+  Migration `relevel()` dans `migratePlayer` (v3→v4 puis v4→v5) qui **crédite les
+  points de talent** des niveaux gagnés — ce que la migration v4 omettait.
+- **Multi-personnages ×3** (`player.ts charKey/accountOf`, `CharacterSelect.tsx`,
+  `playerService.listCharacters/deleteCharacter`) : le **slot 0 garde la clé nue du
+  compte** → aucune migration Firestore. Slots 1-2 suffixés `uid__1`. ⚠️ Toutes les
+  règles Firestore passent par `ownsCharacter()` : les services envoient l'id du
+  **personnage** (`p.uid`), pas du compte. Statut Vétéran/Admin reste au slot 0.
+- **Saison + artefact** (`game/artifact.ts`, `firebase/seasonService.ts`,
+  `ArtifactCard.tsx`) : `system/season` piloté admin (bouton dans AdminModal). La
+  rotation ne touche **aucun personnage**, seul l'artefact repart à zéro. Puissance
+  `0.35*log10(1+level/10)` sans plafond ; grille de 17 mods (58 points) qui se
+  remplit vers le plafond de niveau. Les mods de combat passent par `CombatMods`
+  (agrégés dans `talentMods`) → actifs partout sans toucher les 12 sites d'appel.
+- **Chasse interactive** (`combat.ts`) : `MonsterIntent` (télégraphe annoncé au tour
+  précédent) + actions `parry`/`interrupt` ; **série de chasse** (`huntStreak`,
+  +2%/kill plafonné +40%, perdue à la mort).
+- **Camp** (`game/camp.ts`) : accumulation hors-ligne dès le Nv.5, plafond 12h.
+  L'XP passe par `grantXp` → alimente aussi l'artefact.
+- **Donjons à paliers** (`dungeonService.tierMult`, `p.dungeonTiers`) : +35%/palier
+  sur monstre ET récompense, un seul palier au-dessus du meilleur réussi.
+- **Fin du wipe au boss final** (`ascension.ts`) : la victoire donne un titre et
+  **ouvre** `applyRebirth`, déclenché par le joueur depuis PrestigeCard.
+- **UI** : `EquipmentCard` en paperdoll (silhouette + anneau de set + comparaison
+  avant équipement), arbre de talents à **liens de prérequis tracés** + aperçu du
+  gain, patch notes en **pastille discrète** (modale opt-in dans les Paramètres),
+  `AmbientRail` (4 pastilles max, lit la présence depuis le store — `PresenceTracker`
+  reste l'unique abonné), `WelcomeBackModal` (absence capturée dans le store **avant**
+  `savePlayer`, qui écrase `lastSeen`).
+
+**Abandonné et pourquoi** : niveau 100 (l'artefact le remplace sans réécrire courbe,
+monstres, donjons, arbres et paliers d'équipement) ; wipe saisonnier des personnages
+(la saison ne reset que l'artefact et les classements) ; CLI (projet à part).
+
+---
+
 ## Plan pré-reset (contenu end-game) — en cours
 
 Objectif : rendre le end-game (niv.22→50) attractif. 5 features :

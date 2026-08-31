@@ -30,6 +30,76 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'refonte-saison-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '👥 Trois personnages par compte',
+        kind: 'new',
+        items: [
+          'Tu peux désormais mener <b>jusqu\'à trois héros</b> en parallèle, chacun avec sa classe, son niveau et son équipement.',
+          'Envie d\'essayer une autre voie ? On crée un personnage — on ne détruit plus celui qu\'on a monté. Le changement de classe disparaît, remplacé par ça.',
+          'Un écran de sélection s\'affiche à la connexion, et le bouton 🔄 de la barre du haut permet d\'en changer en cours de partie.',
+        ],
+      },
+      {
+        title: '🔮 Saisons et artefact',
+        kind: 'new',
+        items: [
+          'Une <b>Relique de saison</b> accompagne désormais chaque personnage : une jauge unique qui monte sur <b>tout</b> ce que tu fais (chasse, donjon, récolte, forge) et qui, elle, ne s\'arrête jamais.',
+          'Chaque niveau donne un point à dépenser dans une grille de 17 mods répartis en 5 colonnes — dont de vraies mécaniques : Propagation (brûlures et poisons +50%), Écho de Faille, Sursis (survivre à un coup fatal), Forge économe, Moisson.',
+          'À chaque changement de saison, la Relique repart de zéro et les records sont archivés — mais <b>ton personnage n\'est jamais touché</b> : niveau, équipement et métiers restent acquis.',
+        ],
+      },
+      {
+        title: '⚔️ La chasse devient tactique',
+        kind: 'new',
+        items: [
+          'Le monstre <b>annonce son intention</b> pour le tour suivant : coup lourd, garde, incantation ou attaque simple.',
+          'Deux nouvelles réponses : <b>Parer</b> (tu ne frappes pas, mais tu n\'encaisses que 30% des dégâts) et <b>Interrompre</b> (peu de dégâts, mais tu annules son coup lourd ou son incantation). Frapper une garde ne fait que la moitié des dégâts.',
+          'Nouvelle <b>série de chasse</b> : chaque kill consécutif sans mourir renforce l\'XP et l\'or (jusqu\'à +40%). Elle est entièrement perdue si tu tombes.',
+        ],
+      },
+      {
+        title: '🏕️ Le camp et le repos',
+        kind: 'new',
+        items: [
+          'Dès le <b>niveau 5</b>, ton camp produit pendant ton absence (or, XP, ressource du biome), jusqu\'à 12h — de quoi récolter le midi et le soir.',
+          'Nouvelle commande <b>rest</b> : repos complet gratuit hors combat, toutes les 10 minutes. Plus de blocage quand on n\'a ni potion ni or.',
+          'Après une longue absence, un écran de retour résume ce qui t\'attend.',
+        ],
+      },
+      {
+        title: '🏰 Donjons à paliers',
+        kind: 'content',
+        items: [
+          'Chaque donjon peut désormais être relancé à des <b>paliers de difficulté croissants</b> : monstres et récompenses montent ensemble. Tout le contenu existant devient rejouable sans fin.',
+          'On ne peut tenter qu\'un palier au-dessus du meilleur réussi.',
+        ],
+      },
+      {
+        title: '⚖️ Le mur du niveau 40-50 est tombé',
+        kind: 'balance',
+        items: [
+          'La tranche 40→50 représentait <b>81% de tout le grind</b>, et passer du 45 au 50 coûtait à lui seul 1,3 fois le trajet du niveau 1 au 45. La courbe a été adoucie : le trajet complet est divisé par deux.',
+          'Les niveaux que ton XP déjà accumulée vaut sous la nouvelle courbe te sont rendus à la connexion, avec les points de talent correspondants.',
+          'Vaincre le <b>Néant Originel ne remet plus rien à zéro</b> : tu gardes tout et gagnes un titre. La Renaissance devient un choix, à saisir quand tu veux depuis la carte Prestige.',
+          'La série de connexion tolère désormais un jour manqué.',
+        ],
+      },
+      {
+        title: '✨ Interface',
+        kind: 'new',
+        items: [
+          'La carte <b>Équipement</b> est refondue : silhouette au centre, emplacements autour, anneau de set, usure visible sur l\'icône, et comparaison des stats avant d\'équiper.',
+          'L\'<b>arbre de talents</b> trace enfin ses liens de prérequis et affiche le gain réel du prochain point.',
+          'Les <b>nouveautés</b> ne s\'imposent plus au démarrage : une pastille 📰 discrète les signale (réactivable dans les Paramètres).',
+          'Un petit rail d\'infos apparaît en bas à droite : équipe, joueurs en ligne, artefact, raid ouvert.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'new-subclasses-v1',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [
