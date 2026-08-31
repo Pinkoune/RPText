@@ -217,6 +217,15 @@ export interface PlayerState {
   auraColorOn?: boolean;
   /** Nombre de prestiges accomplis (rituel des Abysses, Nv.50). Bonus permanent + insigne au classement. */
   prestigeLevel?: number;
+  /**
+   * Compte Google propriétaire du personnage. `uid` identifie le PERSONNAGE
+   * (clé du document), `accountUid` identifie le JOUEUR derrière — les deux sont
+   * identiques pour le slot 0, qui garde volontairement la clé nue du compte
+   * afin que les sauvegardes existantes continuent de fonctionner sans migration.
+   */
+  accountUid?: string;
+  /** Emplacement du personnage sur le compte (0, 1 ou 2). */
+  charSlot?: number;
   /** Cooldown (ms) avant nouvel essai du rituel de prestige après un échec. */
   ascensionCooldownUntil?: number;
   /** Nombre de fois où le Néant Originel a été vaincu (le triomphe, sans reset). */

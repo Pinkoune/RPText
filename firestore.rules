@@ -10,6 +10,24 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/players/$(request.auth.uid)).data.isAdmin == true;
     }
 
+    // Multi-personnages : un compte possède jusqu'à 3 personnages. Le slot 0
+    // garde la clé NUE du compte (compatibilité avec les sauvegardes d'avant le
+    // multi-personnages, donc aucune migration), les suivants sont suffixés.
+    // Les slots sont énumérés explicitement plutôt que découpés à la volée :
+    // c'est plus sûr qu'un split() si un uid contenait un jour « __ ».
+    //
+    // Toutes les vérifications d'identité du jeu passent par cette fonction et
+    // non par une comparaison directe à request.auth.uid : les services envoient
+    // l'identifiant du PERSONNAGE actif (p.uid), qui n'est égal au compte que
+    // pour le slot 0.
+    function ownsCharacter(charId) {
+      return request.auth != null && (
+        charId == request.auth.uid
+        || charId == request.auth.uid + '__1'
+        || charId == request.auth.uid + '__2'
+      );
+    }
+
     // Empêche un joueur de s'auto-octroyer / modifier le flag isAdmin.
     // Autorisé seulement si : le champ est absent, explicitement false, ou
     // inchangé par rapport au doc existant.
@@ -26,64 +44,69 @@ service cloud.firestore {
     }
     match /endlessScores/{scoreId} {
       allow read: if true;
-      // Chacun n'écrit que son propre score ; l'admin peut purger (wipe total).
-      allow write: if (request.auth != null && request.auth.uid == scoreId) || isAdminUser();
+      // Chacun n'écrit que le score de ses propres personnages ; l'admin peut
+      // purger (wipe total).
+      allow write: if ownsCharacter(scoreId) || isAdminUser();
     }
     match /endlessScoresMulti/{scoreId} {
       allow read: if true;
-      allow write: if (request.auth != null && request.auth.uid == scoreId) || isAdminUser();
+      allow write: if ownsCharacter(scoreId) || isAdminUser();
     }
 
-    // Chaque joueur écrit son propre document — mais NE PEUT PAS se déclarer
-    // admin (privilege escalation). Un admin peut écrire n'importe quel doc.
-    match /players/{uid} {
+    // Chaque joueur écrit ses propres documents de personnage — mais NE PEUT PAS
+    // se déclarer admin (privilege escalation). Un admin peut écrire n'importe
+    // quel doc. Note : isAdminUser() lit players/{auth.uid}, c'est-à-dire le
+    // slot 0 — le statut d'admin est donc bien attaché au compte, pas au perso.
+    match /players/{charId} {
       allow read: if request.auth != null;            // profils lisibles (classement, PvP)
       allow write: if isAdminUser()
-        || (request.auth != null && request.auth.uid == uid && adminFlagUntouched());
+        || (ownsCharacter(charId) && adminFlagUntouched());
     }
     // Classement public en lecture, écriture via le doc joueur seulement.
-    match /leaderboard/{uid} {
+    // Une ligne de classement par PERSONNAGE (et non par compte) : sinon posséder
+    // plusieurs personnages ferait perdre son rang à chaque changement.
+    match /leaderboard/{charId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && (request.auth.uid == uid || isAdminUser());
+      allow write: if ownsCharacter(charId) || isAdminUser();
     }
     // Duels coinflip : créés par un joueur, rejoignables par un autre.
     match /duels/{duelId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.hostUid == request.auth.uid;
+      allow create: if ownsCharacter(request.resource.data.hostUid);
       allow update: if request.auth != null;
     }
     // Marché : annonces créées par le vendeur, achetables/annulables par tout joueur connecté.
     match /market/{listingId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.sellerUid == request.auth.uid;
+      allow create: if ownsCharacter(request.resource.data.sellerUid);
       allow update: if request.auth != null;
     }
     // Card-Jitsu duels
     match /cj_duels/{duelId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.hostUid == request.auth.uid;
+      allow create: if ownsCharacter(request.resource.data.hostUid);
       allow update: if request.auth != null;
     }
     // Équipes : créées par l'hôte, rejoignables/quittables par les joueurs.
     // Suppression réservée à l'hôte (ou admin) pour éviter le griefing.
     match /teams/{teamId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.hostUid == request.auth.uid;
+      allow create: if ownsCharacter(request.resource.data.hostUid);
       allow update: if request.auth != null;
-      allow delete: if request.auth != null && (resource.data.hostUid == request.auth.uid || isAdminUser());
+      allow delete: if ownsCharacter(resource.data.hostUid) || isAdminUser();
     }
     // Guildes : fondées par l'owner, rejoignables/contributions par les joueurs.
     // Suppression réservée à l'owner (ou admin).
     match /guilds/{guildId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow create: if ownsCharacter(request.resource.data.ownerUid);
       allow update: if request.auth != null;
-      allow delete: if request.auth != null && (resource.data.ownerUid == request.auth.uid || isAdminUser());
+      allow delete: if ownsCharacter(resource.data.ownerUid) || isAdminUser();
     }
     // Dons de ressources : créés par l'expéditeur, encaissés (supprimés) par le destinataire.
     match /gifts/{giftId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.fromUid == request.auth.uid;
+      allow create: if ownsCharacter(request.resource.data.fromUid);
       allow update, delete: if request.auth != null;
     }
   }

@@ -48,6 +48,7 @@ function EventPill({ e, onClick }: { e: EventDef; onClick: () => void }) {
 export default function Topbar() {
   const player = useGame((s) => s.player);
   const logout = useGame((s) => s.logout);
+  const backToSelect = useGame((s) => s.backToSelect);
   const hasUnreadChat = useGame((s) => s.hasUnreadChat);
   const open = useUi((s) => s.open);
   const { now, phase } = useClock();
@@ -178,6 +179,13 @@ export default function Topbar() {
             className="rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
           >
             {muted ? '🔇' : '🔊'}
+          </button>
+          <button
+            onClick={() => void backToSelect()}
+            title="Changer de personnage"
+            className="rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
+          >
+            🔄
           </button>
           <button
             onClick={logout}

@@ -107,6 +107,10 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (p.endlessSessionId === undefined) p.endlessSessionId = null;
   if (!p.settledPvpDuels) p.settledPvpDuels = [];
   if (p.pvpDuelSessionId === undefined) p.pvpDuelSessionId = null;
+  // Personnages d'avant le multi-slot : ils occupent de fait l'emplacement 0,
+  // dont la clé est celle du compte.
+  if (p.accountUid === undefined) p.accountUid = accountOf(p.uid);
+  if (p.charSlot === undefined) p.charSlot = p.uid.includes('__') ? Number(p.uid.split('__')[1]) || 0 : 0;
   if (p.prestigeLevel === undefined) p.prestigeLevel = 0;
   if (p.neantVictories === undefined) p.neantVictories = 0;
   if (p.rebirthAvailable === undefined) p.rebirthAvailable = false;
@@ -477,16 +481,38 @@ export function migratePlayer(p: PlayerState): PlayerState {
   return p;
 }
 
+/** Nombre d'emplacements de personnage par compte. */
+export const MAX_CHARACTERS = 3;
+
+/**
+ * Clé de document d'un personnage. Le slot 0 garde la clé NUE du compte : les
+ * sauvegardes d'avant le multi-personnages restent donc valides telles quelles,
+ * sans migration Firestore. Les slots suivants sont suffixés.
+ */
+export function charKey(accountUid: string, slot: number): string {
+  return slot === 0 ? accountUid : `${accountUid}__${slot}`;
+}
+
+/** Compte propriétaire d'une clé de personnage (inverse de `charKey`). */
+export function accountOf(charId: string): string {
+  const i = charId.indexOf('__');
+  return i === -1 ? charId : charId.slice(0, i);
+}
+
 export function createPlayer(
-  uid: string,
+  accountUid: string,
   name: string,
   photoURL: string | null,
   classId: ClassId,
+  slot = 0,
 ): PlayerState {
   const cls = CLASSES[classId];
   const weapon = starterWeapon(classId);
+  const uid = charKey(accountUid, slot);
   const p: PlayerState = {
     uid,
+    accountUid,
+    charSlot: slot,
     name,
     photoURL: photoURL ?? null,
     classId,

@@ -5,6 +5,7 @@ import { watchNotifications } from './firebase/chatService';
 import Background from './components/Background';
 import Login from './components/Login';
 import ClassSelect from './components/ClassSelect';
+import CharacterSelect from './components/CharacterSelect';
 import Topbar from './components/Topbar';
 import CommandBar from './components/CommandBar';
 import MobileNav from './components/MobileNav';
@@ -121,6 +122,7 @@ export default function App() {
   }
 
   if (status === 'login') return <Login />;
+  if (status === 'select') return <CharacterSelect />;
   if (status === 'create') return <ClassSelect />;
 
   // status === 'ready'
