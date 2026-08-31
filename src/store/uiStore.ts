@@ -37,6 +37,7 @@ export type WindowKind =
   | 'forgeron'
   | 'prestige'
   | 'artifact'
+  | 'notifications'
   | 'ascension'
   | 'endless'
   | 'concoction'

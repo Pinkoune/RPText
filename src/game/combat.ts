@@ -170,18 +170,17 @@ export type HuntAction = 'attack' | 'potion' | 'flee' | 'parry' | 'interrupt' | 
  * C'est ce qui transforme la chasse en suite de décisions : sans elle, chaque
  * tour avait la même réponse optimale (compétence si dispo, sinon Attaquer) et
  * le monstre n'était qu'un sac de PV qui ripostait.
- *  - `heavy`   : gros coup — parer ou interrompre, sinon ça fait très mal
- *  - `guard`   : le monstre se protège — inutile de dépenser un gros coup
- *  - `special` : il prépare une altération — l'interruption l'annule
- *  - `quick`   : attaque banale — c'est le moment d'être gourmand
+ * L'interface se contente d'annoncer l'intention et de mettre en valeur la
+ * réponse pertinente : c'est au joueur de faire le lien, pas à une phrase
+ * d'explication de le lui mâcher.
  */
 export type MonsterIntent = 'quick' | 'heavy' | 'guard' | 'special';
 
-export const INTENT_INFO: Record<MonsterIntent, { icon: string; label: string; hint: string; color: string }> = {
-  quick:   { icon: '👊', label: 'Attaque simple', hint: 'Rien à craindre — sois gourmand.', color: '#94a3b8' },
-  heavy:   { icon: '💢', label: 'Coup lourd',     hint: 'Gros dégâts. Pare ou interromps !', color: '#f4738d' },
-  guard:   { icon: '🛡️', label: 'Garde',          hint: 'Il encaisse mieux : garde ton gros coup.', color: '#8cb4ff' },
-  special: { icon: '🌀', label: 'Incantation',    hint: 'Il prépare une altération. Interromps-le.', color: '#b088ff' },
+export const INTENT_INFO: Record<MonsterIntent, { icon: string; label: string; color: string }> = {
+  quick:   { icon: '👊', label: 'Attaque simple', color: '#94a3b8' },
+  heavy:   { icon: '💢', label: 'Coup lourd',     color: '#f4738d' },
+  guard:   { icon: '🛡️', label: 'Garde',          color: '#8cb4ff' },
+  special: { icon: '🌀', label: 'Incantation',    color: '#b088ff' },
 };
 
 export interface TurnEvent {

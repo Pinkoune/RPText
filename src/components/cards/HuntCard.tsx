@@ -403,46 +403,38 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
             <div className="h-2 overflow-hidden rounded bg-black/40">
               <div className="h-2 rounded bg-orange-400 transition-all duration-300" style={{ width: `${mhpPct}%` }} />
             </div>
+            {/* Télégraphe : ce que le monstre prépare. Logé sous SA barre plutôt
+                qu'en bandeau séparé — c'est son information, pas la tienne. */}
+            {intent && (
+              <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: INTENT_INFO[intent].color }}>
+                <span className={intent === 'heavy' ? 'animate-pulse' : ''}>{INTENT_INFO[intent].icon}</span>
+                {INTENT_INFO[intent].label}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Télégraphe : ce que le monstre s'apprête à faire au prochain tour.
-          C'est l'information qui rend Parer/Interrompre pertinents. */}
-      {fighting && intent && (
-        <div
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
-          style={{ background: `${INTENT_INFO[intent].color}1f`, border: `1px solid ${INTENT_INFO[intent].color}55` }}
-        >
-          <span className={`text-lg leading-none ${intent === 'heavy' ? 'animate-pulse' : ''}`}>{INTENT_INFO[intent].icon}</span>
-          <div className="min-w-0">
-            <div className="font-bold" style={{ color: INTENT_INFO[intent].color }}>{m.name} — {INTENT_INFO[intent].label}</div>
-            <div className="text-[11px] text-slate-400">{INTENT_INFO[intent].hint}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Bandeau tactique : efficacité d'arme + faille + maîtrise du biome */}
+      {/* Une seule ligne d'état : série, arme, faille, maîtrise. Trois bandeaux
+          séparés surchargeaient l'écran pour une information de coin d'œil. */}
       {fighting && (
-        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
           {(p.huntStreak ?? 0) > 0 && (
             <span
-              className="rounded px-2 py-0.5 font-bold"
-              style={{ background: 'rgba(226,145,63,0.2)', color: '#e2913f' }}
-              title={`Série de ${p.huntStreak} kills sans mourir — XP et or multipliés. Elle se perd à la mort.`}
+              className="font-bold"
+              style={{ color: '#e2913f' }}
+              title={`Série de ${p.huntStreak} kills sans mourir — XP et or multipliés (+${Math.round((huntStreakMult(p) - 1) * 100)}%). Perdue à la mort.`}
             >
-              🔥 Série ×{p.huntStreak}
-              {` (+${Math.round((huntStreakMult(p) - 1) * 100)}%)`}
-              {(p.huntStreak ?? 0) >= HUNT_STREAK_CAP ? ' MAX' : ''}
+              🔥 ×{p.huntStreak}{(p.huntStreak ?? 0) >= HUNT_STREAK_CAP ? ' MAX' : ''}
             </span>
           )}
-          <span className={`rounded px-2 py-0.5 font-medium ${effBadge.cls}`} title={effBadge.tip}>{effBadge.txt}</span>
-          {vulnActive && <span className="rounded px-2 py-0.5 font-bold bg-amber-400 text-black animate-pulse" title="Monstre sous contrôle : tes coups infligent +50% de dégâts">⚡ FAILLE — burst !</span>}
-          <span className="ml-auto inline-flex items-center gap-1.5 text-slate-400" title={mastery.next ? `${mastery.into}/${mastery.need} vers le palier suivant` : 'Maîtrise maximale'}>
-            🏅 {BIOMES[p.biome as keyof typeof BIOMES]?.name ?? p.biome} · {mastery.label}
-            {mastery.bonus > 0 && <span className="text-emerald-300">+{Math.round(mastery.bonus * 100)}% XP/Or</span>}
+          <span className={`rounded px-1.5 py-0.5 ${effBadge.cls}`} title={effBadge.tip}>{effBadge.txt}</span>
+          {vulnActive && <span className="rounded bg-amber-400 px-1.5 py-0.5 font-bold text-black animate-pulse" title="Monstre sous contrôle : tes coups infligent +50% de dégâts">⚡ FAILLE</span>}
+          <span className="ml-auto inline-flex items-center gap-1.5 text-slate-500" title={mastery.next ? `${mastery.into}/${mastery.need} vers le palier suivant` : 'Maîtrise maximale'}>
+            🏅 {mastery.label}
+            {mastery.bonus > 0 && <span className="text-emerald-300">+{Math.round(mastery.bonus * 100)}%</span>}
             {mastery.next != null && (
-              <span className="inline-block h-1.5 w-16 overflow-hidden rounded bg-black/40 align-middle">
+              <span className="inline-block h-1.5 w-10 overflow-hidden rounded bg-black/40 align-middle">
                 <span className="block h-full rounded bg-amber-400" style={{ width: `${Math.min(100, (mastery.into / mastery.need) * 100)}%` }} />
               </span>
             )}
@@ -483,20 +475,23 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
             </div>
           ) : (
             <>
-              <button onClick={() => act('attack')} className="col-span-1 rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
-              {/* Réponses au télégraphe : elles n'ont d'intérêt que face à une
-                  intention annoncée, d'où le surlignage quand elle tombe bien. */}
+              <button onClick={() => act('attack')} className="col-span-2 rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
+              {/* Réponses au télégraphe. Volontairement plus petites que les
+                  actions principales : ce sont des réactions ponctuelles, pas le
+                  cœur du combat. Celle qui répond à l'intention annoncée
+                  s'allume — c'est ce qui enseigne quand s'en servir, sans
+                  phrase d'explication. */}
               <button
                 onClick={() => act('parry')}
-                title="Tu ne frappes pas, mais tu n'encaisses que 30% des dégâts ce tour-ci."
-                className={`col-span-1 rounded-lg py-2.5 text-sm font-bold ${intent === 'heavy' ? 'bg-sky-500/60 ring-1 ring-sky-300 hover:bg-sky-500/80' : 'bg-sky-500/25 hover:bg-sky-500/45'}`}
+                title="Tu ne frappes pas ce tour-ci, mais tu n'encaisses que 30% des dégâts."
+                className={`col-span-1 rounded-lg py-1.5 text-xs font-semibold transition ${intent === 'heavy' ? 'bg-sky-500/60 text-white ring-1 ring-sky-300 hover:bg-sky-500/80' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
               >
                 🛡️ Parer
               </button>
               <button
                 onClick={() => act('interrupt')}
                 title="Peu de dégâts, mais annule un coup lourd ou une incantation."
-                className={`col-span-1 rounded-lg py-2.5 text-sm font-bold ${intent === 'special' || intent === 'heavy' ? 'bg-amber-500/60 ring-1 ring-amber-300 hover:bg-amber-500/80' : 'bg-amber-500/25 hover:bg-amber-500/45'}`}
+                className={`col-span-1 rounded-lg py-1.5 text-xs font-semibold transition ${intent === 'special' ? 'bg-amber-500/60 text-white ring-1 ring-amber-300 hover:bg-amber-500/80' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
               >
                 ⚡ Interrompre
               </button>
@@ -533,6 +528,14 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
                 🧪 Potion ({potionCount})
               </button>
               <button onClick={() => act('flee')} className="rounded-lg bg-slate-500/30 py-2.5 text-sm font-bold hover:bg-slate-500/50">🏃 Fuir</button>
+              {activeSkills.length === 0 && (
+                <button
+                  onClick={() => useUi.getState().open('talents', undefined, { singleton: true })}
+                  className="col-span-2 rounded-lg border border-dashed border-white/15 py-1.5 text-[11px] text-slate-500 hover:border-sky-400/40 hover:text-sky-300"
+                >
+                  Aucune compétence équipée — ouvrir l'arbre de talents
+                </button>
+              )}
             </>
           )}
         </div>

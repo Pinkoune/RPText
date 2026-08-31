@@ -292,14 +292,14 @@ export const TALENTS: TalentDef[] = [
 
   // --- Passifs avancés (end-game, niv.30+) — permettent d'absorber les points en excès ---
   // Guerrier
-  { id: 'w_endure', classId: 'warrior', name: 'Endurance', icon: '💪', desc: '+3% PV max par rang.', maxRank: 5, requires: ['w_might'], pos: { x: 2, y: 2 }, perRank: { hpPct: 0.03 } },
+  { id: 'w_endure', classId: 'warrior', name: 'Endurance', icon: '💪', desc: '+3% PV max par rang.', maxRank: 5, requires: ['w_might'], pos: { x: 3, y: 2 }, perRank: { hpPct: 0.03 } },
   { id: 'w_mastery', classId: 'warrior', name: 'Maîtrise guerrière', icon: '⚔️', desc: '+3% ATK par rang.', maxRank: 5, requires: ['w_bulwark'], pos: { x: -2, y: 3 }, perRank: { atkPct: 0.03 } },
   // Mage
   { id: 'm_arcana', classId: 'mage', name: 'Arcane profonde', icon: '✨', desc: '+3% ATK par rang.', maxRank: 5, requires: ['m_overload'], pos: { x: -2, y: 3 }, perRank: { atkPct: 0.03 } },
-  { id: 'm_resilience', classId: 'mage', name: 'Résilience', icon: '🛡️', desc: '+3% PV max par rang.', maxRank: 5, requires: ['m_ward'], pos: { x: 2, y: 2 }, perRank: { hpPct: 0.03 } },
+  { id: 'm_resilience', classId: 'mage', name: 'Résilience', icon: '🛡️', desc: '+3% PV max par rang.', maxRank: 5, requires: ['m_ward'], pos: { x: 3, y: 2 }, perRank: { hpPct: 0.03 } },
   // Archer
   { id: 'a_swiftness', classId: 'archer', name: 'Agilité', icon: '💨', desc: '+3% esquive par rang.', maxRank: 5, requires: ['a_lethal'], pos: { x: -2, y: 3 }, perRank: { dodge: 0.03 } },
-  { id: 'a_sharpshoot', classId: 'archer', name: 'Tir maîtrisé', icon: '🎯', desc: '+3% critique par rang.', maxRank: 5, requires: ['a_hawk'], pos: { x: 2, y: 2 }, perRank: { crit: 0.03 } },
+  { id: 'a_sharpshoot', classId: 'archer', name: 'Tir maîtrisé', icon: '🎯', desc: '+3% critique par rang.', maxRank: 5, requires: ['a_hawk'], pos: { x: 3, y: 2 }, perRank: { crit: 0.03 } },
   // Soigneur
   { id: 'h_endurance', classId: 'healer', name: 'Endurance sacrée', icon: '💪', desc: '+3% PV max par rang.', maxRank: 5, requires: ['h_zeal'], pos: { x: -2, y: 3 }, perRank: { hpPct: 0.03 } },
   { id: 'h_devotion', classId: 'healer', name: 'Dévotion', icon: '💙', desc: '+3% DEF par rang.', maxRank: 5, requires: ['h_grace'], pos: { x: 2, y: 3 }, perRank: { defPct: 0.03 } },

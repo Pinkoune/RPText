@@ -171,16 +171,35 @@ export default function TalentCard() {
     const maxX = Math.max(...xs);
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
-    const cols = maxX - minX + 1;
     const rows = maxY - minY + 1;
-    const width = cols * CELL_W - GAP_X;
     const height = rows * CELL_H - GAP_Y;
 
-    const left = (t: TalentDef) => (t.pos.x - minX) * CELL_W;
+    // Garde-fou anti-superposition. Les coordonnées sont écrites à la main dans
+    // talents.ts, et 12 sous-classes sur 16 avaient deux nœuds sur la MÊME case
+    // — invisible tant que l'affichage empilait des rangées, mais superposé dès
+    // qu'on positionne vraiment. Les données sont corrigées, et ici on décale en
+    // plus tout doublon vers la colonne libre la plus proche : une erreur de
+    // saisie future rendra l'arbre un peu asymétrique, jamais illisible.
+    const colOf = new Map<string, number>();
+    const takenByRow = new Map<number, Set<number>>();
+    for (const t of [...nodes].sort((a, b) => a.pos.y - b.pos.y || a.pos.x - b.pos.x)) {
+      const taken = takenByRow.get(t.pos.y) ?? new Set<number>();
+      let col = t.pos.x;
+      for (let d = 1; taken.has(col); d++) col = taken.has(t.pos.x + d) ? t.pos.x - d : t.pos.x + d;
+      taken.add(col);
+      takenByRow.set(t.pos.y, taken);
+      colOf.set(t.id, col);
+    }
+    const allCols = [...colOf.values()];
+    const gridMinX = Math.min(minX, ...allCols);
+    const gridMaxX = Math.max(maxX, ...allCols);
+
+    const left = (t: TalentDef) => ((colOf.get(t.id) ?? t.pos.x) - gridMinX) * CELL_W;
     const top = (t: TalentDef) => (t.pos.y - minY) * CELL_H;
     const cx = (t: TalentDef) => left(t) + NODE_W / 2;
 
     const byId = new Map(nodes.map((t) => [t.id, t]));
+    const width = (gridMaxX - gridMinX + 1) * CELL_W - GAP_X;
 
     return (
       <div className="overflow-x-auto pb-1">

@@ -1,7 +1,6 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useLayoutEffect, useRef } from 'react';
 import { useGame } from '../store/gameStore';
 import { useClock } from '../hooks/useClock';
-import { isMuted, toggleMute } from '../game/sound';
 import { BIOMES } from '../game/biomes';
 import { CLASSES, xpToNext } from '../game/classes';
 import { PHASE_EMOJI, PHASE_LABEL } from '../game/daynight';
@@ -9,7 +8,8 @@ import { deriveStats } from '../game/player';
 import { useUi } from '../store/uiStore';
 import { currentGlobalEvent, currentBiomeEvent, type EventDef } from '../game/events';
 import { auraColor } from '../game/prestige';
-import { hasUnreadPatch } from './PatchNotesModal';
+import { notificationCount } from './cards/NotificationsCard';
+import { seasonTheme } from '../game/artifact';
 
 function Pill({ icon, value, title, className = '' }: { icon: string; value: string | number; title: string; className?: string }) {
   return (
@@ -48,21 +48,19 @@ function EventPill({ e, onClick }: { e: EventDef; onClick: () => void }) {
 
 export default function Topbar() {
   const player = useGame((s) => s.player);
-  const logout = useGame((s) => s.logout);
-  const backToSelect = useGame((s) => s.backToSelect);
-  const [unread, setUnread] = useState(hasUnreadPatch());
-  // La lecture peut venir d'ailleurs (ouverture de la carte News par commande) :
-  // on ecoute l'evenement plutot que de dupliquer l'etat.
-  useEffect(() => {
-    const h = () => setUnread(false);
-    window.addEventListener('rptext:patch-seen', h);
-    return () => window.removeEventListener('rptext:patch-seen', h);
-  }, []);
   const hasUnreadChat = useGame((s) => s.hasUnreadChat);
   const open = useUi((s) => s.open);
   const { now, phase } = useClock();
-  const [muted, setMuted] = useState(isMuted());
   const barRef = useRef<HTMLDivElement>(null);
+  // Recalculé quand le chat change OU quand les nouveautés sont marquées lues
+  // (l'état vit dans localStorage, d'où l'écoute d'événement).
+  const [patchTick, setPatchTick] = useState(0);
+  useEffect(() => {
+    const h = () => setPatchTick((n) => n + 1);
+    window.addEventListener('rptext:patch-seen', h);
+    return () => window.removeEventListener('rptext:patch-seen', h);
+  }, []);
+  const notifCount = useMemo(() => notificationCount(hasUnreadChat), [hasUnreadChat, patchTick]);
 
   // Expose la hauteur réelle de la barre (elle peut passer sur 2-3 lignes) pour
   // que les fenêtres mobiles démarrent juste en dessous, sans chevauchement.
@@ -83,6 +81,7 @@ export default function Topbar() {
   const cls = CLASSES[player.classId];
   const globalEvent = currentGlobalEvent(now.getTime());
   const biomeEvent = currentBiomeEvent(player.biome, now.getTime());
+  const artTheme = seasonTheme(player.artifact?.season);
   const stats = deriveStats(player); // stats.hp est déjà clampé à maxHp (contrairement à player.hp brut)
   const hpPct = Math.max(0, Math.min(100, Math.round((stats.hp / stats.maxHp) * 100)));
   const xpPct = Math.max(0, Math.min(100, Math.round((player.xp / xpToNext(player.level)) * 100)));
@@ -103,19 +102,10 @@ export default function Topbar() {
               Nv.{player.level} {cls.name}
             </div>
           </div>
-          {/* Or (+ Fate à partir du niv.10) : haut-droite sur mobile uniquement */}
+          {/* Or : haut-droite sur mobile uniquement. Les Fate Coins ont quitté la
+              barre (ils restent au Profil et à la Boutique du Destin). */}
           <div className="ml-auto flex items-center gap-1.5 sm:hidden">
             <Pill icon="🪙" value={player.gold} title="Or" />
-            {player.level >= 10 && (
-              <button
-                onClick={() => open('fateshop', undefined, { singleton: true })}
-                title="Fate Coins — clic pour ouvrir la Boutique du Destin"
-                className="flex items-center gap-1 rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-fuchsia-500/30"
-              >
-                <span>🎲</span>
-                <span className="font-semibold tabular-nums">{player.fateCoins}</span>
-              </button>
-            )}
           </div>
         </div>
 
@@ -160,57 +150,32 @@ export default function Topbar() {
             </div>
           )}
           <Pill icon="🪙" value={player.gold} title="Or" className="hidden sm:flex" />
-          {player.level >= 10 && (
-            <button
-              onClick={() => open('fateshop', undefined, { singleton: true })}
-              title="Fate Coins — clic pour ouvrir la Boutique du Destin"
-              className="hidden items-center gap-1 rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-fuchsia-500/30 sm:flex sm:text-sm"
-            >
-              <span>🎲</span>
-              <span className="font-semibold tabular-nums">{player.fateCoins}</span>
-            </button>
-          )}
           <Pill icon={PHASE_EMOJI[phase]} value={now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} title={PHASE_LABEL[phase]} />
           <Pill icon={biome.emoji} value={biome.name.split(' ')[0]} title={biome.name} />
-          {hasUnreadChat && (
-            <button
-              onClick={() => open('chat', undefined, { singleton: true })}
-              title="Chat — nouveau message"
-              className="relative rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
-            >
-              💬
-              <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-[#0b1020] animate-pulse" />
-            </button>
-          )}
+          {/* Artefact de saison : la seule jauge qui avance en permanence, donc
+              la seule qui mérite un accès direct depuis la barre. */}
           <button
-            onClick={() => setMuted(toggleMute())}
-            title={muted ? 'Activer le son' : 'Couper le son'}
-            className="rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
+            onClick={() => open('artifact', undefined, { singleton: true })}
+            title={`${artTheme.artifactName} — niveau ${player.artifact?.level ?? 0}`}
+            className="flex items-center gap-1 rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
           >
-            {muted ? '🔇' : '🔊'}
+            <span>{artTheme.emoji}</span>
+            <span className="font-semibold tabular-nums" style={{ color: artTheme.color }}>{player.artifact?.level ?? 0}</span>
           </button>
-          {/* Nouveautes : pastille discrete au lieu d'une modale bloquante. */}
+          {/* Bouton de notifications PERSISTANT : messages et mises à jour au
+              même endroit. Avant, chaque source avait son bouton qui
+              apparaissait puis disparaissait, et la barre bougeait sans cesse. */}
           <button
-            onClick={() => { open('news', undefined, { singleton: true }); setUnread(false); }}
-            title={unread ? 'Nouveautés non lues' : 'Nouveautés'}
+            onClick={() => open('notifications', undefined, { singleton: true })}
+            title={notifCount > 0 ? `${notifCount} notification${notifCount > 1 ? 's' : ''}` : 'Aucune notification'}
             className="relative rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
           >
-            📰
-            {unread && <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-sky-400 ring-1 ring-[#0b1020]" />}
-          </button>
-          <button
-            onClick={() => void backToSelect()}
-            title="Changer de personnage"
-            className="rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
-          >
-            🔄
-          </button>
-          <button
-            onClick={logout}
-            title="Se déconnecter"
-            className="rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-rose-500/40"
-          >
-            ⏻
+            🔔
+            {notifCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white ring-2 ring-[#0b1020]">
+                {notifCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
