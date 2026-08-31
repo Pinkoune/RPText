@@ -8,7 +8,8 @@ import { loadPlayer, savePlayer, watchGlobalWipe, listCharacters, deleteCharacte
 import { touchPresence } from '../firebase/socialService';
 import { isFirebaseConfigured } from '../firebase/config';
 import { sendAutoAnnounce } from '../firebase/chatService';
-import { leaveTeam } from '../firebase/groupsService';
+import { leaveTeam, type Team } from '../firebase/groupsService';
+import type { OnlinePlayer } from '../firebase/socialService';
 import { fetchSeason, watchSeason } from '../firebase/seasonService';
 import { getCurrentSeason } from '../game/artifact';
 
@@ -88,6 +89,15 @@ interface GameState {
   setActiveChatView: (v: { tab: ChatChannelKind; dmPeer?: string } | null) => void;
   inCombat: boolean;
   setInCombat: (val: boolean) => void;
+  /**
+   * Joueurs en ligne et equipes, publies par PresenceTracker (unique
+   * abonne). Tout autre composant qui en a besoin lit ici : un second
+   * `trackPresence` reecrirait la presence et poserait un deuxieme
+   * onDisconnect sur le meme noeud.
+   */
+  onlinePlayers: OnlinePlayer[];
+  teams: Team[];
+  setPresence: (online: OnlinePlayer[], teams: Team[]) => void;
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -111,6 +121,9 @@ export const useGame = create<GameState>((set, get) => ({
   clearAway: () => set({ awayMs: 0 }),
   inCombat: false,
   setInCombat: (val) => set({ inCombat: val }),
+  onlinePlayers: [],
+  teams: [],
+  setPresence: (onlinePlayers, teams) => set({ onlinePlayers, teams }),
 
   celebrateLevelUp: () => set((s) => ({ levelCelebration: s.levelCelebration + 1 })),
   setDailyReward: (dailyReward) => set({ dailyReward }),

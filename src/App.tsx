@@ -27,6 +27,7 @@ import { setForcedRaid } from './game/raid';
 import PresenceTracker from './components/PresenceTracker';
 import BaitTimer from './components/BaitTimer';
 import RaidBanner from './components/RaidBanner';
+import AmbientRail from './components/AmbientRail';
 
 export default function App() {
   const status = useGame((s) => s.status);
@@ -143,6 +144,7 @@ export default function App() {
       <SeasonRewardModal />
       <BaitTimer />
       <RaidBanner />
+      <AmbientRail />
     </div>
   );
 }
