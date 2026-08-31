@@ -36,6 +36,7 @@ export type WindowKind =
   | 'enchant'
   | 'forgeron'
   | 'prestige'
+  | 'artifact'
   | 'ascension'
   | 'endless'
   | 'concoction'

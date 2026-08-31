@@ -9,6 +9,8 @@ import { touchPresence } from '../firebase/socialService';
 import { isFirebaseConfigured } from '../firebase/config';
 import { sendAutoAnnounce } from '../firebase/chatService';
 import { leaveTeam } from '../firebase/groupsService';
+import { fetchSeason, watchSeason } from '../firebase/seasonService';
+import { getCurrentSeason } from '../game/artifact';
 
 export type Status = 'loading' | 'login' | 'select' | 'create' | 'ready';
 
@@ -83,6 +85,7 @@ interface GameState {
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let wipeUnsub: (() => void) | null = null;
+let seasonUnsub: (() => void) | null = null;
 let toastId = 0;
 let chatNotifId = 0;
 
@@ -122,6 +125,16 @@ export const useGame = create<GameState>((set, get) => ({
         setTimeout(() => window.location.reload(), 1200);
       });
       try {
+        // La saison doit être connue AVANT de charger un personnage : c'est
+        // `migratePlayer` qui fait tourner l'artefact, et il lui faut le bon
+        // numéro sous peine de remettre l'artefact à zéro à tort.
+        await fetchSeason();
+        seasonUnsub?.();
+        seasonUnsub = watchSeason((info) => {
+          if (info.number === getCurrentSeason()) return;
+          get().toast(`Une nouvelle saison commence ! Rechargement…`, 'gold');
+          setTimeout(() => window.location.reload(), 1500);
+        });
         const slots = await listCharacters(user.uid);
         const existing = slots.filter((s) => s.player);
         set({ characters: slots });

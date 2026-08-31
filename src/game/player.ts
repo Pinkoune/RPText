@@ -9,6 +9,7 @@ import { talentMods } from './talents';
 import { activeEventEffect } from './events';
 import { ensureSeason, seasonId } from './season';
 import { prestigeBonus } from './prestige';
+import { freshArtifact, rotateSeason, artifactPowerPct, grantArtifactXp } from './artifact';
 
 /** Incrémenter force un reset unique des talents de tous les joueurs (bugfix). */
 export const TALENT_RESET_VERSION = 3;
@@ -114,6 +115,10 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (p.prestigeLevel === undefined) p.prestigeLevel = 0;
   if (p.neantVictories === undefined) p.neantVictories = 0;
   if (p.rebirthAvailable === undefined) p.rebirthAvailable = false;
+  // Artefact de saison : créé au besoin, puis remis à zéro si la saison a
+  // tourné depuis la dernière connexion (le personnage, lui, n'est pas touché).
+  if (!p.artifact) p.artifact = freshArtifact();
+  rotateSeason(p);
   if (p.classChangeTokens === undefined) p.classChangeTokens = 0;
   if (p.playtimeMs === undefined) p.playtimeMs = 0;
   if (p.cjWins == null) p.cjWins = 0;
@@ -703,9 +708,12 @@ export function deriveStats(p: PlayerState, skipEquipCheck = false): Stats {
   // Bonus permanent de prestige (rituel Nv.50) : +8% ATK/DEF/PV par prestige,
   // plafonné à 5 (voir ascension.ts PRESTIGE_BONUS_PER_LEVEL / MAX_PRESTIGE_STACK).
   const presMult = 1 + Math.min(p.prestigeLevel ?? 0, 5) * 0.08;
-  atk = Math.round(atk * (1 + mods.atkPct + evt.atkPct + setAtkPct + enchAtkPct + prestige.atkPct) * presMult);
-  def = Math.round(def * (1 + mods.defPct + evt.defPct + setDefPct + enchDefPct + prestige.defPct) * presMult);
-  maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct + setHpPct + enchHpPct + prestige.hpPct) * presMult);
+  // Artefact de saison : progression sans fin qui prend le relais du niveau une
+  // fois le plafond atteint. Logarithmique, donc sans plafond mais sans dérive.
+  const artMult = 1 + artifactPowerPct(p.artifact?.level ?? 0);
+  atk = Math.round(atk * (1 + mods.atkPct + evt.atkPct + setAtkPct + enchAtkPct + prestige.atkPct) * presMult * artMult);
+  def = Math.round(def * (1 + mods.defPct + evt.defPct + setDefPct + enchDefPct + prestige.defPct) * presMult * artMult);
+  maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct + setHpPct + enchHpPct + prestige.hpPct) * presMult * artMult);
 
 
   return { level: p.level, maxHp, atk, def, hp: Math.min(p.hp, maxHp), maxCp, maxGp, weaponElement,
@@ -851,6 +859,10 @@ export function applyBonuses(p: PlayerState, base: { xp: number; gold: number })
 
 /** Applique de l'XP et gère les montées de niveau. Retourne les niveaux gagnés. */
 export function grantXp(p: PlayerState, amount: number): number {
+  // L'artefact avance sur la MÊME XP que le personnage : une seule jauge qui
+  // monte quoi que le joueur fasse, et qui continue d'avancer une fois le
+  // niveau 50 atteint (où `p.xp` ne sert plus à rien).
+  grantArtifactXp(p, amount);
   p.xp += amount;
   let gained = 0;
   while (p.xp >= xpToNext(p.level)) {

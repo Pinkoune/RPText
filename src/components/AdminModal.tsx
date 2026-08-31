@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useGame } from '../store/gameStore';
 import type { PlayerState } from '../game/types';
 import { getAllPlayers, updatePlayerAdmin, wipeAllChats, wipeEndlessScores, resetPvpSeason, triggerFullWipe, cleanupOrphanedPlayers } from '../firebase/adminService';
+import { advanceSeason } from '../firebase/seasonService';
 import { broadcastRaid } from '../firebase/raidService';
 import { listenGuilds, leaveGuild, adminForceJoinGuild, GUILD_MAX, type Guild } from '../firebase/groupsService';
 import { ITEMS, getItem } from '../game/items';
@@ -374,6 +375,16 @@ export function AdminModal() {
                 try { await broadcastRaid(); toast('🔱 Fenêtre de raid ouverte pour tous (10 min d\'inscription).', 'good'); }
                 catch { toast('Impossible (hors ligne ?).', 'bad'); }
               }}>🔱 Ouvrir une fenêtre de Raid</button>
+              {/* Rotation de saison : ne touche AUCUN personnage, seuls les
+                  artefacts (et donc les classements qui en dépendent) repartent
+                  de zéro, à la reconnexion de chaque joueur. */}
+              <button className="py-2 bg-violet-900 hover:bg-violet-800 text-violet-100 rounded col-span-2 sm:col-span-3" onClick={async () => {
+                if (!confirm('Ouvrir la saison suivante ?\n\nTous les artefacts repartent au niveau 0 et les records de saison sont archivés. Les personnages (niveau, équipement, métiers) ne sont PAS touchés.')) return;
+                try {
+                  const n = await advanceSeason();
+                  toast(`🔮 Saison ${n} ouverte ! Les artefacts sont réinitialisés.`, 'gold');
+                } catch { toast('Impossible (hors ligne ?).', 'bad'); }
+              }}>🔮 Ouvrir la saison suivante</button>
             </div>
 
             <div className="mt-6 border-t border-green-500/30 pt-4">

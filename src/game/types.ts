@@ -230,6 +230,10 @@ export interface PlayerState {
   ascensionCooldownUntil?: number;
   /** Nombre de fois où le Néant Originel a été vaincu (le triomphe, sans reset). */
   neantVictories?: number;
+  /** Artefact de la saison en cours (progression sans fin, remise à zéro à chaque saison). */
+  artifact?: { season: number; xp: number; level: number; mods: string[] };
+  /** Panthéon personnel : résultat archivé des saisons passées. */
+  seasonHistory?: { season: number; artifactLevel: number; level: number; at: number }[];
   /**
    * Renaissance disponible : posé par une victoire sur le Néant, consommé quand le
    * joueur CHOISIT de repartir de zéro contre un niveau de prestige. La victoire

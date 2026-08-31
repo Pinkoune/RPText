@@ -1,4 +1,5 @@
 import { item } from './items';
+import { grantArtifactXp, hasFlag } from './artifact';
 import type { PlayerState } from './types';
 import { addItem, removeItem, applyBonuses } from './player';
 import { addQuestMetric } from './quests';
@@ -235,6 +236,12 @@ export function getCraftLevel(xp: number): { level: number; into: number; need: 
 /** Consomme les matériaux au début du craft. */
 export function consumeMaterials(p: PlayerState, r: Recipe): boolean {
   if (!canCraft(p, r)) return false;
+  // Mod d'artefact « Forge économe » : la recette part parfois sans rien coûter.
+  // L'or reste dû dans tous les cas — seul le stock de matériaux est épargné.
+  if (hasFlag(p, 'thrifty') && Math.random() < 0.20) {
+    p.gold -= r.gold;
+    return true;
+  }
   for (const [id, need] of Object.entries(r.materials)) removeItem(p, id, need);
   p.gold -= r.gold;
   return true;
@@ -247,6 +254,7 @@ export function finishCraft(p: PlayerState, r: Recipe, qualityRatio: number, suc
     // XP consolatoire (bénéficie aussi du bonus d'équipe/guilde)
     const { xp: consolXp } = applyBonuses(p, { xp: Math.max(1, Math.floor(r.difficulty / 10)), gold: 0 });
     p.craftXp += consolXp;
+    grantArtifactXp(p, consolXp);
     return { id: 'craft_trash', qty: 1 };
   }
 
@@ -257,6 +265,7 @@ export function finishCraft(p: PlayerState, r: Recipe, qualityRatio: number, suc
   // Bénéficie du bonus d'équipe/guilde comme le combat et la récolte.
   const { xp: xpGain } = applyBonuses(p, { xp: 20 + r.difficulty + Math.floor(r.difficulty * qualityRatio), gold: 0 });
   p.craftXp += xpGain;
+  grantArtifactXp(p, xpGain);
   
   // Générer un ID dynamique basé sur la qualité si celle-ci a un impact (équipements).
   // On considère que 100% quality = stats +50% -> q150

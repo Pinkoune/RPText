@@ -186,10 +186,12 @@ export interface CombatState {
   /** Nécromancien : tours restants et dégâts/tour d'un serviteur invoqué (frappe en fin de tour). */
   minion: number;
   minionPow: number;
+  /** Sursis (artefact) deja consomme sur ce combat. */
+  secondWindUsed?: boolean;
 }
 
 export function freshCombatState(): CombatState {
-  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, chill: 0, stun: 0, minion: 0, minionPow: 0 };
+  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, chill: 0, stun: 0, minion: 0, minionPow: 0, secondWindUsed: false };
 }
 
 export interface TurnResult {
@@ -268,6 +270,8 @@ export function combatTurn(
   // « Faille » : le monstre est-il sous contrôle (gel/étourdi) en début de tour ?
   // → les dégâts offensifs de ce tour sont amplifiés (fenêtre de burst).
   const vuln = state.chill > 0 || state.stun > 0;
+  // « Echo de Faille » (artefact) renforce la fenetre de burst : 1.5 -> 1.9.
+  const vulnMult = VULN_MULT + (mods.riftBonus ?? 0);
 
   // ── Phase joueur ──
   if (action === 'flee') {
@@ -306,7 +310,7 @@ export function combatTurn(
           hitsDealt++;
           let dmg = Math.max(1, Math.round(stats.atk * effMult * (0.9 + Math.random() * 0.3)) - effDef);
           dmg = Math.round(dmg * atkMult);
-          if (vuln) dmg = Math.round(dmg * VULN_MULT);
+          if (vuln) dmg = Math.round(dmg * vulnMult);
           if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
           mhp -= dmg;
           if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
@@ -353,7 +357,7 @@ export function combatTurn(
       hitsDealt++;
       let dmg = Math.max(1, roll(stats.atk - 2, stats.atk + 3) - effDef) + mods.flatDmg;
       dmg = Math.round(dmg * atkMult);
-      if (vuln) dmg = Math.round(dmg * VULN_MULT);
+      if (vuln) dmg = Math.round(dmg * vulnMult);
       if (php < maxHp * 0.3 && mods.berserkBonus > 0) dmg = Math.round(dmg * (1 + mods.berserkBonus));
       if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
       const crit = Math.random() < mods.crit;
@@ -424,6 +428,14 @@ export function combatTurn(
     dmgTakenThisTurn = Math.max(0, mdmg);
     if (mods.thorns > 0) { mhp = Math.max(0, mhp - Math.round((mdmg || 1) * mods.thorns)); thornsProced = true; }
     events.push({ text: `${monster.name} t'inflige ${mdmg}.`, side: 'enemy' });
+    // « Sursis » (artefact) : un seul coup fatal par combat est converti en
+    // survie à 30% des PV. Le drapeau vit dans CombatState, donc il se remet à
+    // zéro à chaque nouveau combat mais pas entre deux tours du même combat.
+    if (php <= 0 && (mods.secondWind ?? 0) > 0 && !state.secondWindUsed) {
+      state.secondWindUsed = true;
+      php = Math.max(1, Math.round(maxHp * 0.3));
+      events.push({ text: `🕊️ Sursis ! Tu refuses de tomber et te relèves à ${php} PV.`, side: 'info' });
+    }
   }
 
   // Régénération : passif (Healer) 100% chance qui scale avec le niveau, mais dont la base est divisée pour compenser le déclenchement garanti
@@ -451,14 +463,18 @@ export function combatTurn(
   const wasPoisoned = state.poison > 0;
   let poisonTicked = false;
   if (mhp > 0) {
+    // « Propagation » (artefact) : les alterations rongent plus fort.
+    const statusMult = 1 + (mods.statusPow ?? 0);
     if (state.burn > 0 && state.burnPow > 0) {
-      mhp = Math.max(0, mhp - state.burnPow);
-      events.push({ text: `🔥 Brûlure : ${monster.name} perd ${state.burnPow} PV.`, side: 'you' });
+      const burnDmg = Math.round(state.burnPow * statusMult);
+      mhp = Math.max(0, mhp - burnDmg);
+      events.push({ text: `🔥 Brûlure : ${monster.name} perd ${burnDmg} PV.`, side: 'you' });
     }
     if (state.poison > 0 && state.poisonPow > 0) {
-      mhp = Math.max(0, mhp - state.poisonPow);
+      const poisonDmg = Math.round(state.poisonPow * statusMult);
+      mhp = Math.max(0, mhp - poisonDmg);
       poisonTicked = true;
-      events.push({ text: `🧪 Poison : ${monster.name} perd ${state.poisonPow} PV.`, side: 'you' });
+      events.push({ text: `🧪 Poison : ${monster.name} perd ${poisonDmg} PV.`, side: 'you' });
     }
     if (state.minion > 0 && state.minionPow > 0) {
       mhp = Math.max(0, mhp - state.minionPow);

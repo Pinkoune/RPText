@@ -37,6 +37,7 @@ import SeasonCard from './cards/SeasonCard';
 import EnchantCard from './cards/EnchantCard';
 import ForgeronCard from './cards/ForgeronCard';
 import PrestigeCard from './cards/PrestigeCard';
+import ArtifactCard from './cards/ArtifactCard';
 import AscensionCard from './cards/AscensionCard';
 import EndlessCard from './cards/EndlessCard';
 import SettingsCard from './cards/SettingsCard';
@@ -56,6 +57,7 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   enchant: { title: '✨ Enchantement', accent: '#a78bfa' },
   forgeron: { title: '🧔‍♂️ Forgeron Renold', accent: '#f0b46a' },
   prestige: { title: '✨ Aura de Prestige', accent: '#ffd45a' },
+  artifact: { title: '🔮 Artefact de saison', accent: '#b088ff' },
   ascension: { title: '🕳️ Le Néant', accent: '#a855f7' },
   endless: { title: '🕳️ Abysses Infinis', accent: '#dc2626' },
   concoction: { title: '🧪 Concoction', accent: '#10b981' },
@@ -140,6 +142,7 @@ export default function WindowManager() {
               {w.kind === 'enchant' && <EnchantCard />}
               {w.kind === 'forgeron' && <ForgeronCard />}
               {w.kind === 'prestige' && <PrestigeCard />}
+              {w.kind === 'artifact' && <ArtifactCard />}
               {w.kind === 'ascension' && <AscensionCard />}
               {w.kind === 'endless' && <EndlessCard />}
               {w.kind === 'settings' && <SettingsCard />}

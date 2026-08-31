@@ -41,6 +41,7 @@ const NAV: { cat: string; items: NavItem[] }[] = [
       { kind: 'experience', emoji: '📈', label: 'XP' },
       { kind: 'familiar', emoji: '🐾', label: 'Familiers' },
       { kind: 'experience', cmd: 'expedition', emoji: '🧭', label: 'Expédition', reqLevel: 35 },
+      { kind: 'artifact', emoji: '🔮', label: 'Artefact' },
       { kind: 'prestige', cmd: 'aura', emoji: '✨', label: 'Aura', reqLevel: 30 },
       { kind: 'quests', emoji: '📜', label: 'Quêtes' },
       { kind: 'achievements', emoji: '🏆', label: 'Succès' },

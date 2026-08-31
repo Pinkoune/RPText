@@ -1,5 +1,6 @@
 import type { PlayerState, ClassId } from './types';
 import { CLASSES } from './classes';
+import { applyArtifactMods } from './artifact';
 
 export interface CombatMods {
   crit: number;
@@ -17,6 +18,12 @@ export interface CombatMods {
   atkPct: number;
   defPct: number;
   hpPct: number;
+  /** Bonus multiplicatif sur les degats de bruleure/poison (mod d'artefact « Propagation »). */
+  statusPow: number;
+  /** S'ajoute au multiplicateur de Faille (1.5 de base) — mod « Echo de Faille ». */
+  riftBonus: number;
+  /** > 0 : survit une fois par combat a un coup fatal (mod « Sursis »). */
+  secondWind: number;
 }
 
 export function emptyMods(): CombatMods {
@@ -24,6 +31,7 @@ export function emptyMods(): CombatMods {
     crit: 0, critMult: 0, flatDmg: 0, dmgReduction: 0, dodge: 0, doubleHit: 0,
     regen: 0, berserkBonus: 0, lifesteal: 0, armorPen: 0, execute: 0, thorns: 0,
     atkPct: 0, defPct: 0, hpPct: 0,
+    statusPow: 0, riftBonus: 0, secondWind: 0,
   };
 }
 
@@ -380,6 +388,13 @@ export function talentMods(p: PlayerState): CombatMods {
       }
     }
   }
+  // Mods de l'artefact de saison. Ils sont agrégés ici — et non dans un appel
+  // séparé — parce que `talentMods` est le point de passage unique des
+  // modificateurs passifs de combat (12 sites d'appel : chasse, donjon, duel,
+  // abysses, guilde, équipe…). Les brancher ailleurs les rendrait absents de la
+  // moitié du jeu. Le plafonnement ci-dessous s'applique donc aussi à eux.
+  applyArtifactMods(p, mods);
+
   for (const [key, cap] of Object.entries(CAPS) as [keyof CombatMods, number][]) {
     mods[key] = Math.min(mods[key], cap);
   }
