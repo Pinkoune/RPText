@@ -93,11 +93,15 @@ export default function LeaderboardCard() {
                 <span className="w-6 shrink-0 text-center font-bold text-slate-400">{i + 1}</span>
                 <span className="shrink-0">{CLASSES[r.classId]?.emoji ?? '🧑'}</span>
                 <button onClick={() => setViewing(r)} className="min-w-0 flex-1 truncate text-left hover:text-sky-300 hover:underline">
+                  {/* Ligne volontairement dépouillée : rang, classe, prestige, nom.
+                      L'emoji d'aura faisait doublon avec l'insigne ✦N juste à côté,
+                      et le titre entre crochets poussait le pseudo — l'information
+                      qui compte ici — hors de vue sur les noms longs. Les deux
+                      restent au Profil, qui est fait pour ça. L'aura n'est pas
+                      perdue : elle teinte toujours le pseudo. */}
                   {(r.prestigeLevel ?? 0) > 0 && (
                     <span className="mr-1 font-bold text-purple-300" title={`Prestige ${r.prestigeLevel}`}>✦{r.prestigeLevel}</span>
                   )}
-                  {r.prestigeAura && <span className="mr-1">{r.prestigeAura}</span>}
-                  {r.title && <span className="font-semibold text-amber-300 mr-1">[{r.title}]</span>}
                   <span style={{ color: auraColor(r.prestigeAura, r.auraColorOn ?? true) }}>{r.name}</span>
                 </button>
                 <span className="shrink-0 text-xs text-slate-400">Nv.{r.level} · {r.kills}☠</span>
