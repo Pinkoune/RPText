@@ -138,6 +138,7 @@ export const PATCH_HISTORY: PatchRelease[] = [
           '<b>Correction</b> : renaître en tant que sous-classe te laissait « Berserker niveau 1 », un état impossible, et tu redevenais Guerrier au chargement suivant sans explication. La renaissance ramène désormais franchement à ta classe de base, à ré-ascensionner au Nv.20.',
           '<b>Le Néant</b> tient compte de la moitié de ton prestige. Il ignorait complètement ces bonus : à prestige 5 le mur de fin de partie n\'en était plus un. Chaque renaissance reste ressentie, mais le combat reste un combat.',
           '<b>Correction</b> : le garde-fou anti-triche ramenait au niveau 30 (l\'ancien maximum) au lieu du niveau que l\'XP légitime valait vraiment.',
+          '<b>Correction</b> : après une renaissance, les cartes <b>Aura</b> (Nv.30) et <b>Relique</b> (Nv.20) redevenaient inaccessibles jusqu\'à ce que tu aies remonté ces niveaux — alors que tu gardes justement ton prestige, ton aura et ta Relique. Elles restent ouvertes tant que tu possèdes ce qu\'elles servent à gérer.',
         ],
       },
       {

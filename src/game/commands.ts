@@ -55,6 +55,16 @@ export interface CommandDef {
   desc: string;
   category: 'Jeu' | 'Combat' | 'Récolte' | 'Casino' | 'Multijoueur' | 'Système';
   reqLevel?: number;
+  /**
+   * Dérogation au niveau requis.
+   *
+   * Une renaissance ramène au Nv.1 en conservant certaines choses — prestige,
+   * aura, Relique. Sans cette échappatoire, le joueur GARDE ces acquis mais ne
+   * peut plus les ouvrir avant d'avoir remonté trente niveaux : le panneau qui
+   * lui dit ce que son prestige lui rapporte devenait inaccessible au moment
+   * précis où il venait de le gagner.
+   */
+  alsoIf?: (p: PlayerState) => boolean;
   /** Commande secrète : absente du help, affichée « ??? » dans le tuto. */
   hidden?: boolean;
 }
@@ -133,9 +143,11 @@ export const COMMANDS: CommandDef[] = [
   { name: 'mercenary', aliases: ['mercenaire', 'merc', 'contrat'], desc: 'Contrat mercenaire : boss quotidien costaud (1 fois / 6h). Butin volcanique.', category: 'Combat', reqLevel: 25 },
   { name: 'expedition', aliases: ['expe', 'exploration'], desc: 'Envoie ton familier en expédition 4h → ramène des ressources.', category: 'Jeu', reqLevel: 35 },
   { name: 'sanctuary', aliases: ['sanctuaire', 'sanctum'], desc: 'Sanctuaire des Anciens : boss solo ultime (1 fois / 24h). Butin unique.', category: 'Combat', reqLevel: 40 },
-  { name: 'aura', aliases: ['auras'], desc: 'Choisis une aura de prestige (bonus passif + affichée au classement).', category: 'Jeu', reqLevel: 30 },
+  { name: 'aura', aliases: ['auras'], desc: 'Choisis une aura de prestige (bonus passif + affichée au classement).', category: 'Jeu', reqLevel: 30,
+    alsoIf: (p) => (p.prestigeLevel ?? 0) > 0 || !!p.rebirthAvailable },
   { name: 'artifact', aliases: ['artefact', 'art'], desc: "Artefact de saison : progression sans fin et grille de mods.", category: 'Jeu', reqLevel: 1 },
-  { name: 'relic', aliases: ['relique', 'rel'], desc: "Ta Relique : le seul objet qui traverse renaissances et saisons.", category: 'Jeu', reqLevel: 20 },
+  { name: 'relic', aliases: ['relique', 'rel'], desc: "Ta Relique : le seul objet qui traverse renaissances et saisons.", category: 'Jeu', reqLevel: 20,
+    alsoIf: (p) => (p.relic?.stars ?? 0) > 0 || (p.relicShards ?? 0) > 0 },
   { name: 'rift', aliases: ['faille'], desc: "Faille de la semaine : un défi qui change tous les lundis.", category: 'Combat', reqLevel: 20 },
   { name: 'prestige', aliases: ['ascension', 'neant'], desc: '???', category: 'Combat', reqLevel: 50, hidden: true },
 
@@ -179,7 +191,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
 
   if (p) {
     const def = COMMANDS.find((c) => c.name === cmd);
-    if (def && def.reqLevel && p.level < def.reqLevel) {
+    if (def && def.reqLevel && p.level < def.reqLevel && !def.alsoIf?.(p)) {
       if (p.ignoreRestrictions) {
         ctx.toast(`[Admin] Bypassed level ${def.reqLevel} req for ${def.name}`, 'info');
       } else {
