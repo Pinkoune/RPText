@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { CLASSES, xpToNext } from '../../game/classes';
 import { powerScore, MASTERY_MAX } from '../../game/power';
+import { PROFILE_BGS, profileBg } from '../../game/seasonpass';
 import { BIOMES } from '../../game/biomes';
 import { deriveStats, changeBaseClass, BASE_CLASSES } from '../../game/player';
 import { farmProgress } from '../../game/gathering';
@@ -78,6 +79,12 @@ export default function ProfileCard() {
 
   return (
     <div className="space-y-4">
+      {/* Fond de profil : cosmétique gagné à la passe de saison. Il habille
+          l'en-tête plutôt que toute la carte, pour rester lisible. */}
+      <div
+        className="-mx-1 rounded-xl px-3 py-3"
+        style={{ background: profileBg(p.profileBg)?.css ?? 'transparent' }}
+      >
       <div className="flex items-start gap-3">
         {p.photoURL ? (
           <img src={p.photoURL} alt="" className="h-14 w-14 rounded-xl" />
@@ -117,6 +124,33 @@ export default function ProfileCard() {
           )}
         </div>
       </div>
+
+      </div>
+
+      {/* Choix du fond, seulement si le joueur en a débloqué. */}
+      {(p.unlockedBgs?.length ?? 0) > 0 && (
+        <div className="rounded-lg bg-black/25 px-3 py-2">
+          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Fond de profil</div>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => mutate((d) => { d.profileBg = undefined; })}
+              className={`rounded-lg px-2.5 py-1 text-[11px] ${!p.profileBg ? 'bg-sky-500/30 text-sky-100' : 'bg-black/30 text-slate-400 hover:bg-white/10'}`}
+            >
+              Aucun
+            </button>
+            {PROFILE_BGS.filter((b) => p.unlockedBgs!.includes(b.id)).map((b) => (
+              <button
+                key={b.id}
+                onClick={() => mutate((d) => { d.profileBg = b.id; })}
+                className={`rounded-lg px-2.5 py-1 text-[11px] ${p.profileBg === b.id ? 'ring-1 ring-sky-400 text-slate-100' : 'text-slate-300 hover:brightness-125'}`}
+                style={{ background: b.css }}
+              >
+                {b.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {(p.talentPoints ?? 0) > 0 && (
         <div className="rounded-lg border border-sky-400/40 bg-sky-500/15 px-3 py-1.5 text-xs">

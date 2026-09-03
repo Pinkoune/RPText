@@ -1,10 +1,19 @@
 import type { PlayerState } from './types';
 import { addItemToInventory } from './items';
+import { getCurrentSeason } from './artifact';
 
-// ─── Saisons PvP / Ladder ────────────────────────────────────────────────────
-// Une saison = un mois calendaire. Les points de saison se gagnent en PvP
-// (duels, Card-Jitsu) et déterminent un rang. Tout se réinitialise au changement
-// de mois, calculé depuis l'horloge (aucun backend dédié).
+// ─── Saisons ─────────────────────────────────────────────────────────────────
+//
+// Il y avait DEUX systèmes appelés « saison », qui ne se parlaient pas : celui
+// d'ici (ladder PvP, mois calendaire, rotation automatique) et celui de
+// l'artefact (numéro dans `system/season`, thème été/automne/hiver/printemps,
+// rotation déclenchée par l'admin). Deux compteurs, deux dates, deux resets —
+// d'où l'impression qu'une saison « ne se sentait pas ».
+//
+// Il n'y en a plus qu'une : la Saison N de l'artefact fait autorité, et le
+// ladder PvP suit. Une rotation remet donc au même instant l'artefact, les
+// points PvP, les classements d'Abysses et la passe — c'est ce qui lui donne
+// enfin du poids.
 
 export const SEASON_POINTS = {
   duelWin: 25,
@@ -27,16 +36,15 @@ export const TIERS: RankTier[] = [
   { name: 'Maître', icon: '👑', min: 1800, color: '#c084fc' },
 ];
 
-/** Identifiant de la saison courante (mois calendaire). */
-export function seasonId(now = Date.now()): string {
-  const d = new Date(now);
-  return `${d.getFullYear()}-${d.getMonth() + 1}`;
-}
-
-/** Horodatage du début du mois suivant (fin de saison). */
-export function nextSeasonAt(now = Date.now()): number {
-  const d = new Date(now);
-  return new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+/**
+ * Identifiant de la saison courante — le numéro de saison de l'artefact.
+ *
+ * Le paramètre `now` est conservé pour ne rien casser chez les appelants, mais
+ * il n'est plus utilisé : une saison ne se termine plus toute seule à minuit le
+ * 1er du mois, elle se termine quand l'admin la fait tourner.
+ */
+export function seasonId(_now = Date.now()): string {
+  return `s${getCurrentSeason()}`;
 }
 
 export interface SeasonReward {

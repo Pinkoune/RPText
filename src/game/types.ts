@@ -272,6 +272,12 @@ export interface PlayerState {
   relic?: { stars: number; effects: string[] };
   /** Éclats de Relique (monnaie du end-game). */
   relicShards?: number;
+  /** Passe de saison : paliers réclamés pour la saison en cours. */
+  seasonPass?: { season: number; claimed: number[] };
+  /** Fonds de profil débloqués (cosmétique permanent). */
+  unlockedBgs?: string[];
+  /** Fond de profil actif. */
+  profileBg?: string;
   /** Joueur vétéran d'avant la réinitialisation (donne droit au Médaillon de l'Ancien Monde) */
   isLegacy?: boolean;
   legacyCreatedAt?: number;

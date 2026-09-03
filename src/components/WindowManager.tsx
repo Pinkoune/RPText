@@ -90,7 +90,7 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   events: { title: '🌍 Événements', accent: '#c084fc' },
   achievements: { title: '🏆 Succès', accent: '#ffd45a' },
   fateshop: { title: '🎲 Boutique du Destin', accent: '#e879f9' },
-  season: { title: '🏅 Saison PvP', accent: '#7ad0ff' },
+  season: { title: '🏅 Saison', accent: '#7ad0ff' },
   settings: { title: '⚙️ Paramètres', accent: '#94a3b8' },
   tuto: { title: '🎓 Tutoriel', accent: '#4ade80' },
   levelup: { title: '🌟 Niveau Supérieur', accent: '#fbbf24' },

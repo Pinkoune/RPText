@@ -52,12 +52,32 @@ export function watchSeason(onChange: (info: SeasonInfo) => void): () => void {
   });
 }
 
-/** Ouvre la saison suivante (admin). Les artefacts repartent à zéro. */
+/**
+ * Ouvre la saison suivante (admin).
+ *
+ * Une rotation doit se SENTIR : avant, elle ne remettait à zéro que l'artefact,
+ * et les classements d'Abysses comme le ladder PvP traînaient les scores de la
+ * saison précédente — d'où l'impression d'un changement purement décoratif.
+ * Elle balaie maintenant les trois d'un coup.
+ *
+ * Ce qu'elle ne touche toujours pas, et c'est volontaire : le personnage.
+ * Niveau, équipement, métiers, maîtrises et Relique traversent la rotation.
+ */
 export async function advanceSeason(): Promise<number> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase non configuré.');
   const cur = await fetchSeason();
   const next = cur.number + 1;
   await setDoc(doc(db, 'system', 'season'), { number: next, startedAt: Date.now() });
   setCurrentSeason(next);
+  // Les artefacts eux-mêmes repartent à zéro côté client, via `rotateSeason`
+  // appelé dans `migratePlayer` au chargement. Ici on nettoie ce qui vit
+  // uniquement côté serveur et qu'aucun client ne remettrait à zéro tout seul.
+  // Échec non bloquant : la saison a déjà tourné, on ne veut pas la coincer.
+  try {
+    const { wipeEndlessScores, resetPvpSeason } = await import('./adminService');
+    await Promise.all([wipeEndlessScores(), resetPvpSeason()]);
+  } catch (e) {
+    console.error('Rotation : nettoyage des classements incomplet.', e);
+  }
   return next;
 }

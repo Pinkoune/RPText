@@ -11,6 +11,7 @@ import { ensureSeason, seasonId } from './season';
 import { prestigeBonus, prestigeStatMult, prestigeXpGoldMult } from './prestige';
 import { freshArtifact, rotateSeason, artifactPowerPct, grantArtifactXp } from './artifact';
 import { freshRelic, relicStatMult } from './relic';
+import { ensureSeasonPass } from './seasonpass';
 
 /** Incrémenter force un reset unique des talents de tous les joueurs (bugfix). */
 export const TALENT_RESET_VERSION = 3;
@@ -136,6 +137,10 @@ export function migratePlayer(p: PlayerState): PlayerState {
   // c'est tout son intérêt. On se contente de la créer si elle manque.
   if (!p.relic) p.relic = freshRelic();
   if (p.relicShards === undefined) p.relicShards = 0;
+  if (!p.unlockedBgs) p.unlockedBgs = [];
+  // Passe de saison : la piste se vide à la rotation (les titres et fonds déjà
+  // obtenus, eux, restent acquis).
+  ensureSeasonPass(p);
   if (!p.enchants) p.enchants = { weapon: [], armor: [], trinket: [] };
   // Titre par défaut retiré : les nouveaux joueurs n'ont plus aucun titre tant
   // qu'ils n'en débloquent pas un — nettoie ceux qui l'ont encore.
@@ -548,6 +553,7 @@ export function createPlayer(
     endlessBest: 0,
     relic: freshRelic(),
     relicShards: 0,
+    unlockedBgs: [],
     endlessSessionId: null,
     settledEndless: [],
     pvpDuelSessionId: null,
