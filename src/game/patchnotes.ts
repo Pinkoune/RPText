@@ -90,6 +90,17 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '✦ Prestige : on te dit enfin ce que ça rapporte',
+        kind: 'balance',
+        items: [
+          'La carte Prestige affiche en permanence <b>tes bonus chiffrés</b> : +8% ATK/DEF/PV et +10% XP/Or par renaissance, et le nombre de jetons de classe qu\'il te reste. Avant, « bonus permanent » n\'était accompagné d\'aucun nombre — impossible de savoir ce qu\'on avait gagné.',
+          'L\'écran de renaissance présente le marché terme à terme : ce que tu perds, ce que tu gagnes (avec les valeurs avant / après), et surtout <b>ce qui est conservé</b> — familiers, titres, succès, artefact de saison et maîtrises de biome.',
+          '<b>Correction</b> : renaître en tant que sous-classe te laissait « Berserker niveau 1 », un état impossible, et tu redevenais Guerrier au chargement suivant sans explication. La renaissance ramène désormais franchement à ta classe de base, à ré-ascensionner au Nv.20.',
+          '<b>Le Néant</b> tient compte de la moitié de ton prestige. Il ignorait complètement ces bonus : à prestige 5 le mur de fin de partie n\'en était plus un. Chaque renaissance reste ressentie, mais le combat reste un combat.',
+          '<b>Correction</b> : le garde-fou anti-triche ramenait au niveau 30 (l\'ancien maximum) au lieu du niveau que l\'XP légitime valait vraiment.',
+        ],
+      },
+      {
         title: '✨ Interface',
         kind: 'new',
         items: [

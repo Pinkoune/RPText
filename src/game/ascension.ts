@@ -10,11 +10,20 @@ import { deriveStats, starterWeapon } from './player';
 import { getTalentsForClass } from './talents';
 import { CLASSES } from './classes';
 import { mintInstanceId } from './items';
+import { prestigeStacks } from './prestige';
 
 export const ASCENSION_FAIL_COOLDOWN = 8 * 60 * 60 * 1000; // 8h après un échec
-export const PRESTIGE_BONUS_PER_LEVEL = 0.08;  // +8% ATK/DEF/PV par prestige
-export const PRESTIGE_XPGOLD_PER_LEVEL = 0.10; // +10% XP/Or par prestige
-export const MAX_PRESTIGE_STACK = 5;           // au-delà, le bonus plafonne
+
+// Les constantes et multiplicateurs de prestige vivent désormais dans
+// `prestige.ts` (module sans dépendance, donc lisible aussi par l'interface).
+// Ré-exportés ici pour ne rien casser chez les appelants existants.
+export {
+  PRESTIGE_BONUS_PER_LEVEL,
+  PRESTIGE_XPGOLD_PER_LEVEL,
+  MAX_PRESTIGE_STACK,
+  prestigeStatMult,
+  prestigeXpGoldMult,
+} from './prestige';
 
 export interface AscensionBoss {
   name: string;
@@ -31,16 +40,6 @@ export interface AscensionBoss {
 const BEST_WEAPON: Record<string, string> = {
   warrior: 'lava_blade', archer: 'infernal_bow', mage: 'magma_staff', healer: 'seraph_staff',
 };
-
-/** Bonus permanent de prestige (multiplicateur), plafonné. */
-export function prestigeStatMult(p: PlayerState): number {
-  const n = Math.min(p.prestigeLevel ?? 0, MAX_PRESTIGE_STACK);
-  return 1 + n * PRESTIGE_BONUS_PER_LEVEL;
-}
-export function prestigeXpGoldMult(p: PlayerState): number {
-  const n = Math.min(p.prestigeLevel ?? 0, MAX_PRESTIGE_STACK);
-  return 1 + n * PRESTIGE_XPGOLD_PER_LEVEL;
-}
 
 /**
  * Stats du boss, calibrées sur un joueur PARFAITEMENT optimisé de la classe du
@@ -72,7 +71,18 @@ export function computeAscensionBoss(p: PlayerState): AscensionBoss {
   // Familier légendaire maxé.
   fake.familiars = { ...(fake.familiars ?? {}), starling: 100000 };
   fake.activeFamiliarId = 'starling';
-  fake.prestigeLevel = 0; // le boss ne compte pas les bonus de prestige déjà acquis
+  // Le boss compte la MOITIÉ du prestige du joueur.
+  //
+  // À 0 (l'ancien comportement), les bonus de renaissance ne rencontraient
+  // aucune résistance : mesuré en simulation, un archer passait de 0% à 97% de
+  // victoire entre prestige 0 et 5 sans rien changer à son jeu — le mur de fin
+  // de partie cessait d'en être un pour ceux qui y revenaient.
+  // À plein, l'inverse : le boss annulerait exactement le gain, et enchaîner
+  // les renaissances ne se sentirait plus du tout.
+  // La moitié garde le mur debout à tous les niveaux tout en laissant chaque
+  // prestige valoir quelque chose (~+4% net par renaissance).
+  // Valeur fractionnaire assumée : `deriveStats` multiplie simplement.
+  fake.prestigeLevel = prestigeStacks(p.prestigeLevel ?? 0) / 2;
 
   const s = deriveStats(fake, true); // skipEquipCheck
 
@@ -146,6 +156,15 @@ export function applyRebirth(d: PlayerState): void {
   const keptFamiliars = d.familiars ?? {};
   const keptTitles = d.unlockedTitles ?? [];
   const newPrestige = (d.prestigeLevel ?? 0) + 1;
+
+  // Retour à la classe de BASE. Sans ça, un Berserker renaissait « Berserker
+  // niveau 1 » — un état impossible : l'ascension exige le Nv.20. Le garde-fou
+  // de `migratePlayer` le corrigeait bien, mais seulement au chargement SUIVANT,
+  // donc le joueur se retrouvait Guerrier du jour au lendemain, arbre remis à
+  // zéro, sans la moindre explication. On le fait ici, franchement : on repart
+  // de sa famille et on ré-ascensionne au Nv.20 (c'est tout l'intérêt du jeton
+  // de changement de classe accordé juste en dessous).
+  d.classId = CLASSES[d.classId]?.parent ?? d.classId;
 
   d.prestigeLevel = newPrestige;
   // Jeton de changement de classe : la renaissance rebat les cartes.

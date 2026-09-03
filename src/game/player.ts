@@ -8,7 +8,7 @@ import { familiarBonus, familiarAbility } from './familiars';
 import { talentMods } from './talents';
 import { activeEventEffect } from './events';
 import { ensureSeason, seasonId } from './season';
-import { prestigeBonus } from './prestige';
+import { prestigeBonus, prestigeStatMult, prestigeXpGoldMult } from './prestige';
 import { freshArtifact, rotateSeason, artifactPowerPct, grantArtifactXp } from './artifact';
 
 /** Incrémenter force un reset unique des talents de tous les joueurs (bugfix). */
@@ -294,7 +294,11 @@ export function migratePlayer(p: PlayerState): PlayerState {
       let newLevel = 1;
       let remainingXp = maxLegitXp;
       
-      while (remainingXp >= xpToNext(newLevel) && newLevel < 30) {
+      // Plafond du re-nivellement : MAX_LEVEL, pas la constante 30 codée en dur
+      // à l'époque où c'était le niveau maximum. Depuis le passage à 50, un
+      // joueur qui déclenchait ce garde-fou était ramené à 30 même quand son XP
+      // légitime en valait davantage — l'anti-triche punissait au-delà de son rôle.
+      while (remainingXp >= xpToNext(newLevel) && newLevel < MAX_LEVEL) {
         remainingXp -= xpToNext(newLevel);
         newLevel++;
       }
@@ -712,9 +716,10 @@ export function deriveStats(p: PlayerState, skipEquipCheck = false): Stats {
   }
 
   const prestige = prestigeBonus(p.prestigeAura);
-  // Bonus permanent de prestige (rituel Nv.50) : +8% ATK/DEF/PV par prestige,
-  // plafonné à 5 (voir ascension.ts PRESTIGE_BONUS_PER_LEVEL / MAX_PRESTIGE_STACK).
-  const presMult = 1 + Math.min(p.prestigeLevel ?? 0, 5) * 0.08;
+  // Bonus permanent de prestige (rituel Nv.50). Valeurs dans prestige.ts —
+  // surtout pas réécrites ici : c'est ce doublon qui les avait fait diverger de
+  // l'interface, où elles n'apparaissaient plus du tout.
+  const presMult = prestigeStatMult(p);
   // Artefact de saison : progression sans fin qui prend le relais du niveau une
   // fois le plafond atteint. Logarithmique, donc sans plafond mais sans dérive.
   const artMult = 1 + artifactPowerPct(p.artifact?.level ?? 0);
@@ -854,8 +859,8 @@ export function applyBonuses(p: PlayerState, base: { xp: number; gold: number })
   const guildGoldMult = fin(getGuildGoldBonus(p.guildId), 1);
   const evt = activeEventEffect(p.biome);
   const prestige = prestigeBonus(p.prestigeAura);
-  // +10% XP/Or par prestige (plafonné à 5) — voir ascension.ts.
-  const presMult = 1 + Math.min(p.prestigeLevel ?? 0, 5) * 0.10;
+  // XP/Or par prestige — même source unique (prestige.ts).
+  const presMult = prestigeXpGoldMult(p);
   const baseXp = fin(base.xp, 0);
   const baseGold = fin(base.gold, 0);
   return {
