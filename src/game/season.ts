@@ -15,9 +15,20 @@ import { getCurrentSeason } from './artifact';
 // points PvP, les classements d'Abysses et la passe — c'est ce qui lui donne
 // enfin du poids.
 
-export const SEASON_POINTS = {
-  duelWin: 25,
-  cjWin: 20,
+/**
+ * XP D'ARTEFACT accordée par une victoire PvP, en multiple du niveau du joueur.
+ *
+ * Le PvP alimentait un compteur `seasonPoints` séparé, alors que TOUT le reste
+ * du jeu alimentait l'artefact : deux jauges de saison qui ne se parlaient pas,
+ * et une saison qui ne récompensait qu'une seule activité. Le PvP verse
+ * désormais dans la même jauge que la chasse, la récolte ou la forge.
+ *
+ * Calibré à quelques kills de chasse : le PvP est plus lent et plus risqué,
+ * mais il ne doit pas devenir la voie rapide non plus.
+ */
+export const PVP_ARTIFACT_XP = {
+  duelWin: 40,
+  cjWin: 30,
 };
 
 export interface RankTier {
@@ -27,14 +38,26 @@ export interface RankTier {
   color: string;
 }
 
+/**
+ * Rangs de saison, indexés sur le NIVEAU D'ARTEFACT.
+ *
+ * Les seuils étaient exprimés en points de saison PvP (0/100/300/600/1000/1800).
+ * Ils suivent maintenant l'artefact, donc l'ensemble des activités, et sont
+ * calés sur les paliers de la passe pour que les deux progressent de concert.
+ */
 export const TIERS: RankTier[] = [
   { name: 'Bronze', icon: '🥉', min: 0, color: '#cd7f32' },
-  { name: 'Argent', icon: '🥈', min: 100, color: '#c0c0c0' },
-  { name: 'Or', icon: '🥇', min: 300, color: '#ffd45a' },
-  { name: 'Platine', icon: '💠', min: 600, color: '#6ee7d0' },
-  { name: 'Diamant', icon: '💎', min: 1000, color: '#7ad0ff' },
-  { name: 'Maître', icon: '👑', min: 1800, color: '#c084fc' },
+  { name: 'Argent', icon: '🥈', min: 8, color: '#c0c0c0' },
+  { name: 'Or', icon: '🥇', min: 20, color: '#ffd45a' },
+  { name: 'Platine', icon: '💠', min: 35, color: '#6ee7d0' },
+  { name: 'Diamant', icon: '💎', min: 55, color: '#7ad0ff' },
+  { name: 'Maître', icon: '👑', min: 85, color: '#c084fc' },
 ];
+
+/** Niveau d'artefact du joueur = sa progression de saison. */
+export function seasonProgress(p: PlayerState): number {
+  return p.artifact?.level ?? 0;
+}
 
 /**
  * Identifiant de la saison courante — le numéro de saison de l'artefact.
@@ -65,17 +88,17 @@ export const TIER_REWARDS: Record<string, SeasonReward> = {
   Maître: { gold: 14000, fateCoins: 70, gems: 6, items: { upgrade_matrix: 4, dungeon_key: 5 } },
 };
 
-export function seasonRewardFor(points: number): { tierName: string; reward: SeasonReward } {
-  const { tier } = tierFor(points);
+export function seasonRewardFor(artifactLevel: number): { tierName: string; reward: SeasonReward } {
+  const { tier } = tierFor(artifactLevel);
   return { tierName: tier.name, reward: TIER_REWARDS[tier.name] };
 }
 
-export function tierFor(points: number): { tier: RankTier; next: RankTier | null; into: number; span: number } {
+export function tierFor(artifactLevel: number): { tier: RankTier; next: RankTier | null; into: number; span: number } {
   let idx = 0;
-  for (let i = 0; i < TIERS.length; i++) if (points >= TIERS[i].min) idx = i;
+  for (let i = 0; i < TIERS.length; i++) if (artifactLevel >= TIERS[i].min) idx = i;
   const tier = TIERS[idx];
   const next = TIERS[idx + 1] ?? null;
-  const into = points - tier.min;
+  const into = artifactLevel - tier.min;
   const span = next ? next.min - tier.min : 1;
   return { tier, next, into, span };
 }
@@ -93,26 +116,22 @@ export function grantSeasonReward(p: PlayerState, reward: SeasonReward): void {
 }
 
 /**
- * Réinitialise les points si la saison a changé. Si le joueur avait marqué des
- * points la saison précédente, sa récompense de rang est créditée et stockée
- * dans `lastSeasonReward` (pour l'affichage). À appeler à la migration/au gain.
+ * Met à jour l'identifiant de saison du joueur.
+ *
+ * La récompense de fin de saison n'est PLUS calculée ici : le rang dépend
+ * désormais du niveau d'artefact, et `rotateSeason` (artifact.ts) est le seul
+ * endroit qui connaisse encore ce niveau avant de le remettre à zéro. C'est
+ * donc `migratePlayer` qui crédite, à partir de l'archive que la rotation rend.
  */
 export function ensureSeason(p: PlayerState, now = Date.now()): void {
   const sid = seasonId(now);
-  if (p.seasonId && p.seasonId !== sid && (p.seasonPoints ?? 0) > 0) {
-    const { tierName, reward } = seasonRewardFor(p.seasonPoints!);
-    grantSeasonReward(p, reward);
-    p.lastSeasonReward = { season: p.seasonId, tierName, reward };
-  }
-  if (p.seasonId !== sid) {
-    p.seasonId = sid;
-    p.seasonPoints = 0;
-  }
-  if (!Number.isFinite(p.seasonPoints)) p.seasonPoints = 0;
+  if (p.seasonId !== sid) p.seasonId = sid;
 }
 
-/** Ajoute des points de saison (garde la saison à jour). */
-export function addSeasonPoints(p: PlayerState, n: number): void {
-  ensureSeason(p);
-  p.seasonPoints = (p.seasonPoints ?? 0) + n;
+/** Crédite la récompense de rang d'une saison écoulée (appelé après rotation). */
+export function grantEndOfSeason(p: PlayerState, season: string, artifactLevel: number): void {
+  if (artifactLevel <= 0) return;
+  const { tierName, reward } = seasonRewardFor(artifactLevel);
+  grantSeasonReward(p, reward);
+  p.lastSeasonReward = { season, tierName, reward };
 }

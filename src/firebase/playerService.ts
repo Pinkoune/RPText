@@ -156,7 +156,10 @@ export async function savePlayer(p: PlayerState): Promise<void> {
     lastSeen: p.lastSeen,
     title: p.title ?? null,
     seasonId: p.seasonId ?? null,
+    // Le ladder de saison se classe sur l'artefact (voir season.ts) ;
+    // `seasonPoints` reste écrit pour les anciens clients, sans effet.
     seasonPoints: p.seasonPoints ?? 0,
+    artifactLevel: p.artifact?.level ?? 0,
     prestigeAura: p.prestigeAura ?? null,
     prestigeLevel: p.prestigeLevel ?? 0,
     auraColorOn: p.auraColorOn ?? true,

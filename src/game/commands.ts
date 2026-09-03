@@ -126,7 +126,7 @@ export const COMMANDS: CommandDef[] = [
   // Niveau 8
   { name: 'duel', aliases: ['pvp', 'defi'], desc: 'Défie un autre joueur au pile/face (mise en or).', category: 'Multijoueur', reqLevel: 8 },
   { name: 'cardjitsu', aliases: ['cj', 'cards', 'ninja', 'cartes'], desc: 'Duel de cartes Card-Jitsu (feu/eau/neige).', category: 'Multijoueur', reqLevel: 8 },
-  { name: 'season', aliases: ['saison', 'ladder', 'rang', 'rank'], desc: 'Saison PvP : ton rang, le ladder et la fin de saison.', category: 'Multijoueur', reqLevel: 8 },
+  { name: 'season', aliases: ['saison', 'ladder', 'rang', 'rank'], desc: 'Saison : ta progression, ton rang, la passe et le classement.', category: 'Jeu', reqLevel: 1 },
 
   // Niveau 9
   { name: 'team', aliases: ['equipe', 'équipe', 'party'], desc: 'Forme une équipe et partage des ressources.', category: 'Multijoueur', reqLevel: 9 },

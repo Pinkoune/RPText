@@ -90,6 +90,24 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '🔮 Une seule jauge de saison',
+        kind: 'balance',
+        items: [
+          'Il y avait deux compteurs de saison : les <b>points de saison</b>, gagnés uniquement en PvP, et le <b>niveau d\'artefact</b>, qui montait sur tout le reste. Les points de saison sont <b>supprimés</b>.',
+          'Ton <b>niveau d\'artefact EST ta progression de saison</b>. Il monte sur tout ce que tu fais — chasse, donjon, récolte, forge, camp — et désormais aussi sur les <b>victoires PvP</b>, qui versent dans la même jauge au lieu d\'un compteur à part.',
+          'Ton rang de saison (Bronze → Maître) suit maintenant ton artefact, tout comme la passe. Une seule jauge, un seul classement.',
+          'La carte <b>Saison</b> s\'ouvre dès le <b>niveau 1</b> (au lieu de 8) et explique en toutes lettres ce qui monte avec quoi.',
+        ],
+      },
+      {
+        title: '❓ L\'aide n\'est plus un mur',
+        kind: 'new',
+        items: [
+          'Une <b>recherche</b> filtre les 63 commandes, et les commandes verrouillées sont masquées par défaut (un bouton les réaffiche).',
+          'Nouvelle section <b>« Les jauges du jeu — qui monte avec quoi »</b> : niveau, artefact/saison, métiers, Éclats, maîtrises et Puissance, avec pour chacune ce qui la fait monter et ce à quoi elle sert.',
+        ],
+      },
+      {
         title: '🌀 La Faille de la semaine',
         kind: 'new',
         items: [

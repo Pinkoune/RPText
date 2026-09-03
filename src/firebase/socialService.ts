@@ -34,6 +34,8 @@ export interface LeaderRow {
   auraColorOn?: boolean;
   /** Cote de Puissance (voir game/power.ts). Absente sur les lignes d'anciens clients. */
   power?: number;
+  /** Niveau d'artefact = progression de saison (voir game/season.ts). */
+  artifactLevel?: number;
 }
 
 export interface OnlinePlayer {
@@ -120,11 +122,15 @@ export function watchSeasonLadder(currentSeasonId: string, max: number, onChange
     onChange([]);
     return () => {};
   }
-  const q = query(collection(db, 'leaderboard'), orderBy('seasonPoints', 'desc'), limit(max * 2));
+  // Même précaution que pour la Puissance : trier côté serveur sur un champ que
+  // toutes les lignes ne portent pas encore exclurait les anciennes. On trie sur
+  // `level`, présent partout, puis on classe côté client sur l'artefact.
+  const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max * 4));
   return onSnapshot(q, (snap) => {
     const rows = snap.docs
       .map((d) => d.data() as LeaderRow)
-      .filter((r) => r.seasonId === currentSeasonId && (r.seasonPoints ?? 0) > 0 && !isHiddenName(r.name))
+      .filter((r) => r.seasonId === currentSeasonId && (r.artifactLevel ?? 0) > 0 && !isHiddenName(r.name))
+      .sort((a, b) => (b.artifactLevel ?? 0) - (a.artifactLevel ?? 0))
       .slice(0, max);
     onChange(rows);
   });

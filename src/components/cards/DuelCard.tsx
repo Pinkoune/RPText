@@ -3,7 +3,8 @@ import { useGame } from '../../store/gameStore';
 import { deriveStats } from '../../game/player';
 import { talentMods, getAllActiveSkills } from '../../game/talents';
 import { simulateDuel } from '../../game/pvp';
-import { addSeasonPoints, SEASON_POINTS } from '../../game/season';
+import { PVP_ARTIFACT_XP } from '../../game/season';
+import { grantArtifactXp } from '../../game/artifact';
 import { item, RARITY_COLOR, HP_CONSUMABLES } from '../../game/items';
 import { auraColor } from '../../game/prestige';
 import { sendChat } from '../../firebase/chatService';
@@ -60,10 +61,10 @@ export default function DuelCard() {
       d.settledPvpDuels.push(session.id);
       if (won) {
         d.gold += session.bet * 2;
-        addSeasonPoints(d, SEASON_POINTS.duelWin);
+        grantArtifactXp(d, PVP_ARTIFACT_XP.duelWin * d.level);
       }
     });
-    toast(won ? `⚔️ Duel gagné ! +${session.bet * 2} 🪙 · +${SEASON_POINTS.duelWin} pts saison` : `Duel perdu… -${session.bet} 🪙`, won ? 'gold' : 'bad');
+    toast(won ? `⚔️ Duel gagné ! +${session.bet * 2} 🪙 · progression de saison` : `Duel perdu… -${session.bet} 🪙`, won ? 'gold' : 'bad');
   }, [session?.state]);
 
   useEffect(() => { logEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [session?.log]);
@@ -328,7 +329,7 @@ export default function DuelCard() {
         <div className={`rounded-xl border p-4 text-center ${won ? 'border-emerald-400/40 bg-emerald-500/15' : 'border-rose-400/40 bg-rose-500/15'}`}>
           <div className="mb-2 text-2xl">{won ? '🏆' : '💀'}</div>
           <div className={`font-bold ${won ? 'text-emerald-300' : 'text-rose-300'}`}>{won ? 'Victoire !' : 'Défaite…'}</div>
-          {won && <div className="mt-2 text-sm">+{session.bet * 2} 🪙 · +{SEASON_POINTS.duelWin} pts saison</div>}
+          {won && <div className="mt-2 text-sm">+{session.bet * 2} 🪙 · progression de saison</div>}
         </div>
         <button onClick={closeSession} className="w-full rounded-lg bg-white/10 py-2 text-sm hover:bg-white/20">Fermer</button>
       </div>

@@ -7,7 +7,7 @@ import { BIOMES, BIOME_LIST } from './biomes';
 import { familiarBonus, familiarAbility } from './familiars';
 import { talentMods } from './talents';
 import { activeEventEffect } from './events';
-import { ensureSeason, seasonId } from './season';
+import { ensureSeason, seasonId, grantEndOfSeason } from './season';
 import { prestigeBonus, prestigeStatMult, prestigeXpGoldMult } from './prestige';
 import { freshArtifact, rotateSeason, artifactPowerPct, grantArtifactXp } from './artifact';
 import { freshRelic, relicStatMult } from './relic';
@@ -127,7 +127,11 @@ export function migratePlayer(p: PlayerState): PlayerState {
   // Artefact de saison : créé au besoin, puis remis à zéro si la saison a
   // tourné depuis la dernière connexion (le personnage, lui, n'est pas touché).
   if (!p.artifact) p.artifact = freshArtifact();
-  rotateSeason(p);
+  // La rotation rend le niveau d'artefact ATTEINT la saison passée — le seul
+  // moment où on le connaît encore. C'est lui qui détermine la récompense de
+  // rang, le classement de saison étant désormais indexé dessus.
+  const archived = rotateSeason(p);
+  if (archived) grantEndOfSeason(p, `s${archived.season}`, archived.artifactLevel);
   if (p.classChangeTokens === undefined) p.classChangeTokens = 0;
   if (p.playtimeMs === undefined) p.playtimeMs = 0;
   if (p.cjWins == null) p.cjWins = 0;

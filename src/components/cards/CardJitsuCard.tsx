@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useGame } from '../../store/gameStore';
 import { playSound } from '../../game/sound';
-import { addSeasonPoints, SEASON_POINTS } from '../../game/season';
+import { PVP_ARTIFACT_XP } from '../../game/season';
+import { grantArtifactXp } from '../../game/artifact';
 import { addQuestMetric } from '../../game/quests';
 import {
   listenCJDuels,
@@ -156,7 +157,7 @@ export default function CardJitsuCard() {
       if (dl.status === 'resolved' && mine && !p.settledCJDuels.includes(dl.id)) {
         const won = dl.winnerUid === p.uid;
         mutate((d) => {
-          if (won) { d.cjWins = (d.cjWins ?? 0) + 1; addSeasonPoints(d, SEASON_POINTS.cjWin); addQuestMetric(d, 'pvpWins', 1); }
+          if (won) { d.cjWins = (d.cjWins ?? 0) + 1; grantArtifactXp(d, PVP_ARTIFACT_XP.cjWin * d.level); addQuestMetric(d, 'pvpWins', 1); }
           d.settledCJDuels.push(dl.id);
         });
         if (won) {

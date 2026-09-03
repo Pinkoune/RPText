@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useGame } from '../../store/gameStore';
-import { TIERS, tierFor, seasonId, SEASON_POINTS, TIER_REWARDS } from '../../game/season';
+import { TIERS, tierFor, seasonId, TIER_REWARDS, seasonProgress } from '../../game/season';
 import { seasonTheme, getCurrentSeason } from '../../game/artifact';
 import { item } from '../../game/items';
 import { watchSeasonLadder, type LeaderRow } from '../../firebase/socialService';
@@ -24,7 +24,10 @@ export default function SeasonCard() {
   useEffect(() => watchSeasonLadder(sid, 15, setLadder), [sid]);
   if (!p) return null;
 
-  const pts = p.seasonPoints ?? 0;
+  // Une seule jauge de saison : le niveau d'artefact. Il monte sur TOUT
+  // (chasse, donjon, récolte, forge, camp, PvP) et pilote à la fois le rang et
+  // la passe. Les « points de saison » PvP n'existent plus.
+  const pts = seasonProgress(p);
   const { tier, next, into, span } = tierFor(pts);
 
   const season = getCurrentSeason();
@@ -45,13 +48,13 @@ export default function SeasonCard() {
       <div className="rounded-xl bg-black/25 p-3 text-center">
         <div className="text-3xl">{tier.icon}</div>
         <div className="text-lg font-bold" style={{ color: tier.color }}>{tier.name}</div>
-        <div className="text-xs text-slate-400">{pts} points de saison</div>
+        <div className="text-xs text-slate-400">Artefact niveau {pts}</div>
         {next ? (
           <>
             <div className="mt-2 h-2 rounded bg-black/40">
               <div className="h-2 rounded transition-all" style={{ width: `${Math.min(100, (into / span) * 100)}%`, background: tier.color }} />
             </div>
-            <div className="mt-1 text-[10px] text-slate-500">{next.icon} {next.name} dans {next.min - pts} pts</div>
+            <div className="mt-1 text-[10px] text-slate-500">{next.icon} {next.name} à l'artefact Nv.{next.min}</div>
           </>
         ) : (
           <div className="mt-1 text-[10px] text-purple-300">Rang maximum atteint 👑</div>
@@ -66,10 +69,22 @@ export default function SeasonCard() {
         <span className="font-semibold" style={{ color: theme.color }}>{theme.emoji} Saison {season} · {theme.name}</span>
       </div>
 
-      <p className="text-[11px] text-slate-500">
-        Gagne des points en PvP : duel gagné <b className="text-slate-300">+{SEASON_POINTS.duelWin}</b>, Card-Jitsu gagné <b className="text-slate-300">+{SEASON_POINTS.cjWin}</b>.
-        À la rotation, points de saison, records d'Abysses et artefact repartent tous à zéro — <b className="text-slate-300">ton personnage n'est jamais touché</b>.
-      </p>
+      {/* La question « quelle jauge monte avec quoi ? » revenait sans arrêt :
+          autant y répondre ici, une fois, en toutes lettres. */}
+      <div className="rounded-lg bg-black/25 p-3">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Une seule jauge de saison</div>
+        <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+          Ton <b className="text-slate-200">niveau d'artefact</b> EST ta progression de saison. Il monte sur
+          <b className="text-slate-200"> tout ce que tu fais</b> — chasse, donjon, récolte, forge, camp, et
+          désormais les victoires PvP. C'est lui qui donne ton rang ci-dessus, qui remplit la passe
+          ci-dessous, et qui débloque les mods de l'artefact.
+        </p>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
+          À la rotation : artefact, rang, passe et records d'Abysses repartent à zéro.
+          <b className="text-slate-200"> Ton personnage n'est jamais touché</b> — niveau, équipement,
+          métiers, maîtrises et Relique traversent.
+        </p>
+      </div>
 
       {/* Passe de saison — gratuite. Elle se remplit sur le niveau d'artefact,
           qui monte déjà sur tout ce que fait le joueur et repart à zéro à
