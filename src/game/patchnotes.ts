@@ -90,6 +90,15 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '🌀 La Faille de la semaine',
+        kind: 'new',
+        items: [
+          'Un défi qui <b>change tous les lundis</b> : un biome et un monstre du jeu, revisités par un modificateur qui t\'oblige à changer quelque chose. Enragé (frappe deux fois plus fort mais tombe vite), Colossal, Carapacé (sans pénétration d\'armure tes coups s\'écrasent), Cœur de givre et Voile d\'ombre (change d\'arme ou souffre), Verre et lames.',
+          '<b>Aucun cooldown</b> : réessaie autant que tu veux, la mort te coûte déjà ta série. Mais la prime — <b>2 ✧ Éclats de Relique</b> et de l\'or — ne tombe qu\'au premier passage de la semaine.',
+          'Tape « rift » (ou « faille ») à partir du niveau 20. Une pastille apparaît en bas à droite tant que tu ne l\'as pas franchie, et disparaît une fois validée.',
+        ],
+      },
+      {
         title: '🏅 Les saisons prennent enfin du poids',
         kind: 'new',
         items: [

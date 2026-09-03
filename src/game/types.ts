@@ -278,6 +278,8 @@ export interface PlayerState {
   unlockedBgs?: string[];
   /** Fond de profil actif. */
   profileBg?: string;
+  /** Clé de la semaine dont la Faille a déjà été validée (`w2870`). */
+  riftClearedWeek?: string;
   /** Joueur vétéran d'avant la réinitialisation (donne droit au Médaillon de l'Ancien Monde) */
   isLegacy?: boolean;
   legacyCreatedAt?: number;

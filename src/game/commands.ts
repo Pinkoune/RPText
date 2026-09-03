@@ -3,6 +3,7 @@ import type { WindowKind } from '../store/uiStore';
 import { useUi } from '../store/uiStore';
 import { useGame } from '../store/gameStore';
 import { pickMonster } from './monsters';
+import { currentRift, buildRiftMonster } from './rift';
 import { cooldownLeft } from './player';
 import { item, ITEMS } from './items';
 import { deriveStats, removeItem } from './player';
@@ -135,6 +136,7 @@ export const COMMANDS: CommandDef[] = [
   { name: 'aura', aliases: ['auras'], desc: 'Choisis une aura de prestige (bonus passif + affichée au classement).', category: 'Jeu', reqLevel: 30 },
   { name: 'artifact', aliases: ['artefact', 'art'], desc: "Artefact de saison : progression sans fin et grille de mods.", category: 'Jeu', reqLevel: 1 },
   { name: 'relic', aliases: ['relique', 'rel'], desc: "Ta Relique : le seul objet qui traverse renaissances et saisons.", category: 'Jeu', reqLevel: 20 },
+  { name: 'rift', aliases: ['faille'], desc: "Faille de la semaine : un défi qui change tous les lundis.", category: 'Combat', reqLevel: 20 },
   { name: 'prestige', aliases: ['ascension', 'neant'], desc: '???', category: 'Combat', reqLevel: 50, hidden: true },
 
   // Niveau 22
@@ -690,6 +692,20 @@ export function runCommand(input: string, ctx: CommandCtx): void {
     case 'relic':
       ctx.open('relic', undefined, { singleton: true });
       return;
+    case 'rift': {
+      if (p!.hp <= 0) { ctx.toast('Tu es K.O. Soigne-toi avant d\'entrer dans la Faille.', 'bad'); break; }
+      const rift = currentRift(Date.now(), p!.level);
+      const monster = buildRiftMonster(p!, rift);
+      // Pas de cooldown : l'échec coûte déjà la mort (pénalité + série perdue),
+      // et la récompense ne tombe qu'une fois par semaine de toute façon.
+      ctx.mutate((d) => {
+        if (!d.statistics.mobsEncountered) d.statistics.mobsEncountered = {};
+        d.statistics.mobsEncountered['rift'] = (d.statistics.mobsEncountered['rift'] ?? 0) + 1;
+      });
+      ctx.toast(`${rift.modifier.icon} Faille — ${rift.modifier.name} : ${rift.modifier.desc}`, 'info');
+      ctx.open('hunt', { monster, id: Date.now(), isMiniboss: true, riftKey: rift.key }, { singleton: true });
+      break;
+    }
     case 'artifact':
       ctx.open('artifact', undefined, { singleton: true });
       break;

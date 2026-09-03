@@ -264,6 +264,8 @@ export interface HuntEncounter {
   id: number;
   isAdventure?: boolean;
   isMiniboss?: boolean;
+  /** Clé de semaine si ce combat est la Faille (voir `rift.ts`). */
+  riftKey?: string;
 }
 
 export interface HuntRewards {

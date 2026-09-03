@@ -27,6 +27,7 @@ import {
   type HuntRewards,
 } from '../../game/combat';
 import { masteryProgress, biomeKills } from '../../game/mastery';
+import { currentRift, claimRift, RIFT_SHARDS } from '../../game/rift';
 import { BIOMES } from '../../game/biomes';
 
 import { useUi } from '../../store/uiStore';
@@ -56,6 +57,7 @@ interface BossTheme { label: string; sub: string; grad: string; ring: string; ba
 const BOSS_THEME: Record<string, BossTheme> = {
   miniboss:   { label: '☠ MINI-BOSS ☠', sub: 'Un colosse surgit des profondeurs.', grad: 'from-fuchsia-900/70 via-purple-800/50 to-indigo-950/70', ring: 'ring-fuchsia-500/50', bar: 'from-fuchsia-600 to-purple-400', text: 'text-fuchsia-200' },
   mercenaire: { label: '🎯 CONTRAT MERCENAIRE', sub: 'Élimine la cible pour toucher la prime.', grad: 'from-amber-900/70 via-red-800/50 to-rose-950/70', ring: 'ring-amber-500/50', bar: 'from-amber-500 to-red-400', text: 'text-amber-200' },
+  rift:       { label: '🌀 FAILLE DE LA SEMAINE', sub: 'Un défi qui changera lundi.', grad: 'from-cyan-900/70 via-sky-800/45 to-indigo-950/70', ring: 'ring-cyan-400/50', bar: 'from-cyan-400 to-sky-300', text: 'text-cyan-200' },
   sanctuaire: { label: '🏛️ ÉPREUVE DU SANCTUAIRE', sub: 'Le Gardien des Anciens juge ta valeur.', grad: 'from-yellow-800/60 via-amber-700/40 to-yellow-950/70', ring: 'ring-yellow-400/50', bar: 'from-yellow-300 to-amber-400', text: 'text-yellow-200' },
   default:    { label: '☠ COMBAT DE BOSS ☠', sub: 'Un adversaire redoutable te défie.', grad: 'from-rose-900/60 via-red-800/40 to-amber-900/50', ring: 'ring-rose-500/50', bar: 'from-rose-600 to-red-400', text: 'text-rose-200' },
 };
@@ -261,7 +263,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     else if (res.mhp <= 0) newStatus = 'won';
     else if (res.php <= 0) newStatus = 'lost';
 
-    const captured: { rewards: HuntRewards | null } = { rewards: null };
+    const captured: { rewards: HuntRewards | null; riftClaimed: boolean } = { rewards: null, riftClaimed: false };
     mutate((d) => {
       d.hp = res.php;
       if (potUse) removeItem(d, potUse, 1);
@@ -272,6 +274,13 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
 
       if (newStatus === 'won') {
         captured.rewards = grantMonsterRewards(d, m);
+        // Faille de la semaine : la prime ne tombe qu'au PREMIER passage de la
+        // semaine. Les tentatives suivantes restent possibles (et rapportent le
+        // butin de combat normal), mais ne repayent pas la prime.
+        if (encounter.riftKey) {
+          const rift = currentRift(Date.now(), d.level);
+          if (rift.key === encounter.riftKey) captured.riftClaimed = claimRift(d, rift);
+        }
         // Tracking mini-boss
         if (encounter.isMiniboss) {
           const prev = (d as any).minibossKills ?? 0;
@@ -368,6 +377,9 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       if (captured.rewards?.masteryUp) {
         const mu = captured.rewards.masteryUp;
         toast(`🏅 Maîtrise ${BIOMES[mu.biome as keyof typeof BIOMES]?.name ?? mu.biome} : palier atteint ! Titre « ${mu.title} » débloqué.`, 'gold');
+      }
+      if (captured.riftClaimed) {
+        toast(`🌀 Faille franchie ! +${RIFT_SHARDS} ✧ Éclats de Relique.`, 'gold');
       }
       if (captured.rewards && captured.rewards.levelsGained > 0) {
         playSound('levelup');

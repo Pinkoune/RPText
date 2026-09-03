@@ -3,6 +3,8 @@ import { useGame } from '../store/gameStore';
 import { useUi } from '../store/uiStore';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { getRaidWindow } from '../game/raid';
+import { currentRift, riftCleared } from '../game/rift';
+import { runCommand } from '../game/commands';
 
 const SETTINGS_KEY = 'rptext.settings';
 
@@ -57,6 +59,8 @@ export default function AmbientRail() {
   const myTeam = teams.find((t) => p.uid in (t.members ?? {}));
   const members = myTeam ? Object.entries(myTeam.members) : [];
   const raid = getRaidWindow();
+  const rift = currentRift(Date.now(), p.level);
+  const riftDone = riftCleared(p, rift);
 
   return (
     <div className="pointer-events-none fixed bottom-24 right-3 z-10 flex flex-col items-end gap-1.5 sm:bottom-20">
@@ -87,7 +91,24 @@ export default function AmbientRail() {
 
       {/* L'artefact a rejoint la barre du haut : le garder ici ferait doublon. */}
 
-      {/* 4. Rendez-vous de raid imminent (le seul rendez-vous a heure fixe). */}
+      {/* 4. Faille de la semaine, tant qu'elle n'est pas franchie. Elle
+          disparaît une fois validée : le rail signale ce qui reste à faire,
+          pas ce qui est fait. */}
+      {p.level >= 20 && !riftDone && (
+        <Chip
+          title={`${rift.modifier.name} — ${rift.modifier.desc}`}
+          onClick={() => runCommand('rift', {
+            getPlayer: () => useGame.getState().player,
+            mutate: useGame.getState().mutate,
+            open,
+            toast: useGame.getState().toast,
+          })}
+        >
+          <span className="animate-pulse">🌀</span> faille · {rift.modifier.name}
+        </Chip>
+      )}
+
+      {/* 5. Rendez-vous de raid imminent (le seul rendez-vous a heure fixe). */}
       {raid.open && p.level >= 22 && (
         <Chip title="Les inscriptions au raid sont ouvertes" onClick={() => open('dungeon', undefined, { singleton: true })}>
           <span className="animate-pulse">🔱</span> raid ouvert · {Math.max(1, Math.round(raid.msLeft / 60_000))} min
