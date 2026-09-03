@@ -2,6 +2,7 @@ import { doc, getDoc, setDoc, deleteDoc, collection, query, where, limit, getDoc
 import { db, isFirebaseConfigured } from './config';
 import type { PlayerState } from '../game/types';
 import { charKey, MAX_CHARACTERS } from '../game/player';
+import { powerScore } from '../game/power';
 import { syncGuildMember, contributeGuildGoal } from './groupsService';
 
 const localKey = (uid: string) => `rptext.player.${uid}`;
@@ -159,6 +160,11 @@ export async function savePlayer(p: PlayerState): Promise<void> {
     prestigeAura: p.prestigeAura ?? null,
     prestigeLevel: p.prestigeLevel ?? 0,
     auraColorOn: p.auraColorOn ?? true,
+    // Cote de Puissance : c'est elle qui classe désormais, le niveau seul se
+    // figeant dès que plusieurs joueurs atteignent le plafond. Pré-calculée ici
+    // parce que la ligne de classement ne transporte pas les composants (sac,
+    // maîtrises, artefact) et qu'on ne veut pas les y dupliquer.
+    power: powerScore(p).total,
   });
   // Garde la fiche membre de guilde à jour (niveau/titre figés sinon depuis l'entrée dans la guilde).
   // `savePlayer` est appelé très souvent (mutate débounced à 800ms) : ne réécrit

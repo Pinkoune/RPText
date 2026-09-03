@@ -2,6 +2,7 @@ import { collection, getDocs, query, orderBy, limit, onSnapshot, doc, getDoc } f
 import { ref, onValue, onDisconnect, set, serverTimestamp } from 'firebase/database';
 import { db, rtdb, isFirebaseConfigured } from './config';
 import type { ClassId, PlayerState } from '../game/types';
+import { fallbackPower } from '../game/power';
 
 /** Lit le profil public d'un joueur (best-effort). Null si indisponible. */
 export async function fetchPublicProfile(uid: string): Promise<Partial<PlayerState> | null> {
@@ -31,6 +32,8 @@ export interface LeaderRow {
   prestigeAura?: string;
   prestigeLevel?: number;
   auraColorOn?: boolean;
+  /** Cote de Puissance (voir game/power.ts). Absente sur les lignes d'anciens clients. */
+  power?: number;
 }
 
 export interface OnlinePlayer {
@@ -43,12 +46,26 @@ export interface OnlinePlayer {
   playtimeMs?: number;
 }
 
+/** Puissance d'une ligne, avec repli pour les lignes d'avant la cote. */
+export function rowPower(r: LeaderRow): number {
+  return r.power ?? fallbackPower(r);
+}
+
 /**
- * Départage à niveau égal par l'XP brute : comme le seuil pour passer au
+ * Classement par Puissance, puis niveau, puis XP brute.
+ *
+ * Le tri se fait ICI plutôt que dans la requête Firestore : un `orderBy('power')`
+ * exclurait purement et simplement les documents qui ne portent pas encore le
+ * champ (les lignes écrites par un client plus ancien disparaîtraient du
+ * tableau jusqu'à la prochaine connexion de leur propriétaire).
+ *
+ * Départage à Puissance égale par l'XP brute : comme le seuil pour passer au
  * niveau suivant ne dépend que du niveau (pas du joueur), comparer l'XP brute
  * entre deux joueurs du même niveau revient à comparer leur % de progression.
  */
-function byLevelThenXp(a: LeaderRow, b: LeaderRow): number {
+function byPower(a: LeaderRow, b: LeaderRow): number {
+  const d = rowPower(b) - rowPower(a);
+  if (d !== 0) return d;
   if (b.level !== a.level) return b.level - a.level;
   return (b.xp ?? 0) - (a.xp ?? 0);
 }
@@ -58,12 +75,28 @@ function isHiddenName(name: string | undefined): boolean {
   return (name ?? '').trim().toLowerCase() === 'admin';
 }
 
-/** Top joueurs par niveau. Vide en mode local. */
+/**
+ * Facteur de sur-échantillonnage.
+ *
+ * La requête doit trier sur `level` (seul champ présent sur TOUTES les lignes,
+ * y compris celles d'anciens clients), mais le classement affiché est celui de
+ * la Puissance. Sans marge, `limit` couperait sur le mauvais critère : un joueur
+ * qui vient de renaître est au Nv.1 tout en pesant très lourd en Puissance, et
+ * il serait purement et simplement absent du tableau. On rapatrie donc large,
+ * on trie, puis on tranche.
+ */
+const OVERFETCH = 4;
+
+function rank(rows: LeaderRow[], max: number): LeaderRow[] {
+  return rows.filter((r) => !isHiddenName(r.name)).sort(byPower).slice(0, max);
+}
+
+/** Top joueurs par Puissance. Vide en mode local. */
 export async function fetchLeaderboard(max = 20): Promise<LeaderRow[]> {
   if (!isFirebaseConfigured || !db) return [];
-  const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max));
+  const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max * OVERFETCH));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as LeaderRow).filter((r) => !isHiddenName(r.name)).sort(byLevelThenXp);
+  return rank(snap.docs.map((d) => d.data() as LeaderRow), max);
 }
 
 export function watchLeaderboard(max: number, onChange: (rows: LeaderRow[]) => void): () => void {
@@ -71,9 +104,9 @@ export function watchLeaderboard(max: number, onChange: (rows: LeaderRow[]) => v
     onChange([]);
     return () => {};
   }
-  const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max));
+  const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max * OVERFETCH));
   return onSnapshot(q, (snap) => {
-    onChange(snap.docs.map((d) => d.data() as LeaderRow).filter((r) => !isHiddenName(r.name)).sort(byLevelThenXp));
+    onChange(rank(snap.docs.map((d) => d.data() as LeaderRow), max));
   });
 }
 

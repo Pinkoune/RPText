@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { CLASSES, xpToNext } from '../../game/classes';
+import { powerScore, MASTERY_MAX } from '../../game/power';
 import { BIOMES } from '../../game/biomes';
 import { deriveStats, changeBaseClass, BASE_CLASSES } from '../../game/player';
 import { farmProgress } from '../../game/gathering';
@@ -49,6 +50,7 @@ export default function ProfileCard() {
   if (!p) return null;
   const cls = CLASSES[p.classId];
   const prestigeN = Math.min(p.prestigeLevel ?? 0, 5);
+  const power = powerScore(p);
   const tokens = p.classChangeTokens ?? 0;
 
   function useToken(newClass: ClassId) {
@@ -121,6 +123,24 @@ export default function ProfileCard() {
           🌟 {p.talentPoints} point{p.talentPoints > 1 ? 's' : ''} de talent à dépenser — tape « talents ».
         </div>
       )}
+
+      {/* Cote de Puissance : le classement se joue là-dessus, donc on montre
+          d'où vient le score — sinon c'est un nombre opaque de plus. Chaque
+          ligne est un levier concret sur lequel le joueur peut agir. */}
+      <div className="rounded-lg bg-black/25 px-3 py-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">⚡ Puissance</span>
+          <span className="text-base font-bold tabular-nums text-amber-300">{power.total.toLocaleString()}</span>
+        </div>
+        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-400">
+          <span>Niveau <b className="tabular-nums text-slate-200">{power.level}</b></span>
+          {power.prestige > 0 && <span>Prestige <b className="tabular-nums text-purple-300">{power.prestige}</b></span>}
+          <span>Artefact <b className="tabular-nums text-slate-200">{power.artifact}</b></span>
+          <span>Étoiles <b className="tabular-nums text-slate-200">{power.stars}</b></span>
+          <span>Maîtrises <b className="tabular-nums text-slate-200">{power.mastery}</b>/{MASTERY_MAX}</span>
+          {power.endless > 0 && <span>Abysses <b className="tabular-nums text-slate-200">{power.endless}</b></span>}
+        </div>
+      </div>
 
       {/* Prestige : insigne + bonus permanent */}
       {(p.prestigeLevel ?? 0) > 0 && (

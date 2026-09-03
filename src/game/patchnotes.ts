@@ -90,6 +90,16 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '⚡ Cote de Puissance — le classement ne se fige plus',
+        kind: 'new',
+        items: [
+          'Le classement triait sur le niveau. Le jour où plusieurs joueurs atteignent le Nv.50 (plafond dur), il se figeait et tout le monde se retrouvait ex æquo — au pire moment.',
+          'Il classe désormais sur la <b>Puissance</b> : une seule note qui additionne niveau, prestige, niveau d\'artefact, étoiles de l\'équipement porté, paliers de maîtrise et meilleur étage d\'Abysses. En début de partie le niveau domine, donc rien ne change ; au plafond, ce sont les autres axes qui départagent.',
+          'Une <b>renaissance ne te fait pas chuter au fond du tableau</b> : le prestige pèse autant que le trajet 1→50 qu\'il te fait recommencer.',
+          'Le détail de ta Puissance est affiché dans ton <b>Profil</b> — chaque ligne est un levier sur lequel tu peux agir.',
+        ],
+      },
+      {
         title: '✦ Prestige : on te dit enfin ce que ça rapporte',
         kind: 'balance',
         items: [
