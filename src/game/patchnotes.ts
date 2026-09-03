@@ -90,6 +90,16 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '🏅 Les saisons prennent enfin du poids',
+        kind: 'new',
+        items: [
+          'Il y avait <b>deux systèmes de saison</b> qui ne se parlaient pas : le ladder PvP tournait au mois calendaire, l\'artefact tournait quand l\'admin le décidait. Il n\'y en a plus qu\'un — la Saison N fait autorité pour tout.',
+          'Une rotation remet désormais à zéro <b>d\'un seul coup</b> : l\'artefact, les points de saison PvP et les <b>classements d\'Abysses</b> (solo et multi). Les records redeviennent contestables au lieu de traîner d\'une saison sur l\'autre.',
+          '<b>Ton personnage n\'est jamais touché</b> : niveau, équipement, métiers, maîtrises et Relique traversent la rotation.',
+          '<b>Passe de saison gratuite</b> — dix paliers, aucune piste payante. Elle se remplit sur ton niveau d\'artefact, donc sur tout ce que tu fais. Au menu : des Éclats de Relique, des <b>fonds de profil</b> à collectionner (Aube, Braise, Abysse, Primordial…) et des <b>titres saisonniers</b> nommés d\'après le thème — « Champion · Automne » ne se regagnera plus jamais.',
+        ],
+      },
+      {
         title: '✦ La Relique — l\'objet qui traverse tout',
         kind: 'new',
         items: [
