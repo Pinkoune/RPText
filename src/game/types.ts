@@ -268,6 +268,10 @@ export interface PlayerState {
   claimedMathieuKdo?: boolean;
   /** Progression dans le donjon sans fin (étage max atteint). */
   endlessBest?: number;
+  /** Relique : l'axe permanent, seule chose à traverser renaissance ET saison. */
+  relic?: { stars: number; effects: string[] };
+  /** Éclats de Relique (monnaie du end-game). */
+  relicShards?: number;
   /** Joueur vétéran d'avant la réinitialisation (donne droit au Médaillon de l'Ancien Monde) */
   isLegacy?: boolean;
   legacyCreatedAt?: number;

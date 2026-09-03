@@ -1,6 +1,7 @@
 import type { PlayerState, ClassId } from './types';
 import { CLASSES } from './classes';
 import { applyArtifactMods } from './artifact';
+import { applyRelicMods } from './relic';
 
 export interface CombatMods {
   crit: number;
@@ -394,6 +395,7 @@ export function talentMods(p: PlayerState): CombatMods {
   // abysses, guilde, équipe…). Les brancher ailleurs les rendrait absents de la
   // moitié du jeu. Le plafonnement ci-dessous s'applique donc aussi à eux.
   applyArtifactMods(p, mods);
+  applyRelicMods(p, mods);
 
   for (const [key, cap] of Object.entries(CAPS) as [keyof CombatMods, number][]) {
     mods[key] = Math.min(mods[key], cap);

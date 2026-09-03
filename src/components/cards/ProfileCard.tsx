@@ -139,6 +139,7 @@ export default function ProfileCard() {
           <span>Étoiles <b className="tabular-nums text-slate-200">{power.stars}</b></span>
           <span>Maîtrises <b className="tabular-nums text-slate-200">{power.mastery}</b>/{MASTERY_MAX}</span>
           {power.endless > 0 && <span>Abysses <b className="tabular-nums text-slate-200">{power.endless}</b></span>}
+          {power.relic > 0 && <span>Relique <b className="tabular-nums text-amber-300">{power.relic}</b></span>}
         </div>
       </div>
 

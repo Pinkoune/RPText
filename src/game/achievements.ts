@@ -2,6 +2,7 @@ import type { PlayerState } from './types';
 import { getCraftLevel } from './crafting';
 import { farmLevel } from './gathering';
 import { addItemToInventory } from './items';
+import { grantShards, SHARDS_PER_ACHIEVEMENT } from './relic';
 
 // ─── Succès ──────────────────────────────────────────────────────────────────
 // Objectifs long terme calculés à partir des statistiques déjà suivies sur le
@@ -81,6 +82,10 @@ export function claimAchievement(p: PlayerState, id: string): boolean {
   if (r.fateCoins) p.fateCoins += r.fateCoins;
   if (r.item) addItemToInventory(p.inventory, r.item.id, r.item.qty);
   
+  // Éclats de Relique : c'est ce qui rend les succès à nouveau désirables au
+  // Nv.50, où l'or et les gemmes qu'ils donnent ne valent plus grand-chose.
+  grantShards(p, SHARDS_PER_ACHIEVEMENT);
+
   if (def.titleReward) {
     if (!p.unlockedTitles) p.unlockedTitles = [];
     if (!p.unlockedTitles.includes(def.titleReward)) p.unlockedTitles.push(def.titleReward);

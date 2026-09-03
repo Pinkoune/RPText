@@ -90,6 +90,17 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '✦ La Relique — l\'objet qui traverse tout',
+        kind: 'new',
+        items: [
+          'Un objet unique, lié à ton personnage, qui <b>survit à la renaissance ET au changement de saison</b>. C\'est la seule chose du jeu dans ce cas : quand tout repart à zéro, elle reste.',
+          '<b>Étoiles 1 à 5</b> : +2% ATK/DEF/PV chacune. <b>Étoiles 6 à 10</b> : pas de statistiques, mais un <b>effet au choix parmi trois</b> à chaque palier — critique, pénétration, esquive, ronces, vol de vie, Sursis, Propagation… Deux Reliques ★10 ne jouent pas pareil.',
+          'Elle change de nom, d\'icône et de couleur en montant : Éclat sans nom, Fragment éveillé, Relique ascendante, Relique souveraine, puis <b>Relique primordiale</b>.',
+          'Elle se grave avec des <b>Éclats</b> : +3 par succès accompli, +1 par niveau d\'artefact <b>au-delà de la grille pleine</b> (ces niveaux ne servaient plus à rien), et des paliers de la passe de saison.',
+          'Tape « relic » à partir du niveau 20.',
+        ],
+      },
+      {
         title: '⚡ Cote de Puissance — le classement ne se fige plus',
         kind: 'new',
         items: [

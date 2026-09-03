@@ -10,6 +10,7 @@ import { activeEventEffect } from './events';
 import { ensureSeason, seasonId } from './season';
 import { prestigeBonus, prestigeStatMult, prestigeXpGoldMult } from './prestige';
 import { freshArtifact, rotateSeason, artifactPowerPct, grantArtifactXp } from './artifact';
+import { freshRelic, relicStatMult } from './relic';
 
 /** Incrémenter force un reset unique des talents de tous les joueurs (bugfix). */
 export const TALENT_RESET_VERSION = 3;
@@ -131,6 +132,10 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (p.cjWins == null) p.cjWins = 0;
   if (p.teamId === undefined) p.teamId = null;
   if (p.endlessBest === undefined) p.endlessBest = 0;
+  // Relique : jamais réinitialisée par `applyRebirth` ni par `rotateSeason`,
+  // c'est tout son intérêt. On se contente de la créer si elle manque.
+  if (!p.relic) p.relic = freshRelic();
+  if (p.relicShards === undefined) p.relicShards = 0;
   if (!p.enchants) p.enchants = { weapon: [], armor: [], trinket: [] };
   // Titre par défaut retiré : les nouveaux joueurs n'ont plus aucun titre tant
   // qu'ils n'en débloquent pas un — nettoie ceux qui l'ont encore.
@@ -541,6 +546,8 @@ export function createPlayer(
     inventory: { potion: 2 },
     equipped: { weapon, armor: null, trinket: null, tool: null, profession_armor: null },
     endlessBest: 0,
+    relic: freshRelic(),
+    relicShards: 0,
     endlessSessionId: null,
     settledEndless: [],
     pvpDuelSessionId: null,
@@ -723,9 +730,12 @@ export function deriveStats(p: PlayerState, skipEquipCheck = false): Stats {
   // Artefact de saison : progression sans fin qui prend le relais du niveau une
   // fois le plafond atteint. Logarithmique, donc sans plafond mais sans dérive.
   const artMult = 1 + artifactPowerPct(p.artifact?.level ?? 0);
-  atk = Math.round(atk * (1 + mods.atkPct + evt.atkPct + setAtkPct + enchAtkPct + prestige.atkPct) * presMult * artMult);
-  def = Math.round(def * (1 + mods.defPct + evt.defPct + setDefPct + enchDefPct + prestige.defPct) * presMult * artMult);
-  maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct + setHpPct + enchHpPct + prestige.hpPct) * presMult * artMult);
+  // Relique : seules les étoiles 1 à 5 donnent des stats (les suivantes donnent
+  // des effets, versés dans CombatMods par `applyRelicMods`).
+  const relMult = relicStatMult(p);
+  atk = Math.round(atk * (1 + mods.atkPct + evt.atkPct + setAtkPct + enchAtkPct + prestige.atkPct) * presMult * artMult * relMult);
+  def = Math.round(def * (1 + mods.defPct + evt.defPct + setDefPct + enchDefPct + prestige.defPct) * presMult * artMult * relMult);
+  maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct + setHpPct + enchHpPct + prestige.hpPct) * presMult * artMult * relMult);
 
 
   return { level: p.level, maxHp, atk, def, hp: Math.min(p.hp, maxHp), maxCp, maxGp, weaponElement,

@@ -1,4 +1,5 @@
 import type { PlayerState } from './types';
+import { grantShards } from './relic';
 import type { CombatMods } from './talents';
 
 // ─── Artefact de saison ──────────────────────────────────────────────────────
@@ -117,6 +118,16 @@ export interface ArtifactModDef {
  */
 export const COLUMN_UNLOCK = [0, 4, 12, 24, 42];
 
+/**
+ * Coût total de la grille. Au-delà de ce niveau, les points d'artefact n'ont
+ * plus rien à acheter : ils deviennent des Éclats de Relique. Sans ça, la
+ * « progression infinie » de l'artefact se résumait à +0,1% de puissance par
+ * niveau, soit une jauge qui monte pour rien.
+ */
+export function artifactGridCost(): number {
+  return ARTIFACT_MODS.reduce((sum, m) => sum + m.cost, 0);
+}
+
 export const ARTIFACT_MODS: ArtifactModDef[] = [
   // ── Colonne I — fondations ──
   { id: 'art_edge', name: 'Tranchant', icon: '🗡️', desc: '+6% ATK.', column: 0, cost: 1, mods: { atkPct: 0.06 } },
@@ -211,6 +222,7 @@ export function applyArtifactMods(p: PlayerState, mods: CombatMods): void {
 export function grantArtifactXp(p: PlayerState, amount: number): number {
   if (!Number.isFinite(amount) || amount <= 0) return 0;
   const a = getArtifact(p);
+  const grid = artifactGridCost();
   a.xp += Math.floor(amount);
   let gained = 0;
   // Garde-fou : une récompense aberrante ne doit pas boucler indéfiniment.
@@ -218,6 +230,10 @@ export function grantArtifactXp(p: PlayerState, amount: number): number {
     a.xp -= artifactXpToNext(a.level);
     a.level += 1;
     gained += 1;
+    // Une fois la grille payable en entier, les niveaux suivants n'ont plus
+    // rien à acheter : ils deviennent des Éclats de Relique. C'est ce qui donne
+    // enfin une raison de continuer à faire monter l'artefact.
+    if (a.level > grid) grantShards(p, 1);
   }
   return gained;
 }

@@ -34,6 +34,8 @@ export const POWER_WEIGHTS = {
   mastery: 1,
   /** Meilleur étage d'Abysses — deux étages valent un point. */
   endless: 0.5,
+  /** Étoile de Relique : rare et permanente, elle pèse lourd. */
+  relicStar: 12,
 } as const;
 
 export interface PowerBreakdown {
@@ -43,6 +45,7 @@ export interface PowerBreakdown {
   stars: number;
   mastery: number;
   endless: number;
+  relic: number;
   total: number;
 }
 
@@ -78,8 +81,9 @@ export function powerScore(p: PlayerState): PowerBreakdown {
   const stars = equippedStars(p) * w.star;
   const mastery = masterySum(p) * w.mastery;
   const endless = Math.max(0, p.endlessBest ?? 0) * w.endless;
-  const total = Math.round(level + prestige + artifact + stars + mastery + endless);
-  return { level, prestige, artifact, stars, mastery, endless, total };
+  const relic = Math.max(0, p.relic?.stars ?? 0) * w.relicStar;
+  const total = Math.round(level + prestige + artifact + stars + mastery + endless + relic);
+  return { level, prestige, artifact, stars, mastery, endless, relic, total };
 }
 
 /**

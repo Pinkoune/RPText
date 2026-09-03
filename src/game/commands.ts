@@ -133,7 +133,8 @@ export const COMMANDS: CommandDef[] = [
   { name: 'expedition', aliases: ['expe', 'exploration'], desc: 'Envoie ton familier en expédition 4h → ramène des ressources.', category: 'Jeu', reqLevel: 35 },
   { name: 'sanctuary', aliases: ['sanctuaire', 'sanctum'], desc: 'Sanctuaire des Anciens : boss solo ultime (1 fois / 24h). Butin unique.', category: 'Combat', reqLevel: 40 },
   { name: 'aura', aliases: ['auras'], desc: 'Choisis une aura de prestige (bonus passif + affichée au classement).', category: 'Jeu', reqLevel: 30 },
-  { name: 'artifact', aliases: ['artefact', 'relique', 'art'], desc: "Artefact de saison : progression sans fin et grille de mods.", category: 'Jeu', reqLevel: 1 },
+  { name: 'artifact', aliases: ['artefact', 'art'], desc: "Artefact de saison : progression sans fin et grille de mods.", category: 'Jeu', reqLevel: 1 },
+  { name: 'relic', aliases: ['relique', 'rel'], desc: "Ta Relique : le seul objet qui traverse renaissances et saisons.", category: 'Jeu', reqLevel: 20 },
   { name: 'prestige', aliases: ['ascension', 'neant'], desc: '???', category: 'Combat', reqLevel: 50, hidden: true },
 
   // Niveau 22
@@ -686,6 +687,9 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.open('prestige', undefined, { singleton: true });
       break;
 
+    case 'relic':
+      ctx.open('relic', undefined, { singleton: true });
+      return;
     case 'artifact':
       ctx.open('artifact', undefined, { singleton: true });
       break;
