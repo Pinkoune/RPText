@@ -1,6 +1,7 @@
 # CLAUDE.md — RPText
 
-RPG textuel multijoueur web. **Vite + React + TypeScript + Tailwind + Zustand**, backend **Firebase** (Auth, Firestore, Realtime DB) avec **repli localStorage** complet (`isFirebaseConfigured`). Utilisateur FR. Vérif = `npm run build` (le preview live est bloqué par le popup OAuth).
+RPG textuel multijoueur web. **Vite + React + TypeScript + Tailwind + Zustand**, backend **Firebase** (Auth, Firestore, Realtime DB) avec **repli localStorage** complet (`isFirebaseConfigured`). Utilisateur FR. Vérif = `npx tsc -b` + `npm run build`, **et le jeu tourne réellement
+en local** (voir « Vérifier en jeu » ci-dessous).
 
 ---
 
@@ -22,31 +23,118 @@ l'utilisateur). ⚠️ `firestore.rules` a changé → **à redéployer**.
   compte** → aucune migration Firestore. Slots 1-2 suffixés `uid__1`. ⚠️ Toutes les
   règles Firestore passent par `ownsCharacter()` : les services envoient l'id du
   **personnage** (`p.uid`), pas du compte. Statut Vétéran/Admin reste au slot 0.
-- **Saison + artefact** (`game/artifact.ts`, `firebase/seasonService.ts`,
-  `ArtifactCard.tsx`) : `system/season` piloté admin (bouton dans AdminModal). La
-  rotation ne touche **aucun personnage**, seul l'artefact repart à zéro. Puissance
-  `0.35*log10(1+level/10)` sans plafond ; grille de 17 mods (58 points) qui se
-  remplit vers le plafond de niveau. Les mods de combat passent par `CombatMods`
-  (agrégés dans `talentMods`) → actifs partout sans toucher les 12 sites d'appel.
-- **Chasse interactive** (`combat.ts`) : `MonsterIntent` (télégraphe annoncé au tour
-  précédent) + actions `parry`/`interrupt` ; **série de chasse** (`huntStreak`,
-  +2%/kill plafonné +40%, perdue à la mort).
 - **Camp** (`game/camp.ts`) : accumulation hors-ligne dès le Nv.5, plafond 12h.
-  L'XP passe par `grantXp` → alimente aussi l'artefact.
-- **Donjons à paliers** (`dungeonService.tierMult`, `p.dungeonTiers`) : +35%/palier
-  sur monstre ET récompense, un seul palier au-dessus du meilleur réussi.
-- **Fin du wipe au boss final** (`ascension.ts`) : la victoire donne un titre et
-  **ouvre** `applyRebirth`, déclenché par le joueur depuis PrestigeCard.
-- **UI** : `EquipmentCard` en paperdoll (silhouette + anneau de set + comparaison
-  avant équipement), arbre de talents à **liens de prérequis tracés** + aperçu du
-  gain, patch notes en **pastille discrète** (modale opt-in dans les Paramètres),
-  `AmbientRail` (4 pastilles max, lit la présence depuis le store — `PresenceTracker`
-  reste l'unique abonné), `WelcomeBackModal` (absence capturée dans le store **avant**
-  `savePlayer`, qui écrase `lastSeen`).
+- **Donjons à paliers** (`dungeonService.tierMult`, `p.dungeonTiers`) : +35%/palier.
+- **Fin du wipe au boss final** (`ascension.ts`) : la victoire ouvre `applyRebirth`,
+  déclenché par le joueur depuis PrestigeCard.
+- **Chasse interactive** (`combat.ts`) : `MonsterIntent` (télégraphe annoncé au tour
+  précédent) + `parry`/`interrupt` ; **série de chasse** (`huntStreak`, +2%/kill
+  plafonné +40%, perdue à la mort).
 
-**Abandonné et pourquoi** : niveau 100 (l'artefact le remplace sans réécrire courbe,
-monstres, donjons, arbres et paliers d'équipement) ; wipe saisonnier des personnages
-(la saison ne reset que l'artefact et les classements) ; CLI (projet à part).
+---
+
+## Progression : les six jauges (⚠️ lire avant d'en ajouter une septième)
+
+L'utilisateur s'est explicitement dit **perdu** (« qui fait quoi et quel exp, ça fait
+beaucoup »). On a répondu en SUPPRIMANT un compteur, pas en en ajoutant. Toute
+nouvelle mécanique doit se brancher sur l'une de ces jauges plutôt qu'en créer une.
+Elles sont expliquées en jeu dans la carte Aide (section « Les jauges du jeu »).
+
+| Jauge | Monte avec | Sert à | Reset |
+|---|---|---|---|
+| **Niveau** 1→50 | combat, donjon, récolte, forge, camp | stats + 1 point de talent/niveau | renaissance |
+| **Artefact = la saison** | la MÊME XP que le niveau, **+ victoires PvP** | mods, rang de saison, paliers de passe | rotation de saison |
+| **Métiers** | récolter, forger, concocter | recettes et ressources | renaissance |
+| **Éclats ✧** | succès (+3), passe, artefact au-delà de la grille (+1/niv) | étoiles de la Relique | jamais |
+| **Maîtrise de biome** | kills par zone (paliers 100/500/1500/4000) | bonus XP/Or permanent + titre | jamais |
+| **Puissance ⚡** | somme dérivée de tout | classement uniquement | — |
+
+**Ce qui traverse tout** (ni renaissance ni saison) : Relique, Éclats, maîtrises,
+familiers, titres, succès, fonds de profil.
+
+### Saison unifiée (`season.ts` + `artifact.ts`)
+Il y avait DEUX saisons : ladder PvP au mois calendaire, et artefact piloté admin.
+Fusionnées. `seasonId()` dérive du numéro de saison de l'artefact (`s<N>`) ;
+`nextSeasonAt` a disparu (une saison finit quand l'admin la fait tourner).
+`seasonPoints` est **retiré du gameplay** (champ conservé pour compat Firestore) :
+les rangs Bronze→Maître sont indexés sur le **niveau d'artefact** (0/8/20/35/55/85),
+et les victoires PvP versent de l'XP d'artefact (`PVP_ARTIFACT_XP`, ×40/×30 le niveau).
+`advanceSeason` balaie artefact + points PvP + classements d'Abysses d'un coup.
+La récompense de fin de saison est créditée dans `migratePlayer` depuis l'archive
+que rend `rotateSeason` — seul endroit qui connaisse le niveau atteint avant reset.
+
+### Artefact (`game/artifact.ts`)
+Puissance `0.35*log10(1+level/10)`, sans plafond mais logarithmique. Grille de
+17 mods (**62 points**). Au-delà de `artifactGridCost()`, chaque niveau donne
+**1 Éclat** au lieu d'un point mort — la queue de l'artefact valait sinon +0,1%
+de puissance par niveau. Mods de combat agrégés dans `talentMods` → `CombatMods`.
+
+### Relique (`game/relic.ts`) — l'axe permanent
+Entité autonome (PAS une pièce d'équipement : elle serait détruite par
+`applyRebirth`, entrerait en concurrence avec le stuff farmé, et devrait battre
+`void_mantle` pour être portée). ★1-5 = **+2%** ATK/DEF/PV chacune (et non +10% :
+en autonome ça s'AJOUTE à l'artefact et au prestige). ★6-10 = **un effet au choix
+parmi trois**, versé dans `CombatMods`, aucune stat brute. Coûts 8/14/20/26/32.
+
+### Passe de saison (`game/seasonpass.ts`)
+Gratuite, 10 paliers indexés sur le **niveau d'artefact** (pas de compteur dédié).
+Donne des Éclats (~26/saison, seule source répétable), des fonds de profil et des
+titres saisonniers nommés d'après le thème. `ensureSeasonPass` vide la piste à la
+rotation ; titres et fonds restent acquis.
+
+### Faille de la semaine (`game/rift.ts`)
+Biome + modificateur déduits de l'horloge (`Math.floor(now / RIFT_WEEK_MS)`), zéro
+backend. ⚠️ Le pas du modificateur (**5**) doit rester premier avec leur nombre (6) :
+avec 3, quatre modificateurs sur six ne sortaient jamais. Calibrée RELATIVEMENT au
+mini-boss (0,21-0,40× ses PV, 0,40-1,32× son ATK) — `simulateCombat` sort 0% de
+victoire même contre un monstre normal, ses taux absolus sont inutilisables.
+Prime (2 Éclats + or) au premier passage de la semaine, pas de cooldown.
+
+### Puissance (`game/power.ts`)
+Unité : **1 point ≈ un niveau de personnage d'effort**. Niveau ×1, prestige ×50
+(une renaissance ne doit PAS faire chuter au fond du classement), artefact ×1,
+étoiles portées ×1, maîtrises ×1, Abysses ×0.5, étoile de Relique ×12, kills et
+donjons en **racine carrée** (×0.5 / ×1.5 — en linéaire 60 000 kills écraseraient
+tout), meilleure série ×1.
+⚠️ Le tri Firestore reste `orderBy('level')` et le classement se fait **côté
+client** : un `orderBy` sur `power` exclurait les lignes d'anciens clients qui ne
+portent pas le champ. `fallbackPower` leur reconstruit un score. Sur-échantillonnage
+×4 avant de trancher, sinon `limit` couperait sur le mauvais critère.
+
+### Prestige — pièges connus
+- Les constantes vivent dans `prestige.ts` (`PRESTIGE_BONUS_PER_LEVEL` 0.08,
+  `PRESTIGE_XPGOLD_PER_LEVEL` 0.10, `MAX_PRESTIGE_STACK` 5). Elles étaient
+  dupliquées en dur dans `player.ts`, ce qui les avait fait diverger de l'interface
+  — **ne jamais les réécrire ailleurs**.
+- `applyRebirth` remet `classId` à la classe de BASE. Sans ça un Berserker
+  renaissait « Berserker niveau 1 » et le garde-fou de `migratePlayer` le corrigeait
+  seulement au chargement suivant, sans explication.
+- `computeAscensionBoss` compte **la moitié** du prestige. À 0, un archer passait de
+  0% à 97% de victoire entre prestige 0 et 5 ; à plein, la renaissance n'apporterait
+  plus rien face au Néant.
+- `CommandDef.alsoIf` : dérogation au `reqLevel`. Une renaissance ramène au Nv.1 en
+  gardant prestige, aura et Relique — sans ça leurs cartes redevenaient inaccessibles.
+
+### Empilement des buffs (mesuré)
+Guerrier Nv.50 build parfait : prestige 5 ×1.40 → artefact grille ×1.30 →
+Relique ★5 ×1.10 → aura ≈ **×2.08 cumulé**, et ×2.43 à artefact Nv.300 (soit 31 fois
+le jeu entier). Jugé acceptable. Le levier le plus simple à baisser est la Relique.
+
+---
+
+## Performances (⚠️ cause de chauffe identifiée)
+
+`.glass` applique un `backdrop-filter` à **chaque fenêtre** plus la barre du haut.
+Chaque surface floutée fait ré-échantillonner tout l'arrière-plan à chaque image :
+c'est de loin l'effet le plus coûteux du jeu. Ne pas l'étendre à d'autres éléments.
+
+- Flou par défaut **10px** (le fond est opaque à 86%, un flou plus large ne se voit pas).
+- `fxStore` reflète son état sur l'élément racine (`fx-reduced`, `fx-compact`) —
+  indispensable, car aucune prop React ne peut désactiver une règle CSS.
+- `.fx-reduced` retire le flou (`none`, PAS `blur(0)` qui garderait une couche de
+  composition), met les particules à 0 et allège les ombres.
+- Les réglages doivent faire ce qu'ils annoncent : `muteSound` et `compactMode`
+  étaient tous deux sauvegardés et branchés sur rien.
 
 ---
 
@@ -318,5 +406,20 @@ Répartition proposée (C = Claude / G = Gemini) :
 - Toujours `item(id)` (jamais `ITEMS[id]`). Ajouter l'icône dans `icons.ts` en même temps qu'un nouvel objet.
 - Toute écriture de save passe par `mutate` (gameStore) ; migrations dans `migratePlayer`.
 - Restriction de classe : les objets listent les **classes de base** ; `canEquip` compare à la classe **de base** du joueur (ascension incluse).
-- `npx tsc -b` doit passer avant de conclure. Ne pas prétendre « vérifié en jeu » (preview OAuth bloqué) — dire « vérif build seulement ».
+- `npx tsc -b` **et** `npm run build` doivent passer avant de conclure.
+- **Vérifier en jeu est possible, et c'est attendu pour tout changement visuel.**
+  Sans `.env`, `isFirebaseConfigured` est faux : l'app bascule en mode local
+  (localStorage), le bouton « Se connecter avec Google » crée un compte local sans
+  aucun popup OAuth, et tout le solo est jouable. `npm run dev` + Playwright
+  (`/opt/node22/lib/node_modules/playwright`, Chromium `/opt/pw-browsers/chromium`)
+  permet donc de piloter le vrai jeu. Cette session y a trouvé des défauts que le
+  typecheck ne voyait pas : nœuds de talents incliquables, boutons de combat hors
+  écran, quatre modificateurs de Faille sur six qui ne sortaient jamais.
+  Pour forcer un état de test : écrire dans `localStorage` (`rptext.player.<uid>`)
+  depuis une page, la FERMER, puis rouvrir une page — sinon la sauvegarde débouncée
+  de la page encore ouverte écrase le patch. ⚠️ Penser à donner assez de `kills` :
+  l'anti-triche de `migratePlayer` re-nivelle tout personnage dont l'XP dépasse
+  `kills*50 + donjons*800 + 3000`, ce qui ramenait les persos de test au Nv.10.
+  Ce qui reste invérifiable en local : classements, ladder, chat, donjons multi,
+  duels temps réel (tout ce qui demande Firestore/RTDB) — le dire explicitement.
 - Respecter la répartition Claude/Gemini ci-dessus pour éviter les conflits de merge.
