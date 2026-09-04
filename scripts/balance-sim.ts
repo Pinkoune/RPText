@@ -12,7 +12,14 @@ import { simulateCombat, getElementMult } from '../src/game/combat';
 import type { PlayerState, ClassId, ItemDef } from '../src/game/types';
 import * as fs from 'fs';
 
-const OUT = '/private/tmp/claude-501/-Users-jeremy-Projects-RPText/b80104e0-3060-4633-b23d-b3224ca13748/scratchpad';
+/**
+ * Dossier de sortie. C'ÉTAIT un chemin absolu vers le scratchpad d'une session
+ * qui n'existe plus : les trois harnais plantaient (`ENOENT`) sur toute autre
+ * machine que celle d'origine. Relatif au repo, créé au besoin, surchargeable
+ * par `BALANCE_OUT`.
+ */
+const OUT = process.env.BALANCE_OUT ?? 'scripts/balance-output';
+fs.mkdirSync(OUT, { recursive: true });
 const N = 2000; // combats par cellule
 
 // ── Construction d'un faux joueur ────────────────────────────────────────────

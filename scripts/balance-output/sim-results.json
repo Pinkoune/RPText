@@ -1,0 +1,2630 @@
+{
+  "classes": [
+    {
+      "classId": "warrior",
+      "name": "Guerrier",
+      "base": "warrior",
+      "isSub": false,
+      "atk": 431,
+      "def": 320,
+      "hp": 2514,
+      "dps": 380,
+      "survWinrate": 0,
+      "survEndHpPct": 0,
+      "survTTK": null
+    },
+    {
+      "classId": "paladin",
+      "name": "Paladin",
+      "base": "warrior",
+      "isSub": true,
+      "atk": 551,
+      "def": 368,
+      "hp": 2769,
+      "dps": 510,
+      "survWinrate": 0.9995,
+      "survEndHpPct": 0.39641127895114003,
+      "survTTK": 29.599799899949975
+    },
+    {
+      "classId": "berserker",
+      "name": "Berserker",
+      "base": "warrior",
+      "isSub": true,
+      "atk": 685,
+      "def": 222,
+      "hp": 2824,
+      "dps": 693,
+      "survWinrate": 1,
+      "survEndHpPct": 0.7827599150141618,
+      "survTTK": 20.181
+    },
+    {
+      "classId": "dark_knight",
+      "name": "Chevalier Noir",
+      "base": "warrior",
+      "isSub": true,
+      "atk": 618,
+      "def": 312,
+      "hp": 2960,
+      "dps": 568,
+      "survWinrate": 1,
+      "survEndHpPct": 0.7273391891891896,
+      "survTTK": 26.2115
+    },
+    {
+      "classId": "sentinel",
+      "name": "Sentinelle",
+      "base": "warrior",
+      "isSub": true,
+      "atk": 431,
+      "def": 416,
+      "hp": 3089,
+      "dps": 379,
+      "survWinrate": 0.032,
+      "survEndHpPct": 0.47345419229524105,
+      "survTTK": 36.28125
+    },
+    {
+      "classId": "mage",
+      "name": "Mage",
+      "base": "mage",
+      "isSub": false,
+      "atk": 489,
+      "def": 216,
+      "hp": 1963,
+      "dps": 511,
+      "survWinrate": 0,
+      "survEndHpPct": 0,
+      "survTTK": null
+    },
+    {
+      "classId": "pyromancer",
+      "name": "Pyromancien",
+      "base": "mage",
+      "isSub": true,
+      "atk": 833,
+      "def": 216,
+      "hp": 2265,
+      "dps": 1021,
+      "survWinrate": 0.004,
+      "survEndHpPct": 0.07792494481236203,
+      "survTTK": 9
+    },
+    {
+      "classId": "cryomancer",
+      "name": "Cryomancien",
+      "base": "mage",
+      "isSub": true,
+      "atk": 617,
+      "def": 305,
+      "hp": 2474,
+      "dps": 655,
+      "survWinrate": 0.0385,
+      "survEndHpPct": 0.047811525580321035,
+      "survTTK": 18.194805194805195
+    },
+    {
+      "classId": "arcanist",
+      "name": "Arcaniste",
+      "base": "mage",
+      "isSub": true,
+      "atk": 758,
+      "def": 216,
+      "hp": 2088,
+      "dps": 839,
+      "survWinrate": 0,
+      "survEndHpPct": 0,
+      "survTTK": null
+    },
+    {
+      "classId": "necromancer",
+      "name": "Nécromancien",
+      "base": "mage",
+      "isSub": true,
+      "atk": 671,
+      "def": 216,
+      "hp": 2404,
+      "dps": 752,
+      "survWinrate": 0,
+      "survEndHpPct": 0,
+      "survTTK": null
+    },
+    {
+      "classId": "archer",
+      "name": "Archer",
+      "base": "archer",
+      "isSub": false,
+      "atk": 366,
+      "def": 218,
+      "hp": 1708,
+      "dps": 367,
+      "survWinrate": 0,
+      "survEndHpPct": 0,
+      "survTTK": null
+    },
+    {
+      "classId": "rogue",
+      "name": "Voleur",
+      "base": "archer",
+      "isSub": true,
+      "atk": 456,
+      "def": 218,
+      "hp": 1757,
+      "dps": 548,
+      "survWinrate": 0.1925,
+      "survEndHpPct": 0.20585709111605577,
+      "survTTK": 26.81038961038961
+    },
+    {
+      "classId": "bard",
+      "name": "Barde",
+      "base": "archer",
+      "isSub": true,
+      "atk": 486,
+      "def": 347,
+      "hp": 2077,
+      "dps": 510,
+      "survWinrate": 0.494,
+      "survEndHpPct": 0.1534027004847774,
+      "survTTK": 28.81174089068826
+    },
+    {
+      "classId": "hunter",
+      "name": "Chasseur",
+      "base": "archer",
+      "isSub": true,
+      "atk": 478,
+      "def": 267,
+      "hp": 1855,
+      "dps": 641,
+      "survWinrate": 0.183,
+      "survEndHpPct": 0.16099450606100807,
+      "survTTK": 23.60655737704918
+    },
+    {
+      "classId": "trapper",
+      "name": "Piégeur",
+      "base": "archer",
+      "isSub": true,
+      "atk": 426,
+      "def": 267,
+      "hp": 1806,
+      "dps": 507,
+      "survWinrate": 0.3715,
+      "survEndHpPct": 0.2179612149720759,
+      "survTTK": 30.798115746971735
+    },
+    {
+      "classId": "healer",
+      "name": "Soigneur",
+      "base": "healer",
+      "isSub": false,
+      "atk": 311,
+      "def": 286,
+      "hp": 2939,
+      "dps": 214,
+      "survWinrate": 0,
+      "survEndHpPct": 0,
+      "survTTK": null
+    },
+    {
+      "classId": "dawn_priest",
+      "name": "Prêtre de l'Aube",
+      "base": "healer",
+      "isSub": true,
+      "atk": 414,
+      "def": 326,
+      "hp": 3194,
+      "dps": 316,
+      "survWinrate": 0,
+      "survEndHpPct": 0,
+      "survTTK": null
+    },
+    {
+      "classId": "druid",
+      "name": "Druide",
+      "base": "healer",
+      "isSub": true,
+      "atk": 401,
+      "def": 319,
+      "hp": 3194,
+      "dps": 300,
+      "survWinrate": 0,
+      "survEndHpPct": 0,
+      "survTTK": null
+    },
+    {
+      "classId": "monk",
+      "name": "Moine",
+      "base": "healer",
+      "isSub": true,
+      "atk": 519,
+      "def": 319,
+      "hp": 2939,
+      "dps": 428,
+      "survWinrate": 0.1085,
+      "survEndHpPct": 0.38110708836981766,
+      "survTTK": 37.004608294930875
+    },
+    {
+      "classId": "oracle",
+      "name": "Oracle",
+      "base": "healer",
+      "isSub": true,
+      "atk": 356,
+      "def": 430,
+      "hp": 3421,
+      "dps": 261,
+      "survWinrate": 0,
+      "survEndHpPct": 0,
+      "survTTK": null
+    }
+  ],
+  "powerCurve": [
+    {
+      "classId": "warrior",
+      "name": "Guerrier",
+      "level": 5,
+      "atk": 45,
+      "def": 30,
+      "hp": 497,
+      "dps": 150
+    },
+    {
+      "classId": "warrior",
+      "name": "Guerrier",
+      "level": 10,
+      "atk": 74,
+      "def": 53,
+      "hp": 663,
+      "dps": 150
+    },
+    {
+      "classId": "warrior",
+      "name": "Guerrier",
+      "level": 15,
+      "atk": 111,
+      "def": 87,
+      "hp": 906,
+      "dps": 150
+    },
+    {
+      "classId": "warrior",
+      "name": "Guerrier",
+      "level": 20,
+      "atk": 144,
+      "def": 102,
+      "hp": 1023,
+      "dps": 150
+    },
+    {
+      "classId": "warrior",
+      "name": "Guerrier",
+      "level": 25,
+      "atk": 188,
+      "def": 132,
+      "hp": 1179,
+      "dps": 150
+    },
+    {
+      "classId": "warrior",
+      "name": "Guerrier",
+      "level": 30,
+      "atk": 235,
+      "def": 147,
+      "hp": 1296,
+      "dps": 164
+    },
+    {
+      "classId": "warrior",
+      "name": "Guerrier",
+      "level": 35,
+      "atk": 265,
+      "def": 180,
+      "hp": 1589,
+      "dps": 197
+    },
+    {
+      "classId": "warrior",
+      "name": "Guerrier",
+      "level": 40,
+      "atk": 298,
+      "def": 207,
+      "hp": 1686,
+      "dps": 237
+    },
+    {
+      "classId": "warrior",
+      "name": "Guerrier",
+      "level": 45,
+      "atk": 334,
+      "def": 251,
+      "hp": 1998,
+      "dps": 274
+    },
+    {
+      "classId": "warrior",
+      "name": "Guerrier",
+      "level": 50,
+      "atk": 353,
+      "def": 266,
+      "hp": 2115,
+      "dps": 299
+    },
+    {
+      "classId": "paladin",
+      "name": "Paladin",
+      "level": 20,
+      "atk": 188,
+      "def": 117,
+      "hp": 1122,
+      "dps": 171
+    },
+    {
+      "classId": "paladin",
+      "name": "Paladin",
+      "level": 25,
+      "atk": 244,
+      "def": 152,
+      "hp": 1304,
+      "dps": 178
+    },
+    {
+      "classId": "paladin",
+      "name": "Paladin",
+      "level": 30,
+      "atk": 304,
+      "def": 169,
+      "hp": 1447,
+      "dps": 244
+    },
+    {
+      "classId": "paladin",
+      "name": "Paladin",
+      "level": 35,
+      "atk": 344,
+      "def": 207,
+      "hp": 1765,
+      "dps": 285
+    },
+    {
+      "classId": "paladin",
+      "name": "Paladin",
+      "level": 40,
+      "atk": 388,
+      "def": 238,
+      "hp": 1889,
+      "dps": 325
+    },
+    {
+      "classId": "paladin",
+      "name": "Paladin",
+      "level": 45,
+      "atk": 436,
+      "def": 289,
+      "hp": 2227,
+      "dps": 380
+    },
+    {
+      "classId": "paladin",
+      "name": "Paladin",
+      "level": 50,
+      "atk": 463,
+      "def": 306,
+      "hp": 2370,
+      "dps": 405
+    },
+    {
+      "classId": "berserker",
+      "name": "Berserker",
+      "level": 20,
+      "atk": 240,
+      "def": 64,
+      "hp": 1147,
+      "dps": 193
+    },
+    {
+      "classId": "berserker",
+      "name": "Berserker",
+      "level": 25,
+      "atk": 310,
+      "def": 84,
+      "hp": 1327,
+      "dps": 274
+    },
+    {
+      "classId": "berserker",
+      "name": "Berserker",
+      "level": 30,
+      "atk": 384,
+      "def": 89,
+      "hp": 1466,
+      "dps": 366
+    },
+    {
+      "classId": "berserker",
+      "name": "Berserker",
+      "level": 35,
+      "atk": 437,
+      "def": 112,
+      "hp": 1793,
+      "dps": 430
+    },
+    {
+      "classId": "berserker",
+      "name": "Berserker",
+      "level": 40,
+      "atk": 495,
+      "def": 129,
+      "hp": 1911,
+      "dps": 510
+    },
+    {
+      "classId": "berserker",
+      "name": "Berserker",
+      "level": 45,
+      "atk": 556,
+      "def": 163,
+      "hp": 2259,
+      "dps": 589
+    },
+    {
+      "classId": "berserker",
+      "name": "Berserker",
+      "level": 50,
+      "atk": 597,
+      "def": 168,
+      "hp": 2398,
+      "dps": 631
+    },
+    {
+      "classId": "dark_knight",
+      "name": "Chevalier Noir",
+      "level": 20,
+      "atk": 214,
+      "def": 95,
+      "hp": 1196,
+      "dps": 171
+    },
+    {
+      "classId": "dark_knight",
+      "name": "Chevalier Noir",
+      "level": 25,
+      "atk": 277,
+      "def": 124,
+      "hp": 1398,
+      "dps": 211
+    },
+    {
+      "classId": "dark_knight",
+      "name": "Chevalier Noir",
+      "level": 30,
+      "atk": 344,
+      "def": 136,
+      "hp": 1560,
+      "dps": 286
+    },
+    {
+      "classId": "dark_knight",
+      "name": "Chevalier Noir",
+      "level": 35,
+      "atk": 390,
+      "def": 168,
+      "hp": 1898,
+      "dps": 342
+    },
+    {
+      "classId": "dark_knight",
+      "name": "Chevalier Noir",
+      "level": 40,
+      "atk": 441,
+      "def": 193,
+      "hp": 2041,
+      "dps": 377
+    },
+    {
+      "classId": "dark_knight",
+      "name": "Chevalier Noir",
+      "level": 45,
+      "atk": 496,
+      "def": 238,
+      "hp": 2399,
+      "dps": 454
+    },
+    {
+      "classId": "dark_knight",
+      "name": "Chevalier Noir",
+      "level": 50,
+      "atk": 530,
+      "def": 250,
+      "hp": 2561,
+      "dps": 491
+    },
+    {
+      "classId": "sentinel",
+      "name": "Sentinelle",
+      "level": 20,
+      "atk": 144,
+      "def": 133,
+      "hp": 1251,
+      "dps": 171
+    },
+    {
+      "classId": "sentinel",
+      "name": "Sentinelle",
+      "level": 25,
+      "atk": 188,
+      "def": 172,
+      "hp": 1454,
+      "dps": 171
+    },
+    {
+      "classId": "sentinel",
+      "name": "Sentinelle",
+      "level": 30,
+      "atk": 235,
+      "def": 191,
+      "hp": 1614,
+      "dps": 172
+    },
+    {
+      "classId": "sentinel",
+      "name": "Sentinelle",
+      "level": 35,
+      "atk": 265,
+      "def": 234,
+      "hp": 1969,
+      "dps": 196
+    },
+    {
+      "classId": "sentinel",
+      "name": "Sentinelle",
+      "level": 40,
+      "atk": 298,
+      "def": 269,
+      "hp": 2107,
+      "dps": 237
+    },
+    {
+      "classId": "sentinel",
+      "name": "Sentinelle",
+      "level": 45,
+      "atk": 334,
+      "def": 326,
+      "hp": 2484,
+      "dps": 274
+    },
+    {
+      "classId": "sentinel",
+      "name": "Sentinelle",
+      "level": 50,
+      "atk": 353,
+      "def": 346,
+      "hp": 2643,
+      "dps": 300
+    },
+    {
+      "classId": "mage",
+      "name": "Mage",
+      "level": 5,
+      "atk": 54,
+      "def": 13,
+      "hp": 392,
+      "dps": 150
+    },
+    {
+      "classId": "mage",
+      "name": "Mage",
+      "level": 10,
+      "atk": 90,
+      "def": 29,
+      "hp": 511,
+      "dps": 150
+    },
+    {
+      "classId": "mage",
+      "name": "Mage",
+      "level": 15,
+      "atk": 132,
+      "def": 53,
+      "hp": 704,
+      "dps": 150
+    },
+    {
+      "classId": "mage",
+      "name": "Mage",
+      "level": 20,
+      "atk": 172,
+      "def": 58,
+      "hp": 773,
+      "dps": 150
+    },
+    {
+      "classId": "mage",
+      "name": "Mage",
+      "level": 25,
+      "atk": 222,
+      "def": 51,
+      "hp": 939,
+      "dps": 191
+    },
+    {
+      "classId": "mage",
+      "name": "Mage",
+      "level": 30,
+      "atk": 246,
+      "def": 56,
+      "hp": 1008,
+      "dps": 220
+    },
+    {
+      "classId": "mage",
+      "name": "Mage",
+      "level": 35,
+      "atk": 296,
+      "def": 106,
+      "hp": 1193,
+      "dps": 281
+    },
+    {
+      "classId": "mage",
+      "name": "Mage",
+      "level": 40,
+      "atk": 346,
+      "def": 123,
+      "hp": 1243,
+      "dps": 342
+    },
+    {
+      "classId": "mage",
+      "name": "Mage",
+      "level": 45,
+      "atk": 389,
+      "def": 157,
+      "hp": 1504,
+      "dps": 395
+    },
+    {
+      "classId": "mage",
+      "name": "Mage",
+      "level": 50,
+      "atk": 414,
+      "def": 162,
+      "hp": 1574,
+      "dps": 426
+    },
+    {
+      "classId": "pyromancer",
+      "name": "Pyromancien",
+      "level": 20,
+      "atk": 301,
+      "def": 58,
+      "hp": 892,
+      "dps": 312
+    },
+    {
+      "classId": "pyromancer",
+      "name": "Pyromancien",
+      "level": 25,
+      "atk": 386,
+      "def": 51,
+      "hp": 1083,
+      "dps": 421
+    },
+    {
+      "classId": "pyromancer",
+      "name": "Pyromancien",
+      "level": 30,
+      "atk": 439,
+      "def": 56,
+      "hp": 1169,
+      "dps": 487
+    },
+    {
+      "classId": "pyromancer",
+      "name": "Pyromancien",
+      "level": 35,
+      "atk": 524,
+      "def": 106,
+      "hp": 1382,
+      "dps": 590
+    },
+    {
+      "classId": "pyromancer",
+      "name": "Pyromancien",
+      "level": 40,
+      "atk": 610,
+      "def": 123,
+      "hp": 1446,
+      "dps": 689
+    },
+    {
+      "classId": "pyromancer",
+      "name": "Pyromancien",
+      "level": 45,
+      "atk": 686,
+      "def": 157,
+      "hp": 1744,
+      "dps": 809
+    },
+    {
+      "classId": "pyromancer",
+      "name": "Pyromancien",
+      "level": 50,
+      "atk": 739,
+      "def": 162,
+      "hp": 1829,
+      "dps": 888
+    },
+    {
+      "classId": "cryomancer",
+      "name": "Cryomancien",
+      "level": 20,
+      "atk": 219,
+      "def": 89,
+      "hp": 973,
+      "dps": 188
+    },
+    {
+      "classId": "cryomancer",
+      "name": "Cryomancien",
+      "level": 25,
+      "atk": 282,
+      "def": 86,
+      "hp": 1186,
+      "dps": 265
+    },
+    {
+      "classId": "cryomancer",
+      "name": "Cryomancien",
+      "level": 30,
+      "atk": 316,
+      "def": 98,
+      "hp": 1292,
+      "dps": 308
+    },
+    {
+      "classId": "cryomancer",
+      "name": "Cryomancien",
+      "level": 35,
+      "atk": 379,
+      "def": 161,
+      "hp": 1527,
+      "dps": 382
+    },
+    {
+      "classId": "cryomancer",
+      "name": "Cryomancien",
+      "level": 40,
+      "atk": 443,
+      "def": 186,
+      "hp": 1612,
+      "dps": 464
+    },
+    {
+      "classId": "cryomancer",
+      "name": "Cryomancien",
+      "level": 45,
+      "atk": 497,
+      "def": 231,
+      "hp": 1931,
+      "dps": 527
+    },
+    {
+      "classId": "cryomancer",
+      "name": "Cryomancien",
+      "level": 50,
+      "atk": 532,
+      "def": 243,
+      "hp": 2038,
+      "dps": 560
+    },
+    {
+      "classId": "arcanist",
+      "name": "Arcaniste",
+      "level": 20,
+      "atk": 272,
+      "def": 58,
+      "hp": 822,
+      "dps": 273
+    },
+    {
+      "classId": "arcanist",
+      "name": "Arcaniste",
+      "level": 25,
+      "atk": 350,
+      "def": 51,
+      "hp": 999,
+      "dps": 367
+    },
+    {
+      "classId": "arcanist",
+      "name": "Arcaniste",
+      "level": 30,
+      "atk": 395,
+      "def": 56,
+      "hp": 1082,
+      "dps": 417
+    },
+    {
+      "classId": "arcanist",
+      "name": "Arcaniste",
+      "level": 35,
+      "atk": 473,
+      "def": 106,
+      "hp": 1279,
+      "dps": 508
+    },
+    {
+      "classId": "arcanist",
+      "name": "Arcaniste",
+      "level": 40,
+      "atk": 550,
+      "def": 123,
+      "hp": 1342,
+      "dps": 608
+    },
+    {
+      "classId": "arcanist",
+      "name": "Arcaniste",
+      "level": 45,
+      "atk": 619,
+      "def": 157,
+      "hp": 1615,
+      "dps": 680
+    },
+    {
+      "classId": "arcanist",
+      "name": "Arcaniste",
+      "level": 50,
+      "atk": 664,
+      "def": 162,
+      "hp": 1698,
+      "dps": 717
+    },
+    {
+      "classId": "necromancer",
+      "name": "Nécromancien",
+      "level": 20,
+      "atk": 238,
+      "def": 58,
+      "hp": 946,
+      "dps": 229
+    },
+    {
+      "classId": "necromancer",
+      "name": "Nécromancien",
+      "level": 25,
+      "atk": 307,
+      "def": 51,
+      "hp": 1152,
+      "dps": 312
+    },
+    {
+      "classId": "necromancer",
+      "name": "Nécromancien",
+      "level": 30,
+      "atk": 344,
+      "def": 56,
+      "hp": 1251,
+      "dps": 358
+    },
+    {
+      "classId": "necromancer",
+      "name": "Nécromancien",
+      "level": 35,
+      "atk": 413,
+      "def": 106,
+      "hp": 1478,
+      "dps": 441
+    },
+    {
+      "classId": "necromancer",
+      "name": "Nécromancien",
+      "level": 40,
+      "atk": 481,
+      "def": 123,
+      "hp": 1556,
+      "dps": 522
+    },
+    {
+      "classId": "necromancer",
+      "name": "Nécromancien",
+      "level": 45,
+      "atk": 541,
+      "def": 157,
+      "hp": 1869,
+      "dps": 594
+    },
+    {
+      "classId": "necromancer",
+      "name": "Nécromancien",
+      "level": 50,
+      "atk": 578,
+      "def": 162,
+      "hp": 1968,
+      "dps": 627
+    },
+    {
+      "classId": "archer",
+      "name": "Archer",
+      "level": 5,
+      "atk": 40,
+      "def": 18,
+      "hp": 336,
+      "dps": 136
+    },
+    {
+      "classId": "archer",
+      "name": "Archer",
+      "level": 10,
+      "atk": 66,
+      "def": 31,
+      "hp": 444,
+      "dps": 136
+    },
+    {
+      "classId": "archer",
+      "name": "Archer",
+      "level": 15,
+      "atk": 98,
+      "def": 55,
+      "hp": 611,
+      "dps": 136
+    },
+    {
+      "classId": "archer",
+      "name": "Archer",
+      "level": 20,
+      "atk": 125,
+      "def": 60,
+      "hp": 681,
+      "dps": 136
+    },
+    {
+      "classId": "archer",
+      "name": "Archer",
+      "level": 25,
+      "atk": 163,
+      "def": 68,
+      "hp": 796,
+      "dps": 136
+    },
+    {
+      "classId": "archer",
+      "name": "Archer",
+      "level": 30,
+      "atk": 201,
+      "def": 73,
+      "hp": 866,
+      "dps": 173
+    },
+    {
+      "classId": "archer",
+      "name": "Archer",
+      "level": 35,
+      "atk": 229,
+      "def": 108,
+      "hp": 1056,
+      "dps": 209
+    },
+    {
+      "classId": "archer",
+      "name": "Archer",
+      "level": 40,
+      "atk": 259,
+      "def": 125,
+      "hp": 1111,
+      "dps": 242
+    },
+    {
+      "classId": "archer",
+      "name": "Archer",
+      "level": 45,
+      "atk": 291,
+      "def": 159,
+      "hp": 1331,
+      "dps": 287
+    },
+    {
+      "classId": "archer",
+      "name": "Archer",
+      "level": 50,
+      "atk": 309,
+      "def": 164,
+      "hp": 1401,
+      "dps": 310
+    },
+    {
+      "classId": "rogue",
+      "name": "Voleur",
+      "level": 20,
+      "atk": 160,
+      "def": 60,
+      "hp": 700,
+      "dps": 168
+    },
+    {
+      "classId": "rogue",
+      "name": "Voleur",
+      "level": 25,
+      "atk": 207,
+      "def": 68,
+      "hp": 820,
+      "dps": 230
+    },
+    {
+      "classId": "rogue",
+      "name": "Voleur",
+      "level": 30,
+      "atk": 254,
+      "def": 73,
+      "hp": 895,
+      "dps": 294
+    },
+    {
+      "classId": "rogue",
+      "name": "Voleur",
+      "level": 35,
+      "atk": 292,
+      "def": 108,
+      "hp": 1090,
+      "dps": 344
+    },
+    {
+      "classId": "rogue",
+      "name": "Voleur",
+      "level": 40,
+      "atk": 330,
+      "def": 125,
+      "hp": 1150,
+      "dps": 391
+    },
+    {
+      "classId": "rogue",
+      "name": "Voleur",
+      "level": 45,
+      "atk": 372,
+      "def": 159,
+      "hp": 1375,
+      "dps": 456
+    },
+    {
+      "classId": "rogue",
+      "name": "Voleur",
+      "level": 50,
+      "atk": 399,
+      "def": 164,
+      "hp": 1450,
+      "dps": 484
+    },
+    {
+      "classId": "bard",
+      "name": "Barde",
+      "level": 20,
+      "atk": 166,
+      "def": 103,
+      "hp": 827,
+      "dps": 152
+    },
+    {
+      "classId": "bard",
+      "name": "Barde",
+      "level": 25,
+      "atk": 216,
+      "def": 120,
+      "hp": 971,
+      "dps": 189
+    },
+    {
+      "classId": "bard",
+      "name": "Barde",
+      "level": 30,
+      "atk": 266,
+      "def": 133,
+      "hp": 1063,
+      "dps": 250
+    },
+    {
+      "classId": "bard",
+      "name": "Barde",
+      "level": 35,
+      "atk": 304,
+      "def": 185,
+      "hp": 1293,
+      "dps": 297
+    },
+    {
+      "classId": "bard",
+      "name": "Barde",
+      "level": 40,
+      "atk": 343,
+      "def": 213,
+      "hp": 1367,
+      "dps": 352
+    },
+    {
+      "classId": "bard",
+      "name": "Barde",
+      "level": 45,
+      "atk": 386,
+      "def": 264,
+      "hp": 1632,
+      "dps": 406
+    },
+    {
+      "classId": "bard",
+      "name": "Barde",
+      "level": 50,
+      "atk": 410,
+      "def": 277,
+      "hp": 1724,
+      "dps": 428
+    },
+    {
+      "classId": "hunter",
+      "name": "Chasseur",
+      "level": 20,
+      "atk": 166,
+      "def": 79,
+      "hp": 738,
+      "dps": 177
+    },
+    {
+      "classId": "hunter",
+      "name": "Chasseur",
+      "level": 25,
+      "atk": 215,
+      "def": 92,
+      "hp": 868,
+      "dps": 251
+    },
+    {
+      "classId": "hunter",
+      "name": "Chasseur",
+      "level": 30,
+      "atk": 264,
+      "def": 102,
+      "hp": 953,
+      "dps": 326
+    },
+    {
+      "classId": "hunter",
+      "name": "Chasseur",
+      "level": 35,
+      "atk": 303,
+      "def": 142,
+      "hp": 1158,
+      "dps": 382
+    },
+    {
+      "classId": "hunter",
+      "name": "Chasseur",
+      "level": 40,
+      "atk": 342,
+      "def": 164,
+      "hp": 1228,
+      "dps": 432
+    },
+    {
+      "classId": "hunter",
+      "name": "Chasseur",
+      "level": 45,
+      "atk": 385,
+      "def": 203,
+      "hp": 1463,
+      "dps": 503
+    },
+    {
+      "classId": "hunter",
+      "name": "Chasseur",
+      "level": 50,
+      "atk": 412,
+      "def": 213,
+      "hp": 1548,
+      "dps": 529
+    },
+    {
+      "classId": "trapper",
+      "name": "Piégeur",
+      "level": 20,
+      "atk": 146,
+      "def": 79,
+      "hp": 719,
+      "dps": 148
+    },
+    {
+      "classId": "trapper",
+      "name": "Piégeur",
+      "level": 25,
+      "atk": 189,
+      "def": 92,
+      "hp": 844,
+      "dps": 175
+    },
+    {
+      "classId": "trapper",
+      "name": "Piégeur",
+      "level": 30,
+      "atk": 233,
+      "def": 102,
+      "hp": 924,
+      "dps": 235
+    },
+    {
+      "classId": "trapper",
+      "name": "Piégeur",
+      "level": 35,
+      "atk": 266,
+      "def": 142,
+      "hp": 1124,
+      "dps": 279
+    },
+    {
+      "classId": "trapper",
+      "name": "Piégeur",
+      "level": 40,
+      "atk": 301,
+      "def": 164,
+      "hp": 1189,
+      "dps": 330
+    },
+    {
+      "classId": "trapper",
+      "name": "Piégeur",
+      "level": 45,
+      "atk": 338,
+      "def": 203,
+      "hp": 1419,
+      "dps": 373
+    },
+    {
+      "classId": "trapper",
+      "name": "Piégeur",
+      "level": 50,
+      "atk": 360,
+      "def": 213,
+      "hp": 1499,
+      "dps": 407
+    },
+    {
+      "classId": "healer",
+      "name": "Soigneur",
+      "level": 5,
+      "atk": 33,
+      "def": 22,
+      "hp": 484,
+      "dps": 171
+    },
+    {
+      "classId": "healer",
+      "name": "Soigneur",
+      "level": 10,
+      "atk": 55,
+      "def": 43,
+      "hp": 650,
+      "dps": 171
+    },
+    {
+      "classId": "healer",
+      "name": "Soigneur",
+      "level": 15,
+      "atk": 82,
+      "def": 74,
+      "hp": 893,
+      "dps": 171
+    },
+    {
+      "classId": "healer",
+      "name": "Soigneur",
+      "level": 20,
+      "atk": 108,
+      "def": 81,
+      "hp": 1010,
+      "dps": 171
+    },
+    {
+      "classId": "healer",
+      "name": "Soigneur",
+      "level": 25,
+      "atk": 132,
+      "def": 72,
+      "hp": 1342,
+      "dps": 171
+    },
+    {
+      "classId": "healer",
+      "name": "Soigneur",
+      "level": 30,
+      "atk": 146,
+      "def": 78,
+      "hp": 1459,
+      "dps": 171
+    },
+    {
+      "classId": "healer",
+      "name": "Soigneur",
+      "level": 35,
+      "atk": 185,
+      "def": 143,
+      "hp": 1810,
+      "dps": 171
+    },
+    {
+      "classId": "healer",
+      "name": "Soigneur",
+      "level": 40,
+      "atk": 215,
+      "def": 165,
+      "hp": 1966,
+      "dps": 171
+    },
+    {
+      "classId": "healer",
+      "name": "Soigneur",
+      "level": 45,
+      "atk": 243,
+      "def": 209,
+      "hp": 2278,
+      "dps": 171
+    },
+    {
+      "classId": "healer",
+      "name": "Soigneur",
+      "level": 50,
+      "atk": 257,
+      "def": 216,
+      "hp": 2395,
+      "dps": 172
+    },
+    {
+      "classId": "dawn_priest",
+      "name": "Prêtre de l'Aube",
+      "level": 20,
+      "atk": 146,
+      "def": 92,
+      "hp": 1109,
+      "dps": 171
+    },
+    {
+      "classId": "dawn_priest",
+      "name": "Prêtre de l'Aube",
+      "level": 25,
+      "atk": 180,
+      "def": 81,
+      "hp": 1466,
+      "dps": 171
+    },
+    {
+      "classId": "dawn_priest",
+      "name": "Prêtre de l'Aube",
+      "level": 30,
+      "atk": 201,
+      "def": 89,
+      "hp": 1609,
+      "dps": 171
+    },
+    {
+      "classId": "dawn_priest",
+      "name": "Prêtre de l'Aube",
+      "level": 35,
+      "atk": 251,
+      "def": 163,
+      "hp": 1986,
+      "dps": 171
+    },
+    {
+      "classId": "dawn_priest",
+      "name": "Prêtre de l'Aube",
+      "level": 40,
+      "atk": 292,
+      "def": 188,
+      "hp": 2168,
+      "dps": 200
+    },
+    {
+      "classId": "dawn_priest",
+      "name": "Prêtre de l'Aube",
+      "level": 45,
+      "atk": 330,
+      "def": 238,
+      "hp": 2506,
+      "dps": 239
+    },
+    {
+      "classId": "dawn_priest",
+      "name": "Prêtre de l'Aube",
+      "level": 50,
+      "atk": 351,
+      "def": 246,
+      "hp": 2649,
+      "dps": 260
+    },
+    {
+      "classId": "druid",
+      "name": "Druide",
+      "level": 20,
+      "atk": 143,
+      "def": 90,
+      "hp": 1109,
+      "dps": 171
+    },
+    {
+      "classId": "druid",
+      "name": "Druide",
+      "level": 25,
+      "atk": 177,
+      "def": 80,
+      "hp": 1466,
+      "dps": 171
+    },
+    {
+      "classId": "druid",
+      "name": "Druide",
+      "level": 30,
+      "atk": 200,
+      "def": 87,
+      "hp": 1609,
+      "dps": 171
+    },
+    {
+      "classId": "druid",
+      "name": "Druide",
+      "level": 35,
+      "atk": 247,
+      "def": 160,
+      "hp": 1986,
+      "dps": 171
+    },
+    {
+      "classId": "druid",
+      "name": "Druide",
+      "level": 40,
+      "atk": 287,
+      "def": 184,
+      "hp": 2168,
+      "dps": 194
+    },
+    {
+      "classId": "druid",
+      "name": "Druide",
+      "level": 45,
+      "atk": 324,
+      "def": 233,
+      "hp": 2506,
+      "dps": 231
+    },
+    {
+      "classId": "druid",
+      "name": "Druide",
+      "level": 50,
+      "atk": 347,
+      "def": 241,
+      "hp": 2649,
+      "dps": 250
+    },
+    {
+      "classId": "monk",
+      "name": "Moine",
+      "level": 20,
+      "atk": 186,
+      "def": 90,
+      "hp": 1010,
+      "dps": 168
+    },
+    {
+      "classId": "monk",
+      "name": "Moine",
+      "level": 25,
+      "atk": 231,
+      "def": 80,
+      "hp": 1342,
+      "dps": 167
+    },
+    {
+      "classId": "monk",
+      "name": "Moine",
+      "level": 30,
+      "atk": 263,
+      "def": 87,
+      "hp": 1459,
+      "dps": 172
+    },
+    {
+      "classId": "monk",
+      "name": "Moine",
+      "level": 35,
+      "atk": 324,
+      "def": 160,
+      "hp": 1810,
+      "dps": 231
+    },
+    {
+      "classId": "monk",
+      "name": "Moine",
+      "level": 40,
+      "atk": 376,
+      "def": 184,
+      "hp": 1966,
+      "dps": 285
+    },
+    {
+      "classId": "monk",
+      "name": "Moine",
+      "level": 45,
+      "atk": 424,
+      "def": 233,
+      "hp": 2278,
+      "dps": 333
+    },
+    {
+      "classId": "monk",
+      "name": "Moine",
+      "level": 50,
+      "atk": 456,
+      "def": 241,
+      "hp": 2395,
+      "dps": 353
+    },
+    {
+      "classId": "oracle",
+      "name": "Oracle",
+      "level": 20,
+      "atk": 125,
+      "def": 130,
+      "hp": 1182,
+      "dps": 170
+    },
+    {
+      "classId": "oracle",
+      "name": "Oracle",
+      "level": 25,
+      "atk": 155,
+      "def": 126,
+      "hp": 1566,
+      "dps": 171
+    },
+    {
+      "classId": "oracle",
+      "name": "Oracle",
+      "level": 30,
+      "atk": 173,
+      "def": 142,
+      "hp": 1711,
+      "dps": 171
+    },
+    {
+      "classId": "oracle",
+      "name": "Oracle",
+      "level": 35,
+      "atk": 216,
+      "def": 230,
+      "hp": 2117,
+      "dps": 171
+    },
+    {
+      "classId": "oracle",
+      "name": "Oracle",
+      "level": 40,
+      "atk": 251,
+      "def": 266,
+      "hp": 2306,
+      "dps": 171
+    },
+    {
+      "classId": "oracle",
+      "name": "Oracle",
+      "level": 45,
+      "atk": 283,
+      "def": 328,
+      "hp": 2668,
+      "dps": 190
+    },
+    {
+      "classId": "oracle",
+      "name": "Oracle",
+      "level": 50,
+      "atk": 302,
+      "def": 344,
+      "hp": 2813,
+      "dps": 207
+    }
+  ],
+  "gear": [
+    {
+      "tier": "starter",
+      "classId": "warrior",
+      "atk": 199,
+      "def": 160,
+      "hp": 1335,
+      "dps": 150
+    },
+    {
+      "tier": "starter",
+      "classId": "mage",
+      "atk": 264,
+      "def": 55,
+      "hp": 805,
+      "dps": 241
+    },
+    {
+      "tier": "starter",
+      "classId": "archer",
+      "atk": 197,
+      "def": 58,
+      "hp": 801,
+      "dps": 167
+    },
+    {
+      "tier": "starter",
+      "classId": "healer",
+      "atk": 149,
+      "def": 77,
+      "hp": 1316,
+      "dps": 171
+    },
+    {
+      "tier": "crafted",
+      "classId": "warrior",
+      "atk": 353,
+      "def": 266,
+      "hp": 2115,
+      "dps": 297
+    },
+    {
+      "tier": "crafted",
+      "classId": "mage",
+      "atk": 414,
+      "def": 162,
+      "hp": 1574,
+      "dps": 427
+    },
+    {
+      "tier": "crafted",
+      "classId": "archer",
+      "atk": 309,
+      "def": 164,
+      "hp": 1401,
+      "dps": 308
+    },
+    {
+      "tier": "crafted",
+      "classId": "healer",
+      "atk": 257,
+      "def": 216,
+      "hp": 2395,
+      "dps": 171
+    },
+    {
+      "tier": "maxed",
+      "classId": "warrior",
+      "atk": 431,
+      "def": 320,
+      "hp": 2514,
+      "dps": 380
+    },
+    {
+      "tier": "maxed",
+      "classId": "mage",
+      "atk": 489,
+      "def": 216,
+      "hp": 1963,
+      "dps": 510
+    },
+    {
+      "tier": "maxed",
+      "classId": "archer",
+      "atk": 366,
+      "def": 218,
+      "hp": 1708,
+      "dps": 372
+    },
+    {
+      "tier": "maxed",
+      "classId": "healer",
+      "atk": 311,
+      "def": 286,
+      "hp": 2939,
+      "dps": 214
+    }
+  ],
+  "activities": [
+    {
+      "activity": "Chasse",
+      "level": 5,
+      "biome": "plains",
+      "winrate": 1,
+      "refAtk": 40,
+      "refHp": 336
+    },
+    {
+      "activity": "Chasse",
+      "level": 10,
+      "biome": "mountains",
+      "winrate": 1,
+      "refAtk": 66,
+      "refHp": 444
+    },
+    {
+      "activity": "Chasse",
+      "level": 15,
+      "biome": "desert",
+      "winrate": 1,
+      "refAtk": 98,
+      "refHp": 611
+    },
+    {
+      "activity": "Chasse",
+      "level": 20,
+      "biome": "swamp",
+      "winrate": 0.9670833333333334,
+      "refAtk": 125,
+      "refHp": 681
+    },
+    {
+      "activity": "Chasse",
+      "level": 25,
+      "biome": "volcano",
+      "winrate": 0.3935,
+      "refAtk": 163,
+      "refHp": 796
+    },
+    {
+      "activity": "Chasse",
+      "level": 30,
+      "biome": "crypt",
+      "winrate": 0.00125,
+      "refAtk": 201,
+      "refHp": 866
+    },
+    {
+      "activity": "Chasse",
+      "level": 35,
+      "biome": "crypt",
+      "winrate": 0.00425,
+      "refAtk": 229,
+      "refHp": 1056
+    },
+    {
+      "activity": "Chasse",
+      "level": 40,
+      "biome": "frozen",
+      "winrate": 0,
+      "refAtk": 259,
+      "refHp": 1111
+    },
+    {
+      "activity": "Chasse",
+      "level": 45,
+      "biome": "frozen",
+      "winrate": 0,
+      "refAtk": 291,
+      "refHp": 1331
+    },
+    {
+      "activity": "Chasse",
+      "level": 50,
+      "biome": "frozen",
+      "winrate": 0,
+      "refAtk": 309,
+      "refHp": 1401
+    },
+    {
+      "activity": "Donjon:Caverne des Gobelins",
+      "level": 7,
+      "numPlayers": 1,
+      "bossHp": 154,
+      "winrate": 1
+    },
+    {
+      "activity": "Donjon:Caverne des Gobelins",
+      "level": 7,
+      "numPlayers": 2,
+      "bossHp": 449,
+      "winrate": 1
+    },
+    {
+      "activity": "Donjon:Caverne des Gobelins",
+      "level": 7,
+      "numPlayers": 3,
+      "bossHp": 865,
+      "winrate": 1
+    },
+    {
+      "activity": "Donjon:Caverne des Gobelins",
+      "level": 7,
+      "numPlayers": 4,
+      "bossHp": 1402,
+      "winrate": 1
+    },
+    {
+      "activity": "Donjon:Crypte Maudite",
+      "level": 14,
+      "numPlayers": 1,
+      "bossHp": 744,
+      "winrate": 1
+    },
+    {
+      "activity": "Donjon:Crypte Maudite",
+      "level": 14,
+      "numPlayers": 2,
+      "bossHp": 2162,
+      "winrate": 0.9975
+    },
+    {
+      "activity": "Donjon:Crypte Maudite",
+      "level": 14,
+      "numPlayers": 3,
+      "bossHp": 4161,
+      "winrate": 0.17
+    },
+    {
+      "activity": "Donjon:Crypte Maudite",
+      "level": 14,
+      "numPlayers": 4,
+      "bossHp": 6744,
+      "winrate": 0
+    },
+    {
+      "activity": "Donjon:Sanctuaire du Dragon",
+      "level": 24,
+      "numPlayers": 1,
+      "bossHp": 2506,
+      "winrate": 0
+    },
+    {
+      "activity": "Donjon:Sanctuaire du Dragon",
+      "level": 24,
+      "numPlayers": 2,
+      "bossHp": 7277,
+      "winrate": 0
+    },
+    {
+      "activity": "Donjon:Sanctuaire du Dragon",
+      "level": 24,
+      "numPlayers": 3,
+      "bossHp": 14004,
+      "winrate": 0
+    },
+    {
+      "activity": "Donjon:Sanctuaire du Dragon",
+      "level": 24,
+      "numPlayers": 4,
+      "bossHp": 22695,
+      "winrate": 0
+    },
+    {
+      "activity": "Donjon:Forge Infernale",
+      "level": 32,
+      "numPlayers": 1,
+      "bossHp": 5739,
+      "winrate": 0
+    },
+    {
+      "activity": "Donjon:Forge Infernale",
+      "level": 32,
+      "numPlayers": 2,
+      "bossHp": 16662,
+      "winrate": 0
+    },
+    {
+      "activity": "Donjon:Forge Infernale",
+      "level": 32,
+      "numPlayers": 3,
+      "bossHp": 32066,
+      "winrate": 0
+    },
+    {
+      "activity": "Donjon:Forge Infernale",
+      "level": 32,
+      "numPlayers": 4,
+      "bossHp": 51966,
+      "winrate": 0
+    },
+    {
+      "activity": "Donjon:Citadelle Abyssale",
+      "level": 42,
+      "numPlayers": 1,
+      "bossHp": 9429,
+      "winrate": 0
+    },
+    {
+      "activity": "Donjon:Citadelle Abyssale",
+      "level": 42,
+      "numPlayers": 2,
+      "bossHp": 27372,
+      "winrate": 0
+    },
+    {
+      "activity": "Donjon:Citadelle Abyssale",
+      "level": 42,
+      "numPlayers": 3,
+      "bossHp": 52677,
+      "winrate": 0
+    },
+    {
+      "activity": "Donjon:Citadelle Abyssale",
+      "level": 42,
+      "numPlayers": 4,
+      "bossHp": 85369,
+      "winrate": 0
+    },
+    {
+      "activity": "Abysses",
+      "level": 50,
+      "floor": 5,
+      "mHp": 856,
+      "mAtk": 58.5,
+      "winrate": 1
+    },
+    {
+      "activity": "Abysses",
+      "level": 50,
+      "floor": 10,
+      "mHp": 1576,
+      "mAtk": 102,
+      "winrate": 1
+    },
+    {
+      "activity": "Abysses",
+      "level": 50,
+      "floor": 15,
+      "mHp": 2412,
+      "mAtk": 153,
+      "winrate": 1
+    },
+    {
+      "activity": "Abysses",
+      "level": 50,
+      "floor": 20,
+      "mHp": 3348,
+      "mAtk": 207,
+      "winrate": 1
+    },
+    {
+      "activity": "Abysses",
+      "level": 50,
+      "floor": 25,
+      "mHp": 4368,
+      "mAtk": 265.5,
+      "winrate": 1
+    },
+    {
+      "activity": "Abysses",
+      "level": 50,
+      "floor": 30,
+      "mHp": 5470,
+      "mAtk": 327,
+      "winrate": 1
+    },
+    {
+      "activity": "Abysses",
+      "level": 50,
+      "floor": 40,
+      "mHp": 7890,
+      "mAtk": 459,
+      "winrate": 0.00375
+    },
+    {
+      "activity": "Abysses",
+      "level": 50,
+      "floor": 50,
+      "mHp": 10572,
+      "mAtk": 603,
+      "winrate": 0
+    },
+    {
+      "activity": "Abysses",
+      "level": 50,
+      "floor": 60,
+      "mHp": 13498,
+      "mAtk": 754.5,
+      "winrate": 0
+    },
+    {
+      "activity": "Abysses",
+      "level": 50,
+      "floor": 75,
+      "mHp": 18302,
+      "mAtk": 1000.5,
+      "winrate": 0
+    },
+    {
+      "activity": "Abysses",
+      "level": 50,
+      "floor": 100,
+      "mHp": 27318,
+      "mAtk": 1447.5,
+      "winrate": 0
+    }
+  ],
+  "elements": [
+    {
+      "weapon": "fire",
+      "monster": "fire",
+      "mult": 1
+    },
+    {
+      "weapon": "fire",
+      "monster": "water",
+      "mult": 0.7
+    },
+    {
+      "weapon": "fire",
+      "monster": "earth",
+      "mult": 1
+    },
+    {
+      "weapon": "fire",
+      "monster": "wind",
+      "mult": 1.5
+    },
+    {
+      "weapon": "fire",
+      "monster": "frost",
+      "mult": 1.5
+    },
+    {
+      "weapon": "fire",
+      "monster": "light",
+      "mult": 1
+    },
+    {
+      "weapon": "fire",
+      "monster": "dark",
+      "mult": 1
+    },
+    {
+      "weapon": "fire",
+      "monster": "neutral",
+      "mult": 1
+    },
+    {
+      "weapon": "water",
+      "monster": "fire",
+      "mult": 1.5
+    },
+    {
+      "weapon": "water",
+      "monster": "water",
+      "mult": 1
+    },
+    {
+      "weapon": "water",
+      "monster": "earth",
+      "mult": 0.7
+    },
+    {
+      "weapon": "water",
+      "monster": "wind",
+      "mult": 1
+    },
+    {
+      "weapon": "water",
+      "monster": "frost",
+      "mult": 0.7
+    },
+    {
+      "weapon": "water",
+      "monster": "light",
+      "mult": 1
+    },
+    {
+      "weapon": "water",
+      "monster": "dark",
+      "mult": 1
+    },
+    {
+      "weapon": "water",
+      "monster": "neutral",
+      "mult": 1
+    },
+    {
+      "weapon": "earth",
+      "monster": "fire",
+      "mult": 1
+    },
+    {
+      "weapon": "earth",
+      "monster": "water",
+      "mult": 1.5
+    },
+    {
+      "weapon": "earth",
+      "monster": "earth",
+      "mult": 1
+    },
+    {
+      "weapon": "earth",
+      "monster": "wind",
+      "mult": 0.7
+    },
+    {
+      "weapon": "earth",
+      "monster": "frost",
+      "mult": 1
+    },
+    {
+      "weapon": "earth",
+      "monster": "light",
+      "mult": 1
+    },
+    {
+      "weapon": "earth",
+      "monster": "dark",
+      "mult": 1
+    },
+    {
+      "weapon": "earth",
+      "monster": "neutral",
+      "mult": 1
+    },
+    {
+      "weapon": "wind",
+      "monster": "fire",
+      "mult": 0.7
+    },
+    {
+      "weapon": "wind",
+      "monster": "water",
+      "mult": 1
+    },
+    {
+      "weapon": "wind",
+      "monster": "earth",
+      "mult": 1.5
+    },
+    {
+      "weapon": "wind",
+      "monster": "wind",
+      "mult": 1
+    },
+    {
+      "weapon": "wind",
+      "monster": "frost",
+      "mult": 1
+    },
+    {
+      "weapon": "wind",
+      "monster": "light",
+      "mult": 1
+    },
+    {
+      "weapon": "wind",
+      "monster": "dark",
+      "mult": 1
+    },
+    {
+      "weapon": "wind",
+      "monster": "neutral",
+      "mult": 1
+    },
+    {
+      "weapon": "frost",
+      "monster": "fire",
+      "mult": 1
+    },
+    {
+      "weapon": "frost",
+      "monster": "water",
+      "mult": 1.5
+    },
+    {
+      "weapon": "frost",
+      "monster": "earth",
+      "mult": 1.5
+    },
+    {
+      "weapon": "frost",
+      "monster": "wind",
+      "mult": 1
+    },
+    {
+      "weapon": "frost",
+      "monster": "frost",
+      "mult": 1
+    },
+    {
+      "weapon": "frost",
+      "monster": "light",
+      "mult": 1
+    },
+    {
+      "weapon": "frost",
+      "monster": "dark",
+      "mult": 1
+    },
+    {
+      "weapon": "frost",
+      "monster": "neutral",
+      "mult": 1
+    },
+    {
+      "weapon": "light",
+      "monster": "fire",
+      "mult": 1
+    },
+    {
+      "weapon": "light",
+      "monster": "water",
+      "mult": 1
+    },
+    {
+      "weapon": "light",
+      "monster": "earth",
+      "mult": 1
+    },
+    {
+      "weapon": "light",
+      "monster": "wind",
+      "mult": 1
+    },
+    {
+      "weapon": "light",
+      "monster": "frost",
+      "mult": 1
+    },
+    {
+      "weapon": "light",
+      "monster": "light",
+      "mult": 1
+    },
+    {
+      "weapon": "light",
+      "monster": "dark",
+      "mult": 1.5
+    },
+    {
+      "weapon": "light",
+      "monster": "neutral",
+      "mult": 1
+    },
+    {
+      "weapon": "dark",
+      "monster": "fire",
+      "mult": 1
+    },
+    {
+      "weapon": "dark",
+      "monster": "water",
+      "mult": 1
+    },
+    {
+      "weapon": "dark",
+      "monster": "earth",
+      "mult": 1
+    },
+    {
+      "weapon": "dark",
+      "monster": "wind",
+      "mult": 1
+    },
+    {
+      "weapon": "dark",
+      "monster": "frost",
+      "mult": 1
+    },
+    {
+      "weapon": "dark",
+      "monster": "light",
+      "mult": 1.5
+    },
+    {
+      "weapon": "dark",
+      "monster": "dark",
+      "mult": 1
+    },
+    {
+      "weapon": "dark",
+      "monster": "neutral",
+      "mult": 1
+    },
+    {
+      "weapon": "neutral",
+      "monster": "fire",
+      "mult": 1
+    },
+    {
+      "weapon": "neutral",
+      "monster": "water",
+      "mult": 1
+    },
+    {
+      "weapon": "neutral",
+      "monster": "earth",
+      "mult": 1
+    },
+    {
+      "weapon": "neutral",
+      "monster": "wind",
+      "mult": 1
+    },
+    {
+      "weapon": "neutral",
+      "monster": "frost",
+      "mult": 1
+    },
+    {
+      "weapon": "neutral",
+      "monster": "light",
+      "mult": 1
+    },
+    {
+      "weapon": "neutral",
+      "monster": "dark",
+      "mult": 1
+    },
+    {
+      "weapon": "neutral",
+      "monster": "neutral",
+      "mult": 1
+    }
+  ],
+  "stars": [
+    {
+      "stars": 0,
+      "atk": 309,
+      "def": 164,
+      "hp": 1401,
+      "dps": 308
+    },
+    {
+      "stars": 1,
+      "atk": 319,
+      "def": 174,
+      "hp": 1462,
+      "dps": 322
+    },
+    {
+      "stars": 2,
+      "atk": 331,
+      "def": 185,
+      "hp": 1524,
+      "dps": 336
+    },
+    {
+      "stars": 3,
+      "atk": 343,
+      "def": 196,
+      "hp": 1585,
+      "dps": 350
+    },
+    {
+      "stars": 4,
+      "atk": 354,
+      "def": 207,
+      "hp": 1647,
+      "dps": 367
+    },
+    {
+      "stars": 5,
+      "atk": 366,
+      "def": 218,
+      "hp": 1708,
+      "dps": 371
+    }
+  ],
+  "skills": [
+    {
+      "classId": "warrior",
+      "name": "Guerrier",
+      "resource": "cooldown",
+      "bestAtkMult": 1.8,
+      "bestHealFrac": 0,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 2
+    },
+    {
+      "classId": "paladin",
+      "name": "Paladin",
+      "resource": "zeal",
+      "bestAtkMult": 2,
+      "bestHealFrac": 0.05,
+      "bestShield": 0.2,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 4
+    },
+    {
+      "classId": "berserker",
+      "name": "Berserker",
+      "resource": "rage",
+      "bestAtkMult": 2.8,
+      "bestHealFrac": 0,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 4
+    },
+    {
+      "classId": "dark_knight",
+      "name": "Chevalier Noir",
+      "resource": "corruption",
+      "bestAtkMult": 2.2,
+      "bestHealFrac": 0.15,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 4
+    },
+    {
+      "classId": "sentinel",
+      "name": "Sentinelle",
+      "resource": "vindicte",
+      "bestAtkMult": 2.2,
+      "bestHealFrac": 0.1,
+      "bestShield": 0.15,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 4
+    },
+    {
+      "classId": "mage",
+      "name": "Mage",
+      "resource": "cooldown",
+      "bestAtkMult": 2.2,
+      "bestHealFrac": 0,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": true,
+      "nbSkills": 2
+    },
+    {
+      "classId": "pyromancer",
+      "name": "Pyromancien",
+      "resource": "mana",
+      "bestAtkMult": 3.2,
+      "bestHealFrac": 0,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": true,
+      "nbSkills": 4
+    },
+    {
+      "classId": "cryomancer",
+      "name": "Cryomancien",
+      "resource": "mana",
+      "bestAtkMult": 2.2,
+      "bestHealFrac": 0,
+      "bestShield": 0.15,
+      "hasStun": false,
+      "hasCC": true,
+      "nbSkills": 4
+    },
+    {
+      "classId": "arcanist",
+      "name": "Arcaniste",
+      "resource": "overcharge",
+      "bestAtkMult": 2.2,
+      "bestHealFrac": 0,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": true,
+      "nbSkills": 4
+    },
+    {
+      "classId": "necromancer",
+      "name": "Nécromancien",
+      "resource": "souls",
+      "bestAtkMult": 2.8,
+      "bestHealFrac": 0.15,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": true,
+      "nbSkills": 5
+    },
+    {
+      "classId": "archer",
+      "name": "Archer",
+      "resource": "cooldown",
+      "bestAtkMult": 1.9,
+      "bestHealFrac": 0,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 2
+    },
+    {
+      "classId": "rogue",
+      "name": "Voleur",
+      "resource": "combo",
+      "bestAtkMult": 2.2,
+      "bestHealFrac": 0,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 4
+    },
+    {
+      "classId": "bard",
+      "name": "Barde",
+      "resource": "tempo",
+      "bestAtkMult": 2.3,
+      "bestHealFrac": 0.1,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 4
+    },
+    {
+      "classId": "hunter",
+      "name": "Chasseur",
+      "resource": "instinct",
+      "bestAtkMult": 2.5,
+      "bestHealFrac": 0,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 4
+    },
+    {
+      "classId": "trapper",
+      "name": "Piégeur",
+      "resource": "traps",
+      "bestAtkMult": 2.6,
+      "bestHealFrac": 0,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 4
+    },
+    {
+      "classId": "healer",
+      "name": "Soigneur",
+      "resource": "cooldown",
+      "bestAtkMult": 1.5,
+      "bestHealFrac": 0.2,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 2
+    },
+    {
+      "classId": "dawn_priest",
+      "name": "Prêtre de l'Aube",
+      "resource": "grace",
+      "bestAtkMult": 1.6,
+      "bestHealFrac": 0.22,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 4
+    },
+    {
+      "classId": "druid",
+      "name": "Druide",
+      "resource": "sap",
+      "bestAtkMult": 2,
+      "bestHealFrac": 0.25,
+      "bestShield": 0,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 4
+    },
+    {
+      "classId": "monk",
+      "name": "Moine",
+      "resource": "combo",
+      "bestAtkMult": 1.8,
+      "bestHealFrac": 0.2,
+      "bestShield": 0,
+      "hasStun": true,
+      "hasCC": false,
+      "nbSkills": 4
+    },
+    {
+      "classId": "oracle",
+      "name": "Oracle",
+      "resource": "presage",
+      "bestAtkMult": 1.8,
+      "bestHealFrac": 0.2,
+      "bestShield": 0.18,
+      "hasStun": false,
+      "hasCC": false,
+      "nbSkills": 4
+    }
+  ]
+}

@@ -169,10 +169,18 @@ commande admin = l'inscrire dans `ADMIN_ONLY`, rien d'autre.
 - `CommandDef.alsoIf` : dérogation au `reqLevel`. Une renaissance ramène au Nv.1 en
   gardant prestige, aura et Relique — sans ça leurs cartes redevenaient inaccessibles.
 
-### Empilement des buffs (mesuré)
-Guerrier Nv.50 build parfait : prestige 5 ×1.40 → artefact grille ×1.30 →
-Relique ★5 ×1.10 → aura ≈ **×2.08 cumulé**, et ×2.43 à artefact Nv.300 (soit 31 fois
-le jeu entier). Jugé acceptable. Le levier le plus simple à baisser est la Relique.
+### Empilement des buffs (mesuré en simulation, corrigé)
+Chasseur Nv.50 gear q150 5★, via `balance-sim-turns.ts` (section « empilement de
+saison ») : ATK **478 nu → 1190 tout maxé (×2.49) → 1393 à artefact Nv.300 (×2.91)**.
+⚠️ Le chiffre précédemment noté ici (×2.08) était calculé à la main en multipliant
+les seuls multiplicateurs de stats (`presMult × artMult × relMult`) : il **oubliait
+les mods de la grille d'artefact**, qui ajoutent leur propre `atkPct`/`hpPct` dans
+`(1 + mods.atkPct + …)` (art_edge +6%, art_vigor +8%, art_apex +10%). ~20% d'écart.
+
+Conséquence mesurée, plus parlante que le multiplicateur : contre les monstres des
+Abysses au Nv.50, **la grille d'artefact seule fait passer de 48% à 100%** de
+victoire. Le levier le plus simple à baisser reste la Relique, mais le vrai poids
+est dans la grille.
 
 ---
 
@@ -348,6 +356,47 @@ Murs de difficulté localisés par la simu et corrigés :
 **Constats de progression (analyse, non « corrigés » — à surveiller)** : courbes d'**artisanat** et de **récolte** saines (~4-5 actions par niveau de métier). Mais l'**XP global est très end-loaded** : Nv40-50 = **81% du grind total** (Nv45→50 seul = 56%), et tous les biomes sont débloqués dès Nv28 → le end-game (Nv40-50) est un très long grind sans nouvelle zone. Piste si trop punitif : adoucir le multiplicateur `1.18` post-Nv30 dans `xpToNext`.
 
 Constats clés (tour-par-tour, Nv.50 maxé) : toutes les **sous-classes** sont saines (100% survie, endHP 36-100%) ; les **bases** Mage/Archer faibles à 50 mais normal (on ascensionne à 20) ; **Berserker** cumule top-3 DPS + survie parfaite (vol de vie passif) = à surveiller sans nerf urgent ; les 4 Soigneurs paraissent 0% en sim **passif** (leur kit est 100% actif) → juger au tour-par-tour uniquement. ⚠️ Le sim co-op ne modélise pas encore le **soin de groupe** des soigneurs en donjon → winrates absolus des donjons Nv.30+ pessimistes (le fix de scaling reste valide, mesuré en relatif).
+
+### Passe de mesure de la refonte saisonnière (fait, C) — trois biais du harness
+
+Le harness disait des choses fausses parce qu'il mesurait les mauvais sujets.
+Corrigé, et **à ne pas réintroduire** :
+
+1. **La référence de chasse restait Archer de BASE jusqu'au Nv.50** — la classe
+   la plus faible du jeu à 50 (2% de survie), justement parce qu'on ascensionne
+   à 20. Elle ascensionne maintenant (`played()`). Effet : Nécropole Nv.30
+   **16% → 70%**, volcan 72% → 80%. Le « mur de la crypte » n'existait pas ; il
+   décrivait un personnage que personne ne joue.
+2. **La composition de groupe n'était pas cumulative** : la rotation
+   `[guerrier, mage, soigneur, archer]` ne mettait un soigneur qu'à partir de
+   3 joueurs. La Forge Infernale sortait `0% / 6% / 100% / 33%` — une courbe qui
+   suivait la présence du soigneur, pas l'effectif. Ordre cumulatif désormais
+   (`guerrier → +soigneur → +mage → +archer`).
+3. **`turns` renvoyait `maxTurns` en dur** : la colonne affichait 120 pour tout
+   le monde, quelle que soit la durée réelle. Les combats font en fait 17 à 46
+   tours (et non « 100-300 » comme noté ailleurs dans ce fichier).
+
+Deux mesures ajoutées : `season()` (artefact/Relique/prestige, cf. « Empilement
+des buffs ») et le **Rituel du Néant par sous-classe**, jamais simulé jusqu'ici.
+
+**Résultats à traiter** (aucun correctif appliqué, ce sont des constats) :
+- **Le Néant ne discrimine plus.** Dès artefact + Relique ★5, les 16
+  sous-classes le battent à ≥97% ; six (Berserker, Chevalier Noir, Cryomancien,
+  Prêtre de l'Aube, Moine, Oracle) le battent à **100% sans aucune saison**. Il
+  est calibré sur la seule montée en stats, or un combat long est gagné par le
+  sustain, pas par les stats. Levier : plafonner les soins/vol de vie pendant le
+  rituel, pas gonfler ses PV.
+- **Les gros groupes sont encore punis.** Forge Infernale en gear de craft :
+  `0% / 100% / 99% / 25%` de 1 à 4 joueurs. L'ATK du boss monte de +35% par
+  membre (`atkMult`) alors que chaque membre garde une seule barre de vie et que
+  le débit du soigneur, lui, ne monte pas. Le passage 0.5 → 0.35 avait réduit le
+  problème, pas supprimé.
+- **Falaise d'Abysses (endless) au palier 50** : 89% au palier 40, **0% au 50**.
+  Une marche, pas une courbe.
+- **Les donjons de fin ne sont PAS cassés** : le `0%` de la Citadelle Abyssale
+  mesure un groupe en gear de craft au niveau minimum. Avec un groupe réellement
+  équipé (Nv.50 maxé + artefact + ★5), Forge et Citadelle sont à **100% de 1 à
+  4 joueurs**. C'est une porte d'entrée, pas un mur.
 
 ## Amusement — 3 features (fait, C)
 

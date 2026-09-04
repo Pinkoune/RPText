@@ -17,8 +17,33 @@ node_modules/.bin/esbuild scripts/balance-sim-turns.ts --bundle --platform=node 
 ```
 
 - `balance-sim.ts` → écrit `scratchpad/sim-results.json` (DPS, courbes, gear, éléments).
-- `balance-sim-turns.ts` → écrit `scratchpad/sim-turns.json` (winrate/survie AVEC skills, donjons co-op).
+- `balance-sim-turns.ts` → écrit `sim-turns.json` (winrate/survie AVEC skills, donjons co-op).
 - CSV pour Excel : `scripts/balance-output/*.csv` (séparateur `;`, décimales `,`).
+
+Sortie par défaut : `scripts/balance-output/`, surchargeable par `BALANCE_OUT=…`.
+(C'était un chemin absolu vers le scratchpad d'une session : les trois harnais
+plantaient en `ENOENT` sur toute autre machine.)
+
+### Ce que le harness modélise — et ce qu'il ne modélise pas
+
+Il faut lire chaque tableau en sachant sur QUI il porte, sinon on tire les
+mauvaises conclusions. Trois pièges corrigés, à ne pas réintroduire :
+
+1. **La référence de chasse ascensionne au Nv.20** (`played()`). Elle restait
+   Archer de base jusqu'au Nv.50 — la classe la plus faible du jeu à 50 (2% de
+   survie), parce que personne n'est censé y rester. Les taux de chasse Nv.30+
+   décrivaient un personnage que plus aucun joueur ne joue.
+2. **La composition de groupe est cumulative** (`guerrier → +soigneur → +mage →
+   +archer`). L'ancienne rotation ne mettait un soigneur qu'à partir de 3
+   joueurs, si bien que la colonne « taille du groupe » mesurait en fait la
+   présence d'un soigneur.
+3. **Les axes de saison** (artefact, Relique, prestige) s'appliquent via
+   `season()`. Sans eux, tout le harness décrivait un joueur de première semaine
+   de saison — or ces axes multiplient ATK/DEF/PV par ~2,5 (voir plus bas).
+
+Toujours pas modélisé : le soin de groupe des soigneurs en donjon (les winrates
+absolus de donjon restent pessimistes, le relatif reste valide), les familiers,
+les enchantements, les événements.
 
 ⚠️ **Garder les formules du harness synchronisées avec le jeu** quand tu changes
 le scaling. Miroirs à maintenir :
@@ -36,10 +61,39 @@ Une classe **saine** doit tomber dans ces fourchettes vs le boss d'attrition
 | PV restants (endHP) | 35–100% | pic à 100% partout = trop tanky |
 | DPS effectif (passif) | 330–900 | > 1000 (glass cannon) ou < 300 (inoffensif) |
 
-Repères actuels : DPS de 240 (Soigneur) à ~1020 (Pyromancien). Les DPS purs
+Repères actuels : DPS de 214 (Soigneur) à ~1020 (Pyromancien). Les DPS purs
 (Pyro/Arcaniste) tolèrent un endHP bas ; les tanks/soigneurs un DPS bas mais
 endHP haut. Une classe qui cumule **top DPS + top survie** (comme le Berserker)
 est un signal à surveiller, pas forcément à nerfer.
+
+## Empilement de saison — l'échelle qui écrase les autres
+
+Mesuré (Chasseur Nv.50, gear q150 5★, contre les monstres des Abysses) :
+
+| Profil | ATK | Abysses |
+|---|---|---|
+| nu (saison 1, semaine 1) | 478 | 48% |
+| artefact, grille complète (Nv.62) | 715 | **100%** |
+| + Relique ★5 | 786 | 100% |
+| + Relique ★10 | 850 | 100% |
+| + prestige 5 | 1190 | 100% |
+| artefact Nv.300 (fin de saison) | 1393 | 100% |
+
+Soit **×2,9 sur l'ATK** entre un joueur nu et un joueur de fin de saison, et la
+**grille d'artefact à elle seule** fait passer le biome final de 48% à 100%.
+Toute lecture de difficulté doit préciser à quel profil elle s'applique : le même
+contenu est un mur en semaine 1 et une formalité en semaine 8.
+
+## Rituel du Néant
+
+`computeAscensionBoss` se calibre sur un joueur idéal dérivé du joueur réel
+(`structuredClone`), donc le boss suit l'artefact et la Relique — mais il ne
+compte que **la moitié** du prestige, et l'idéal n'a pas la grille de mods du
+joueur. Résultat mesuré : dès l'artefact + Relique ★5, les 16 sous-classes le
+battent à ≥97%, et six d'entre elles (Berserker, Chevalier Noir, Cryomancien,
+Prêtre de l'Aube, Moine, Oracle) le battent à 100% **sans aucune progression de
+saison**. Les combats longs favorisent mécaniquement le sustain : c'est là qu'il
+faut agir si on veut que le mur en reste un, pas sur ses PV.
 
 ## Ajouter une classe (checklist)
 
