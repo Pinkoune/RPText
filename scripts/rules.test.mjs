@@ -107,6 +107,19 @@ await t("puissance à 1e9 REFUSÉE", () =>
     row(ALICE, { level: 1, kills: 55, prestigeLevel: 3, power: 1e9 }))));
 await t("écrire la ligne d'un AUTRE joueur refusé", () =>
   assertFails(setDoc(doc(as(BOB), 'leaderboard', ALICE), row(ALICE))));
+// Chemin de CRÉATION D'UN PERSONNAGE : `savePlayer` écrit le doc joueur puis la
+// ligne de classement. La règle de miroir fait un `get()` sur le doc — si
+// l'ordre était inversé, ou si le `get()` échouait sur un doc absent, créer un
+// personnage serait impossible en production.
+await t("premier save d'un tout nouveau personnage (doc + ligne)", async () => {
+  const NEW = 'newbie';
+  const dbNew = env.authenticatedContext(NEW).firestore();
+  await assertSucceeds(setDoc(doc(dbNew, 'players', NEW), player(NEW, { level: 1, xp: 0, kills: 0, gold: 50 })));
+  await assertSucceeds(setDoc(doc(dbNew, 'leaderboard', NEW),
+    row(NEW, { level: 1, kills: 0, prestigeLevel: 0, artifactLevel: 5, power: 1 })));
+});
+await t("ligne de classement SANS doc joueur refusée", () =>
+  assertFails(setDoc(doc(env.authenticatedContext('ghost').firestore(), 'leaderboard', 'ghost'), row('ghost'))));
 
 console.log('\n── Marché : plus de sabotage des annonces d\'autrui ──');
 await t("un tiers ne peut PAS annuler l'annonce d'un autre", () =>
