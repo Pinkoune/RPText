@@ -112,6 +112,42 @@ sans jamais reculer (un numéro qui recule ferait réapparaître des saisons dé
 archivées chez les joueurs). Le bloc vit dans les actions **globales** du panneau
 — l'ancien bouton de rotation était enfoui dans l'éditeur d'un joueur.
 
+### Panneau admin — le reste (revue faite, C)
+Règle de rangement : **une action qui touche le serveur entier ne va jamais dans
+l'éditeur d'un joueur.** Même faute que la rotation de saison, retrouvée une fois
+de plus : « Ouvrir une fenêtre de Raid » (`broadcastRaid`, RTDB `world/raid`) y
+vivait dans les « Actions Rapides », donc il fallait ouvrir la fiche d'un joueur
+au hasard pour lancer un événement mondial. Déplacé dans une section **Monde**.
+
+- **Bug du don d'objet** : la recherche filtrait la liste du `<select>` sans
+  jamais toucher `giveItemId`, resté sur sa valeur initiale `'potion'`. On
+  cherchait un objet, on lisait son nom en tête de liste, on donnait des potions
+  de soin. Un `useEffect` resynchronise la sélection dès qu'elle sort de la liste
+  filtrée, et une ligne « Sélection : … » affiche ce qui sera réellement donné.
+- **Don/retrait d'objet instanciés** : le don écrivait `inv[baseId] += n`, ce qui
+  fabriquait une **pile de gear** alors que chaque pièce doit avoir sa clé unique
+  (`baseId:qXXX:i1234`) — la migration d'instanciation étant déjà passée, rien ne
+  l'aurait rattrapée (étoiles/durabilité partagées). Passe par
+  `addItemToInventory`. Symétriquement le retrait cherchait `inv[baseId]`, absent
+  pour du gear, et ne faisait donc **rien** : il balaie maintenant les clés dont
+  la base correspond.
+- **Bloc « Saison · Relique · Prestige »** (éditeur de joueur) : niveau
+  d'artefact, Éclats, prestige, jetons de classe. Ces jauges n'avaient aucun
+  levier admin. Les **étoiles de Relique se donnent en Éclats, pas en étoiles** :
+  poser une étoile ≥6 de force laisserait `relic.effects` plus court que
+  `relic.stars`, et l'achat suivant choisirait un effet du mauvais palier.
+- **Hors ligne** : `getAllPlayers`/`updatePlayerAdmin` retombent sur les clés
+  `rptext.player.*` du localStorage. Le panneau était vide et inerte en dev — ce
+  qui rendait tout le panel invérifiable en local, alors que c'est justement là
+  qu'on veut tester.
+- **Supprimés** : `📊 Simuler Courbe` (bouton) et la commande `admin_curve`
+  (alias `curve`) — même code, formules de stats écrites en dur
+  (`100 + 20/niv`, `atk 5 + 2/niv`) qui ne correspondent à **aucune** classe
+  (`base.maxHp` 130, `growth` 18-25) et qui ignorent talents, artefact, prestige.
+  Les vrais chiffres sont dans `scripts/` (harnais tour-par-tour).
+  `🏆 RESET SAISON PVP` aussi : il ne remettait à zéro que `seasonPoints`, champ
+  sorti du gameplay quand le rang de saison est passé sur le niveau d'artefact.
+
 ### Commandes admin — ne pas fuiter leur existence
 `ADMIN_ONLY` (commands.ts) est filtré **au dispatch** : un non-admin reçoit le
 message d'une commande inexistante, mot pour mot. Avant, `admin` répondait

@@ -5,7 +5,7 @@ import { useGame } from '../store/gameStore';
 import { pickMonster } from './monsters';
 import { currentRift, buildRiftMonster } from './rift';
 import { cooldownLeft } from './player';
-import { item, ITEMS } from './items';
+import { item } from './items';
 import { deriveStats, removeItem } from './player';
 import { currentPhase } from './daynight';
 import { addQuestMetric } from './quests';
@@ -164,7 +164,6 @@ for (const c of COMMANDS) {
 export function resolveCommand(input: string): string | null {
   const word = input.trim().toLowerCase().split(/\s+/)[0];
   if (word === 'admin') return 'admin';
-  if (word === 'admin_curve' || word === 'curve') return 'admin_curve';
   return ALIAS_MAP[word] ?? null;
 }
 
@@ -181,7 +180,7 @@ export const DAILY_COOLDOWN = 20 * 60 * 60 * 1000; // 20h
 export const REST_COOLDOWN = 10 * 60 * 1000; // 10 min
 
 /** Commandes réservées à l'administration — invisibles pour les autres. */
-const ADMIN_ONLY = new Set(['admin', 'admin_curve']);
+const ADMIN_ONLY = new Set(['admin']);
 
 export function runCommand(input: string, ctx: CommandCtx): void {
   const cmd = resolveCommand(input);
@@ -223,37 +222,6 @@ export function runCommand(input: string, ctx: CommandCtx): void {
     case 'admin':
       ctx.open('admin', undefined, { singleton: true });
       break;
-
-    case 'admin_curve': {
-      const levels = [1, 5, 10, 15, 20, 30];
-      
-      console.log("=== SIMULATION DE COURBE DE STATS ===");
-      const getBestStat = (slot: string, lvl: number, stat: 'atk' | 'def' | 'hp'): number => {
-        const valid = Object.values(ITEMS)
-          .filter((i: any) => i.slot === slot && (i.reqLevel || 1) <= lvl);
-        return valid.reduce((max: number, i: any) => Math.max(max, i[stat] || 0), 0);
-      };
-        for (const lvl of levels) {
-          const wp = getBestStat('weapon', lvl, 'atk');
-          const am = getBestStat('armor', lvl, 'def');
-          const ah = getBestStat('armor', lvl, 'hp');
-          const tkA = getBestStat('trinket', lvl, 'atk');
-          const tkD = getBestStat('trinket', lvl, 'def');
-          const tkH = getBestStat('trinket', lvl, 'hp');
-          
-          const maxHpBase = 100 + (lvl - 1) * 20;
-          const atkBase = 5 + (lvl - 1) * 2;
-          const defBase = 5 + (lvl - 1) * 1;
-          
-          const hpStars = (ah + tkH) * 1.5; // +50% étoiles
-          const atkStars = (wp + tkA) * 1.5;
-          const defStars = (am + tkD) * 1.5;
-          
-          console.log(`Lvl ${lvl} | Base: HP=${maxHpBase} ATK=${atkBase} DEF=${defBase} | Gear (Max+Etoiles): HP=${Math.round(hpStars)} ATK=${Math.round(atkStars)} DEF=${Math.round(defStars)}`);
-        }
-        ctx.toast("Simulation générée ! Ouvre la console du navigateur (F12) pour voir les résultats.", "good");
-      break;
-    }
 
     case 'reset':
       import('../store/uiStore').then(({ useUi }) => {
