@@ -133,7 +133,7 @@ export default function WindowManager() {
               {w.kind === 'guild' && <GuildCard />}
               {w.kind === 'familiar' && <FamiliarCard />}
               {w.kind === 'boss' && <BossCard />}
-              {w.kind === 'chat' && <ChatCard initialPayload={w.payload as { tab?: ChatChannel; dmPeer?: string } | undefined} />}
+              {w.kind === 'chat' && <ChatCard initialPayload={w.payload as { tab?: ChatChannel; dmPeer?: { uid: string; name: string } } | undefined} />}
               {w.kind === 'leaderboard' && <LeaderboardCard />}
               {w.kind === 'stats' && <StatsCard />}
               {w.kind === 'news' && <NewsCard />}

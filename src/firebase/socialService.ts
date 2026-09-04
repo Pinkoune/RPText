@@ -1,8 +1,28 @@
-import { collection, getDocs, query, orderBy, limit, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { ref, onValue, onDisconnect, set, serverTimestamp } from 'firebase/database';
 import { db, rtdb, isFirebaseConfigured } from './config';
 import type { ClassId, PlayerState } from '../game/types';
 import { fallbackPower } from '../game/power';
+
+/**
+ * Retrouve l'UID d'un personnage depuis son pseudo, via le classement (qui
+ * porte `uid` et `name`). Sert au raccourci `/w Nom` : les messages privés sont
+ * rangés par UID, donc il faut résoudre le pseudo — y compris pour quelqu'un de
+ * déconnecté, absent de la liste de présence.
+ *
+ * ⚠️ Les pseudos ne sont pas uniques (chacun choisit le sien dans le Profil) :
+ * en cas d'homonymie on prend la première ligne trouvée. C'est le raccourci de
+ * confort ; le chemin fiable reste de cliquer sur la personne.
+ */
+export async function findUidByName(name: string): Promise<string | null> {
+  if (!isFirebaseConfigured || !db) return null;
+  try {
+    const snap = await getDocs(query(collection(db, 'leaderboard'), where('name', '==', name), limit(1)));
+    return snap.empty ? null : (snap.docs[0].data() as { uid?: string }).uid ?? snap.docs[0].id;
+  } catch {
+    return null;
+  }
+}
 
 /** Lit le profil public d'un joueur (best-effort). Null si indisponible. */
 export async function fetchPublicProfile(uid: string): Promise<Partial<PlayerState> | null> {

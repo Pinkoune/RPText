@@ -95,6 +95,7 @@ export default function App() {
   useEffect(() => {
     if (status !== 'ready' || !player) return;
     const unsub = watchNotifications(
+      player.uid,
       player.name,
       player.teamId,
       player.guildId,
@@ -105,11 +106,11 @@ export default function App() {
         // Pas de notif si on a déjà cette conversation sous les yeux (Chat ouvert sur le bon onglet/DM).
         const view = useGame.getState().activeChatView;
         const alreadyViewing = view && (
-          (channel === 'private' && view.tab === 'private' && view.dmPeer === msg.name) ||
+          (channel === 'private' && view.tab === 'private' && view.dmPeer?.uid === msg.uid) ||
           (channel !== 'private' && view.tab === channel)
         );
         if (alreadyViewing) return;
-        useGame.getState().pushChatNotif({ channel, name: msg.name, text: msg.text });
+        useGame.getState().pushChatNotif({ channel, name: msg.name, text: msg.text, uid: msg.uid });
       }
     );
     return unsub;

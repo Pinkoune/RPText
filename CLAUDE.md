@@ -596,10 +596,76 @@ Répartition proposée (C = Claude / G = Gemini) :
 
 ## Sécurité (repo public + GitHub Pages)
 
-- **Firebase apiKey/config = publics par design** (`import.meta.env.VITE_*`, `.env` gitignoré, seul `.env.example` versionné). La sécurité repose **entièrement sur les règles** (`firestore.rules`, `database.rules.json`), pas sur le secret des clés.
-- ⚠️ **NE JAMAIS** autoriser un joueur à écrire `isAdmin` sur son propre doc. `firestore.rules` : `players/{uid}` write = `isAdminUser()` OU (`auth.uid==uid` ET `adminFlagUntouched()`) → le flag `isAdmin` ne peut être introduit/modifié que par un admin déjà confirmé (ou la console). Sinon = **prise de contrôle totale** (wipe, écriture sur tous les comptes). Bootstrap du 1er admin = console Firebase. Le re-grant post-wipe marche car l'ancien doc admin (isAdmin=true) existe encore quand `isAdminUser()` le lit.
-- `system/*` write = admin only ; `teams`/`guilds` **delete** = host/owner ou admin ; `endlessScores*` write = son propre uid ou admin (pour le wipe).
-- **Risque résiduel accepté** = *jeu client-authoritative* : un client modifié peut falsifier ses propres stats/or (Firestore fait confiance au doc) et griefer les sessions RTDB partagées (chat/dungeons/endlessSessions/pvpDuels/world = `.write: auth != null`, les règles RTDB ne peuvent pas lire `isAdmin` de Firestore). Mitigation optionnelle = déplacer les actions à enjeu dans `functions/` (Cloud Functions, plan Blaze, non déployé). Ne pas prétendre que c'est « sécurisé » côté triche solo.
+Audit fait, correctifs appliqués et **testés contre l'émulateur** :
+`npm run test:rules` (Firestore, 33 tests). ⚠️ `npm run test:rules:rtdb` existe
+mais **l'émulateur RTDB ne démarre pas dans le conteneur de dev** (il échoue
+aussi sur le fichier de règles d'origine — c'est l'environnement, pas les
+règles) : les règles RTDB sont relues et validées avec le parseur `cjson` de la
+CLI, pas exécutées. À faire tourner sur une machine avec un vrai accès réseau.
+
+- **Firebase apiKey/config = publics par design** (`import.meta.env.VITE_*`, `.env` gitignoré, seul `.env.example` versionné). La sécurité repose **entièrement sur les règles** (`firestore.rules`, `database.rules.json`), pas sur le secret des clés. Vérifié : aucun secret n'a jamais été commité.
+- ⚠️ **NE JAMAIS** autoriser un joueur à écrire `isAdmin` sur son propre doc. `adminFlagUntouched()` + `isAdminUser()`. Bootstrap du 1er admin = console Firebase.
+- ⚠️ **`isAdminUser()` doit tester `'isAdmin' in d` AVANT `d.isAdmin`.** L'accès direct (et même `d.get('isAdmin', false)`) **lève une erreur d'évaluation** sur les documents qui ne portent pas le champ — c'est-à-dire tous les joueurs normaux. Ça passait par court-circuit du `||`, mais une règle qui aurait mis `isAdminUser()` en premier opérande d'un `&&` aurait refusé des écritures légitimes. Vu dans les logs de l'émulateur, pas à la relecture.
+
+### Anti-triche : ce que le serveur refuse désormais (`playerSane`)
+Le jeu reste *client-authoritative* — Firestore ne peut pas RECALCULER une
+progression. Mais il peut refuser l'absurde, et surtout tout ce qui **déborde
+sur les autres**. Vérifié côté serveur, donc incontournable par un client modifié :
+- **niveau plafonné à 50** (`MAX_LEVEL`) ; devises ≥ 0 et bornées ;
+- **kills et prestige monotones** — ce sont les deux axes qui pèsent le plus au
+  classement (`power.ts` : prestige ×50). `applyRebirth` remet l'or à 100 et le
+  niveau à 1 mais n'y touche jamais, donc la contrainte ne gêne aucun jeu légitime ;
+- **`createdAt` immuable** : il suffisait de réécrire sa date de création pour
+  **survivre à un wipe global** (`loadPlayer` compare à `system/config.lastWipe`) ;
+- **la ligne de classement doit refléter le doc joueur** (niveau, kills,
+  prestige, artefact, via un `get()`). Avant, on pouvait laisser son personnage
+  intact et n'envoyer qu'une ligne mensongère — tricher le ladder ne demandait
+  même pas de toucher à sa sauvegarde. `savePlayer` écrit le doc AVANT la ligne,
+  donc le `get()` voit les bonnes valeurs.
+
+Pas de plafond « par delta » sur l'or : une vente au marché se fait à prix libre,
+donc un gain légitime peut être arbitrairement gros. Ce qui reste possible :
+monter **lentement des valeurs plausibles**. Pour fermer ça il faut déplacer les
+gains dans `functions/` (Cloud Functions, plan Blaze, non déployé) — `resolveDuel`
+et `buyMarketListing` y sont déjà écrits comme point de départ.
+
+### Ce qui a été fermé côté joueurs
+- **Messagerie privée** : les MP vivaient sous `chat/inbox/<pseudo>` avec
+  `.read: auth != null` sur tout le sous-arbre → **toutes les conversations
+  privées du serveur étaient lisibles par n'importe quel compte connecté**, les
+  clés s'énuméraient depuis le classement, et comme les pseudos sont libres et
+  **non uniques** (`ProfileCard`), se renommer comme quelqu'un suffisait à
+  recevoir ses messages. Re-keyées par **UID de personnage** (`chatService`,
+  `ChatCard`, `App`, `ChatNotifs`) ; la règle vérifie enfin la propriété.
+  `findUidByName` (socialService) résout le raccourci `/w Nom` via le classement.
+- **Chat vandalisable** : `chat` avait un `.write` racine qui cascadait, donc un
+  `set(ref('chat'), null)` vidait le serveur. Réservé aux admins ; les messages
+  sont en **création seule** (`!data.exists()`).
+- **Actions admin RTDB non protégées** : les règles RTDB ne peuvent pas lire
+  `isAdmin` (Firestore). Nouveau nœud **`admins/<uid>`**, lisible par tous et
+  écrivable **console uniquement**. ⚠️ **À créer à la main au déploiement**,
+  sinon « Vider les chats » et « Ouvrir une fenêtre de Raid » seront refusés.
+- ⚠️ **NE PAS verrouiller tout `world` sur les admins** : `world/boss` est écrit
+  par CHAQUE joueur qui frappe le boss mondial, `world/dungeonOpen` par quiconque
+  ouvre un donjon. Seul `world/raid` est administratif.
+- **Marché / équipes / guildes** : l'`update` était ouvert à tout compte connecté
+  (annuler l'annonce d'un autre, se déclarer hôte d'une équipe, s'approprier une
+  guilde). Champs d'identité figés, et le marché n'accepte que
+  `status`/`buyerUid`/`soldAt` — un acheteur ne peut plus baisser le prix.
+- **Règles mortes supprimées** : `duels` (remplacé par `pvpDuelService`) et
+  `gifts` (jamais branché) laissaient `update`/`delete` ouverts sur des
+  collections que plus personne n'écrit.
+
+### Risque résiduel, assumé
+Sessions temps réel partagées (`dungeons`/`endlessSessions`/`pvpDuels`) toujours
+en `.write: auth != null` : les deux camps y écrivent tour à tour, les verrouiller
+demanderait des Cloud Functions. Griefing d'une session en cours possible, pas de
+vol. Et `power` reste calculé par le client (les règles ne peuvent pas rejouer
+`powerScore`) : seul un plafond l'empêche d'écraser l'affichage.
+`dangerouslySetInnerHTML` dans `NewsCard`/`PatchNotesModal` n'est pas un XSS
+aujourd'hui (source = constante du dépôt) mais le deviendrait si les patch notes
+passaient un jour par Firestore. `npm audit` remonte `undici` (Firebase SDK) :
+**absent du bundle navigateur**, donc non exploitable ici.
 
 ## Règles pour agents
 

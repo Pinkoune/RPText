@@ -9,7 +9,22 @@ export interface ChatMessage {
   text: string;
   ts: number;
   channel?: ChatChannel;
-  targetId?: string; // guildId, teamId, or recipient name
+  /** guildId ou teamId. Pour un MP, voir `toUid`/`toName`. */
+  targetId?: string;
+  /**
+   * Destinataire d'un message privé, par UID.
+   *
+   * ⚠️ Les MP étaient rangés sous `chat/inbox/<nom du joueur>` et la règle RTDB
+   * ouvrait la lecture de tout `chat/inbox` à n'importe quel compte connecté :
+   * toutes les conversations privées du serveur étaient lisibles par tout le
+   * monde, et les clés (des pseudos) s'énuméraient depuis le classement. Pire,
+   * les pseudos sont libres et non uniques : se renommer comme quelqu'un
+   * suffisait à recevoir ses messages. Rangés par UID, la règle peut enfin
+   * vérifier que le lecteur est bien le propriétaire de la boîte.
+   */
+  toUid?: string;
+  /** Pseudo du destinataire au moment de l'envoi (affichage seulement). */
+  toName?: string;
   system?: boolean; // annonce automatique du monde
   aura?: string;
   auraColorOn?: boolean;
@@ -29,13 +44,20 @@ function loadLocal(channel?: ChatChannel): ChatMessage[] {
   return channel ? localMsgs.filter(m => m.channel === channel) : localMsgs;
 }
 
-export function sendChat(me: { uid: string; name: string; aura?: string; auraColorOn?: boolean }, text: string, channel: ChatChannel = 'global', targetId?: string): void {
+/**
+ * Envoie un message. Pour `private`, `targetId` est l'**UID** du destinataire
+ * (et non son pseudo) ; `targetName` sert uniquement à l'affichage.
+ */
+export function sendChat(me: { uid: string; name: string; aura?: string; auraColorOn?: boolean }, text: string, channel: ChatChannel = 'global', targetId?: string, targetName?: string): void {
   const clean = text.trim().slice(0, 240);
   if (!clean) return;
   const msg: ChatMessage = { uid: me.uid, name: me.name, text: clean, ts: Date.now(), channel };
   if (me.aura) msg.aura = me.aura;
   if (me.auraColorOn === false) msg.auraColorOn = false;
-  if (targetId) msg.targetId = targetId;
+  if (targetId) {
+    if (channel === 'private') { msg.toUid = targetId; msg.toName = targetName ?? targetId; }
+    else msg.targetId = targetId;
+  }
   if (!rtdb) {
     localMsgs.push(msg);
     if (localMsgs.length > 50) localMsgs.shift();
@@ -49,12 +71,9 @@ export function sendChat(me: { uid: string; name: string; aura?: string; auraCol
   } else if (channel === 'guild' && targetId) {
     void push(ref(rtdb, `chat/guild/${targetId}`), msg);
   } else if (channel === 'private' && targetId) {
-    // Send to recipient's inbox
+    // Boîte du destinataire, puis copie dans la mienne pour voir mes envois.
     void push(ref(rtdb, `chat/inbox/${targetId}`), msg);
-    // Send to my own inbox so I see what I sent
-    if (targetId !== me.name) {
-      void push(ref(rtdb, `chat/inbox/${me.name}`), { ...msg, targetId });
-    }
+    if (targetId !== me.uid) void push(ref(rtdb, `chat/inbox/${me.uid}`), msg);
   } else {
     void push(ref(rtdb, 'chat/global'), msg);
   }
@@ -91,7 +110,7 @@ export function watchChat(channel: ChatChannel, targetId: string | null | undefi
   let path = 'chat/global';
   if (channel === 'team' && targetId) path = `chat/team/${targetId}`;
   else if (channel === 'guild' && targetId) path = `chat/guild/${targetId}`;
-  else if (channel === 'private' && targetId) path = `chat/inbox/${targetId}`; // For private, targetId is our own name
+  else if (channel === 'private' && targetId) path = `chat/inbox/${targetId}`; // en privé, targetId = MON uid
 
   const q = query(ref(rtdb, path), limitToLast(50));
   return onValue(q, (snap) => {
@@ -104,6 +123,7 @@ export function watchChat(channel: ChatChannel, targetId: string | null | undefi
  * A background watcher to get notifications for new messages across all relevant channels
  */
 export function watchNotifications(
+  myUid: string,
   myName: string,
   teamId: string | null | undefined,
   guildId: string | null | undefined,
@@ -133,7 +153,7 @@ export function watchNotifications(
   };
 
   bind('chat/global');
-  bind(`chat/inbox/${myName}`);
+  bind(`chat/inbox/${myUid}`);
   if (teamId) bind(`chat/team/${teamId}`);
   if (guildId) bind(`chat/guild/${guildId}`);
 

@@ -5,8 +5,17 @@ service cloud.firestore {
     // Vrai si l'appelant est un admin confirmé (flag isAdmin sur SON doc joueur,
     // qui ne peut être posé que par un admin existant ou la console Firebase).
     function isAdminUser() {
+      // ⚠️ `'isAdmin' in d` PUIS `d.isAdmin`, et non un accès direct ni un
+      // `d.get('isAdmin', false)` : sur un document qui ne porte pas le champ —
+      // le cas de tous les joueurs normaux — les deux autres formes lèvent une
+      // erreur d'évaluation (« Property isAdmin is undefined on object »),
+      // visible dans les logs de l'émulateur. Le résultat final restait correct
+      // par court-circuit du `||`, mais une règle qui aurait mis
+      // `isAdminUser()` en PREMIER opérande d'un `&&`, ou seule, aurait refusé
+      // sur erreur au lieu de refuser sur un false propre.
       return request.auth != null
         && exists(/databases/$(database)/documents/players/$(request.auth.uid))
+        && ('isAdmin' in get(/databases/$(database)/documents/players/$(request.auth.uid)).data)
         && get(/databases/$(database)/documents/players/$(request.auth.uid)).data.isAdmin == true;
     }
 
@@ -32,9 +41,62 @@ service cloud.firestore {
     // Autorisé seulement si : le champ est absent, explicitement false, ou
     // inchangé par rapport au doc existant.
     function adminFlagUntouched() {
-      return !('isAdmin' in request.resource.data)
-        || request.resource.data.isAdmin == false
-        || (resource != null && request.resource.data.isAdmin == resource.data.isAdmin);
+      // Même précaution que dans isAdminUser() : lire le champ absent via
+      // `.get(..., false)`, sinon l'évaluation lève au lieu de renvoyer false.
+      return request.resource.data.get('isAdmin', false) == false
+        || (resource != null
+            && request.resource.data.get('isAdmin', false) == resource.data.get('isAdmin', false));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Bornes de vraisemblance sur le document de personnage.
+    //
+    // ⚠️ À lire avant d'y toucher. Le jeu calcule tout côté client : Firestore
+    // ne peut pas RECALCULER une progression, donc il ne peut pas empêcher la
+    // triche solo dans l'absolu. Ce qu'il peut faire, et qu'il ne faisait pas du
+    // tout, c'est refuser l'ABSURDE — et surtout tout ce qui déborde sur les
+    // autres joueurs (classement, wipe, statut).
+    //
+    // Ce qui est vérifié ici est vérifié PAR LE SERVEUR : un client modifié ne
+    // peut pas le contourner. Ce qui reste possible : monter lentement des
+    // valeurs plausibles. Pour fermer ça il faudrait déplacer les gains dans
+    // `functions/` (Cloud Functions, plan Blaze) — voir le README.
+    //
+    // Aucune borne « par delta » sur l'or : la sauvegarde est débouncée à 800ms
+    // mais une vente au marché se fait à un prix libre, donc un gain légitime
+    // peut être arbitrairement gros. Un plafond de delta casserait le marché.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Lecture d'un champ numérique optionnel, avec valeur par défaut : les vieux
+    // documents ne portent pas tous les champs récents.
+    function n(data, key) { return data.get(key, 0); }
+
+    function playerSane(charId) {
+      let d = request.resource.data;
+      let old = resource;
+      return d.uid == charId
+        // Plafond dur du jeu (classes.ts MAX_LEVEL). Un niveau 9999 faussait le
+        // classement de tout le monde, pas seulement le tricheur.
+        && d.level is number && d.level >= 1 && d.level <= 50
+        // Rien de négatif, rien d'aberrant. Les plafonds sont volontairement très
+        // hauts : ils arrêtent l'absurde, pas le jeu.
+        && d.xp is number && d.xp >= 0
+        && n(d, 'gold') >= 0 && n(d, 'gold') <= 1000000000
+        && n(d, 'gems') >= 0 && n(d, 'gems') <= 10000000
+        && n(d, 'fateCoins') >= 0 && n(d, 'fateCoins') <= 10000000
+        && n(d, 'kills') >= 0
+        && n(d, 'prestigeLevel') >= 0 && n(d, 'prestigeLevel') <= 99
+        && n(d, 'relicShards') >= 0
+        // MONOTONES. `applyRebirth` remet l'or à 100 et le niveau à 1, mais ne
+        // touche JAMAIS aux kills ni au prestige : ces deux-là ne peuvent que
+        // monter, et ce sont précisément ceux qui pèsent au classement
+        // (`power.ts` : kills en racine, prestige ×50).
+        && (old == null || n(d, 'kills') >= n(old.data, 'kills'))
+        && (old == null || n(d, 'prestigeLevel') >= n(old.data, 'prestigeLevel'))
+        // `createdAt` IMMUABLE : `playerService.loadPlayer` refuse un personnage
+        // créé avant `system/config.lastWipe`. Sans cette ligne, il suffisait de
+        // réécrire sa propre date de création pour survivre à un wipe global.
+        && (old == null || d.createdAt == old.data.createdAt);
     }
 
     match /system/{document=**} {
@@ -54,52 +116,107 @@ service cloud.firestore {
     }
 
     // Chaque joueur écrit ses propres documents de personnage — mais NE PEUT PAS
-    // se déclarer admin (privilege escalation). Un admin peut écrire n'importe
-    // quel doc. Note : isAdminUser() lit players/{auth.uid}, c'est-à-dire le
-    // slot 0 — le statut d'admin est donc bien attaché au compte, pas au perso.
+    // se déclarer admin (privilege escalation), ni sortir des bornes ci-dessus.
+    // Un admin peut écrire n'importe quel doc. Note : isAdminUser() lit
+    // players/{auth.uid}, c'est-à-dire le slot 0 — le statut d'admin est donc
+    // bien attaché au compte, pas au perso.
     match /players/{charId} {
       allow read: if request.auth != null;            // profils lisibles (classement, PvP)
       allow write: if isAdminUser()
-        || (ownsCharacter(charId) && adminFlagUntouched());
+        || (ownsCharacter(charId) && adminFlagUntouched() && playerSane(charId));
     }
-    // Classement public en lecture, écriture via le doc joueur seulement.
-    // Une ligne de classement par PERSONNAGE (et non par compte) : sinon posséder
+
+    // Classement : une ligne par PERSONNAGE (et non par compte) — sinon posséder
     // plusieurs personnages ferait perdre son rang à chaque changement.
+    //
+    // ⚠️ La ligne doit REFLÉTER le doc joueur, elle n'est plus déclarative.
+    // Avant, elle était écrite librement : on pouvait laisser son personnage
+    // intact et n'envoyer qu'une ligne de classement mensongère, sans même
+    // tricher sur sa sauvegarde. Maintenant niveau, kills, prestige et niveau
+    // d'artefact doivent correspondre au document de personnage — lequel est
+    // borné juste au-dessus. `savePlayer` écrit le doc joueur AVANT la ligne de
+    // classement, donc le `get()` voit bien les valeurs à jour.
+    //
+    // `power` reste calculé par le client (les règles ne peuvent pas rejouer
+    // `powerScore`) : on se contente d'un plafond qui empêche une ligne à 1e99
+    // d'écraser l'affichage de tout le monde.
+    function leaderboardMirrors(charId) {
+      let d = request.resource.data;
+      let p = get(/databases/$(database)/documents/players/$(charId)).data;
+      return d.uid == charId
+        && d.level == p.level
+        && n(d, 'kills') == n(p, 'kills')
+        && n(d, 'prestigeLevel') == n(p, 'prestigeLevel')
+        && n(d, 'artifactLevel') == p.get('artifact', {}).get('level', 0)
+        && n(d, 'power') >= 0 && n(d, 'power') <= 1000000;
+    }
     match /leaderboard/{charId} {
       allow read: if request.auth != null;
-      allow write: if ownsCharacter(charId) || isAdminUser();
+      allow write: if isAdminUser() || (ownsCharacter(charId) && leaderboardMirrors(charId));
     }
+
     // ⚠️ `duels` SUPPRIMÉ : l'ancien duel pile/face Firestore a été remplacé par
     // `pvpDuelService` (RTDB). Plus aucune référence dans le code — la règle ne
     // faisait qu'entretenir une collection ouverte en écriture pour rien.
-    // Marché : annonces créées par le vendeur, achetables/annulables par tout joueur connecté.
+
+    // Marché : annonce créée par le vendeur. L'`update` était ouvert à tout
+    // compte connecté, donc n'importe qui pouvait annuler ou marquer vendue
+    // l'annonce d'un autre. Seuls le statut et les champs d'achat bougent après
+    // création — l'objet, le prix et le vendeur sont figés.
+    function marketFieldsLocked() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['status', 'buyerUid', 'soldAt']);
+    }
     match /market/{listingId} {
       allow read: if request.auth != null;
       allow create: if ownsCharacter(request.resource.data.sellerUid);
-      allow update: if request.auth != null;
+      // Annuler : le vendeur seul. Acheter : n'importe qui d'autre, mais il ne
+      // peut toucher qu'au statut et se désigner acheteur.
+      allow update: if isAdminUser() || (
+        marketFieldsLocked() && (
+          ownsCharacter(resource.data.sellerUid)
+          // `.get(..., '')` : une annulation n'écrit pas de `buyerUid`, et
+          // l'accès direct lèverait une erreur d'évaluation.
+          || ownsCharacter(request.resource.data.get('buyerUid', ''))
+        )
+      );
     }
-    // Card-Jitsu duels
+
+    // Card-Jitsu : les deux camps écrivent tour à tour, on ne peut pas figer
+    // grand-chose — mais au moins l'hôte et l'invité ne changent plus en cours
+    // de partie (avant, un tiers pouvait se substituer à un joueur).
     match /cj_duels/{duelId} {
       allow read: if request.auth != null;
       allow create: if ownsCharacter(request.resource.data.hostUid);
-      allow update: if request.auth != null;
+      allow update: if isAdminUser()
+        || (request.auth != null && request.resource.data.hostUid == resource.data.hostUid);
     }
+
     // Équipes : créées par l'hôte, rejoignables/quittables par les joueurs.
-    // Suppression réservée à l'hôte (ou admin) pour éviter le griefing.
+    // L'hôte ne peut plus être réécrit par un tiers (détournement d'équipe) ;
+    // le transfert d'hôte passe par l'hôte lui-même.
     match /teams/{teamId} {
       allow read: if request.auth != null;
       allow create: if ownsCharacter(request.resource.data.hostUid);
-      allow update: if request.auth != null;
+      allow update: if isAdminUser()
+        || ownsCharacter(resource.data.hostUid)
+        || (request.auth != null && request.resource.data.hostUid == resource.data.hostUid);
       allow delete: if ownsCharacter(resource.data.hostUid) || isAdminUser();
     }
-    // Guildes : fondées par l'owner, rejoignables/contributions par les joueurs.
-    // Suppression réservée à l'owner (ou admin).
+
+    // Guildes : idem, l'owner est figé sauf pour l'owner lui-même ou un admin.
+    // Le reste (roster, XP, objectif collectif) reste ouvert aux membres : le
+    // jeu écrit ces champs depuis plusieurs clients, et les verrouiller
+    // demanderait de passer par des Cloud Functions.
     match /guilds/{guildId} {
       allow read: if request.auth != null;
       allow create: if ownsCharacter(request.resource.data.ownerUid);
-      allow update: if request.auth != null;
+      allow update: if isAdminUser()
+        || ownsCharacter(resource.data.ownerUid)
+        || (request.auth != null && request.resource.data.ownerUid == resource.data.ownerUid);
       allow delete: if ownsCharacter(resource.data.ownerUid) || isAdminUser();
     }
+
     // ⚠️ `gifts` SUPPRIMÉ : aucune référence dans le code (feature jamais
     // branchée). La règle laissait `update, delete` ouverts à tout compte
     // connecté sur une collection que personne n'écrit — surface d'attaque

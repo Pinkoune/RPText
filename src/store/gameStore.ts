@@ -31,6 +31,8 @@ export interface ChatNotif {
   channel: ChatChannelKind;
   name: string;
   text: string;
+  /** UID de l'expéditeur — les MP sont keyés par UID, pas par pseudo. */
+  uid?: string;
 }
 
 interface GameState {
@@ -85,8 +87,8 @@ interface GameState {
   hasUnreadChat: boolean;
   markChatRead: () => void;
   /** Onglet/conversation actuellement affiché dans ChatCard (si ouvert) — évite de notifier une conversation déjà sous les yeux. */
-  activeChatView: { tab: ChatChannelKind; dmPeer?: string } | null;
-  setActiveChatView: (v: { tab: ChatChannelKind; dmPeer?: string } | null) => void;
+  activeChatView: { tab: ChatChannelKind; dmPeer?: { uid: string; name: string } } | null;
+  setActiveChatView: (v: { tab: ChatChannelKind; dmPeer?: { uid: string; name: string } } | null) => void;
   inCombat: boolean;
   setInCombat: (val: boolean) => void;
   /**
