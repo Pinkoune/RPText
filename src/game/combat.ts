@@ -297,9 +297,25 @@ export function combatTurn(
     resourceAmount?: number;
     /** Type de ressource passive de la classe du joueur (voir `classResourceType`). */
     resourceType?: 'rage' | 'combo' | 'grace' | 'mana' | 'sap' | 'zeal' | 'tempo' | 'overcharge' | 'instinct' | 'corruption' | 'vindicte' | 'souls' | 'traps' | 'presage' | null;
+    /**
+     * Multiplicateur sur tout le SUSTAIN régénératif : vol de vie, régénération,
+     * soins de compétence, boucliers, procs de set soignants. 1 par défaut.
+     *
+     * Sert aux combats volontairement longs (Rituel du Néant), où la simulation
+     * a montré qu'un mur calibré sur les STATS ne discrimine rien : sur 200
+     * tours, les classes à vol de vie ou à soin gagnent quels que soient les PV
+     * du boss, et les autres perdent. La potion n'est pas touchée — elle est en
+     * nombre limité, donc elle ne dérive pas avec la durée du combat.
+     */
+    sustainMult?: number;
   } = {},
   state: CombatState = freshCombatState(),
 ): TurnResult {
+  const sustain = opts.sustainMult ?? 1;
+  // Vol de vie et régénération passent par `mods` : on en fabrique une copie
+  // atténuée plutôt que de toucher aux six sites qui les lisent.
+  if (sustain !== 1) mods = { ...mods, lifesteal: mods.lifesteal * sustain, regen: mods.regen * sustain };
+
   let php = php0;
   let mhp = mhp0;
   const maxHp = stats.maxHp;
@@ -403,14 +419,14 @@ export function combatTurn(
           }
         }
         if (effHealFrac) {
-          const heal = Math.round(maxHp * effHealFrac);
+          const heal = Math.round(maxHp * effHealFrac * sustain);
           php = Math.min(maxHp, php + heal);
           healDone += heal;
           events.push({ text: `${skill.name} te rend ${heal} PV.`, side: 'info' });
         }
         if (skill.shield) {
           // Vrai bouclier : PV qui absorbent les prochains dégâts entrants.
-          const amount = Math.round(maxHp * skill.shield);
+          const amount = Math.round(maxHp * skill.shield * sustain);
           state.shield += amount;
           events.push({ text: `🛡️ ${skill.name} t'accorde un bouclier de ${amount} PV.`, side: 'info' });
         }
@@ -463,11 +479,11 @@ export function combatTurn(
       state.chill = Math.max(state.chill, 2);
       if (mhp > 0) events.push({ text: `${sp.icon} ${sp.name} : ${monster.name} est gelé !`, side: 'you' });
     } else if (sp.kind === 'heal') {
-      const heal = Math.max(1, Math.round(maxHp * sp.power));
+      const heal = Math.max(1, Math.round(maxHp * sp.power * sustain));
       php = Math.min(maxHp, php + heal);
       events.push({ text: `${sp.icon} ${sp.name} : +${heal} PV.`, side: 'info' });
     } else if (sp.kind === 'shield') {
-      const amt = Math.max(1, Math.round(maxHp * sp.power));
+      const amt = Math.max(1, Math.round(maxHp * sp.power * sustain));
       state.shield += amt;
       events.push({ text: `${sp.icon} ${sp.name} : bouclier +${amt} PV.`, side: 'info' });
     } else if (sp.kind === 'extra' && mhp > 0) {

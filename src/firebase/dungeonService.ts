@@ -272,7 +272,13 @@ function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1, avgLe
   // (combats de 100-300 tours). 1.6 garde une vraie montée sans exploser.
   const lvlMult = Math.pow(1 + Math.max(0, avgLevel - 1) / 30, avgLevel >= 20 ? 1.6 : 1.4);
   const hpMult  = numPlayers * (1 + (numPlayers - 1) * 0.12) * lvlMult; // ~linéaire (avant : ^1.4)
-  const atkMult = (1 + (numPlayers - 1) * 0.35) * lvlMult; // 0.5→0.35
+  // 0.5 → 0.35 → 0.28. Les PV du boss montent de +12% par membre mais son ATK
+  // montait de +35% : à 4 joueurs il frappait 2,05× plus fort alors que chaque
+  // membre garde UNE barre de vie et que le débit du soigneur, lui, ne monte
+  // pas. Mesuré sur la Forge Infernale en gear de craft : 100% à 2 joueurs mais
+  // 19% à 4 — le groupe complet était puni d'être complet. À 0.28 : 72% à 4,
+  // donc toujours plus dur qu'à 2, sans inverser la courbe.
+  const atkMult = (1 + (numPlayers - 1) * 0.28) * lvlMult;
   // La DEF scale en RACINE du lvlMult, pas plein : les dégâts sont `atk - def`
   // (soustraction plate), donc une DEF qui grimpait au même rythme que les PV
   // finissait par DÉPASSER l'ATK des joueurs (boss Nv40+ → dégâts floorés à 1,

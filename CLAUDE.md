@@ -398,6 +398,76 @@ des buffs ») et le **Rituel du Néant par sous-classe**, jamais simulé jusqu'i
   équipé (Nv.50 maxé + artefact + ★5), Forge et Citadelle sont à **100% de 1 à
   4 joueurs**. C'est une porte d'entrée, pas un mur.
 
+### Correctifs d'équilibrage end-game (fait, C) — le craft doit suivre jusqu'à 50
+
+Constat de l'utilisateur, confirmé par les données : **un joueur gardait le même
+équipement du Nv.36 au Nv.50**. La dernière arme du jeu était le Sceptre
+Nécrotique (Nv.36) ; côté armure, plus rien après `void_mantle` (42) ; côté
+bijou, plus rien après `primordial_crown` (45). Or la tranche 40-50 pèse la
+majorité du temps de jeu : le craft cessait d'exister pile là où le joueur passe
+le plus de temps.
+
+**Deux paliers ajoutés** (`items.ts` + `crafting.ts` + `icons.ts`), 11 objets :
+- **« Givre du Vide » Nv.40** — 4 armes (78/74/76/70 ATK), 1 armure (51/245),
+  1 bijou (12/12/120). Se fabrique avec les ressources de l'**Abysse** (cristal,
+  lotus des glaces, poussière du vide) : le biome final s'ouvre au Nv.38, on y
+  entre avec le stuff de la Nécropole et on en ressort avec le sien.
+- **« Primordial » Nv.46-48** — 4 armes (92/88/90/84 ATK), 1 armure (64/300).
+  Coûte des **Âmes de Boss** : la dernière marche se gagne au Sanctuaire (CD 24h)
+  ou en Citadelle, pas à la récolte. Volontairement le palier le plus long.
+
+Courbe d'armes lissée : 46 (Nv.22) → 62 (30) → 68 (34) → **78 (40)** → **92 (46)**.
+Armures : 198 → 260 → 312 → **340** → 370 → **428** (score `def×2 + hp`).
+
+⚠️ **L'Égide primordiale n'a PAS d'élément**, exprès. Une armure `light` prend
++50% des attaques `dark` (`getElementMult`) et l'Abysse — la zone où on porte ce
+set — est intégralement peuplée de monstres sombres : la meilleure armure du jeu
+aurait été un handicap là où on la porte (-36 points de winrate, mesuré). Les
+ARMES du palier restent `light`, donc +50% contre ces mêmes monstres.
+
+**Rituel du Néant recalibré**, parce qu'il ne faisait plus barrage du tout :
+1. `BEST_WEAPON` était une **table écrite en dur** figée sur le palier volcanique
+   (Nv.30-32). Le palier Nécropole était sorti sans qu'on y touche : le « joueur
+   idéal » sur lequel se calibre le boss se battait avec une arme deux paliers en
+   retard, et le mur s'effondrait un peu plus à chaque ajout de contenu. Remplacé
+   par `bestGear()`, **dérivé d'`ITEMS`** — tout nouvel objet met le boss à jour
+   tout seul.
+2. **`ASCENSION_SUSTAIN_MULT = 0.60`** : le Néant draine. Vol de vie,
+   régénération, soins de compétence, boucliers et procs de set sont ramenés à
+   60% pendant le rituel (`combatTurn` opt `sustainMult`). **Les potions ne sont
+   pas touchées** — elles sont en nombre limité, donc elles récompensent la
+   préparation sans dériver avec la durée du combat. Un mur calibré sur les
+   STATS ne triait que par archétype : sur un combat de centaines de tours, les
+   classes à sustain gagnaient quels que soient les PV du boss.
+3. **Dégâts du boss +30%** (`s.maxHp / 6` → `/ 4.6`, `s.def * 0.6` → `* 0.78`),
+   valeur balayée en simulation (`SWEEP=1`) sur 16 sous-classes × 3 profils.
+
+Résultat mesuré (winrate, 16 sous-classes) — avant : six classes le battaient à
+**100% sans aucune progression de saison**, tout le monde à 100% avec. Après :
+
+| Profil | avant | après |
+|---|---|---|
+| Nv.50 maxé, aucune saison | médiane 71% | **médiane 3%** |
+| + artefact grille + Relique ★5 | 100% partout | 0-100%, médiane 66% |
+| tout maxé (artefact + ★10 + prestige 5) | 100% partout | **75-100%** |
+
+C'est le contrat de la feature : infranchissable sans équipement à jour,
+franchissable par **toutes** les classes avec. Reste un point à surveiller : le
+Prêtre de l'Aube le bat encore à 100% sans saison (c'est aussi la seule classe à
+100% de PV restants dans le tableau de classes — le même excès de sustain).
+
+**Donjons : `atkMult` 0.35 → 0.28 par membre** (`dungeonService.initMonster`).
+Les PV du boss montent de +12% par membre mais son ATK montait de +35% : à
+4 joueurs il frappait 2,05× plus fort alors que chaque membre garde UNE barre de
+vie et que le débit du soigneur ne monte pas. Forge Infernale en gear de craft :
+`0% / 100% / 99% / 19%` de 1 à 4 joueurs — le groupe complet était puni d'être
+complet. Après : **72% à 4 joueurs**, toujours plus dur qu'à 2, sans inverser la
+courbe. ⚠️ Miroir à tenir dans `scripts/balance-sim-turns.ts` (`dungeonScale`).
+
+Effet du lot sur la chasse en Abysses (Chasseur en gear de craft, sans saison) :
+Nv.40 17% → **25%**, Nv.50 17% → **40%**. Dur, mais plus une porte fermée — et
+c'est le craft du biome qui l'ouvre, pas le niveau.
+
 ## Amusement — 3 features (fait, C)
 
 - **Maîtrise des biomes** (`game/mastery.ts`, nouveau) : chaque kill compte pour le biome courant (`p.biomeKills`, migré). Paliers 100/500/1500/4000 → titre (`Novice/Familier/Vétéran/Maître/Légende · <Biome>`, ajouté à `unlockedTitles`) + **bonus permanent XP/Or dans ce biome** (+5/10/15/25%, appliqué dans `grantMonsterRewards`). But concret au farm end-game (Nv.40-50 = 81% du temps, sans nouvelle zone). Affiché : bandeau dans HuntCard (biome courant) + liste complète dans MapCard + toast au palier franchi (`HuntRewards.masteryUp`).

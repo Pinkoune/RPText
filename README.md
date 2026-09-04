@@ -119,7 +119,7 @@ Une fois le niveau 50 atteint, la progression continue ailleurs.
 |---|---|
 | 🗺️ **8 biomes** | Forêt, Plaines, Montagnes, Désert, Marais, Volcan, Nécropole de Cristal, Abysses du Vide |
 | 🐺 **28 monstres** | avec éléments, faiblesses, résistances et phases d'apparition |
-| ⚗️ **204 objets** · **138 recettes** | armes, armures, bijoux, consommables, matériaux |
+| ⚗️ **215 objets** · **149 recettes** | armes, armures, bijoux, consommables, matériaux |
 | 🌟 **147 talents** | répartis sur les 20 arbres de classe |
 | 🐣 **11 familiers** | avec leurs capacités passives en combat |
 | 🏆 **29 succès** | qui donnent titres et Éclats de Relique |

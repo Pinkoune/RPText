@@ -89,11 +89,29 @@ contenu est un mur en semaine 1 et une formalité en semaine 8.
 `computeAscensionBoss` se calibre sur un joueur idéal dérivé du joueur réel
 (`structuredClone`), donc le boss suit l'artefact et la Relique — mais il ne
 compte que **la moitié** du prestige, et l'idéal n'a pas la grille de mods du
-joueur. Résultat mesuré : dès l'artefact + Relique ★5, les 16 sous-classes le
-battent à ≥97%, et six d'entre elles (Berserker, Chevalier Noir, Cryomancien,
-Prêtre de l'Aube, Moine, Oracle) le battent à 100% **sans aucune progression de
-saison**. Les combats longs favorisent mécaniquement le sustain : c'est là qu'il
-faut agir si on veut que le mur en reste un, pas sur ses PV.
+joueur, qui reste donc un avantage net.
+
+Deux leviers, réglés par simulation :
+- `ASCENSION_SUSTAIN_MULT` (ascension.ts) — vol de vie, régénération, soins de
+  compétence, boucliers et procs de set pendant le rituel. Les potions ne sont
+  jamais touchées.
+- le coefficient de dégâts du boss (`s.maxHp / 4.6 + s.def * 0.78`).
+
+**`SWEEP=1 node /tmp/simt.cjs`** balaie les deux sur les 16 sous-classes × trois
+profils de progression et imprime `min/med/max` par profil. Le réglage retenu
+(sustain 0.60, dégâts ×1.30 par rapport à l'origine) donne :
+
+| Profil | min | médiane | max |
+|---|---|---|---|
+| Nv.50 maxé, aucune saison | 0% | 3% | 100% |
+| + artefact grille + Relique ★5 | 0% | 66% | 100% |
+| tout maxé | 75% | 100% | 100% |
+
+La cible : **médiane proche de 0 sans saison, minimum > 70% tout maxé.** Un mur
+que personne ne franchit sans progression, que toutes les classes franchissent
+avec. Ne jamais régler ça sur les PV du boss : plus le combat est long, plus le
+sustain domine, donc gonfler ses PV avantage précisément les classes qui
+passaient déjà.
 
 ## Ajouter une classe (checklist)
 

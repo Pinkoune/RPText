@@ -9,10 +9,30 @@ import type { PlayerState, ClassId } from './types';
 import { deriveStats, starterWeapon } from './player';
 import { getTalentsForClass } from './talents';
 import { CLASSES } from './classes';
-import { mintInstanceId } from './items';
+import { mintInstanceId, ITEMS } from './items';
 import { prestigeStacks } from './prestige';
 
 export const ASCENSION_FAIL_COOLDOWN = 8 * 60 * 60 * 1000; // 8h après un échec
+
+/**
+ * Le Néant DRAINE : tout le sustain régénératif du joueur (vol de vie,
+ * régénération, soins de compétence, boucliers, procs de set) est ramené à 35%
+ * pendant le rituel. Les potions, elles, sont intactes.
+ *
+ * Pourquoi : le boss était calibré sur les seules STATISTIQUES d'un joueur
+ * idéal, or ce combat dure des centaines de tours. Mesuré en simulation, six
+ * sous-classes sur seize (Berserker, Chevalier Noir, Cryomancien, Prêtre de
+ * l'Aube, Moine, Oracle) le battaient à 100% SANS aucune progression de saison,
+ * simplement parce qu'elles se soignent plus vite qu'il ne frappe — pendant que
+ * d'autres échouaient à 0%. Un mur qui ne trie que par archétype n'est pas un
+ * mur. Gonfler ses PV aurait aggravé les deux effets : plus le combat est long,
+ * plus le sustain domine. C'est donc le sustain qu'on borne.
+ *
+ * Les potions restent pleines exprès : elles sont en nombre limité, donc elles
+ * récompensent la préparation (en fabriquer, en emporter) sans jamais dériver
+ * avec la durée du combat.
+ */
+export const ASCENSION_SUSTAIN_MULT = 0.60;
 
 // Les constantes et multiplicateurs de prestige vivent désormais dans
 // `prestige.ts` (module sans dépendance, donc lisible aussi par l'interface).
@@ -36,10 +56,31 @@ export interface AscensionBoss {
   dmgType: 'physical' | 'magical';
 }
 
-/** Meilleure arme par classe de base (les recettes end-game). */
-const BEST_WEAPON: Record<string, string> = {
-  warrior: 'lava_blade', archer: 'infernal_bow', mage: 'magma_staff', healer: 'seraph_staff',
-};
+/**
+ * Meilleur équipement atteignable, DÉRIVÉ du registre d'objets.
+ *
+ * C'était une table écrite en dur (`warrior: 'lava_blade', …`) figée sur le
+ * palier volcanique niv.30-32. Le palier Nécropole (niv.34-36) est sorti sans
+ * qu'on y touche, puis les paliers Abysse (40) et Primordial (46) : le « joueur
+ * idéal » sur lequel se calibre le boss se battait donc avec une arme trois
+ * paliers en retard, et le mur de fin de partie s'effondrait un peu plus à
+ * chaque ajout de contenu. En le dérivant, tout nouvel objet met le boss à jour
+ * tout seul.
+ */
+function bestGear(slot: 'weapon' | 'armor' | 'trinket', base: ClassId): string | null {
+  let best: { id: string; score: number } | null = null;
+  for (const it of Object.values(ITEMS)) {
+    if (it.slot !== slot) continue;
+    if (it.classes?.length && !it.classes.includes(base)) continue;
+    // Score homogène avec le harness d'équilibrage : l'ATK prime sur l'arme, la
+    // survie sur l'armure, et le bijou mélange les trois.
+    const score = slot === 'weapon'
+      ? (it.atk ?? 0) * 3 + (it.hp ?? 0) * 0.2
+      : (it.atk ?? 0) * 3 + (it.def ?? 0) * 2 + (it.hp ?? 0);
+    if (!best || score > best.score) best = { id: it.id, score };
+  }
+  return best?.id ?? null;
+}
 
 /**
  * Stats du boss, calibrées sur un joueur PARFAITEMENT optimisé de la classe du
@@ -48,7 +89,9 @@ const BEST_WEAPON: Record<string, string> = {
  */
 export function computeAscensionBoss(p: PlayerState): AscensionBoss {
   const base = (CLASSES[p.classId]?.parent ?? p.classId) as ClassId;
-  const weapon = BEST_WEAPON[base] ?? 'lava_blade';
+  const weapon = bestGear('weapon', base) ?? 'lava_blade';
+  const armor = bestGear('armor', base) ?? 'void_mantle';
+  const trinket = bestGear('trinket', base) ?? 'primordial_crown';
 
   const fake: PlayerState = structuredClone(p);
   fake.level = 50;
@@ -58,8 +101,8 @@ export function computeAscensionBoss(p: PlayerState): AscensionBoss {
 
   // Meilleur équipement : arme (q150 = +50% stats), armure, bijou — tous 5★ + runes.
   const wKey = mintInstanceId(`${weapon}:q150`);
-  const aKey = mintInstanceId('void_mantle:q150');
-  const tKey = mintInstanceId('primordial_crown:q150');
+  const aKey = mintInstanceId(`${armor}:q150`);
+  const tKey = mintInstanceId(`${trinket}:q150`);
   fake.equipped = { ...fake.equipped, weapon: wKey, armor: aKey, trinket: tKey };
   fake.gearStars = { [wKey]: 5, [aKey]: 5, [tKey]: 5 };
   fake.gearDurability = { [wKey]: 800, [aKey]: 1400, [tKey]: 500 };
@@ -90,7 +133,14 @@ export function computeAscensionBoss(p: PlayerState): AscensionBoss {
   // des dégâts qui dépassent le sustain d'un moine/soigneur → il faut vraiment le
   // build idéal + une bonne gestion des soins pour l'emporter.
   const hp = Math.round(s.atk * 36);
-  const atk = Math.round(s.maxHp / 6 + s.def * 0.6);
+  // Coefficient de dégâts relevé de 1/6 à 1/4.6 sur les PV idéaux (+30%).
+  // Balayé en simulation (`SWEEP=1` sur `balance-sim-turns.ts`) sur les 16
+  // sous-classes × trois profils de progression. À l'ancienne valeur, la
+  // médiane des classes gagnait à 71% SANS aucune progression de saison ; à
+  // celle-ci, elle tombe à 3% sans saison, 66% avec artefact + Relique ★5, et
+  // 86-100% une fois tout maxé. C'est le contrat de la feature : infranchissable
+  // sans équipement à jour, franchissable par TOUTES les classes avec.
+  const atk = Math.round(s.maxHp / 4.6 + s.def * 0.78);
   const def = Math.round(s.atk * 0.15);
 
   return {

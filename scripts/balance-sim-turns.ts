@@ -13,7 +13,7 @@ import { combatTurn, freshCombatState } from '../src/game/combat';
 import { activeSetProc } from '../src/game/sets';
 import { ARTIFACT_MODS } from '../src/game/artifact';
 import { RELIC_STAT_STARS, RELIC_MAX_STARS, effectsForStar } from '../src/game/relic';
-import { computeAscensionBoss } from '../src/game/ascension';
+import { computeAscensionBoss, ASCENSION_SUSTAIN_MULT } from '../src/game/ascension';
 import type { PlayerState, ClassId, ItemDef } from '../src/game/types';
 import * as fs from 'fs';
 
@@ -101,7 +101,7 @@ function played(base: ClassId, sub: ClassId, level: number): ClassId { return le
 type Mon = { hp: number; atk: number; def: number; name: string; element?: string; weaknesses?: string[]; resistances?: string[] };
 
 // ── PILOTE DE COMBAT tour-par-tour ──
-function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: number; maxTurns?: number } = {}): { win: boolean; turns: number; endHpPct: number } {
+function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: number; maxTurns?: number; sustainMult?: number } = {}): { win: boolean; turns: number; endHpPct: number } {
   const stats = deriveStats(p, true) as any;
   const mods = talentMods(p);
   const setProc = activeSetProc(p);
@@ -147,7 +147,7 @@ function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: 
     }
     const r = combatTurn(stats, mods, { ...mon, maxHp: mon.hp } as any, php, mhp, action, {
       activeSkill: skill, potionHeal: action === 'potion' ? potionHeal : 0, setProc: setProc ?? undefined,
-      resourceAmount: pool, resourceType,
+      resourceAmount: pool, resourceType, sustainMult: opts.sustainMult,
     }, state);
     php = r.php; mhp = r.mhp; state = r.state;
     if (action === 'potion') potions--;
@@ -179,7 +179,7 @@ function dungeonScale(np: number, avgLevel: number) {
   const lm = Math.pow(1 + Math.max(0, avgLevel - 1) / 30, avgLevel >= 20 ? 1.6 : 1.4);
   return {
     hpMult: np * (1 + (np - 1) * 0.12) * lm,
-    atkMult: (1 + (np - 1) * 0.35) * lm,
+    atkMult: (1 + (np - 1) * 0.28) * lm, // ⚠️ miroir de dungeonService.initMonster
     defMult: (1 + (np - 1) * 0.20) * Math.sqrt(lm),
   };
 }
@@ -302,7 +302,7 @@ function proposedScale(np: number, avgLevel: number) {
   const lm = Math.pow(1 + Math.max(0, avgLevel - 1) / 30, avgLevel >= 20 ? 1.6 : 1.4);
   return {
     hpMult: np * (1 + (np - 1) * 0.12) * lm,   // ~linéaire (+12%/membre au lieu de ^1.4)
-    atkMult: (1 + (np - 1) * 0.35) * lm,       // 0.5→0.35
+    atkMult: (1 + (np - 1) * Number(process.env.ATKPER ?? 0.28)) * lm,
     defMult: (1 + (np - 1) * 0.2) * Math.sqrt(lm),        // 0.25→0.20
   };
 }
@@ -377,6 +377,31 @@ results.stack = stackRows;
 //    calibré sur un joueur IDÉAL (`computeAscensionBoss`), donc un joueur réel
 //    doit perdre s'il n'est pas optimisé — c'est le contrat de la feature.
 //    On le mesure sur trois profils pour vérifier qu'il discrimine bien.
+// Balayage du multiplicateur de sustain : on cherche la valeur qui rend le mur
+// infranchissable sans saison ET franchissable par TOUTES les classes une fois
+// tout maxé — y compris les soigneurs, dont le kit EST du sustain.
+if (process.env.SWEEP) {
+  for (const sm of [0.4, 0.5, 0.6]) {
+    for (const atkScale of [1.0, 1.15, 1.3, 1.45]) {
+      const line: string[] = [];
+      for (const { label, stack } of [
+        { label: 'nu', stack: {} as Stack },
+        { label: 'art+*5', stack: { artifact: 62, relicStars: 5 } as Stack },
+        { label: 'maxe', stack: { artifact: 62, relicStars: 10, prestige: 5 } as Stack },
+      ]) {
+        const wrs = CLASS_LIST.filter(c => c.parent).map(c => {
+          const p = season(blankPlayer(c.id, 50), stack); outfit(p, 'maxed');
+          const b = computeAscensionBoss(p) as any;
+          return batch(p, { hp: b.hp, atk: Math.round(b.atk * atkScale), def: b.def, name: b.name, element: 'dark' } as any, 150, { potions: 6, maxTurns: 200, sustainMult: sm }).winrate;
+        }).sort((a, b) => a - b);
+        const med = wrs[Math.floor(wrs.length / 2)];
+        line.push(`${label} ${(wrs[0] * 100).toFixed(0)}/${(med * 100).toFixed(0)}/${(wrs[wrs.length - 1] * 100).toFixed(0)}`);
+      }
+      console.log(`sustain=${sm.toFixed(2)} atk*${atkScale.toFixed(2)}  min/med/max  ${line.join('   ')}`);
+    }
+  }
+}
+
 const voidRows: any[] = [];
 for (const c of CLASS_LIST.filter(c => c.parent)) {
   for (const { label, stack } of [
@@ -386,7 +411,7 @@ for (const c of CLASS_LIST.filter(c => c.parent)) {
   ]) {
     const p = season(blankPlayer(c.id, 50), stack); outfit(p, 'maxed');
     const boss = computeAscensionBoss(p) as any;
-    const r = batch(p, { hp: boss.hp, atk: boss.atk, def: boss.def, name: boss.name, element: 'dark' } as any, 300, { potions: 6, maxTurns: 200 });
+    const r = batch(p, { hp: boss.hp, atk: boss.atk, def: boss.def, name: boss.name, element: 'dark' } as any, 300, { potions: 6, maxTurns: 200, sustainMult: ASCENSION_SUSTAIN_MULT });
     voidRows.push({ classId: c.id, name: c.name, profile: label, winrate: r.winrate, bossHp: boss.hp, bossAtk: boss.atk });
   }
 }

@@ -5,7 +5,7 @@ import { useUi } from '../../store/uiStore';
 import { combatTurn, freshCombatState, type CombatState } from '../../game/combat';
 import { deriveStats } from '../../game/player';
 import { talentMods, getAllActiveSkills, type ActiveSkillDef } from '../../game/talents';
-import { computeAscensionBoss, ascensionOutcome, applyAscensionResult, type AscensionBoss } from '../../game/ascension';
+import { computeAscensionBoss, ascensionOutcome, applyAscensionResult, ASCENSION_SUSTAIN_MULT, type AscensionBoss } from '../../game/ascension';
 import { item, HP_CONSUMABLES } from '../../game/items';
 import { playSound, stopAmbientMusic, setAmbient } from '../../game/sound';
 import { currentPhase } from '../../game/daynight';
@@ -126,7 +126,7 @@ export default function AscensionCard() {
     }
     const monster = { ...fs.boss, hp: fs.bhp };
     const fightStats = { ...stats, atk: stats.atk + fs.bonusAtk };
-    const res = combatTurn(fightStats, mods, monster, fs.php, fs.bhp, action, { potionHeal: action === 'potion' ? potionHeal : 0, activeSkill: skill }, fs.combat);
+    const res = combatTurn(fightStats, mods, monster, fs.php, fs.bhp, action, { potionHeal: action === 'potion' ? potionHeal : 0, activeSkill: skill, sustainMult: ASCENSION_SUSTAIN_MULT }, fs.combat);
     if (action === 'potion' && potionId) mutate((d) => { d.inventory[potionId]--; });
 
     const logs = [...fs.logs, ...res.events.map((l) => l.text)];

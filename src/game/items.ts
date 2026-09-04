@@ -252,6 +252,40 @@ export const ITEMS: Record<string, ItemDef> = {
   crypt_rod: { id: 'crypt_rod', name: 'Sceptre d\'Apaisement', icon: '✨', rarity: 'legendary', slot: 'weapon', atk: 62, hp: 150, classes: ['healer'], value: 3400, desc: 'Apaise les âmes errantes, et soigne les vivants.', element: 'light', dmgType: 'magical', maxDurability: 800, reqLevel: 36 },
   crypt_plate: { id: 'crypt_plate', name: 'Armure Ossuaire', icon: '🛡️', rarity: 'legendary', slot: 'armor', def: 46, hp: 220, value: 3300, desc: 'Forgée à partir d\'ossements pétrifiés en cristal.', element: 'dark', maxDurability: 1200, reqLevel: 35 },
   soul_ward: { id: 'soul_ward', name: 'Talisman des Âmes', icon: '🔮', rarity: 'legendary', slot: 'trinket', atk: 8, def: 8, hp: 90, value: 2800, desc: 'Retient une part d\'essence spectrale captive.', element: 'dark', maxDurability: 500, reqLevel: 36 },
+
+  // ── Palier « Givre du Vide », niv.40 (ressources de l'Abysse) ────────────────
+  //
+  // Il n'existait RIEN entre le palier Nécropole (armes niv.34-36) et le niveau
+  // max : la dernière arme du jeu était le Sceptre Nécrotique au niveau 36. Un
+  // joueur gardait donc la même arme pendant 14 niveaux — soit, avec la courbe
+  // d'XP end-loaded, la grande majorité de son temps de jeu. Ces deux paliers
+  // (40 puis 46) rendent au craft son rôle sur toute la fin de partie.
+  //
+  // Ils se fabriquent avec les ressources de l'Abysse (cristal, lotus des
+  // glaces, poussière du vide) : le biome final s'ouvre au niveau 38, on y entre
+  // avec le stuff de la Nécropole et on en ressort avec le sien.
+  rimeblade: { id: 'rimeblade', name: 'Lame de Givre-Vide', icon: '⚔️', rarity: 'legendary', slot: 'weapon', atk: 78, classes: ['warrior'], value: 4200, desc: 'Le froid qu\'elle laisse dans la plaie ne part jamais.', element: 'frost', dmgType: 'physical', maxDurability: 850, reqLevel: 40 },
+  rimebow: { id: 'rimebow', name: 'Arc de Givre-Vide', icon: '🏹', rarity: 'legendary', slot: 'weapon', atk: 74, classes: ['archer'], value: 4100, desc: 'Ses flèches gèlent l\'air qu\'elles traversent.', element: 'frost', dmgType: 'physical', maxDurability: 850, reqLevel: 40 },
+  rimescepter: { id: 'rimescepter', name: 'Sceptre de Givre-Vide', icon: '🪄', rarity: 'legendary', slot: 'weapon', atk: 76, classes: ['mage'], value: 4300, desc: 'Un éclat d\'Abysse serti sur un manche d\'os.', element: 'frost', dmgType: 'magical', maxDurability: 850, reqLevel: 40 },
+  rimestaff: { id: 'rimestaff', name: 'Bâton de Givre-Vide', icon: '✨', rarity: 'legendary', slot: 'weapon', atk: 70, hp: 180, classes: ['healer'], value: 4400, desc: 'Le silence de l\'Abysse, transformé en refuge.', element: 'frost', dmgType: 'magical', maxDurability: 850, reqLevel: 40 },
+  rime_plate: { id: 'rime_plate', name: 'Cuirasse de Givre-Vide', icon: '🛡️', rarity: 'legendary', slot: 'armor', def: 51, hp: 245, value: 4300, desc: 'La glace de l\'Abysse ne fond pas, même au volcan.', element: 'frost', maxDurability: 1300, reqLevel: 40 },
+  rime_sigil: { id: 'rime_sigil', name: 'Sceau de Givre-Vide', icon: '❄️', rarity: 'legendary', slot: 'trinket', atk: 12, def: 12, hp: 120, value: 3600, desc: 'Retient une once du froid originel.', element: 'frost', maxDurability: 500, reqLevel: 40 },
+
+  // ── Palier « Primordial », niv.46-48 (le dernier du jeu) ─────────────────────
+  //
+  // Se fabrique avec des Âmes de Boss : il faut donc être passé par le
+  // Sanctuaire (niv.40, CD 24h) plusieurs fois. C'est le seul palier dont le
+  // matériau ne se récolte pas — la dernière marche se mérite en combat.
+  primordial_edge: { id: 'primordial_edge', name: 'Tranchant primordial', icon: '⚔️', rarity: 'legendary', slot: 'weapon', atk: 92, classes: ['warrior'], value: 9000, desc: 'Forgé avant que le monde n\'ait un nom.', element: 'light', dmgType: 'physical', maxDurability: 900, reqLevel: 46 },
+  primordial_bow: { id: 'primordial_bow', name: 'Arc primordial', icon: '🏹', rarity: 'legendary', slot: 'weapon', atk: 88, classes: ['archer'], value: 8800, desc: 'Sa corde est un rayon de la première aube.', element: 'light', dmgType: 'physical', maxDurability: 900, reqLevel: 46 },
+  primordial_scepter: { id: 'primordial_scepter', name: 'Sceptre primordial', icon: '🪄', rarity: 'legendary', slot: 'weapon', atk: 90, classes: ['mage'], value: 9200, desc: 'Contient la première étincelle de magie.', element: 'light', dmgType: 'magical', maxDurability: 900, reqLevel: 46 },
+  primordial_staff: { id: 'primordial_staff', name: 'Bâton primordial', icon: '✨', rarity: 'legendary', slot: 'weapon', atk: 84, hp: 210, classes: ['healer'], value: 9400, desc: 'Le premier souffle, gardé intact.', element: 'light', dmgType: 'magical', maxDurability: 900, reqLevel: 46 },
+  // ⚠️ SANS élément, volontairement. Une armure `light` prend +50% des attaques
+  // `dark` (`getElementMult`), or l'Abysse — la zone où on porte ce set — est
+  // entièrement peuplée de monstres sombres : la meilleure armure du jeu aurait
+  // été un handicap là où on la porte. Mesuré : -36 points de winrate en Abysses.
+  // Les ARMES du palier restent `light` (+50% contre ces mêmes monstres).
+  primordial_aegis: { id: 'primordial_aegis', name: 'Égide primordiale', icon: '🛡️', rarity: 'legendary', slot: 'armor', def: 64, hp: 300, value: 11000, desc: 'Ce qui restait du monde avant qu\'il ne se brise.', maxDurability: 1500, reqLevel: 48 },
 };
 /**
  * Tous les consommables de soin (slot consumable + hp défini), triés du moins
