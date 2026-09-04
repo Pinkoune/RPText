@@ -52,9 +52,10 @@ function particleFx(biome: BiomeId, phase: Phase): PFX | null {
 function Particles({ biome, phase }: Props) {
   const reduced = useFx((s) => s.reduced);
   const fx = particleFx(biome, phase);
-  // Mode réduit : ~40% des particules (arrondi), sinon le plein. Ces particules
-  // animées en boucle sont un gros contributeur à la charge GPU permanente.
-  const count = fx ? (reduced ? Math.ceil(fx.count * 0.4) : fx.count) : 0;
+  // Mode économie : AUCUNE particule. Le réglage annonce « coupe le fond animé,
+  // les particules et les flous » — il n'en gardait que 40%, ce qui laissait
+  // jusqu'à 16 éléments animés en boucle pour un joueur venu couper les effets.
+  const count = fx ? (reduced ? 0 : fx.count) : 0;
   const items = useMemo(() => {
     if (!fx || count === 0) return [];
     return Array.from({ length: count }, () => ({

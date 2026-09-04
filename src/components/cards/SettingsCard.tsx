@@ -41,6 +41,7 @@ export default function SettingsCard() {
     setSettings(next);
     localStorage.setItem('rptext.settings', JSON.stringify(next));
     if (key === 'disableAnimations') useFx.getState().setReduced(val);
+    if (key === 'compactMode') useFx.getState().setCompact(val);
     if (key === 'muteSound' && isMuted() !== val) toggleMute();
     toast('Paramètre sauvegardé.', 'info');
   }
@@ -75,7 +76,7 @@ export default function SettingsCard() {
         </label>
         
         <label className="flex items-start justify-between gap-3 hover:text-sky-300 cursor-pointer">
-          <span>Réduire les animations <span className="block text-[10px] text-slate-500">Coupe le fond animé, les particules et les flous. Recommandé si le PC chauffe ou rame.</span></span>
+          <span>Mode économie <span className="block text-[10px] text-slate-500">Coupe les flous des fenêtres, les particules et le fond animé. C'est le réglage à activer si le PC chauffe ou si le ventilateur s'emballe.</span></span>
           <input type="checkbox" checked={settings.disableAnimations} onChange={(e) => updateSetting('disableAnimations', e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded bg-black/40 accent-sky-500" />
         </label>
 
@@ -89,9 +90,9 @@ export default function SettingsCard() {
           <input type="checkbox" checked={settings.ambientRail} onChange={(e) => updateSetting('ambientRail', e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded bg-black/40 accent-sky-500" />
         </label>
 
-        <label className="flex items-center justify-between hover:text-sky-300 cursor-pointer">
-          <span>Mode Interface Compacte</span>
-          <input type="checkbox" checked={settings.compactMode} onChange={(e) => updateSetting('compactMode', e.target.checked)} className="h-4 w-4 rounded bg-black/40 accent-sky-500" />
+        <label className="flex items-start justify-between gap-3 hover:text-sky-300 cursor-pointer">
+          <span>Interface compacte <span className="block text-[10px] text-slate-500">Resserre le contenu des fenêtres : textes et marges plus denses.</span></span>
+          <input type="checkbox" checked={settings.compactMode} onChange={(e) => updateSetting('compactMode', e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded bg-black/40 accent-sky-500" />
         </label>
       </div>
 

@@ -36,6 +36,22 @@ export const POWER_WEIGHTS = {
   endless: 0.5,
   /** Étoile de Relique : rare et permanente, elle pèse lourd. */
   relicStar: 12,
+  /**
+   * Monstres vaincus, en RACINE CARRÉE.
+   *
+   * Le niveau plafonne à 50 : deux joueurs au plafond étaient départagés
+   * uniquement par leurs autres axes, alors que l'un pouvait avoir chassé dix
+   * fois plus que l'autre. Les kills récompensent ce temps de jeu là.
+   *
+   * La racine est essentielle : en linéaire, 60 000 kills écraseraient tout le
+   * reste du classement. En racine, 100 kills valent 5 points, 2 500 en valent
+   * 25 et 40 000 en valent 100 — ça départage sans jamais dominer.
+   */
+  killsSqrt: 0.5,
+  /** Donjons terminés, en racine aussi : récompense le jeu de groupe. */
+  dungeonSqrt: 1.5,
+  /** Meilleure série de chasse : la régularité, pas seulement le volume. */
+  streak: 1,
 } as const;
 
 export interface PowerBreakdown {
@@ -46,6 +62,9 @@ export interface PowerBreakdown {
   mastery: number;
   endless: number;
   relic: number;
+  kills: number;
+  dungeons: number;
+  streak: number;
   total: number;
 }
 
@@ -82,8 +101,14 @@ export function powerScore(p: PlayerState): PowerBreakdown {
   const mastery = masterySum(p) * w.mastery;
   const endless = Math.max(0, p.endlessBest ?? 0) * w.endless;
   const relic = Math.max(0, p.relic?.stars ?? 0) * w.relicStar;
-  const total = Math.round(level + prestige + artifact + stars + mastery + endless + relic);
-  return { level, prestige, artifact, stars, mastery, endless, relic, total };
+  const kills = Math.round(Math.sqrt(Math.max(0, p.kills ?? 0)) * w.killsSqrt);
+  const clears = Object.values(p.dungeonClears ?? {}).reduce((a, b) => a + b, 0);
+  const dungeons = Math.round(Math.sqrt(Math.max(0, clears)) * w.dungeonSqrt);
+  const streak = Math.max(0, p.bestHuntStreak ?? 0) * w.streak;
+  const total = Math.round(
+    level + prestige + artifact + stars + mastery + endless + relic + kills + dungeons + streak,
+  );
+  return { level, prestige, artifact, stars, mastery, endless, relic, kills, dungeons, streak, total };
 }
 
 /**

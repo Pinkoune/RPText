@@ -44,8 +44,9 @@ export default function AmbientRail() {
   const open = useUi((s) => s.open);
   const isMobile = useIsMobile();
   // Lecture seule : PresenceTracker est l'unique abonné à la présence.
-  const online = useGame((s) => s.onlinePlayers);
+  const allOnline = useGame((s) => s.onlinePlayers);
   const teams = useGame((s) => s.teams);
+  const windowCount = useUi((s) => s.windows.length);
   const [, tick] = useState(0);
 
   // Le compte à rebours du raid doit avancer sans dépendre d'un autre rendu.
@@ -54,8 +55,15 @@ export default function AmbientRail() {
     return () => clearInterval(id);
   }, []);
 
+  // Sur mobile les fenêtres sont PLEIN ÉCRAN : le rail, en `fixed`, passait
+  // par-dessus la carte ouverte et par-dessus le dock. Il n'a de sens que sur
+  // l'écran d'accueil, donc on le retire dès qu'une fenêtre est ouverte.
   if (!p || !railEnabled(isMobile)) return null;
+  if (isMobile && windowCount > 0) return null;
 
+  // Se compter soi-même rendait la pastille permanente et vide de sens : elle
+  // affichait « 1 en ligne » en permanence, même seul.
+  const online = allOnline.filter((o) => o.uid !== p.uid);
   const myTeam = teams.find((t) => p.uid in (t.members ?? {}));
   const members = myTeam ? Object.entries(myTeam.members) : [];
   const raid = getRaidWindow();
@@ -85,7 +93,7 @@ export default function AmbientRail() {
       {/* 2. Qui est en ligne. */}
       {online.length > 0 && (
         <Chip title={online.map((o) => `${o.name} (Nv.${o.level})`).join('\n')} onClick={() => open('leaderboard', undefined, { singleton: true })}>
-          🟢 <span className="tabular-nums">{online.length}</span> en ligne
+          🟢 <span className="tabular-nums">{online.length}</span> {online.length > 1 ? 'autres joueurs' : 'autre joueur'}
         </Chip>
       )}
 

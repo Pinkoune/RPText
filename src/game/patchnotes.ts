@@ -90,6 +90,25 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '⚙️ Confort et performances',
+        kind: 'fix',
+        items: [
+          '<b>Mode économie</b> (ex « Réduire les animations ») : il annonçait couper « les flous » mais ne le faisait pas. Il coupe désormais réellement le <b>flou des fenêtres</b>, de loin l\'effet le plus coûteux du jeu — chaque fenêtre ouverte en avait un, et c\'est la cause principale de la chauffe sur portable. Les particules passent aussi à zéro au lieu de 40%.',
+          'Le flou par défaut passe de 14 à 10 pixels : le fond des fenêtres est opaque à 86%, un flou plus large coûtait cher pour une différence invisible.',
+          '<b>Interface compacte</b> : le réglage existait, était sauvegardé, et n\'était branché sur rien. Il resserre maintenant réellement le contenu des fenêtres.',
+          'Les <b>boutons d\'action en combat restent collés en bas</b> de la carte : plus besoin de faire défiler pour jouer son tour contre un boss ou dans la Faille. L\'arène de boss a été compactée dans la foulée.',
+          'Sur mobile, les pastilles d\'info en bas à droite ne passent plus <b>par-dessus les cartes</b> ouvertes. Et le compteur de joueurs en ligne ne te compte plus toi-même — il n\'affichait « 1 en ligne » en permanence, même seul.',
+        ],
+      },
+      {
+        title: '⚡ La Puissance compte le temps de jeu',
+        kind: 'balance',
+        items: [
+          'La cote de Puissance intègre désormais tes <b>monstres vaincus</b>, tes <b>donjons terminés</b> et ta <b>meilleure série de chasse</b>. Deux joueurs au niveau maximum peuvent enfin se départager sur ce qu\'ils ont réellement joué.',
+          'Kills et donjons comptent en <b>racine carrée</b> : 100 kills valent 5 points, 2 500 en valent 25, 40 000 en valent 100. Ça départage sans jamais écraser le reste du classement.',
+        ],
+      },
+      {
         title: '🔮 Une seule jauge de saison',
         kind: 'balance',
         items: [

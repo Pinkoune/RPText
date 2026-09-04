@@ -430,19 +430,24 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       {theme ? (
         <>
           {/* Arène de boss (dédiée, thématisée) */}
-          <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${theme.grad} p-4 text-center ring-1 ${theme.ring}`}>
-            <div className={`animate-pulse text-[11px] font-black uppercase tracking-[0.28em] ${theme.text}`}>{theme.label}</div>
-            <div className="relative mt-2 grid place-items-center">
+          {/* Arène compactée : l'emblème faisait 80px et le bloc poussait les
+              boutons d'action hors de l'écran — il fallait scroller pour jouer
+              son tour, sur la carte où c'est le plus pénible. */}
+          <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${theme.grad} p-3 ring-1 ${theme.ring}`}>
+            <div className={`text-center text-[10px] font-black uppercase tracking-[0.22em] ${theme.text}`}>{theme.label}</div>
+            <div className="relative mt-2 flex items-center gap-3">
               <Floaters items={floaters.filter((f) => f.side === 'enemy')} />
-              <div className={`grid h-20 w-20 place-items-center rounded-full bg-black/40 text-5xl ring-2 ${theme.ring} ${punch ? 'hit-punch' : phpPct > 0 && fighting ? 'animate-pulseGlow' : ''}`}>
+              <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-full bg-black/40 text-3xl ring-2 ${theme.ring} ${punch ? 'hit-punch' : phpPct > 0 && fighting ? 'animate-pulseGlow' : ''}`}>
                 {m.emoji}
               </div>
+              <div className="min-w-0 flex-1 text-left">
+                <div className="truncate text-base font-extrabold text-white drop-shadow">{m.name}</div>
+                <div className="truncate text-[11px] italic text-white/70">{theme.sub}</div>
+              </div>
             </div>
-            <div className="mt-2 text-lg font-extrabold text-white drop-shadow">{m.name}</div>
-            <div className="text-[11px] italic text-white/70">{theme.sub}</div>
 
-            {/* Barre de PV du boss (grande, thématisée) */}
-            <div className="mx-auto mt-3 max-w-xs">
+            {/* Barre de PV du boss */}
+            <div className="mt-2">
               <div className="mb-1 flex items-center justify-between text-[11px] text-white/80">
                 <span className="inline-flex items-center gap-1.5">PV du boss {statusBadges}</span>
                 <span className="tabular-nums">{Math.max(0, Math.round(monsterHp)).toLocaleString()} / {m.hp.toLocaleString()}</span>
@@ -572,9 +577,11 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
         <div ref={logEnd} />
       </div>
 
-      {/* Actions */}
+      {/* Actions — collées en bas de la zone défilable. Quelle que soit la
+          longueur du journal ou la taille de l'arène, jouer son tour ne demande
+          jamais de faire défiler la carte. */}
       {fighting ? (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="sticky bottom-0 -mx-4 -mb-4 grid grid-cols-2 gap-2 border-t border-white/10 bg-[#0d1324]/95 px-4 pb-4 pt-3 backdrop-blur-sm">
           {showPotions ? (
             <div className="col-span-2 space-y-2">
               <div className="text-xs font-semibold text-slate-300">Choisir un soin :</div>

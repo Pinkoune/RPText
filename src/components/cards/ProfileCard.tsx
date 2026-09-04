@@ -174,6 +174,9 @@ export default function ProfileCard() {
           <span>Maîtrises <b className="tabular-nums text-slate-200">{power.mastery}</b>/{MASTERY_MAX}</span>
           {power.endless > 0 && <span>Abysses <b className="tabular-nums text-slate-200">{power.endless}</b></span>}
           {power.relic > 0 && <span>Relique <b className="tabular-nums text-amber-300">{power.relic}</b></span>}
+          {power.kills > 0 && <span>Kills <b className="tabular-nums text-rose-300">{power.kills}</b></span>}
+          {power.dungeons > 0 && <span>Donjons <b className="tabular-nums text-slate-200">{power.dungeons}</b></span>}
+          {power.streak > 0 && <span>Série <b className="tabular-nums text-slate-200">{power.streak}</b></span>}
         </div>
       </div>
 
