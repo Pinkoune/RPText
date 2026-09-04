@@ -101,6 +101,24 @@ client** : un `orderBy` sur `power` exclurait les lignes d'anciens clients qui n
 portent pas le champ. `fallbackPower` leur reconstruit un score. Sur-échantillonnage
 ×4 avant de trancher, sinon `limit` couperait sur le mauvais critère.
 
+### Panneau admin — saisons
+`setSeason(n)` (seasonService) remplace `advanceSeason` : elle écrit n'importe
+quel numéro dans `system/season`. Comme les clients comparent
+`artifact.season !== saison courante` pour décider de repartir de zéro,
+**écrire un numéro DIFFÉRENT suffit à tout réinitialiser** — réécrire le même
+numéro ne fait rien. Le thème étant dérivé du numéro (`(n-1) % 4`),
+`nextSeasonWithTheme(themeIndex, from)` traduit « je veux l'Hiver » en un numéro,
+sans jamais reculer (un numéro qui recule ferait réapparaître des saisons déjà
+archivées chez les joueurs). Le bloc vit dans les actions **globales** du panneau
+— l'ancien bouton de rotation était enfoui dans l'éditeur d'un joueur.
+
+### Commandes admin — ne pas fuiter leur existence
+`ADMIN_ONLY` (commands.ts) est filtré **au dispatch** : un non-admin reçoit le
+message d'une commande inexistante, mot pour mot. Avant, `admin` répondait
+« Commande introuvable. » là où l'inconnue répond « Commande inconnue : "x". » —
+la différence de formulation révélait l'existence de la commande. Ajouter une
+commande admin = l'inscrire dans `ADMIN_ONLY`, rien d'autre.
+
 ### Prestige — pièges connus
 - Les constantes vivent dans `prestige.ts` (`PRESTIGE_BONUS_PER_LEVEL` 0.08,
   `PRESTIGE_XPGOLD_PER_LEVEL` 0.10, `MAX_PRESTIGE_STACK` 5). Elles étaient

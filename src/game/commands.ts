@@ -180,11 +180,25 @@ export const DAILY_COOLDOWN = 20 * 60 * 60 * 1000; // 20h
  */
 export const REST_COOLDOWN = 10 * 60 * 1000; // 10 min
 
+/** Commandes réservées à l'administration — invisibles pour les autres. */
+const ADMIN_ONLY = new Set(['admin', 'admin_curve']);
+
 export function runCommand(input: string, ctx: CommandCtx): void {
   const cmd = resolveCommand(input);
   const p = ctx.getPlayer();
+  const unknown = () => ctx.toast(`Commande inconnue : "${input}". Tape "help".`, 'bad');
   if (!cmd) {
-    ctx.toast(`Commande inconnue : "${input}". Tape "help".`, 'bad');
+    unknown();
+    return;
+  }
+  // Une commande admin doit être INDISCERNABLE d'une commande qui n'existe pas.
+  // Elles répondaient « Commande introuvable. » là où l'inconnue répond
+  // « Commande inconnue : "xyz". Tape "help". » — deux messages différents, donc
+  // un joueur curieux pouvait déduire de la formulation que `admin` existe.
+  // Le filtre est ici, au dispatch, et non dans chaque `case` : ajouter une
+  // commande admin ne demande plus que de l'inscrire dans ADMIN_ONLY.
+  if (ADMIN_ONLY.has(cmd) && !p?.isAdmin) {
+    unknown();
     return;
   }
   if (!p && cmd !== 'help' && cmd !== 'tuto') return;
@@ -206,21 +220,11 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.open('profile', undefined, { singleton: true });
       break;
 
-    case 'admin': {
-      if (p && p.isAdmin) {
-        ctx.open('admin', undefined, { singleton: true });
-      } else {
-        ctx.toast('Commande introuvable.', 'bad');
-      }
+    case 'admin':
+      ctx.open('admin', undefined, { singleton: true });
       break;
-    }
 
     case 'admin_curve': {
-      if (!p || !p.isAdmin) {
-        ctx.toast('Commande introuvable.', 'bad');
-        break;
-      }
-      
       const levels = [1, 5, 10, 15, 20, 30];
       
       console.log("=== SIMULATION DE COURBE DE STATS ===");

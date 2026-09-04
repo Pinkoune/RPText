@@ -2,7 +2,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useGame } from '../store/gameStore';
 import type { PlayerState } from '../game/types';
 import { getAllPlayers, updatePlayerAdmin, wipeAllChats, wipeEndlessScores, resetPvpSeason, triggerFullWipe, cleanupOrphanedPlayers } from '../firebase/adminService';
-import { advanceSeason } from '../firebase/seasonService';
+import { setSeason as pushSeason, fetchSeason } from '../firebase/seasonService';
+import { seasonTheme, getCurrentSeason, SEASON_THEMES, nextSeasonWithTheme } from '../game/artifact';
 import { broadcastRaid } from '../firebase/raidService';
 import { listenGuilds, leaveGuild, adminForceJoinGuild, GUILD_MAX, type Guild } from '../firebase/groupsService';
 import { ITEMS, getItem } from '../game/items';
@@ -16,7 +17,30 @@ export function AdminModal() {
   const { player, toast, mutate } = useGame();
   
   const [players, setPlayers] = useState<PlayerState[]>([]);
+  const [season, setSeasonNum] = useState(getCurrentSeason());
   const [loading, setLoading] = useState(true);
+
+  // Le numéro vit dans `system/season` : on le relit à l'ouverture du panneau
+  // plutôt que de faire confiance au cache du module, qui peut dater.
+  useEffect(() => { void fetchSeason().then((i) => setSeasonNum(i.number)); }, []);
+
+  /**
+   * Ouvre la saison `target`. Le libellé du thème sert uniquement à la
+   * confirmation — c'est le NUMÉRO qui détermine le thème côté jeu.
+   */
+  async function rotate(target: number, label: string, isReset = false) {
+    const msg = isReset
+      ? `Réinitialiser la saison ?\n\nUne nouvelle saison (${target} · ${label}) s'ouvre et TOUT ce qui est saisonnier repart de zéro : artefacts, rangs, passes, classements d'Abysses.\n\nLes personnages ne sont PAS touchés (niveau, équipement, métiers, maîtrises, Reliques).`
+      : `Ouvrir la saison ${target} (${label}) ?\n\nArtefacts, rangs, passes et classements d'Abysses repartent de zéro. Les personnages ne sont PAS touchés.`;
+    if (!confirm(msg)) return;
+    try {
+      const n = await pushSeason(target);
+      setSeasonNum(n);
+      toast(`🔮 Saison ${n} ouverte — ${label}.`, 'gold');
+    } catch (e: any) {
+      toast(e?.message ?? 'Impossible (hors ligne ?).', 'bad');
+    }
+  }
   const [search, setSearch] = useState('');
   const [editingPlayer, setEditingPlayer] = useState<PlayerState | null>(null);
 
@@ -375,16 +399,6 @@ export function AdminModal() {
                 try { await broadcastRaid(); toast('🔱 Fenêtre de raid ouverte pour tous (10 min d\'inscription).', 'good'); }
                 catch { toast('Impossible (hors ligne ?).', 'bad'); }
               }}>🔱 Ouvrir une fenêtre de Raid</button>
-              {/* Rotation de saison : ne touche AUCUN personnage, seuls les
-                  artefacts (et donc les classements qui en dépendent) repartent
-                  de zéro, à la reconnexion de chaque joueur. */}
-              <button className="py-2 bg-violet-900 hover:bg-violet-800 text-violet-100 rounded col-span-2 sm:col-span-3" onClick={async () => {
-                if (!confirm('Ouvrir la saison suivante ?\n\nTous les artefacts repartent au niveau 0 et les records de saison sont archivés. Les personnages (niveau, équipement, métiers) ne sont PAS touchés.')) return;
-                try {
-                  const n = await advanceSeason();
-                  toast(`🔮 Saison ${n} ouverte ! Les artefacts sont réinitialisés.`, 'gold');
-                } catch { toast('Impossible (hors ligne ?).', 'bad'); }
-              }}>🔮 Ouvrir la saison suivante</button>
             </div>
 
             <div className="mt-6 border-t border-green-500/30 pt-4">
@@ -487,6 +501,57 @@ export function AdminModal() {
         </div>
       ) : (
         <>
+          {/* ─── Saisons ───────────────────────────────────────────────────
+              Une rotation ne touche AUCUN personnage : seuls l'artefact, le
+              rang, la passe et les classements de saison repartent de zéro, à
+              la reconnexion de chaque joueur. */}
+          <div className="mt-6 border-t border-violet-500/30 pt-4">
+            <h3 className="text-violet-300 font-bold mb-1">Saisons</h3>
+            <p className="text-[11px] text-gray-500 mb-3">
+              Saison en cours : <b className="text-violet-200">{seasonTheme(season).emoji} Saison {season} · {seasonTheme(season).name}</b>.
+              Une rotation remet à zéro les artefacts, les rangs, les passes et les classements
+              d'Abysses. Niveau, équipement, métiers, maîtrises et Reliques ne sont jamais touchés.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {SEASON_THEMES.map((t, i) => {
+                const target = nextSeasonWithTheme(i, season);
+                return (
+                  <button
+                    key={t.name}
+                    className="rounded border border-white/10 py-2 text-xs hover:brightness-125"
+                    style={{ background: `${t.color}22`, color: t.color }}
+                    title={`Ouvrira la saison ${target}`}
+                    onClick={() => void rotate(target, `${t.emoji} ${t.name}`)}
+                  >
+                    <div className="text-lg leading-none">{t.emoji}</div>
+                    <div className="mt-1 font-semibold">{t.name}</div>
+                    <div className="text-[10px] opacity-70">saison {target}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                className="flex-1 rounded bg-violet-900 py-2 text-xs text-violet-100 hover:bg-violet-800"
+                onClick={() => void rotate(season + 1, `${seasonTheme(season + 1).emoji} ${seasonTheme(season + 1).name}`)}
+              >
+                🔮 Saison suivante ({season + 1})
+              </button>
+              {/* « Relancer » = repasser au numéro suivant. Réécrire le MÊME
+                  numéro ne ferait rien : les clients comparent leur saison
+                  d'artefact à la saison courante pour décider de repartir de
+                  zéro, donc un numéro identique n'est pas une rotation. */}
+              <button
+                className="flex-1 rounded bg-rose-900/70 py-2 text-xs text-rose-100 hover:bg-rose-900"
+                onClick={() => void rotate(season + 1, `${seasonTheme(season + 1).emoji} ${seasonTheme(season + 1).name}`, true)}
+              >
+                ♻️ Réinitialiser la saison
+              </button>
+            </div>
+          </div>
+
           <div className="p-2 border-b border-red-500/30 bg-red-900/10 flex justify-end gap-2 mb-4">
             <button
               onClick={async () => {

@@ -31,7 +31,7 @@ export interface SeasonTheme {
   artifactName: string;
 }
 
-const THEMES: SeasonTheme[] = [
+export const SEASON_THEMES: SeasonTheme[] = [
   { name: 'Automne', emoji: '🍂', color: '#e2913f', artifactName: 'Relique des Feuilles Mortes' },
   { name: 'Hiver', emoji: '❄️', color: '#8cd0ff', artifactName: 'Relique de Givre' },
   { name: 'Printemps', emoji: '🌸', color: '#f39ac7', artifactName: 'Relique de Sève' },
@@ -39,7 +39,24 @@ const THEMES: SeasonTheme[] = [
 ];
 
 export function seasonTheme(season = currentSeason): SeasonTheme {
-  return THEMES[(Math.max(1, season) - 1) % THEMES.length];
+  return SEASON_THEMES[(Math.max(1, season) - 1) % SEASON_THEMES.length];
+}
+
+/**
+ * Plus petit numéro > `from` qui donne le thème voulu.
+ *
+ * Le thème est dérivé du numéro (`(n-1) % 4`), donc choisir un thème revient à
+ * choisir un numéro. L'admin raisonne en « je veux passer à l'Hiver », pas en
+ * « je veux la saison 6 » : cette fonction fait la traduction, en n'allant
+ * jamais en arrière (un numéro qui recule ferait réapparaître des saisons déjà
+ * archivées chez les joueurs).
+ */
+export function nextSeasonWithTheme(themeIndex: number, from: number): number {
+  const t = ((themeIndex % SEASON_THEMES.length) + SEASON_THEMES.length) % SEASON_THEMES.length;
+  for (let n = from + 1; n < from + 1 + SEASON_THEMES.length; n++) {
+    if ((Math.max(1, n) - 1) % SEASON_THEMES.length === t) return n;
+  }
+  return from + 1;
 }
 
 // ─── Courbe de l'artefact ────────────────────────────────────────────────────

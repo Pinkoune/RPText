@@ -64,9 +64,24 @@ export function watchSeason(onChange: (info: SeasonInfo) => void): () => void {
  * Niveau, équipement, métiers, maîtrises et Relique traversent la rotation.
  */
 export async function advanceSeason(): Promise<number> {
-  if (!isFirebaseConfigured || !db) throw new Error('Firebase non configuré.');
   const cur = await fetchSeason();
-  const next = cur.number + 1;
+  return setSeason(cur.number + 1);
+}
+
+/**
+ * Ouvre une saison précise (admin).
+ *
+ * `advanceSeason` ne savait qu'incrémenter : impossible de choisir le thème, qui
+ * est pourtant dérivé du numéro, ni de relancer une rotation. Comme les clients
+ * comparent `artifact.season !== saison courante` pour décider de repartir à
+ * zéro, écrire N'IMPORTE QUEL numéro différent déclenche la remise à zéro — un
+ * simple « +1 » suffit donc à réinitialiser, et un numéro choisi permet de
+ * viser un thème.
+ */
+export async function setSeason(next: number): Promise<number> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase non configuré.');
+  if (!Number.isFinite(next) || next < 1) throw new Error('Numéro de saison invalide.');
+  next = Math.floor(next);
   await setDoc(doc(db, 'system', 'season'), { number: next, startedAt: Date.now() });
   setCurrentSeason(next);
   // Les artefacts eux-mêmes repartent à zéro côté client, via `rotateSeason`
