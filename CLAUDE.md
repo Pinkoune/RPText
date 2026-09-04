@@ -391,8 +391,13 @@ des buffs ») et le **Rituel du Néant par sous-classe**, jamais simulé jusqu'i
   membre (`atkMult`) alors que chaque membre garde une seule barre de vie et que
   le débit du soigneur, lui, ne monte pas. Le passage 0.5 → 0.35 avait réduit le
   problème, pas supprimé.
-- **Falaise d'Abysses (endless) au palier 50** : 89% au palier 40, **0% au 50**.
-  Une marche, pas une courbe.
+- ~~**Falaise d'Abysses (endless) au palier 50**~~ — **fausse alerte, deux
+  artefacts de mesure cumulés** : la référence était l'Archer de BASE, et la
+  liste d'étages testés (10/20/30/40/50…) ne contenait **que des multiples de
+  5**, or `generateEndlessMonster` fait un BOSS tous les 5 étages (×2 PV, ×1.5
+  ATK). On ne mesurait que des boss. Avec un Chasseur maxé et des étages
+  intercalés : 100% jusqu'au 57, boss du 60 à 54%, boss du 75 à 3%. C'est une
+  courbe de score, pas une marche. Rien à corriger.
 - **Les donjons de fin ne sont PAS cassés** : le `0%` de la Citadelle Abyssale
   mesure un groupe en gear de craft au niveau minimum. Avec un groupe réellement
   équipé (Nv.50 maxé + artefact + ★5), Forge et Citadelle sont à **100% de 1 à
@@ -442,19 +447,41 @@ ARMES du palier restent `light`, donc +50% contre ces mêmes monstres.
 3. **Dégâts du boss +30%** (`s.maxHp / 6` → `/ 4.6`, `s.def * 0.6` → `* 0.78`),
    valeur balayée en simulation (`SWEEP=1`) sur 16 sous-classes × 3 profils.
 
-Résultat mesuré (winrate, 16 sous-classes) — avant : six classes le battaient à
-**100% sans aucune progression de saison**, tout le monde à 100% avec. Après :
+4. **`NEANT_LEGACY` déplacé de `AscensionCard.tsx` vers `ascension.ts`.** Il
+   vivait dans le composant React, donc **les harnais ne pouvaient pas s'en
+   servir** : ils mesuraient le rituel avec des ultimes à 3s de cooldown là où
+   le jeu les remet à 20-35s. Toutes les mesures du Néant portaient donc sur un
+   joueur plus fort que le vrai. Maintenant en logique pure, vu à l'identique
+   par le jeu et par la simulation.
+5. **Quatre sous-classes manquaient à `NEANT_LEGACY`** — Sentinelle,
+   Nécromancien, Piégeur, Oracle, ajoutées après l'écriture de la table. Leur
+   finisher restait à 3s pendant le rituel quand les douze autres remontaient à
+   20-35s. Ajoutées, et `neutralizeForNeant` neutralise désormais **toute**
+   compétence portant une `resource`, listée ou non (repli 25s) : une classe
+   future ne peut plus passer au travers.
 
-| Profil | avant | après |
+Résultat mesuré (winrate, 16 sous-classes, règles du rituel appliquées) — avant :
+six classes le battaient à **100% sans aucune progression de saison**, tout le
+monde à 100% avec. Après :
+
+| Profil | avant | après (min / médiane / max) |
 |---|---|---|
-| Nv.50 maxé, aucune saison | médiane 71% | **médiane 3%** |
-| + artefact grille + Relique ★5 | 100% partout | 0-100%, médiane 66% |
-| tout maxé (artefact + ★10 + prestige 5) | 100% partout | **75-100%** |
+| Nv.50 gear maxé, aucune saison | médiane 71% | 0% / **2%** / 72% |
+| + artefact grille + Relique ★5 | 100% partout | 0% / 37% / 100% |
+| tout maxé (artefact + ★10 + prestige 5) | 100% partout | **88%** / 100% / 100% |
 
 C'est le contrat de la feature : infranchissable sans équipement à jour,
-franchissable par **toutes** les classes avec. Reste un point à surveiller : le
-Prêtre de l'Aube le bat encore à 100% sans saison (c'est aussi la seule classe à
-100% de PV restants dans le tableau de classes — le même excès de sustain).
+franchissable par **toutes** les classes avec.
+
+⚠️ Le « Prêtre de l'Aube à 100% sans saison » signalé au passage précédent
+**n'existait pas** : c'était l'artefact de mesure ci-dessus (sa Nova à 3s au lieu
+de 30s). Il est en réalité à 0% sans saison. Ne pas le nerfer.
+
+Écart résiduel assumé : à investissement égal (gear maxé, aucune saison),
+Berserker 72%, Piégeur 56%, Voleur 55% et Cryomancien 55% passent là où les
+autres sont à 0-15%. Ce sont les quatre profils burst/esquive, qui ne dépendent
+pas du sustain bridé. Le choix de classe pèse donc à ce palier — jugé acceptable
+plutôt que d'aplatir les identités.
 
 **Donjons : `atkMult` 0.35 → 0.28 par membre** (`dungeonService.initMonster`).
 Les PV du boss montent de +12% par membre mais son ATK montait de +35% : à

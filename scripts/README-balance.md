@@ -103,9 +103,15 @@ profils de progression et imprime `min/med/max` par profil. Le réglage retenu
 
 | Profil | min | médiane | max |
 |---|---|---|---|
-| Nv.50 maxé, aucune saison | 0% | 3% | 100% |
-| + artefact grille + Relique ★5 | 0% | 66% | 100% |
-| tout maxé | 75% | 100% | 100% |
+| Nv.50 gear maxé, aucune saison | 0% | 2% | 72% |
+| + artefact grille + Relique ★5 | 0% | 37% | 100% |
+| tout maxé | 88% | 100% | 100% |
+
+⚠️ Le harness DOIT appliquer `neutralizeForNeant` (option `neant: true`), comme
+le jeu : le rituel remet les ultimes à ressource à leur cooldown d'avant les
+ressources d'archétype (20-35s au lieu de 3s). Sans ça on mesure un joueur bien
+plus fort que le vrai — c'est ce qui avait fait croire à un Prêtre de l'Aube
+imbattable, alors qu'il est à 0% sans saison.
 
 La cible : **médiane proche de 0 sans saison, minimum > 70% tout maxé.** Un mur
 que personne ne franchit sans progression, que toutes les classes franchissent
@@ -130,6 +136,12 @@ Une classe = une entrée `CLASSES` + son arbre `TALENTS` + câblage. Ordre :
      la logique de gain dans `combatTurn` (chercher `resourceType ===`).
 4. **`src/game/player.ts`** — `talentMods` : bonus inné de classe (ligne des `if
    (p.classId === ...)`). `starterWeapon` si nouvelle famille.
+4bis. **`src/game/ascension.ts` — `NEANT_LEGACY`** : si le finisher est gaté par
+   une ressource (donc cooldown 3s), y inscrire son cooldown « historique »
+   (20-35s). Les quatre dernières sous-classes avaient été oubliées et gardaient
+   leur ultime à 3s pendant le rituel. `neutralizeForNeant` a maintenant un repli
+   à 25s pour toute compétence à `resource`, donc l'oubli n'est plus fatal — mais
+   la valeur explicite reste préférable.
 5. **Icône/UI** — emoji dans `CLASSES`, sélecteur de création, Wiki (auto via
    `CLASS_LIST`).
 6. **VALIDER** — ajouter la classe au harness tourne automatiquement (`CLASS_LIST`).

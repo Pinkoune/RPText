@@ -13,7 +13,7 @@ import { combatTurn, freshCombatState } from '../src/game/combat';
 import { activeSetProc } from '../src/game/sets';
 import { ARTIFACT_MODS } from '../src/game/artifact';
 import { RELIC_STAT_STARS, RELIC_MAX_STARS, effectsForStar } from '../src/game/relic';
-import { computeAscensionBoss, ASCENSION_SUSTAIN_MULT } from '../src/game/ascension';
+import { computeAscensionBoss, neutralizeForNeant, ASCENSION_SUSTAIN_MULT } from '../src/game/ascension';
 import type { PlayerState, ClassId, ItemDef } from '../src/game/types';
 import * as fs from 'fs';
 
@@ -101,13 +101,16 @@ function played(base: ClassId, sub: ClassId, level: number): ClassId { return le
 type Mon = { hp: number; atk: number; def: number; name: string; element?: string; weaknesses?: string[]; resistances?: string[] };
 
 // ── PILOTE DE COMBAT tour-par-tour ──
-function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: number; maxTurns?: number; sustainMult?: number } = {}): { win: boolean; turns: number; endHpPct: number } {
+function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: number; maxTurns?: number; sustainMult?: number; neant?: boolean } = {}): { win: boolean; turns: number; endHpPct: number } {
   const stats = deriveStats(p, true) as any;
   const mods = talentMods(p);
   const setProc = activeSetProc(p);
   const resourceType = classResourceType(p.classId);
   const skillDefs = getTalentsForClass(p.classId).map(t => t.activeSkill).filter(Boolean) as ActiveSkillDef[];
-  const equipped = skillDefs.filter(s => p.equippedSkills.includes(s.id));
+  // Le rituel du Néant remet les ultimes à leur cooldown d'avant les ressources
+  // d'archétype (`neutralizeForNeant`) : sans ça le harness mesurait un joueur
+  // qui enchaîne des ultimes à 3s là où le jeu les bride à 25-35s.
+  const equipped = skillDefs.filter(s => p.equippedSkills.includes(s.id)).map(s => opts.neant ? neutralizeForNeant(s) : s);
   const dmgSkills = equipped.filter(s => s.mult && (s.type === 'attack')).sort((a, b) => (b.mult ?? 0) - (a.mult ?? 0));
   const healSkills = equipped.filter(s => (s.healFrac ?? 0) > 0 || s.type === 'heal').sort((a, b) => (b.healFrac ?? 0) - (a.healFrac ?? 0));
 
@@ -163,7 +166,7 @@ function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: 
   return { win: mhp <= 0 && php > 0, turns: turn, endHpPct: Math.max(0, php) / stats.maxHp };
 }
 
-function batch(p: PlayerState, mon: Mon, n = N, opts = {}) {
+function batch(p: PlayerState, mon: Mon, n = N, opts: Parameters<typeof fight>[2] = {}) {
   let wins = 0, endHp = 0, turns = 0;
   for (let i = 0; i < n; i++) { const r = fight(p, mon, opts); if (r.win) { wins++; endHp += r.endHpPct; turns += r.turns; } }
   return { winrate: wins / n, endHpPct: wins ? endHp / wins : 0, avgTurns: wins ? turns / wins : NaN };
@@ -321,8 +324,12 @@ results.dungeons = dungRows;
 // 4) Endless (archer maxed) avec skills
 const endRows: any[] = [];
 {
-  const p = blankPlayer('archer', 50); outfit(p, 'maxed');
-  for (const floor of [10, 20, 30, 40, 50, 60, 75, 100, 125, 150]) {
+  const p = blankPlayer('hunter', 50); outfit(p, 'maxed');
+  // ⚠️ Ne PAS n'échantillonner que des multiples de 5 : `generateEndlessMonster`
+  // fait un BOSS tous les 5 étages (×2 PV, ×1.5 ATK, ×1.4 DEF). L'ancienne liste
+  // (10/20/30/40/50…) ne mesurait donc que des boss et faisait passer la courbe
+  // pour une falaise. On intercale des étages normaux.
+  for (const floor of [10, 22, 30, 38, 44, 50, 53, 57, 60, 75, 100]) {
     const m = generateEndlessMonster(floor);
     endRows.push({ floor, hp: m.hp, winrate: batch(p, { hp: m.hp, atk: m.atk, def: m.def, name: m.name, element: 'dark' } as any, 400, { potions: 6 }).winrate });
   }
@@ -392,7 +399,7 @@ if (process.env.SWEEP) {
         const wrs = CLASS_LIST.filter(c => c.parent).map(c => {
           const p = season(blankPlayer(c.id, 50), stack); outfit(p, 'maxed');
           const b = computeAscensionBoss(p) as any;
-          return batch(p, { hp: b.hp, atk: Math.round(b.atk * atkScale), def: b.def, name: b.name, element: 'dark' } as any, 150, { potions: 6, maxTurns: 200, sustainMult: sm }).winrate;
+          return batch(p, { hp: b.hp, atk: Math.round(b.atk * atkScale), def: b.def, name: b.name, element: 'dark' } as any, 150, { potions: 6, maxTurns: 200, sustainMult: sm, neant: true }).winrate;
         }).sort((a, b) => a - b);
         const med = wrs[Math.floor(wrs.length / 2)];
         line.push(`${label} ${(wrs[0] * 100).toFixed(0)}/${(med * 100).toFixed(0)}/${(wrs[wrs.length - 1] * 100).toFixed(0)}`);
@@ -411,7 +418,7 @@ for (const c of CLASS_LIST.filter(c => c.parent)) {
   ]) {
     const p = season(blankPlayer(c.id, 50), stack); outfit(p, 'maxed');
     const boss = computeAscensionBoss(p) as any;
-    const r = batch(p, { hp: boss.hp, atk: boss.atk, def: boss.def, name: boss.name, element: 'dark' } as any, 300, { potions: 6, maxTurns: 200, sustainMult: ASCENSION_SUSTAIN_MULT });
+    const r = batch(p, { hp: boss.hp, atk: boss.atk, def: boss.def, name: boss.name, element: 'dark' } as any, 300, { potions: 6, maxTurns: 200, sustainMult: ASCENSION_SUSTAIN_MULT, neant: true });
     voidRows.push({ classId: c.id, name: c.name, profile: label, winrate: r.winrate, bossHp: boss.hp, bossAtk: boss.atk });
   }
 }
@@ -430,7 +437,7 @@ for (const d of [...new Set(dungRows.map(r => r.dungeon))]) {
   console.log(`  ${d.padEnd(22)} actuel[${cur.join(' ')}]  proposé[${pro.join(' ')}]`);
 }
 console.log('=== ENDLESS (archer maxed, skills) ===');
-for (const r of endRows) console.log(`  floor${r.floor} ${(r.winrate * 100).toFixed(0)}%`);
+for (const r of endRows) console.log(`  étage ${String(r.floor).padStart(3)}${r.floor % 5 === 0 ? ' BOSS' : '     '} ${(r.winrate * 100).toFixed(0).padStart(3)}%`);
 console.log('=== EMPILEMENT DE SAISON (Chasseur Nv.50 maxé) — stats / Abysses / endHP ===');
 for (const r of stackRows)
   console.log(`  ${r.label.padEnd(32)} ATK=${String(r.atk).padStart(5)} DEF=${String(r.def).padStart(4)} HP=${String(r.hp).padStart(5)}  abysses=${(r.frozenWinrate * 100).toFixed(0).padStart(3)}%  endHP=${(r.gauntletEndHp * 100).toFixed(0).padStart(3)}%`);

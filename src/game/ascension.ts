@@ -7,7 +7,7 @@
 
 import type { PlayerState, ClassId } from './types';
 import { deriveStats, starterWeapon } from './player';
-import { getTalentsForClass } from './talents';
+import { getTalentsForClass, type ActiveSkillDef } from './talents';
 import { CLASSES } from './classes';
 import { mintInstanceId, ITEMS } from './items';
 import { prestigeStacks } from './prestige';
@@ -54,6 +54,58 @@ export interface AscensionBoss {
   def: number;
   element: string;
   dmgType: 'physical' | 'magical';
+}
+
+// ⚠️ Vivait dans `AscensionCard.tsx`, donc les harnais de simulation ne
+// pouvaient PAS s'en servir : ils mesuraient le rituel avec des ultimes à 3s de
+// cooldown là où le jeu les remet à 25-35s. Toutes les mesures du Néant étaient
+// donc faites sur un joueur plus fort que le vrai. Déplacé ici (logique pure)
+// pour que le harness et le jeu voient exactement les mêmes règles.
+//
+// Le Néant est calibré au millimètre contre un joueur "idéal" classique (voir
+// `computeAscensionBoss`) — les ressources d'archétype (rage/combo/grâce/mana/
+// sève/ferveur/tempo/surcharge) permettent de spammer des ultimes bien plus
+// souvent que le cooldown d'origine (parfois 25-35s ramené à 3s), ce qui
+// fausserait complètement cet équilibrage. Le Néant "annule" ces pouvoirs pour
+// ce combat uniquement : chaque compétence concernée retrouve son cooldown et
+// ses chiffres d'avant l'introduction des ressources, sans `resource`.
+export const NEANT_LEGACY: Record<string, Partial<ActiveSkillDef>> = {
+  skill_ber_execute: { cooldownMs: 30_000, resource: undefined },
+  skill_dk_drain: { cooldownMs: 25_000, resource: undefined },
+  skill_rog_assassinate: { cooldownMs: 3_000, mult: 2.5, resource: undefined },
+  skill_mnk_dragon: { cooldownMs: 25_000, mult: 2.0, resource: undefined },
+  skill_dp_nova: { cooldownMs: 30_000, resource: undefined },
+  skill_pyro_inferno: { cooldownMs: 35_000, resource: undefined },
+  skill_cryo_blizzard: { cooldownMs: 25_000, resource: undefined },
+  skill_arc_time: { cooldownMs: 28_000, resource: undefined },
+  skill_pal_smite: { cooldownMs: 20_000, resource: undefined },
+  skill_brd_crescendo: { cooldownMs: 25_000, mult: 2.3, resource: undefined },
+  skill_dru_wrath: { cooldownMs: 16_000, resource: undefined },
+  skill_hnt_snipe: { cooldownMs: 28_000, resource: undefined },
+  // Les quatre sous-classes ajoutées après coup (Sentinelle, Nécromancien,
+  // Piégeur, Oracle) avaient été OUBLIÉES ici : leur finisher restait à 3s de
+  // cooldown pendant le rituel alors que les douze autres remontaient à 20-35s.
+  // Mesuré : le Piégeur battait le Néant à 60% sans aucune progression de
+  // saison, contre 0-1% pour ses pairs.
+  skill_sent_retribution: { cooldownMs: 22_000, resource: undefined },
+  skill_necro_soulwave: { cooldownMs: 25_000, resource: undefined },
+  skill_trp_ambush: { cooldownMs: 25_000, resource: undefined },
+  skill_orc_judgment: { cooldownMs: 20_000, resource: undefined },
+};
+
+/**
+ * Cooldown de repli pour une compétence à ressource qu'on aurait oublié
+ * d'inscrire dans `NEANT_LEGACY`. C'est exactement ce qui s'est produit avec
+ * les quatre dernières sous-classes. Désormais toute compétence portant une
+ * `resource` est neutralisée, listée ou non : une classe future ne peut plus
+ * passer au travers en gardant son ultime à 3s.
+ */
+const NEANT_DEFAULT_CD = 25_000;
+export function neutralizeForNeant(skill: ActiveSkillDef): ActiveSkillDef {
+  const override = NEANT_LEGACY[skill.id];
+  if (override) return { ...skill, ...override };
+  if (skill.resource) return { ...skill, cooldownMs: Math.max(skill.cooldownMs, NEANT_DEFAULT_CD), resource: undefined };
+  return skill;
 }
 
 /**
