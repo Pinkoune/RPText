@@ -1,25 +1,55 @@
+// Règles Realtime Database.
+//
+// ⚠️ Les commentaires sont des commentaires de LIGNE (la CLI Firebase parse ce
+// fichier en cjson). Ne PAS utiliser de clés `"//"` : la RTDB les prendrait pour
+// des noms de nœuds, et un nom de nœud ne peut pas contenir « / ».
+//
+// Les règles RTDB ne peuvent pas lire Firestore, donc `isAdmin` (qui vit sur le
+// document joueur) leur est invisible. D'où le nœud `admins` : un miroir
+// minimal, lisible par tous, écrivable UNIQUEMENT depuis la console Firebase.
+// Sans lui, n'importe quel compte connecté pouvait vider le chat entier et
+// diffuser une fenêtre de raid à tout le serveur — deux boutons du panneau
+// admin, mais rien côté serveur ne vérifiait qui appuyait.
+//
+// DÉPLOIEMENT : créer `admins/<uid du compte admin>: true` à la main dans la
+// console Realtime Database, sinon les actions mondiales du panneau admin
+// seront refusées.
 {
   "rules": {
+    "admins": {
+      ".read": "auth != null",
+      ".write": false
+    },
+
     "presence": {
       ".read": "auth != null",
       "$uid": {
         ".write": "auth != null && auth.uid === $uid"
       }
     },
+
     "chat": {
-      ".write": "auth != null",
+      // Le `.write` de ce niveau était `auth != null` : il cascadait sur tout le
+      // sous-arbre, donc un seul `set(ref('chat'), null)` vidait le chat du
+      // serveur entier. Réservé aux admins — c'est ce que fait le bouton
+      // « Vider les chats » du panneau. Un refus ici ne bloque PAS les enfants
+      // (en RTDB les autorisations cascadent, les refus non) : les joueurs
+      // normaux restent régis par les règles `$msg` plus bas.
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
       "global": {
         ".read": "auth != null",
-        ".write": "auth != null",
         "$msg": {
+          // Création seule. Sans `!data.exists()`, n'importe qui pouvait
+          // réécrire ou effacer les messages des autres.
+          ".write": "auth != null && (!data.exists() || root.child('admins').child(auth.uid).val() === true)",
           ".validate": "newData.hasChildren(['uid', 'name', 'text', 'ts']) && newData.child('text').isString() && newData.child('text').val().length <= 240"
         }
       },
       "team": {
         "$teamId": {
           ".read": "auth != null",
-          ".write": "auth != null",
           "$msg": {
+            ".write": "auth != null && (!data.exists() || root.child('admins').child(auth.uid).val() === true)",
             ".validate": "newData.hasChildren(['uid', 'name', 'text', 'ts']) && newData.child('text').isString() && newData.child('text').val().length <= 240"
           }
         }
@@ -27,26 +57,54 @@
       "guild": {
         "$guildId": {
           ".read": "auth != null",
-          ".write": "auth != null",
           "$msg": {
+            ".write": "auth != null && (!data.exists() || root.child('admins').child(auth.uid).val() === true)",
             ".validate": "newData.hasChildren(['uid', 'name', 'text', 'ts']) && newData.child('text').isString() && newData.child('text').val().length <= 240"
           }
         }
       },
+
+      // Messagerie privée. La boîte est keyée par l'UID du PERSONNAGE (slot 0 =
+      // uid nu, slots 1-2 suffixés `__1`/`__2`, comme dans firestore.rules).
+      //
+      // Avant : keyée par PSEUDO, avec `.read: auth != null` sur tout le
+      // sous-arbre — toutes les conversations privées du serveur étaient donc
+      // lisibles par n'importe quel compte connecté, les clés s'énuméraient
+      // depuis le classement, et comme les pseudos sont libres et non uniques,
+      // se renommer comme quelqu'un suffisait à recevoir ses messages.
       "inbox": {
-        "$recipientName": {
-          ".read": "auth != null",
-          ".write": "auth != null",
+        "$uid": {
+          ".read": "auth != null && ($uid === auth.uid || $uid === auth.uid + '__1' || $uid === auth.uid + '__2')",
           "$msg": {
+            // Tout le monde peut DÉPOSER (c'est une boîte aux lettres) ; personne
+            // ne peut lire ni modifier celle d'un autre ; seul le propriétaire
+            // peut effacer ses messages.
+            ".write": "auth != null && (!data.exists() || $uid === auth.uid || $uid === auth.uid + '__1' || $uid === auth.uid + '__2')",
             ".validate": "newData.hasChildren(['uid', 'name', 'text', 'ts']) && newData.child('text').isString() && newData.child('text').val().length <= 240"
           }
         }
       }
     },
+
+    // Événements mondiaux.
+    //
+    // ⚠️ NE PAS verrouiller tout `world` sur les admins : `world/boss` est écrit
+    // par CHAQUE joueur qui frappe le boss mondial (transaction dans
+    // `bossService`), et `world/dungeonOpen` par quiconque ouvre un donjon.
+    // Seule la fenêtre de raid est une action d'administration.
     "world": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      "raid": {
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+      },
+      "boss": { ".write": "auth != null" },
+      "lastBoss": { ".write": "auth != null" },
+      "dungeonOpen": { ".write": "auth != null" }
     },
+
+    // Sessions temps réel partagées. Restent ouvertes en écriture : les deux
+    // camps y écrivent tour à tour et les verrouiller demanderait des Cloud
+    // Functions. Risque assumé = griefing d'une session en cours, pas vol.
     "dungeons": {
       ".read": "auth != null",
       ".write": "auth != null"

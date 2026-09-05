@@ -5,6 +5,7 @@ import { watchNotifications } from './firebase/chatService';
 import Background from './components/Background';
 import Login from './components/Login';
 import ClassSelect from './components/ClassSelect';
+import CharacterSelect from './components/CharacterSelect';
 import Topbar from './components/Topbar';
 import CommandBar from './components/CommandBar';
 import MobileNav from './components/MobileNav';
@@ -16,6 +17,7 @@ import ChatNotifs from './components/ChatNotifs';
 import LevelUpFx from './components/LevelUpFx';
 import PatchNotesModal from './components/PatchNotesModal';
 import DailyRewardModal from './components/DailyRewardModal';
+import WelcomeBackModal from './components/WelcomeBackModal';
 import SeasonRewardModal from './components/SeasonRewardModal';
 import { setAmbient, stopAmbientMusic } from './game/sound';
 import { deriveStats } from './game/player';
@@ -25,6 +27,7 @@ import { setForcedRaid } from './game/raid';
 import PresenceTracker from './components/PresenceTracker';
 import BaitTimer from './components/BaitTimer';
 import RaidBanner from './components/RaidBanner';
+import AmbientRail from './components/AmbientRail';
 
 export default function App() {
   const status = useGame((s) => s.status);
@@ -92,6 +95,7 @@ export default function App() {
   useEffect(() => {
     if (status !== 'ready' || !player) return;
     const unsub = watchNotifications(
+      player.uid,
       player.name,
       player.teamId,
       player.guildId,
@@ -102,11 +106,11 @@ export default function App() {
         // Pas de notif si on a déjà cette conversation sous les yeux (Chat ouvert sur le bon onglet/DM).
         const view = useGame.getState().activeChatView;
         const alreadyViewing = view && (
-          (channel === 'private' && view.tab === 'private' && view.dmPeer === msg.name) ||
+          (channel === 'private' && view.tab === 'private' && view.dmPeer?.uid === msg.uid) ||
           (channel !== 'private' && view.tab === channel)
         );
         if (alreadyViewing) return;
-        useGame.getState().pushChatNotif({ channel, name: msg.name, text: msg.text });
+        useGame.getState().pushChatNotif({ channel, name: msg.name, text: msg.text, uid: msg.uid });
       }
     );
     return unsub;
@@ -121,6 +125,7 @@ export default function App() {
   }
 
   if (status === 'login') return <Login />;
+  if (status === 'select') return <CharacterSelect />;
   if (status === 'create') return <ClassSelect />;
 
   // status === 'ready'
@@ -136,9 +141,11 @@ export default function App() {
       <LevelUpFx />
       <PatchNotesModal />
       <DailyRewardModal />
+      <WelcomeBackModal />
       <SeasonRewardModal />
       <BaitTimer />
       <RaidBanner />
+      <AmbientRail />
     </div>
   );
 }

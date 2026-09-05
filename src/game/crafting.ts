@@ -1,4 +1,5 @@
 import { item } from './items';
+import { grantArtifactXp, hasFlag } from './artifact';
 import type { PlayerState } from './types';
 import { addItem, removeItem, applyBonuses } from './player';
 import { addQuestMetric } from './quests';
@@ -199,6 +200,26 @@ export const RECIPES: Recipe[] = [
   { output: 'crypt_rod', qty: 1, materials: { wraith_essence: 6, bone_dust: 10, magic_dust: 8 }, gold: 7200, levelReq: 36, difficulty: 560, maxQuality: 2250, durability: 100 },
   { output: 'crypt_plate', qty: 1, materials: { bone_dust: 14, crypt_shard: 10, iron_ingot: 10 }, gold: 7200, levelReq: 35, difficulty: 560, maxQuality: 2250, durability: 130 },
   { output: 'soul_ward', qty: 1, materials: { wraith_essence: 8, crypt_shard: 6, magic_dust: 6 }, gold: 6000, levelReq: 36, difficulty: 500, maxQuality: 2000, durability: 90 },
+
+  // ── Palier « Givre du Vide », niv.40 (ressources de l'Abysse) ──
+  // Le biome s'ouvre au niv.38 : on y entre avec le stuff de la Nécropole et on
+  // en ressort avec le sien. Sans ce palier, la dernière arme du jeu datait du
+  // niveau 36 — 14 niveaux avec la même arme.
+  { output: 'rimeblade', qty: 1, materials: { crystal: 10, void_dust: 8, mithril_ingot: 8 }, gold: 9000, levelReq: 40, difficulty: 640, maxQuality: 2500, durability: 110 },
+  { output: 'rimebow', qty: 1, materials: { crystal: 8, void_dust: 6, ironwood: 10 }, gold: 9000, levelReq: 40, difficulty: 640, maxQuality: 2500, durability: 110 },
+  { output: 'rimescepter', qty: 1, materials: { crystal: 12, void_dust: 8, magic_dust: 10 }, gold: 9500, levelReq: 40, difficulty: 660, maxQuality: 2550, durability: 110 },
+  { output: 'rimestaff', qty: 1, materials: { frost_lotus: 10, crystal: 8, magic_dust: 10 }, gold: 9500, levelReq: 40, difficulty: 660, maxQuality: 2550, durability: 110 },
+  { output: 'rime_plate', qty: 1, materials: { crystal: 14, void_dust: 10, iron_ingot: 12 }, gold: 9500, levelReq: 40, difficulty: 660, maxQuality: 2550, durability: 140 },
+  { output: 'rime_sigil', qty: 1, materials: { frost_lotus: 8, crystal: 8, void_dust: 6 }, gold: 8000, levelReq: 40, difficulty: 600, maxQuality: 2400, durability: 95 },
+
+  // ── Palier « Primordial », niv.46-48 (le dernier) ──
+  // Coûte des Âmes de Boss : la dernière marche se gagne au Sanctuaire (CD 24h),
+  // pas à la récolte. C'est volontairement le palier le plus long à réunir.
+  { output: 'primordial_edge', qty: 1, materials: { boss_soul: 4, void_dust: 14, mithril_ingot: 10 }, gold: 22000, levelReq: 46, difficulty: 920, maxQuality: 3300, durability: 120 },
+  { output: 'primordial_bow', qty: 1, materials: { boss_soul: 4, void_dust: 12, ironwood: 14 }, gold: 22000, levelReq: 46, difficulty: 920, maxQuality: 3300, durability: 120 },
+  { output: 'primordial_scepter', qty: 1, materials: { boss_soul: 4, void_dust: 14, magic_dust: 12 }, gold: 23000, levelReq: 46, difficulty: 940, maxQuality: 3350, durability: 120 },
+  { output: 'primordial_staff', qty: 1, materials: { boss_soul: 4, frost_lotus: 14, magic_dust: 12 }, gold: 23000, levelReq: 46, difficulty: 940, maxQuality: 3350, durability: 120 },
+  { output: 'primordial_aegis', qty: 1, materials: { boss_soul: 6, void_dust: 18, crystal: 14 }, gold: 28000, levelReq: 48, difficulty: 1000, maxQuality: 3500, durability: 150 },
 ];
 
 export function missingFor(p: PlayerState, r: Recipe): { materials: Record<string, number>; gold: number } {
@@ -235,6 +256,12 @@ export function getCraftLevel(xp: number): { level: number; into: number; need: 
 /** Consomme les matériaux au début du craft. */
 export function consumeMaterials(p: PlayerState, r: Recipe): boolean {
   if (!canCraft(p, r)) return false;
+  // Mod d'artefact « Forge économe » : la recette part parfois sans rien coûter.
+  // L'or reste dû dans tous les cas — seul le stock de matériaux est épargné.
+  if (hasFlag(p, 'thrifty') && Math.random() < 0.20) {
+    p.gold -= r.gold;
+    return true;
+  }
   for (const [id, need] of Object.entries(r.materials)) removeItem(p, id, need);
   p.gold -= r.gold;
   return true;
@@ -247,6 +274,7 @@ export function finishCraft(p: PlayerState, r: Recipe, qualityRatio: number, suc
     // XP consolatoire (bénéficie aussi du bonus d'équipe/guilde)
     const { xp: consolXp } = applyBonuses(p, { xp: Math.max(1, Math.floor(r.difficulty / 10)), gold: 0 });
     p.craftXp += consolXp;
+    grantArtifactXp(p, consolXp);
     return { id: 'craft_trash', qty: 1 };
   }
 
@@ -257,6 +285,7 @@ export function finishCraft(p: PlayerState, r: Recipe, qualityRatio: number, suc
   // Bénéficie du bonus d'équipe/guilde comme le combat et la récolte.
   const { xp: xpGain } = applyBonuses(p, { xp: 20 + r.difficulty + Math.floor(r.difficulty * qualityRatio), gold: 0 });
   p.craftXp += xpGain;
+  grantArtifactXp(p, xpGain);
   
   // Générer un ID dynamique basé sur la qualité si celle-ci a un impact (équipements).
   // On considère que 100% quality = stats +50% -> q150

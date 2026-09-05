@@ -242,15 +242,34 @@ export function xpToNextV3(currentLevel: number): number {
 const XP_AT_15 = 100 * Math.pow(1.25, 14);
 const XP_AT_30 = XP_AT_15 * Math.pow(1.20, 15);
 
+/** Ancienne courbe v4 (end-game ×1.18) — conservée pour la migration v4→v5. */
+export function xpToNextV4(currentLevel: number): number {
+  if (currentLevel >= MAX_LEVEL) return Infinity;
+  if (currentLevel <= 15) return Math.floor(100 * Math.pow(1.25, currentLevel - 1));
+  if (currentLevel <= 30) return Math.floor(XP_AT_15 * Math.pow(1.20, currentLevel - 15));
+  return Math.floor(XP_AT_30 * Math.pow(1.18, currentLevel - 30));
+}
+
 /**
- * XP pour passer du niveau n au n+1 (courbe v4, deux phases + end-game jusqu'à 50).
- * Early (≤15) douce, mid (16-30) plateau confortable, end (31-50) étirement maîtrisé.
+ * XP pour passer du niveau n au n+1 (courbe v5, deux phases + end-game jusqu'à 50).
+ * Early (≤15) douce, mid (16-30) plateau confortable — les deux inchangés depuis v4,
+ * ils sont sains (le Nv.20 ne pèse que 0,5% du trajet et s'atteint en 2-3 jours).
+ *
+ * L'end-game (31-50), lui, était un mur : en ×1.18, la tranche 40→50 représentait
+ * 81% de tout le grind et le seul passage 45→50 coûtait 1,3 fois le trajet 1→45
+ * (≈7,5 semaines au rythme observé en bêta, contre 2,5 semaines pour aller à 40).
+ *
+ * Ramené à ×1.12 : trajet complet 1→50 divisé par ~2 (13,3 → 6,8 semaines au même
+ * rythme), tranche 40→50 de 10,8 → 4,8 semaines, passage 45→50 de 7,5 → 3,1.
+ * ×1.10 avait été écarté : il propulsait d'un coup les joueurs de fin de bêta au
+ * niveau max, les privant du peu de montée qui leur restait. La progression sans
+ * fin est désormais portée par l'artefact de saison, plus par le niveau.
  */
 export function xpToNext(currentLevel: number): number {
   if (currentLevel >= MAX_LEVEL) return Infinity;
   if (currentLevel <= 15) return Math.floor(100 * Math.pow(1.25, currentLevel - 1));
   if (currentLevel <= 30) return Math.floor(XP_AT_15 * Math.pow(1.20, currentLevel - 15));
-  return Math.floor(XP_AT_30 * Math.pow(1.18, currentLevel - 30));
+  return Math.floor(XP_AT_30 * Math.pow(1.12, currentLevel - 30));
 }
 
 /** Retourne l'arme par défaut (T0) selon la classe (ou sa classe parente). */

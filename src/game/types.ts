@@ -185,6 +185,8 @@ export interface PlayerState {
   masteredRecipes?: string[];
   /** Nombre de clears par donjon. */
   dungeonClears: Record<string, number>;
+  /** Meilleur palier de difficulté réussi par donjon (débloque le suivant). */
+  dungeonTiers?: Record<string, number>;
   /** Points de talent non dépensés. */
   talentPoints: number;
   /** Rang investi par talent (id -> rang). */
@@ -217,12 +219,43 @@ export interface PlayerState {
   auraColorOn?: boolean;
   /** Nombre de prestiges accomplis (rituel des Abysses, Nv.50). Bonus permanent + insigne au classement. */
   prestigeLevel?: number;
+  /**
+   * Compte Google propriétaire du personnage. `uid` identifie le PERSONNAGE
+   * (clé du document), `accountUid` identifie le JOUEUR derrière — les deux sont
+   * identiques pour le slot 0, qui garde volontairement la clé nue du compte
+   * afin que les sauvegardes existantes continuent de fonctionner sans migration.
+   */
+  accountUid?: string;
+  /** Emplacement du personnage sur le compte (0, 1 ou 2). */
+  charSlot?: number;
   /** Cooldown (ms) avant nouvel essai du rituel de prestige après un échec. */
   ascensionCooldownUntil?: number;
+  /** Nombre de fois où le Néant Originel a été vaincu (le triomphe, sans reset). */
+  neantVictories?: number;
+  /** Artefact de la saison en cours (progression sans fin, remise à zéro à chaque saison). */
+  artifact?: { season: number; xp: number; level: number; mods: string[] };
+  /** Panthéon personnel : résultat archivé des saisons passées. */
+  seasonHistory?: { season: number; artifactLevel: number; level: number; at: number }[];
+  /**
+   * Renaissance disponible : posé par une victoire sur le Néant, consommé quand le
+   * joueur CHOISIT de repartir de zéro contre un niveau de prestige. La victoire
+   * ne remet plus rien à zéro d'elle-même.
+   */
+  rebirthAvailable?: boolean;
   /** Jetons de changement de classe (gagnés au prestige), utilisables depuis le Profil. */
   classChangeTokens?: number;
   /** Temps de jeu cumulé (ms), compté seulement onglet visible (PresenceTracker). */
   playtimeMs?: number;
+  /**
+   * Série de chasse : kills consécutifs sans mourir. Multiplie XP et or, et
+   * se perd entièrement à la mort — la tension passe du combat isolé à la
+   * session entière.
+   */
+  huntStreak?: number;
+  /** Meilleure série atteinte (fierté, affichée dans les stats). */
+  bestHuntStreak?: number;
+  /** Dernière récolte du camp (accumulation hors-ligne, voir camp.ts). */
+  campCollectedAt?: number;
   /** Expédition de familier en cours : fin (ms) + biome ciblé. */
   expeditionEndsAt?: number;
   expeditionBiome?: BiomeId;
@@ -235,6 +268,18 @@ export interface PlayerState {
   claimedMathieuKdo?: boolean;
   /** Progression dans le donjon sans fin (étage max atteint). */
   endlessBest?: number;
+  /** Relique : l'axe permanent, seule chose à traverser renaissance ET saison. */
+  relic?: { stars: number; effects: string[] };
+  /** Éclats de Relique (monnaie du end-game). */
+  relicShards?: number;
+  /** Passe de saison : paliers réclamés pour la saison en cours. */
+  seasonPass?: { season: number; claimed: number[] };
+  /** Fonds de profil débloqués (cosmétique permanent). */
+  unlockedBgs?: string[];
+  /** Fond de profil actif. */
+  profileBg?: string;
+  /** Clé de la semaine dont la Faille a déjà été validée (`w2870`). */
+  riftClearedWeek?: string;
   /** Joueur vétéran d'avant la réinitialisation (donne droit au Médaillon de l'Ancien Monde) */
   isLegacy?: boolean;
   legacyCreatedAt?: number;

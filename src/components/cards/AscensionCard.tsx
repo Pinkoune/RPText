@@ -5,7 +5,7 @@ import { useUi } from '../../store/uiStore';
 import { combatTurn, freshCombatState, type CombatState } from '../../game/combat';
 import { deriveStats } from '../../game/player';
 import { talentMods, getAllActiveSkills, type ActiveSkillDef } from '../../game/talents';
-import { computeAscensionBoss, ascensionOutcome, applyAscensionResult, type AscensionBoss } from '../../game/ascension';
+import { computeAscensionBoss, ascensionOutcome, applyAscensionResult, neutralizeForNeant, ASCENSION_SUSTAIN_MULT, type AscensionBoss } from '../../game/ascension';
 import { item, HP_CONSUMABLES } from '../../game/items';
 import { playSound, stopAmbientMusic, setAmbient } from '../../game/sound';
 import { currentPhase } from '../../game/daynight';
@@ -14,32 +14,6 @@ import ItemIcon from '../ItemIcon';
 type Transition = 'enter' | 'none' | 'win' | 'dead';
 
 const POTIONS = HP_CONSUMABLES;
-
-// Le Néant est calibré au millimètre contre un joueur "idéal" classique (voir
-// `computeAscensionBoss`) — les ressources d'archétype (rage/combo/grâce/mana/
-// sève/ferveur/tempo/surcharge) permettent de spammer des ultimes bien plus
-// souvent que le cooldown d'origine (parfois 25-35s ramené à 3s), ce qui
-// fausserait complètement cet équilibrage. Le Néant "annule" ces pouvoirs pour
-// ce combat uniquement : chaque compétence concernée retrouve son cooldown et
-// ses chiffres d'avant l'introduction des ressources, sans `resource`.
-const NEANT_LEGACY: Record<string, Partial<ActiveSkillDef>> = {
-  skill_ber_execute: { cooldownMs: 30_000, resource: undefined },
-  skill_dk_drain: { cooldownMs: 25_000, resource: undefined },
-  skill_rog_assassinate: { cooldownMs: 3_000, mult: 2.5, resource: undefined },
-  skill_mnk_dragon: { cooldownMs: 25_000, mult: 2.0, resource: undefined },
-  skill_dp_nova: { cooldownMs: 30_000, resource: undefined },
-  skill_pyro_inferno: { cooldownMs: 35_000, resource: undefined },
-  skill_cryo_blizzard: { cooldownMs: 25_000, resource: undefined },
-  skill_arc_time: { cooldownMs: 28_000, resource: undefined },
-  skill_pal_smite: { cooldownMs: 20_000, resource: undefined },
-  skill_brd_crescendo: { cooldownMs: 25_000, mult: 2.3, resource: undefined },
-  skill_dru_wrath: { cooldownMs: 16_000, resource: undefined },
-  skill_hnt_snipe: { cooldownMs: 28_000, resource: undefined },
-};
-function neutralizeForNeant(skill: ActiveSkillDef): ActiveSkillDef {
-  const override = NEANT_LEGACY[skill.id];
-  return override ? { ...skill, ...override } : skill;
-}
 
 type Phase = 'intro' | 'confirm' | 'fight' | 'result';
 
@@ -126,7 +100,7 @@ export default function AscensionCard() {
     }
     const monster = { ...fs.boss, hp: fs.bhp };
     const fightStats = { ...stats, atk: stats.atk + fs.bonusAtk };
-    const res = combatTurn(fightStats, mods, monster, fs.php, fs.bhp, action, { potionHeal: action === 'potion' ? potionHeal : 0, activeSkill: skill }, fs.combat);
+    const res = combatTurn(fightStats, mods, monster, fs.php, fs.bhp, action, { potionHeal: action === 'potion' ? potionHeal : 0, activeSkill: skill, sustainMult: ASCENSION_SUSTAIN_MULT }, fs.combat);
     if (action === 'potion' && potionId) mutate((d) => { d.inventory[potionId]--; });
 
     const logs = [...fs.logs, ...res.events.map((l) => l.text)];
@@ -159,7 +133,8 @@ export default function AscensionCard() {
         </p>
         <p className="text-xs text-rose-300/80">
           Si tu échoues, le Néant t'arrachera des années de vie (jusqu'à <b>3 niveaux</b>) et se refermera pour un temps.
-          Si tu triomphes... tu renaîtras au commencement, marqué à jamais du <b className="text-amber-300">Prestige</b>.
+          Si tu triomphes, tu ne perds <b>rien</b> : le titre de <b className="text-amber-300">Vainqueur du Néant</b> est à toi,
+          et la <b className="text-purple-300">Renaissance</b> s'ouvre — à saisir quand tu le voudras.
         </p>
         <button onClick={() => setPhase('confirm')} className="w-full rounded-xl bg-purple-900/70 py-3 text-sm font-bold text-purple-100 ring-1 ring-purple-500/50 hover:bg-purple-800/70">
           Affronter le mal
@@ -188,13 +163,29 @@ export default function AscensionCard() {
       <div className="space-y-4 text-center">
         <div className="text-5xl">{result.won ? '🌅' : '🕳️'}</div>
         <div className={`text-lg font-bold ${result.won ? 'text-amber-300' : 'text-purple-300'}`}>
-          {result.won ? 'PRESTIGE ATTEINT' : 'Le Néant te rejette'}
+          {result.won ? 'LE NÉANT EST VAINCU' : 'Le Néant te rejette'}
         </div>
         <p className="text-sm text-slate-300">{result.message}</p>
         {!result.won && (result.levelsLost ?? 0) > 0 && (
           <p className="text-xs text-rose-300">-{result.levelsLost} niveau(x). Reviens plus fort.</p>
         )}
-        {result.won && <p className="text-xs text-amber-200/80">Tu renais au niveau 1 avec un bonus permanent de prestige. Ta collection de familiers est conservée. 🎫 Un <b>jeton de changement de classe</b> t'attend dans ton <b>Profil</b>.</p>}
+        {result.won && (
+          <>
+            <p className="text-xs text-amber-200/80">
+              Tu gardes <b>tout</b> : ton niveau, ton équipement, tes métiers. Le titre
+              <b className="text-amber-300"> Vainqueur du Néant</b> est à toi.
+            </p>
+            <div className="rounded-xl border border-purple-500/30 bg-purple-950/30 p-3 text-left">
+              <div className="text-xs font-bold text-purple-200">🔮 La Renaissance t'est ouverte</div>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                Tu peux, <b>quand tu le voudras</b>, tout recommencer au niveau 1 en échange d'un
+                niveau de <b className="text-amber-300">Prestige</b> (bonus permanent + jeton de
+                changement de classe). Rien ne presse : l'offre reste ouverte dans ta carte
+                <b> Prestige</b>. Tu peux aussi simplement continuer ta partie.
+              </p>
+            </div>
+          </>
+        )}
         <button onClick={() => { const w = useUi.getState().windows.find((x) => x.kind === 'ascension'); if (w) closeWindow(w.id); }} className="w-full rounded-lg bg-white/10 py-2 text-sm hover:bg-white/20">
           Fermer
         </button>

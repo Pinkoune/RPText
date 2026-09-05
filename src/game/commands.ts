@@ -3,8 +3,9 @@ import type { WindowKind } from '../store/uiStore';
 import { useUi } from '../store/uiStore';
 import { useGame } from '../store/gameStore';
 import { pickMonster } from './monsters';
+import { currentRift, buildRiftMonster } from './rift';
 import { cooldownLeft } from './player';
-import { item, ITEMS } from './items';
+import { item } from './items';
 import { deriveStats, removeItem } from './player';
 import { currentPhase } from './daynight';
 import { addQuestMetric } from './quests';
@@ -39,6 +40,7 @@ function applyZonePenalty(p: PlayerState, monster: any): void {
 import { getRaidWindow } from './raid';
 import { joinOrCreateRaid } from '../firebase/dungeonService';
 import { activeSetProc } from './sets';
+import { campReady, campElapsed, previewCamp, collectCamp, campSummary } from './camp';
 
 export interface CommandCtx {
   getPlayer: () => PlayerState | null;
@@ -53,6 +55,16 @@ export interface CommandDef {
   desc: string;
   category: 'Jeu' | 'Combat' | 'Récolte' | 'Casino' | 'Multijoueur' | 'Système';
   reqLevel?: number;
+  /**
+   * Dérogation au niveau requis.
+   *
+   * Une renaissance ramène au Nv.1 en conservant certaines choses — prestige,
+   * aura, Relique. Sans cette échappatoire, le joueur GARDE ces acquis mais ne
+   * peut plus les ouvrir avant d'avoir remonté trente niveaux : le panneau qui
+   * lui dit ce que son prestige lui rapporte devenait inaccessible au moment
+   * précis où il venait de le gagner.
+   */
+  alsoIf?: (p: PlayerState) => boolean;
   /** Commande secrète : absente du help, affichée « ??? » dans le tuto. */
   hidden?: boolean;
 }
@@ -67,6 +79,8 @@ export const COMMANDS: CommandDef[] = [
   { name: 'cooldown', aliases: ['cd', 'cooldowns', 'recup'], desc: 'Affiche les récupérations en cours.', category: 'Jeu', reqLevel: 1 },
   { name: 'experience', aliases: ['xp', 'exp', 'niveau', 'level'], desc: 'Expérience d\'aventure et de farm.', category: 'Jeu', reqLevel: 1 },
   { name: 'heal', aliases: ['soin', 'potion'], desc: 'Bois une potion pour récupérer des PV.', category: 'Combat', reqLevel: 1 },
+  { name: 'rest', aliases: ['repos', 'reposer', 'dormir'], desc: 'Repose-toi au camp : PV restaurés à fond (hors combat, 10 min).', category: 'Combat', reqLevel: 1 },
+  { name: 'camp', aliases: ['bivouac', 'collecte'], desc: 'Ton camp produit pendant ton absence — reviens y récolter.', category: 'Jeu', reqLevel: 5 },
   { name: 'stats', aliases: ['statistiques', 'stat', 'st'], desc: 'Affiche toutes tes statistiques.', category: 'Jeu', reqLevel: 1 },
   { name: 'help', aliases: ['aide', 'commands', '?'], desc: 'Liste toutes les commandes.', category: 'Système', reqLevel: 1 },
   { name: 'wiki', aliases: ['bestiaire', 'items', 'encyclopedie'], desc: "Consulte l'encyclopédie des objets et des monstres.", category: 'Système', reqLevel: 1 },
@@ -112,7 +126,7 @@ export const COMMANDS: CommandDef[] = [
   // Niveau 8
   { name: 'duel', aliases: ['pvp', 'defi'], desc: 'Défie un autre joueur au pile/face (mise en or).', category: 'Multijoueur', reqLevel: 8 },
   { name: 'cardjitsu', aliases: ['cj', 'cards', 'ninja', 'cartes'], desc: 'Duel de cartes Card-Jitsu (feu/eau/neige).', category: 'Multijoueur', reqLevel: 8 },
-  { name: 'season', aliases: ['saison', 'ladder', 'rang', 'rank'], desc: 'Saison PvP : ton rang, le ladder et la fin de saison.', category: 'Multijoueur', reqLevel: 8 },
+  { name: 'season', aliases: ['saison', 'ladder', 'rang', 'rank'], desc: 'Saison : ta progression, ton rang, la passe et le classement.', category: 'Jeu', reqLevel: 1 },
 
   // Niveau 9
   { name: 'team', aliases: ['equipe', 'équipe', 'party'], desc: 'Forme une équipe et partage des ressources.', category: 'Multijoueur', reqLevel: 9 },
@@ -129,7 +143,12 @@ export const COMMANDS: CommandDef[] = [
   { name: 'mercenary', aliases: ['mercenaire', 'merc', 'contrat'], desc: 'Contrat mercenaire : boss quotidien costaud (1 fois / 6h). Butin volcanique.', category: 'Combat', reqLevel: 25 },
   { name: 'expedition', aliases: ['expe', 'exploration'], desc: 'Envoie ton familier en expédition 4h → ramène des ressources.', category: 'Jeu', reqLevel: 35 },
   { name: 'sanctuary', aliases: ['sanctuaire', 'sanctum'], desc: 'Sanctuaire des Anciens : boss solo ultime (1 fois / 24h). Butin unique.', category: 'Combat', reqLevel: 40 },
-  { name: 'aura', aliases: ['auras'], desc: 'Choisis une aura de prestige (bonus passif + affichée au classement).', category: 'Jeu', reqLevel: 30 },
+  { name: 'aura', aliases: ['auras'], desc: 'Choisis une aura de prestige (bonus passif + affichée au classement).', category: 'Jeu', reqLevel: 30,
+    alsoIf: (p) => (p.prestigeLevel ?? 0) > 0 || !!p.rebirthAvailable },
+  { name: 'artifact', aliases: ['artefact', 'art'], desc: "Artefact de saison : progression sans fin et grille de mods.", category: 'Jeu', reqLevel: 1 },
+  { name: 'relic', aliases: ['relique', 'rel'], desc: "Ta Relique : le seul objet qui traverse renaissances et saisons.", category: 'Jeu', reqLevel: 20,
+    alsoIf: (p) => (p.relic?.stars ?? 0) > 0 || (p.relicShards ?? 0) > 0 },
+  { name: 'rift', aliases: ['faille'], desc: "Faille de la semaine : un défi qui change tous les lundis.", category: 'Combat', reqLevel: 20 },
   { name: 'prestige', aliases: ['ascension', 'neant'], desc: '???', category: 'Combat', reqLevel: 50, hidden: true },
 
   // Niveau 22
@@ -145,25 +164,47 @@ for (const c of COMMANDS) {
 export function resolveCommand(input: string): string | null {
   const word = input.trim().toLowerCase().split(/\s+/)[0];
   if (word === 'admin') return 'admin';
-  if (word === 'admin_curve' || word === 'curve') return 'admin_curve';
   return ALIAS_MAP[word] ?? null;
 }
 
 export const HUNT_COOLDOWN = 20_000; // 20s (Façon EPIC RPG)
 export const DAILY_COOLDOWN = 20 * 60 * 60 * 1000; // 20h
+/**
+ * Repos au camp : soin complet gratuit, mais HORS COMBAT uniquement.
+ * C'est cette restriction — pas la durée — qui protège l'économie des potions :
+ * la potion reste la seule option instantanée quand un combat tourne mal, le
+ * repos est l'option gratuite mais lente entre deux combats. Avec 20s de CD sur
+ * la chasse, 10 min ≈ 30 chasses, ce qui cale bien le rythme. Règle aussi le vrai
+ * point de blocage : plus de potions, plus d'or, donc plus rien à faire.
+ */
+export const REST_COOLDOWN = 10 * 60 * 1000; // 10 min
+
+/** Commandes réservées à l'administration — invisibles pour les autres. */
+const ADMIN_ONLY = new Set(['admin']);
 
 export function runCommand(input: string, ctx: CommandCtx): void {
   const cmd = resolveCommand(input);
   const p = ctx.getPlayer();
+  const unknown = () => ctx.toast(`Commande inconnue : "${input}". Tape "help".`, 'bad');
   if (!cmd) {
-    ctx.toast(`Commande inconnue : "${input}". Tape "help".`, 'bad');
+    unknown();
+    return;
+  }
+  // Une commande admin doit être INDISCERNABLE d'une commande qui n'existe pas.
+  // Elles répondaient « Commande introuvable. » là où l'inconnue répond
+  // « Commande inconnue : "xyz". Tape "help". » — deux messages différents, donc
+  // un joueur curieux pouvait déduire de la formulation que `admin` existe.
+  // Le filtre est ici, au dispatch, et non dans chaque `case` : ajouter une
+  // commande admin ne demande plus que de l'inscrire dans ADMIN_ONLY.
+  if (ADMIN_ONLY.has(cmd) && !p?.isAdmin) {
+    unknown();
     return;
   }
   if (!p && cmd !== 'help' && cmd !== 'tuto') return;
 
   if (p) {
     const def = COMMANDS.find((c) => c.name === cmd);
-    if (def && def.reqLevel && p.level < def.reqLevel) {
+    if (def && def.reqLevel && p.level < def.reqLevel && !def.alsoIf?.(p)) {
       if (p.ignoreRestrictions) {
         ctx.toast(`[Admin] Bypassed level ${def.reqLevel} req for ${def.name}`, 'info');
       } else {
@@ -178,50 +219,9 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       ctx.open('profile', undefined, { singleton: true });
       break;
 
-    case 'admin': {
-      if (p && p.isAdmin) {
-        ctx.open('admin', undefined, { singleton: true });
-      } else {
-        ctx.toast('Commande introuvable.', 'bad');
-      }
+    case 'admin':
+      ctx.open('admin', undefined, { singleton: true });
       break;
-    }
-
-    case 'admin_curve': {
-      if (!p || !p.isAdmin) {
-        ctx.toast('Commande introuvable.', 'bad');
-        break;
-      }
-      
-      const levels = [1, 5, 10, 15, 20, 30];
-      
-      console.log("=== SIMULATION DE COURBE DE STATS ===");
-      const getBestStat = (slot: string, lvl: number, stat: 'atk' | 'def' | 'hp'): number => {
-        const valid = Object.values(ITEMS)
-          .filter((i: any) => i.slot === slot && (i.reqLevel || 1) <= lvl);
-        return valid.reduce((max: number, i: any) => Math.max(max, i[stat] || 0), 0);
-      };
-        for (const lvl of levels) {
-          const wp = getBestStat('weapon', lvl, 'atk');
-          const am = getBestStat('armor', lvl, 'def');
-          const ah = getBestStat('armor', lvl, 'hp');
-          const tkA = getBestStat('trinket', lvl, 'atk');
-          const tkD = getBestStat('trinket', lvl, 'def');
-          const tkH = getBestStat('trinket', lvl, 'hp');
-          
-          const maxHpBase = 100 + (lvl - 1) * 20;
-          const atkBase = 5 + (lvl - 1) * 2;
-          const defBase = 5 + (lvl - 1) * 1;
-          
-          const hpStars = (ah + tkH) * 1.5; // +50% étoiles
-          const atkStars = (wp + tkA) * 1.5;
-          const defStars = (am + tkD) * 1.5;
-          
-          console.log(`Lvl ${lvl} | Base: HP=${maxHpBase} ATK=${atkBase} DEF=${defBase} | Gear (Max+Etoiles): HP=${Math.round(hpStars)} ATK=${Math.round(atkStars)} DEF=${Math.round(defStars)}`);
-        }
-        ctx.toast("Simulation générée ! Ouvre la console du navigateur (F12) pour voir les résultats.", "good");
-      break;
-    }
 
     case 'reset':
       import('../store/uiStore').then(({ useUi }) => {
@@ -459,6 +459,32 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       break;
     }
 
+    case 'rest': {
+      if (useGame.getState().inCombat) {
+        ctx.toast('Impossible de se reposer en plein combat ! Utilise une potion.', 'bad');
+        break;
+      }
+      const left = cooldownLeft(p!, 'rest', REST_COOLDOWN);
+      if (left > 0) {
+        const mins = Math.floor(left / 60_000);
+        const secs = Math.ceil((left % 60_000) / 1000);
+        ctx.toast(`Tu viens à peine de te reposer. Encore ${mins > 0 ? `${mins} min ` : ''}${secs}s.`, 'bad');
+        break;
+      }
+      const maxHp = deriveStats(p!).maxHp;
+      if (p!.hp >= maxHp) {
+        ctx.toast('Tu es déjà en pleine forme.', 'info');
+        break;
+      }
+      const gained = maxHp - p!.hp;
+      ctx.mutate((d) => {
+        d.hp = deriveStats(d).maxHp;
+        d.cooldowns.rest = Date.now();
+      });
+      ctx.toast(`🏕️ Tu montes le camp et reprends des forces (+${gained} PV).`, 'good');
+      break;
+    }
+
     case 'hunt': {
       const left = cooldownLeft(p!, 'hunt', HUNT_COOLDOWN);
       if (left > 0) {
@@ -466,7 +492,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         break;
       }
       if (p!.hp <= 0) {
-        ctx.toast('Tu es K.O. ! Soigne-toi (heal) avant de chasser.', 'bad');
+        ctx.toast('Tu es K.O. ! Bois une potion (heal) ou repose-toi au camp (rest).', 'bad');
         break;
       }
       const now = Date.now();
@@ -627,8 +653,45 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       break;
     }
 
+    case 'camp': {
+      const now = Date.now();
+      if (!campReady(p!, now)) {
+        const mins = Math.ceil((15 * 60 * 1000 - campElapsed(p!, now)) / 60_000);
+        ctx.toast(`🏕️ Ton camp n'a pas encore produit grand-chose. Repasse dans ~${Math.max(1, mins)} min.`, 'info');
+        break;
+      }
+      const preview = previewCamp(p!, now);
+      ctx.mutate((d) => { collectCamp(d, now); });
+      const hours = Math.floor(preview.elapsedMs / 3_600_000);
+      const mins = Math.round((preview.elapsedMs % 3_600_000) / 60_000);
+      const dur = hours > 0 ? `${hours}h${String(mins).padStart(2, '0')}` : `${mins} min`;
+      ctx.toast(`🏕️ Camp récolté (${dur}) : ${campSummary(preview)}.`, 'good');
+      break;
+    }
+
     case 'aura':
       ctx.open('prestige', undefined, { singleton: true });
+      break;
+
+    case 'relic':
+      ctx.open('relic', undefined, { singleton: true });
+      return;
+    case 'rift': {
+      if (p!.hp <= 0) { ctx.toast('Tu es K.O. Soigne-toi avant d\'entrer dans la Faille.', 'bad'); break; }
+      const rift = currentRift(Date.now(), p!.level);
+      const monster = buildRiftMonster(p!, rift);
+      // Pas de cooldown : l'échec coûte déjà la mort (pénalité + série perdue),
+      // et la récompense ne tombe qu'une fois par semaine de toute façon.
+      ctx.mutate((d) => {
+        if (!d.statistics.mobsEncountered) d.statistics.mobsEncountered = {};
+        d.statistics.mobsEncountered['rift'] = (d.statistics.mobsEncountered['rift'] ?? 0) + 1;
+      });
+      ctx.toast(`${rift.modifier.icon} Faille — ${rift.modifier.name} : ${rift.modifier.desc}`, 'info');
+      ctx.open('hunt', { monster, id: Date.now(), isMiniboss: true, riftKey: rift.key }, { singleton: true });
+      break;
+    }
+    case 'artifact':
+      ctx.open('artifact', undefined, { singleton: true });
       break;
 
     case 'prestige': {

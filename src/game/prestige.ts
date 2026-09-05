@@ -1,6 +1,36 @@
 // Auras de prestige (Nv.30+). En plus du cosmétique affiché au classement,
 // chaque aura confère un petit bonus passif thématique → le choix a un sens.
 
+import type { PlayerState } from './types';
+
+// ─── Bonus permanent de renaissance ─────────────────────────────────────────
+// Ces constantes vivaient dans `ascension.ts`, mais personne ne s'en servait :
+// `player.ts` réécrivait 0.08 / 0.10 / 5 en dur des deux côtés. Résultat, la
+// valeur réelle du prestige n'était affichée nulle part — un joueur venait de
+// renaître et demandait encore « ça sert à quelque chose à part flex ? ».
+// Elles vivent ici (module sans dépendance runtime) pour que la logique ET
+// l'interface lisent la même source.
+
+/** Gain de stats par niveau de prestige (ATK / DEF / PV). */
+export const PRESTIGE_BONUS_PER_LEVEL = 0.08;
+/** Gain d'XP et d'or par niveau de prestige. */
+export const PRESTIGE_XPGOLD_PER_LEVEL = 0.10;
+/** Au-delà, les bonus plafonnent (le prestige lui-même continue de monter). */
+export const MAX_PRESTIGE_STACK = 5;
+
+/** Niveaux de prestige effectivement comptés dans les bonus. */
+export function prestigeStacks(level = 0): number {
+  return Math.min(Math.max(0, level), MAX_PRESTIGE_STACK);
+}
+/** Multiplicateur permanent d'ATK/DEF/PV. */
+export function prestigeStatMult(p: Pick<PlayerState, 'prestigeLevel'>): number {
+  return 1 + prestigeStacks(p.prestigeLevel ?? 0) * PRESTIGE_BONUS_PER_LEVEL;
+}
+/** Multiplicateur permanent d'XP et d'or. */
+export function prestigeXpGoldMult(p: Pick<PlayerState, 'prestigeLevel'>): number {
+  return 1 + prestigeStacks(p.prestigeLevel ?? 0) * PRESTIGE_XPGOLD_PER_LEVEL;
+}
+
 export interface PrestigeAura {
   emoji: string;
   label: string;

@@ -11,10 +11,20 @@ import { getTalentsForClass, talentMods, classResourceType, type ActiveSkillDef 
 import { deriveStats } from '../src/game/player';
 import { combatTurn, freshCombatState } from '../src/game/combat';
 import { activeSetProc } from '../src/game/sets';
+import { ARTIFACT_MODS } from '../src/game/artifact';
+import { RELIC_STAT_STARS, RELIC_MAX_STARS, effectsForStar } from '../src/game/relic';
+import { computeAscensionBoss, neutralizeForNeant, ASCENSION_SUSTAIN_MULT } from '../src/game/ascension';
 import type { PlayerState, ClassId, ItemDef } from '../src/game/types';
 import * as fs from 'fs';
 
-const OUT = '/private/tmp/claude-501/-Users-jeremy-Projects-RPText/b80104e0-3060-4633-b23d-b3224ca13748/scratchpad';
+/**
+ * Dossier de sortie. C'ÉTAIT un chemin absolu vers le scratchpad d'une session
+ * qui n'existe plus : les trois harnais plantaient (`ENOENT`) sur toute autre
+ * machine que celle d'origine. Relatif au repo, créé au besoin, surchargeable
+ * par `BALANCE_OUT`.
+ */
+const OUT = process.env.BALANCE_OUT ?? 'scripts/balance-output';
+fs.mkdirSync(OUT, { recursive: true });
 const N = 1500;
 
 // ── fake player + outfit (identique au harness passif) ──
@@ -58,16 +68,49 @@ function outfit(p: PlayerState, tier: Tier) {
   p.equippedSkills = skills.slice(0, 4).map(s => s.id);
 }
 
+/**
+ * Empile les axes de SAISON sur un joueur déjà habillé.
+ *
+ * Ils manquaient entièrement au harness : tout ce qui était mesuré jusqu'ici
+ * décrivait un joueur sans artefact, sans Relique et sans prestige, c'est-à-dire
+ * personne au-delà de la première semaine d'une saison. Or ces trois axes
+ * multiplient ATK/DEF/PV (`presMult * artMult * relMult` dans `deriveStats`) et
+ * versent des `CombatMods` — c'est le plus gros levier de puissance du jeu.
+ *
+ * `artifact` = niveau de la grille complète (tous les mods achetés).
+ * `relic`    = étoiles, avec un effet par palier ≥6 (le premier de chaque).
+ */
+type Stack = { artifact?: number; relicStars?: number; prestige?: number };
+function season(p: PlayerState, s: Stack) {
+  if (s.artifact) p.artifact = { season: 1, xp: 0, level: s.artifact, mods: ARTIFACT_MODS.map(m => m.id) };
+  if (s.relicStars) {
+    const effects: string[] = [];
+    for (let star = RELIC_STAT_STARS + 1; star <= Math.min(s.relicStars, RELIC_MAX_STARS); star++) {
+      const choices = effectsForStar(star);
+      if (choices.length) effects.push(choices[0].id);
+    }
+    p.relic = { stars: s.relicStars, effects };
+  }
+  if (s.prestige) p.prestigeLevel = s.prestige;
+  return p;
+}
+
+/** Classe réellement jouée à ce niveau : on ascensionne au Nv.20, comme un joueur. */
+function played(base: ClassId, sub: ClassId, level: number): ClassId { return level >= 20 ? sub : base; }
+
 type Mon = { hp: number; atk: number; def: number; name: string; element?: string; weaknesses?: string[]; resistances?: string[] };
 
 // ── PILOTE DE COMBAT tour-par-tour ──
-function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: number; maxTurns?: number } = {}): { win: boolean; turns: number; endHpPct: number } {
+function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: number; maxTurns?: number; sustainMult?: number; neant?: boolean } = {}): { win: boolean; turns: number; endHpPct: number } {
   const stats = deriveStats(p, true) as any;
   const mods = talentMods(p);
   const setProc = activeSetProc(p);
   const resourceType = classResourceType(p.classId);
   const skillDefs = getTalentsForClass(p.classId).map(t => t.activeSkill).filter(Boolean) as ActiveSkillDef[];
-  const equipped = skillDefs.filter(s => p.equippedSkills.includes(s.id));
+  // Le rituel du Néant remet les ultimes à leur cooldown d'avant les ressources
+  // d'archétype (`neutralizeForNeant`) : sans ça le harness mesurait un joueur
+  // qui enchaîne des ultimes à 3s là où le jeu les bride à 25-35s.
+  const equipped = skillDefs.filter(s => p.equippedSkills.includes(s.id)).map(s => opts.neant ? neutralizeForNeant(s) : s);
   const dmgSkills = equipped.filter(s => s.mult && (s.type === 'attack')).sort((a, b) => (b.mult ?? 0) - (a.mult ?? 0));
   const healSkills = equipped.filter(s => (s.healFrac ?? 0) > 0 || s.type === 'heal').sort((a, b) => (b.healFrac ?? 0) - (a.healFrac ?? 0));
 
@@ -88,7 +131,11 @@ function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: 
   };
   const ready = (s: ActiveSkillDef) => (cd[s.id] ?? 0) <= 0 && affordable(s);
 
-  for (let turn = 0; turn < maxTurns && php > 0 && mhp > 0; turn++) {
+  // `turn` vit HORS de la boucle : le retour renvoyait `turns: maxTurns` en dur,
+  // donc la colonne « turns » affichait 120 pour tout le monde quelle que soit
+  // la durée réelle du combat — une colonne qui ne pouvait rien dire d'autre.
+  let turn = 0;
+  for (; turn < maxTurns && php > 0 && mhp > 0; turn++) {
     for (const k in cd) if (cd[k] > 0) cd[k]--;
     // décision
     let action = 'attack';
@@ -103,7 +150,7 @@ function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: 
     }
     const r = combatTurn(stats, mods, { ...mon, maxHp: mon.hp } as any, php, mhp, action, {
       activeSkill: skill, potionHeal: action === 'potion' ? potionHeal : 0, setProc: setProc ?? undefined,
-      resourceAmount: pool, resourceType,
+      resourceAmount: pool, resourceType, sustainMult: opts.sustainMult,
     }, state);
     php = r.php; mhp = r.mhp; state = r.state;
     if (action === 'potion') potions--;
@@ -116,10 +163,10 @@ function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: 
     lastAction = action;
     if (r.fled) return { win: false, turns: turn + 1, endHpPct: php / stats.maxHp };
   }
-  return { win: mhp <= 0 && php > 0, turns: maxTurns, endHpPct: Math.max(0, php) / stats.maxHp };
+  return { win: mhp <= 0 && php > 0, turns: turn, endHpPct: Math.max(0, php) / stats.maxHp };
 }
 
-function batch(p: PlayerState, mon: Mon, n = N, opts = {}) {
+function batch(p: PlayerState, mon: Mon, n = N, opts: Parameters<typeof fight>[2] = {}) {
   let wins = 0, endHp = 0, turns = 0;
   for (let i = 0; i < n; i++) { const r = fight(p, mon, opts); if (r.win) { wins++; endHp += r.endHpPct; turns += r.turns; } }
   return { winrate: wins / n, endHpPct: wins ? endHp / wins : 0, avgTurns: wins ? turns / wins : NaN };
@@ -135,7 +182,7 @@ function dungeonScale(np: number, avgLevel: number) {
   const lm = Math.pow(1 + Math.max(0, avgLevel - 1) / 30, avgLevel >= 20 ? 1.6 : 1.4);
   return {
     hpMult: np * (1 + (np - 1) * 0.12) * lm,
-    atkMult: (1 + (np - 1) * 0.35) * lm,
+    atkMult: (1 + (np - 1) * 0.28) * lm, // ⚠️ miroir de dungeonService.initMonster
     defMult: (1 + (np - 1) * 0.20) * Math.sqrt(lm),
   };
 }
@@ -224,9 +271,14 @@ results.classes = classRows;
 
 // 2) Chasse : référence archer craft, par niveau (AVEC skills)
 const biomeMin: Record<string, number> = { forest: 1, plains: 3, mountains: 8, desert: 14, swamp: 20, volcano: 24, crypt: 30, frozen: 38 };
+// ⚠️ La référence ascensionne au Nv.20 (`played`). Avant, elle restait Archer de
+// BASE jusqu'au Nv.50 — or la base Archer est la classe la plus faible du jeu à
+// 50 (WR 1% contre le boss d'attrition, cf. tableau des classes) parce que
+// personne n'est censé y rester. Les taux de chasse Nv.30+ mesuraient donc un
+// personnage que plus aucun joueur ne joue, et sous-estimaient tout le end-game.
 const huntRows: any[] = [];
 for (const lvl of levels) {
-  const p = blankPlayer('archer', lvl); outfit(p, 'crafted');
+  const p = blankPlayer(played('archer', 'hunter', lvl), lvl); outfit(p, 'crafted');
   let biome = 'forest'; for (const [b, m] of Object.entries(biomeMin)) if (m <= lvl && m >= biomeMin[biome]) biome = b;
   const mobs = (MONSTERS as any[]).filter(m => m.biomes.includes(biome));
   let wr = 0, c = 0; for (const mb of mobs) { wr += batch(p, scaleHunt(mb, lvl), 400, { potions: 4 }).winrate; c++; }
@@ -237,7 +289,12 @@ results.hunt = huntRows;
 // 3) DONJONS : run co-op complet, solo→4p. Party MIXTE réaliste (guerrier/mage/
 //    archer/soigneur en rotation), gear craft au niveau du donjon.
 //    Compare le scaling ACTUEL vs une courbe quasi-linéaire PROPOSÉE.
-const PARTY_CLASSES: ClassId[] = ['warrior', 'mage', 'healer', 'archer'];
+// ⚠️ La composition doit être CUMULATIVE, sinon la colonne ne mesure pas la
+// taille du groupe. Avec l'ancienne rotation `[guerrier, mage, soigneur, archer]`
+// il n'y avait de soigneur qu'à partir de 3 joueurs : la Forge Infernale sortait
+// 0% / 6% / 100% / 33%, une courbe qui suivait la PRÉSENCE DU SOIGNEUR et pas
+// l'effectif. Un groupe réel prend un soigneur en deuxième.
+const PARTY_CLASSES: ClassId[] = ['warrior', 'healer', 'mage', 'archer'];
 function makeParty(np: number, lvl: number): PlayerState[] {
   const arr: PlayerState[] = [];
   for (let i = 0; i < np; i++) { const p = blankPlayer(PARTY_CLASSES[i % PARTY_CLASSES.length], lvl); outfit(p, 'crafted'); arr.push(p); }
@@ -248,7 +305,7 @@ function proposedScale(np: number, avgLevel: number) {
   const lm = Math.pow(1 + Math.max(0, avgLevel - 1) / 30, avgLevel >= 20 ? 1.6 : 1.4);
   return {
     hpMult: np * (1 + (np - 1) * 0.12) * lm,   // ~linéaire (+12%/membre au lieu de ^1.4)
-    atkMult: (1 + (np - 1) * 0.35) * lm,       // 0.5→0.35
+    atkMult: (1 + (np - 1) * Number(process.env.ATKPER ?? 0.28)) * lm,
     defMult: (1 + (np - 1) * 0.2) * Math.sqrt(lm),        // 0.25→0.20
   };
 }
@@ -267,13 +324,105 @@ results.dungeons = dungRows;
 // 4) Endless (archer maxed) avec skills
 const endRows: any[] = [];
 {
-  const p = blankPlayer('archer', 50); outfit(p, 'maxed');
-  for (const floor of [10, 20, 30, 40, 50, 60, 75, 100, 125, 150]) {
+  const p = blankPlayer('hunter', 50); outfit(p, 'maxed');
+  // ⚠️ Ne PAS n'échantillonner que des multiples de 5 : `generateEndlessMonster`
+  // fait un BOSS tous les 5 étages (×2 PV, ×1.5 ATK, ×1.4 DEF). L'ancienne liste
+  // (10/20/30/40/50…) ne mesurait donc que des boss et faisait passer la courbe
+  // pour une falaise. On intercale des étages normaux.
+  for (const floor of [10, 22, 30, 38, 44, 50, 53, 57, 60, 75, 100]) {
     const m = generateEndlessMonster(floor);
     endRows.push({ floor, hp: m.hp, winrate: batch(p, { hp: m.hp, atk: m.atk, def: m.def, name: m.name, element: 'dark' } as any, 400, { potions: 6 }).winrate });
   }
 }
 results.endless = endRows;
+
+// 4bis) DONJONS DE FIN, groupe RÉELLEMENT équipé : gear maxé (q150 5★) + artefact
+//    de grille + Relique ★5, au Nv.50. La grille au-dessus mesure un groupe en
+//    gear de craft nu au niveau minimum du donjon — utile pour la porte d'entrée,
+//    inutile pour dire si le contenu final est FAISABLE par ceux qui y vont.
+function makeEndParty(np: number): PlayerState[] {
+  const arr: PlayerState[] = [];
+  for (let i = 0; i < np; i++) {
+    const p = season(blankPlayer(PARTY_CLASSES[i % PARTY_CLASSES.length], 50), { artifact: 62, relicStars: 5 });
+    outfit(p, 'maxed'); arr.push(p);
+  }
+  return arr;
+}
+const endDungRows: any[] = [];
+for (const d of DUNGEONS) {
+  if ((d as any).raid || (d as any).minLevel < 30) continue;
+  for (const np of [1, 2, 3, 4]) {
+    endDungRows.push({ dungeon: (d as any).name, numPlayers: np, winrate: dungeonWinrate(() => makeEndParty(np), d, np, 50, 300, 8, dungeonScale) });
+  }
+}
+results.endgameDungeons = endDungRows;
+
+// 5) EMPILEMENT DE SAISON : ce que l'artefact, la Relique et le prestige
+//    achètent réellement, mesuré contre le contenu le plus dur du jeu (Abysses
+//    Nv.50). Jusqu'ici la doc citait un facteur de stats calculé à la main
+//    (×2.08) sans jamais le confronter à un monstre.
+const STACKS: { label: string; stack: Stack }[] = [
+  { label: 'nu (saison 1, semaine 1)', stack: {} },
+  { label: 'artefact grille (Nv.62)', stack: { artifact: 62 } },
+  { label: '+ Relique ★5', stack: { artifact: 62, relicStars: 5 } },
+  { label: '+ Relique ★10', stack: { artifact: 62, relicStars: 10 } },
+  { label: '+ prestige 5 (tout maxé)', stack: { artifact: 62, relicStars: 10, prestige: 5 } },
+  { label: 'artefact Nv.300 (fin de saison)', stack: { artifact: 300, relicStars: 10, prestige: 5 } },
+];
+const frozenMobs = (MONSTERS as any[]).filter(m => m.biomes.includes('frozen'));
+const stackRows: any[] = [];
+for (const { label, stack } of STACKS) {
+  const p = season(blankPlayer('hunter', 50), stack); outfit(p, 'maxed');
+  const st = deriveStats(p, true);
+  let wr = 0; for (const mb of frozenMobs) wr += batch(p, scaleHunt(mb, 50), 400, { potions: 6 }).winrate;
+  const g = batch(p, gauntlet(50), 600, { potions: 6 });
+  stackRows.push({ label, atk: st.atk, def: st.def, hp: st.maxHp, frozenWinrate: wr / frozenMobs.length, gauntletEndHp: g.endHpPct });
+}
+results.stack = stackRows;
+
+// 6) RITUEL DU NÉANT : le boss de prestige, jamais simulé jusqu'ici. Il est
+//    calibré sur un joueur IDÉAL (`computeAscensionBoss`), donc un joueur réel
+//    doit perdre s'il n'est pas optimisé — c'est le contrat de la feature.
+//    On le mesure sur trois profils pour vérifier qu'il discrimine bien.
+// Balayage du multiplicateur de sustain : on cherche la valeur qui rend le mur
+// infranchissable sans saison ET franchissable par TOUTES les classes une fois
+// tout maxé — y compris les soigneurs, dont le kit EST du sustain.
+if (process.env.SWEEP) {
+  for (const sm of [0.4, 0.5, 0.6]) {
+    for (const atkScale of [1.0, 1.15, 1.3, 1.45]) {
+      const line: string[] = [];
+      for (const { label, stack } of [
+        { label: 'nu', stack: {} as Stack },
+        { label: 'art+*5', stack: { artifact: 62, relicStars: 5 } as Stack },
+        { label: 'maxe', stack: { artifact: 62, relicStars: 10, prestige: 5 } as Stack },
+      ]) {
+        const wrs = CLASS_LIST.filter(c => c.parent).map(c => {
+          const p = season(blankPlayer(c.id, 50), stack); outfit(p, 'maxed');
+          const b = computeAscensionBoss(p) as any;
+          return batch(p, { hp: b.hp, atk: Math.round(b.atk * atkScale), def: b.def, name: b.name, element: 'dark' } as any, 150, { potions: 6, maxTurns: 200, sustainMult: sm, neant: true }).winrate;
+        }).sort((a, b) => a - b);
+        const med = wrs[Math.floor(wrs.length / 2)];
+        line.push(`${label} ${(wrs[0] * 100).toFixed(0)}/${(med * 100).toFixed(0)}/${(wrs[wrs.length - 1] * 100).toFixed(0)}`);
+      }
+      console.log(`sustain=${sm.toFixed(2)} atk*${atkScale.toFixed(2)}  min/med/max  ${line.join('   ')}`);
+    }
+  }
+}
+
+const voidRows: any[] = [];
+for (const c of CLASS_LIST.filter(c => c.parent)) {
+  for (const { label, stack } of [
+    { label: 'sans saison', stack: {} as Stack },
+    { label: 'artefact+★5', stack: { artifact: 62, relicStars: 5 } as Stack },
+    { label: 'tout maxé', stack: { artifact: 62, relicStars: 10, prestige: 5 } as Stack },
+  ]) {
+    const p = season(blankPlayer(c.id, 50), stack); outfit(p, 'maxed');
+    const boss = computeAscensionBoss(p) as any;
+    const r = batch(p, { hp: boss.hp, atk: boss.atk, def: boss.def, name: boss.name, element: 'dark' } as any, 300, { potions: 6, maxTurns: 200, sustainMult: ASCENSION_SUSTAIN_MULT, neant: true });
+    voidRows.push({ classId: c.id, name: c.name, profile: label, winrate: r.winrate, bossHp: boss.hp, bossAtk: boss.atk });
+  }
+}
+results.voidRitual = voidRows;
 
 fs.writeFileSync(`${OUT}/sim-turns.json`, JSON.stringify(results, null, 2));
 console.log('=== CLASSES Nv.50 (skills+potions) vs boss attrition — winrate / endHP / turns ===');
@@ -288,4 +437,15 @@ for (const d of [...new Set(dungRows.map(r => r.dungeon))]) {
   console.log(`  ${d.padEnd(22)} actuel[${cur.join(' ')}]  proposé[${pro.join(' ')}]`);
 }
 console.log('=== ENDLESS (archer maxed, skills) ===');
-for (const r of endRows) console.log(`  floor${r.floor} ${(r.winrate * 100).toFixed(0)}%`);
+for (const r of endRows) console.log(`  étage ${String(r.floor).padStart(3)}${r.floor % 5 === 0 ? ' BOSS' : '     '} ${(r.winrate * 100).toFixed(0).padStart(3)}%`);
+console.log('=== EMPILEMENT DE SAISON (Chasseur Nv.50 maxé) — stats / Abysses / endHP ===');
+for (const r of stackRows)
+  console.log(`  ${r.label.padEnd(32)} ATK=${String(r.atk).padStart(5)} DEF=${String(r.def).padStart(4)} HP=${String(r.hp).padStart(5)}  abysses=${(r.frozenWinrate * 100).toFixed(0).padStart(3)}%  endHP=${(r.gauntletEndHp * 100).toFixed(0).padStart(3)}%`);
+console.log('=== RITUEL DU NÉANT (winrate par sous-classe et profil) ===');
+for (const c of [...new Set(voidRows.map(r => r.classId))]) {
+  const rows = voidRows.filter(r => r.classId === c);
+  console.log(`  ${rows[0].name.padEnd(18)} ${rows.map(r => `${r.profile}=${(r.winrate * 100).toFixed(0).padStart(3)}%`).join('  ')}`);
+}
+console.log('=== DONJONS DE FIN, groupe équipé (Nv.50 maxé + artefact + ★5), 1p→4p ===');
+for (const d of [...new Set(endDungRows.map(r => r.dungeon))])
+  console.log(`  ${d.padEnd(22)} [${[1, 2, 3, 4].map(np => (endDungRows.find(r => r.dungeon === d && r.numPlayers === np)!.winrate * 100).toFixed(0).padStart(3) + '%').join(' ')}]`);

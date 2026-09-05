@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:rules": "firebase emulators:exec --only firestore --project rptext-test \"node scripts/rules.test.mjs\"",
+    "test:rules:rtdb": "firebase emulators:exec --only database --project rptext-test \"node scripts/rtdb-rules.test.mjs\""
   },
   "dependencies": {
     "firebase": "^10.12.2",

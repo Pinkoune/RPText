@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { cooldownLeft } from '../../game/player';
-import { HUNT_COOLDOWN, DAILY_COOLDOWN } from '../../game/commands';
+import { HUNT_COOLDOWN, DAILY_COOLDOWN, REST_COOLDOWN } from '../../game/commands';
 import { GATHER_COOLDOWN } from '../../game/gathering';
 import { DUNGEONS } from '../../game/dungeons';
 import { BOSS_ATTACK_CD } from '../../firebase/bossService';
@@ -26,6 +26,7 @@ export default function CooldownCard() {
 
   const entries: { icon: string; label: string; left: number }[] = [
     { icon: '⚔️', label: 'Chasse', left: cooldownLeft(p, 'hunt', HUNT_COOLDOWN) },
+    { icon: '🏕️', label: 'Repos', left: cooldownLeft(p, 'rest', REST_COOLDOWN) },
     { icon: '🔥', label: 'Aventure', left: cooldownLeft(p, 'adventure', 15 * 60 * 1000) },
     { icon: '👹', label: 'Mini-boss', left: cooldownLeft(p, 'miniboss', 12 * 60 * 60 * 1000) },
     { icon: '🎯', label: 'Contrat (mercenaire)', left: cooldownLeft(p, 'mercenaire', 6 * 60 * 60 * 1000) },

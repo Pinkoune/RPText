@@ -3,10 +3,18 @@ import { useGame } from '../store/gameStore';
 import { BASE_CLASSES, getAscensions } from '../game/classes';
 import type { ClassId } from '../game/types';
 import { isNameTaken } from '../firebase/playerService';
+import { charKey } from '../game/player';
 
 export default function ClassSelect() {
   const user = useGame((s) => s.user);
   const chooseClass = useGame((s) => s.chooseClass);
+  const pendingSlot = useGame((s) => s.pendingSlot);
+  const characters = useGame((s) => s.characters);
+  const backToSelect = useGame((s) => s.backToSelect);
+  // Clé du personnage en cours de création : c'est elle (et non le compte) qu'il
+  // faut exclure du contrôle d'unicité du pseudo.
+  const charId = user ? charKey(user.uid, pendingSlot) : undefined;
+  const hasOtherCharacters = characters.some((c) => c.player);
   const [name, setName] = useState(user?.name ?? '');
   const [sel, setSel] = useState<ClassId | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -19,14 +27,14 @@ export default function ClassSelect() {
   useEffect(() => {
     if (!user?.name) return;
     let alive = true;
-    isNameTaken(user.name, user.uid).then((taken) => {
+    isNameTaken(user.name, charId).then((taken) => {
       if (!alive || !taken) return;
       const temp = `${user.name.slice(0, 14)}${Math.floor(1000 + Math.random() * 9000)}`;
       setName(temp);
       setAutoRenamed(true);
     });
     return () => { alive = false; };
-  }, [user?.name, user?.uid]);
+  }, [user?.name, charId]);
 
   async function submit() {
     if (!sel) return;
@@ -35,7 +43,7 @@ export default function ClassSelect() {
     setChecking(true);
     setNameError(null);
     try {
-      const taken = await isNameTaken(clean, user?.uid);
+      const taken = await isNameTaken(clean, charId);
       if (taken) { setNameError('Ce pseudo est déjà pris.'); return; }
       chooseClass(sel, clean);
     } finally {
@@ -49,6 +57,16 @@ export default function ClassSelect() {
   return (
     <div className="grid h-full place-items-center overflow-auto bg-gradient-to-b from-[#0b1020] to-[#1a2b52] px-4 py-8">
       <div className="glass w-full max-w-3xl rounded-2xl p-6 animate-floatIn">
+        {/* Retour au roster : seulement s'il y a déjà un personnage, sinon il
+            n'y aurait nulle part où revenir. */}
+        {hasOtherCharacters && (
+          <button
+            onClick={() => void backToSelect()}
+            className="mb-3 text-xs text-slate-400 transition hover:text-sky-300"
+          >
+            ← Retour à mes personnages
+          </button>
+        )}
         <h1 className="text-2xl font-bold text-glow">Crée ton héros</h1>
         <p className="mt-1 text-sm text-slate-300">Choisis un nom, puis une classe. Clique une classe pour découvrir son style de jeu.</p>
 

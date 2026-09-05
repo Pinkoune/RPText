@@ -1,7 +1,6 @@
-import { useState, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useLayoutEffect, useRef } from 'react';
 import { useGame } from '../store/gameStore';
 import { useClock } from '../hooks/useClock';
-import { isMuted, toggleMute } from '../game/sound';
 import { BIOMES } from '../game/biomes';
 import { CLASSES, xpToNext } from '../game/classes';
 import { PHASE_EMOJI, PHASE_LABEL } from '../game/daynight';
@@ -9,6 +8,8 @@ import { deriveStats } from '../game/player';
 import { useUi } from '../store/uiStore';
 import { currentGlobalEvent, currentBiomeEvent, type EventDef } from '../game/events';
 import { auraColor } from '../game/prestige';
+import { notificationCount } from './cards/NotificationsCard';
+import { seasonTheme, artifactXpToNext } from '../game/artifact';
 
 function Pill({ icon, value, title, className = '' }: { icon: string; value: string | number; title: string; className?: string }) {
   return (
@@ -47,12 +48,19 @@ function EventPill({ e, onClick }: { e: EventDef; onClick: () => void }) {
 
 export default function Topbar() {
   const player = useGame((s) => s.player);
-  const logout = useGame((s) => s.logout);
   const hasUnreadChat = useGame((s) => s.hasUnreadChat);
   const open = useUi((s) => s.open);
   const { now, phase } = useClock();
-  const [muted, setMuted] = useState(isMuted());
   const barRef = useRef<HTMLDivElement>(null);
+  // Recalculé quand le chat change OU quand les nouveautés sont marquées lues
+  // (l'état vit dans localStorage, d'où l'écoute d'événement).
+  const [patchTick, setPatchTick] = useState(0);
+  useEffect(() => {
+    const h = () => setPatchTick((n) => n + 1);
+    window.addEventListener('rptext:patch-seen', h);
+    return () => window.removeEventListener('rptext:patch-seen', h);
+  }, []);
+  const notifCount = useMemo(() => notificationCount(hasUnreadChat), [hasUnreadChat, patchTick]);
 
   // Expose la hauteur réelle de la barre (elle peut passer sur 2-3 lignes) pour
   // que les fenêtres mobiles démarrent juste en dessous, sans chevauchement.
@@ -73,6 +81,9 @@ export default function Topbar() {
   const cls = CLASSES[player.classId];
   const globalEvent = currentGlobalEvent(now.getTime());
   const biomeEvent = currentBiomeEvent(player.biome, now.getTime());
+  const artTheme = seasonTheme(player.artifact?.season);
+  const artLevel = player.artifact?.level ?? 0;
+  const artPct = player.artifact ? Math.min(100, (player.artifact.xp / artifactXpToNext(artLevel)) * 100) : 0;
   const stats = deriveStats(player); // stats.hp est déjà clampé à maxHp (contrairement à player.hp brut)
   const hpPct = Math.max(0, Math.min(100, Math.round((stats.hp / stats.maxHp) * 100)));
   const xpPct = Math.max(0, Math.min(100, Math.round((player.xp / xpToNext(player.level)) * 100)));
@@ -93,19 +104,10 @@ export default function Topbar() {
               Nv.{player.level} {cls.name}
             </div>
           </div>
-          {/* Or (+ Fate à partir du niv.10) : haut-droite sur mobile uniquement */}
+          {/* Or : haut-droite sur mobile uniquement. Les Fate Coins ont quitté la
+              barre (ils restent au Profil et à la Boutique du Destin). */}
           <div className="ml-auto flex items-center gap-1.5 sm:hidden">
             <Pill icon="🪙" value={player.gold} title="Or" />
-            {player.level >= 10 && (
-              <button
-                onClick={() => open('fateshop', undefined, { singleton: true })}
-                title="Fate Coins — clic pour ouvrir la Boutique du Destin"
-                className="flex items-center gap-1 rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-fuchsia-500/30"
-              >
-                <span>🎲</span>
-                <span className="font-semibold tabular-nums">{player.fateCoins}</span>
-              </button>
-            )}
           </div>
         </div>
 
@@ -150,42 +152,36 @@ export default function Topbar() {
             </div>
           )}
           <Pill icon="🪙" value={player.gold} title="Or" className="hidden sm:flex" />
-          {player.level >= 10 && (
-            <button
-              onClick={() => open('fateshop', undefined, { singleton: true })}
-              title="Fate Coins — clic pour ouvrir la Boutique du Destin"
-              className="hidden items-center gap-1 rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-fuchsia-500/30 sm:flex sm:text-sm"
-            >
-              <span>🎲</span>
-              <span className="font-semibold tabular-nums">{player.fateCoins}</span>
-            </button>
-          )}
           <Pill icon={PHASE_EMOJI[phase]} value={now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} title={PHASE_LABEL[phase]} />
           <Pill icon={biome.emoji} value={biome.name.split(' ')[0]} title={biome.name} />
-          {hasUnreadChat && (
+          {/* Artefact de saison : la seule jauge qui avance en permanence, donc
+              la seule qui mérite un accès direct depuis la barre. */}
+          <button
+            onClick={() => open('artifact', undefined, { singleton: true })}
+            title={`${artTheme.artifactName} — niveau ${artLevel}`}
+            className="flex items-center gap-1.5 rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
+          >
+            <span>{artTheme.emoji}</span>
+            <span className="font-semibold tabular-nums" style={{ color: artTheme.color }}>Nv.{artLevel}</span>
+            <span className="h-1 w-8 overflow-hidden rounded-full bg-black/60">
+              <span className="block h-full rounded-full transition-all" style={{ width: `${artPct}%`, background: artTheme.color }} />
+            </span>
+          </button>
+          {/* Notifications : messages et mises à jour au même endroit. Le bouton
+              n'apparaît QUE s'il y a quelque chose — une cloche vide en
+              permanence n'apporte rien et encombre la barre. */}
+          {notifCount > 0 && (
             <button
-              onClick={() => open('chat', undefined, { singleton: true })}
-              title="Chat — nouveau message"
+              onClick={() => open('notifications', undefined, { singleton: true })}
+              title={`${notifCount} notification${notifCount > 1 ? 's' : ''}`}
               className="relative rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
             >
-              💬
-              <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-[#0b1020] animate-pulse" />
+              🔔
+              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white ring-2 ring-[#0b1020]">
+                {notifCount}
+              </span>
             </button>
           )}
-          <button
-            onClick={() => setMuted(toggleMute())}
-            title={muted ? 'Activer le son' : 'Couper le son'}
-            className="rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-white/15"
-          >
-            {muted ? '🔇' : '🔊'}
-          </button>
-          <button
-            onClick={logout}
-            title="Se déconnecter"
-            className="rounded-full bg-black/35 px-2.5 py-1 text-xs transition hover:bg-rose-500/40"
-          >
-            ⏻
-          </button>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { useUi } from '../../store/uiStore';
 import { watchChat, sendChat, chatOnline, type ChatMessage, type ChatChannel } from '../../firebase/chatService';
-import { trackPresence, type OnlinePlayer } from '../../firebase/socialService';
+import { findUidByName, trackPresence, type OnlinePlayer } from '../../firebase/socialService';
 import { item, addItemToInventory } from '../../game/items';
 import { auraColor } from '../../game/prestige';
 import { fetchPublicProfile } from '../../firebase/socialService';
@@ -19,12 +19,14 @@ const CHANNELS: { id: ChatChannel; label: string }[] = [
   { id: 'private', label: 'Privé' },
 ];
 
-export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: ChatChannel; dmPeer?: string } } = {}) {
+type DmPeer = { uid: string; name: string };
+
+export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: ChatChannel; dmPeer?: DmPeer } } = {}) {
   const p = useGame((s) => s.player);
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const [activeTab, setActiveTab] = useState<ChatChannel>(initialPayload?.dmPeer ? 'private' : initialPayload?.tab ?? 'global');
-  const [dmPeer, setDmPeer] = useState<string | null>(initialPayload?.dmPeer ?? null); // conversation privée ouverte
+  const [dmPeer, setDmPeer] = useState<DmPeer | null>(initialPayload?.dmPeer ?? null); // conversation privée ouverte
   const [showNewDm, setShowNewDm] = useState(false);
   const [online, setOnline] = useState<OnlinePlayer[]>([]);
   const [viewingProfile, setViewingProfile] = useState<ProfileSeed | null>(null);
@@ -54,9 +56,9 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
     let targetId: string | undefined;
     if (activeTab === 'team') targetId = p.teamId ?? undefined;
     if (activeTab === 'guild') targetId = p.guildId ?? undefined;
-    if (activeTab === 'private') targetId = p.name; // on écoute notre propre boîte de réception
+    if (activeTab === 'private') targetId = p.uid; // ma boîte de réception est keyée par UID
     return watchChat(activeTab, targetId, setMsgs);
-  }, [activeTab, p?.teamId, p?.guildId, p?.name]);
+  }, [activeTab, p?.teamId, p?.guildId, p?.uid]);
 
   // Joueurs en ligne (pour choisir un destinataire de DM).
   useEffect(() => {
@@ -65,25 +67,26 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
   }, [p?.uid, p?.name, p?.level]);
 
   // Fils de discussion privés dérivés de la boîte de réception.
+  //
+  // ⚠️ Groupés par UID et non par pseudo : les pseudos sont libres et non
+  // uniques (`ProfileCard` laisse choisir n'importe quoi), donc deux personnes
+  // portant le même nom se retrouvaient dans le même fil. L'UID est la seule
+  // identité stable.
   const threads = useMemo(() => {
-    if (!p) return [] as { peer: string; peerUid?: string; last: ChatMessage }[];
-    const map = new Map<string, ChatMessage>();
+    if (!p) return [] as { peerUid: string; peer: string; last: ChatMessage }[];
+    const map = new Map<string, { peer: string; last: ChatMessage }>();
     for (const m of msgs) {
-      const peer = m.name === p.name ? (m.targetId ?? '') : m.name;
-      if (!peer) continue;
-      const prev = map.get(peer);
-      if (!prev || m.ts > prev.ts) map.set(peer, m);
+      const mine = m.uid === p.uid;
+      const peerUid = mine ? (m.toUid ?? '') : m.uid;
+      const peerName = mine ? (m.toName ?? peerUid) : m.name;
+      if (!peerUid || peerUid === p.uid) continue;
+      const prev = map.get(peerUid);
+      if (!prev || m.ts > prev.last.ts) map.set(peerUid, { peer: peerName, last: m });
     }
     return [...map.entries()]
-      .map(([peer, last]) => {
-        // uid du destinataire : cherché dans un message qu'il a lui-même envoyé,
-        // sinon repli sur la liste des joueurs en ligne.
-        const theirMsg = msgs.find((m) => m.name === peer);
-        const peerUid = theirMsg?.uid ?? online.find((o) => o.name === peer)?.uid;
-        return { peer, peerUid, last };
-      })
+      .map(([peerUid, v]) => ({ peerUid, peer: v.peer, last: v.last }))
       .sort((a, b) => b.last.ts - a.last.ts);
-  }, [msgs, p?.name, online]);
+  }, [msgs, p?.uid]);
 
   // Avatars des interlocuteurs privés (photo de profil au lieu de la 1ère lettre).
   useEffect(() => {
@@ -98,17 +101,17 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
   // Messages du fil ouvert.
   const dmMessages = useMemo(() => {
     if (!p || !dmPeer) return [] as ChatMessage[];
-    return msgs.filter((m) => (m.name === p.name ? m.targetId === dmPeer : m.name === dmPeer));
-  }, [msgs, dmPeer, p?.name]);
+    return msgs.filter((m) => (m.uid === p.uid ? m.toUid === dmPeer.uid : m.uid === dmPeer.uid));
+  }, [msgs, dmPeer, p?.uid]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs, dmPeer, activeTab]);
 
   if (!p) return null;
 
-  function openDm(name: string) {
-    if (name === p!.name) return;
+  function openDm(uid: string, name: string) {
+    if (uid === p!.uid) return;
     setActiveTab('private');
-    setDmPeer(name);
+    setDmPeer({ uid, name });
     setShowNewDm(false);
   }
 
@@ -138,10 +141,17 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
       if (parts.length >= 3) {
         const targetName = parts[1];
         const msgText = parts.slice(2).join(' ');
-        sendChat({ uid: p.uid, name: p.name, aura: p.prestigeAura, auraColorOn: p.auraColorOn }, msgText, 'private', targetName);
-        setActiveTab('private');
-        setDmPeer(targetName);
+        // Les MP sont keyés par UID : le raccourci doit résoudre le pseudo.
+        // D'abord parmi les joueurs en ligne, sinon via le classement (qui porte
+        // uid + name), ce qui permet d'écrire à quelqu'un de déconnecté.
         setText('');
+        void (async () => {
+          const uid = online.find((o) => o.name === targetName)?.uid ?? await findUidByName(targetName);
+          if (!uid) return useGame.getState().toast(`Joueur « ${targetName} » introuvable.`, 'bad');
+          sendChat({ uid: p.uid, name: p.name, aura: p.prestigeAura, auraColorOn: p.auraColorOn }, msgText, 'private', uid, targetName);
+          setActiveTab('private');
+          setDmPeer({ uid, name: targetName });
+        })();
         return;
       }
     }
@@ -149,7 +159,7 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
     // Onglet privé : on envoie directement à la personne du fil ouvert.
     if (activeTab === 'private') {
       if (!dmPeer) return useGame.getState().toast('Choisis un destinataire à gauche.', 'bad');
-      sendChat({ uid: p.uid, name: p.name, aura: p.prestigeAura, auraColorOn: p.auraColorOn }, t, 'private', dmPeer);
+      sendChat({ uid: p.uid, name: p.name, aura: p.prestigeAura, auraColorOn: p.auraColorOn }, t, 'private', dmPeer.uid, dmPeer.name);
       setText('');
       return;
     }
@@ -227,7 +237,7 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {onlineOthers.map((o) => (
-                      <button key={o.uid} onClick={() => openDm(o.name)} className="rounded-full bg-rose-500/20 px-2.5 py-1 text-xs hover:bg-rose-500/40">
+                      <button key={o.uid} onClick={() => openDm(o.uid, o.name)} className="rounded-full bg-rose-500/20 px-2.5 py-1 text-xs hover:bg-rose-500/40">
                         💬 {o.name} <span className="text-slate-400">Nv.{o.level}</span>
                       </button>
                     ))}
@@ -242,7 +252,7 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
               threads.map((th) => {
                 const avatarUrl = th.peerUid ? avatars[th.peerUid] : null;
                 return (
-                  <button key={th.peer} onClick={() => openDm(th.peer)} className="flex w-full items-center gap-2 rounded-lg bg-black/30 p-2 text-left hover:bg-white/10">
+                  <button key={th.peerUid} onClick={() => openDm(th.peerUid, th.peer)} className="flex w-full items-center gap-2 rounded-lg bg-black/30 p-2 text-left hover:bg-white/10">
                     {avatarUrl
                       ? <img src={avatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
                       : <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-rose-500/20 text-sm">{th.peer[0]?.toUpperCase() ?? '?'}</div>}
@@ -260,11 +270,11 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
           <>
             <div className="mb-2 flex items-center gap-2">
               <button onClick={() => setDmPeer(null)} className="rounded bg-black/30 px-2 py-1 text-xs hover:bg-white/10">← Fils</button>
-              <div className="text-sm font-semibold text-rose-200">💬 {dmPeer}</div>
-              {onlineOthers.some((o) => o.name === dmPeer) && <span className="text-[10px] text-emerald-400">● en ligne</span>}
+              <div className="text-sm font-semibold text-rose-200">💬 {dmPeer.name}</div>
+              {onlineOthers.some((o) => o.uid === dmPeer.uid) && <span className="text-[10px] text-emerald-400">● en ligne</span>}
             </div>
             <div className="flex-1 space-y-1.5 overflow-auto rounded-lg bg-black/25 p-2">
-              {dmMessages.length === 0 && <p className="text-xs text-slate-500">Début de ta conversation avec {dmPeer}.</p>}
+              {dmMessages.length === 0 && <p className="text-xs text-slate-500">Début de ta conversation avec {dmPeer.name}.</p>}
               {dmMessages.map((m, i) => {
                 const dateStr = new Date(m.ts).toLocaleDateString();
                 const prevDateStr = i > 0 ? new Date(dmMessages[i - 1].ts).toLocaleDateString() : '';
@@ -350,7 +360,7 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && send()}
             maxLength={240}
-            placeholder={activeTab === 'private' ? `Message à ${dmPeer}…` : 'Écris un message…'}
+            placeholder={activeTab === 'private' ? `Message à ${dmPeer?.name}…` : 'Écris un message…'}
             className="flex-1 rounded-lg bg-black/30 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-sky-400/50"
           />
           <button onClick={send} className="rounded-lg bg-sky-500/40 px-3 text-sm font-semibold hover:bg-sky-500/60">Envoyer</button>
@@ -361,7 +371,7 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
         <PlayerProfileModal
           row={viewingProfile}
           onClose={() => setViewingProfile(null)}
-          onMessage={() => { openDm(viewingProfile.name); setViewingProfile(null); }}
+          onMessage={() => { openDm(viewingProfile.uid, viewingProfile.name); setViewingProfile(null); }}
         />
       )}
     </div>

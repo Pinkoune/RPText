@@ -1,10 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useGame } from '../store/gameStore';
 import type { PlayerState } from '../game/types';
-import { getAllPlayers, updatePlayerAdmin, wipeAllChats, wipeEndlessScores, resetPvpSeason, triggerFullWipe, cleanupOrphanedPlayers } from '../firebase/adminService';
+import { getAllPlayers, updatePlayerAdmin, wipeAllChats, wipeEndlessScores, triggerFullWipe, cleanupOrphanedPlayers } from '../firebase/adminService';
+import { setSeason as pushSeason, fetchSeason } from '../firebase/seasonService';
+import { seasonTheme, getCurrentSeason, SEASON_THEMES, nextSeasonWithTheme, pointsSpent } from '../game/artifact';
+import { MAX_PRESTIGE_STACK } from '../game/prestige';
 import { broadcastRaid } from '../firebase/raidService';
 import { listenGuilds, leaveGuild, adminForceJoinGuild, GUILD_MAX, type Guild } from '../firebase/groupsService';
-import { ITEMS, getItem } from '../game/items';
+import { ITEMS, getItem, addItemToInventory } from '../game/items';
 import { farmProgress } from '../game/gathering';
 import { getCraftLevel } from '../game/crafting';
 import { deriveStats } from '../game/player';
@@ -15,7 +18,30 @@ export function AdminModal() {
   const { player, toast, mutate } = useGame();
   
   const [players, setPlayers] = useState<PlayerState[]>([]);
+  const [season, setSeasonNum] = useState(getCurrentSeason());
   const [loading, setLoading] = useState(true);
+
+  // Le numéro vit dans `system/season` : on le relit à l'ouverture du panneau
+  // plutôt que de faire confiance au cache du module, qui peut dater.
+  useEffect(() => { void fetchSeason().then((i) => setSeasonNum(i.number)); }, []);
+
+  /**
+   * Ouvre la saison `target`. Le libellé du thème sert uniquement à la
+   * confirmation — c'est le NUMÉRO qui détermine le thème côté jeu.
+   */
+  async function rotate(target: number, label: string, isReset = false) {
+    const msg = isReset
+      ? `Réinitialiser la saison ?\n\nUne nouvelle saison (${target} · ${label}) s'ouvre et TOUT ce qui est saisonnier repart de zéro : artefacts, rangs, passes, classements d'Abysses.\n\nLes personnages ne sont PAS touchés (niveau, équipement, métiers, maîtrises, Reliques).`
+      : `Ouvrir la saison ${target} (${label}) ?\n\nArtefacts, rangs, passes et classements d'Abysses repartent de zéro. Les personnages ne sont PAS touchés.`;
+    if (!confirm(msg)) return;
+    try {
+      const n = await pushSeason(target);
+      setSeasonNum(n);
+      toast(`🔮 Saison ${n} ouverte — ${label}.`, 'gold');
+    } catch (e: any) {
+      toast(e?.message ?? 'Impossible (hors ligne ?).', 'bad');
+    }
+  }
   const [search, setSearch] = useState('');
   const [editingPlayer, setEditingPlayer] = useState<PlayerState | null>(null);
 
@@ -29,6 +55,10 @@ export function AdminModal() {
   const [editFate, setEditFate] = useState(0);
   const [editKills, setEditKills] = useState(0);
   const [editIgnoreRestrictions, setEditIgnoreRestrictions] = useState(false);
+  const [editArtifact, setEditArtifact] = useState(0);
+  const [editShards, setEditShards] = useState(0);
+  const [editPrestige, setEditPrestige] = useState(0);
+  const [editTokens, setEditTokens] = useState(0);
 
   function getFarmXpForLevel(lvl: number) {
     let xp = 0;
@@ -63,6 +93,18 @@ export function AdminModal() {
     if (!q) return sortedItems;
     return sortedItems.filter((it) => it.name.toLowerCase().includes(q) || it.id.toLowerCase().includes(q));
   }, [sortedItems, giveItemSearch]);
+
+  /**
+   * La recherche filtrait la liste du `<select>` SANS toucher à la sélection :
+   * après avoir tapé un nom, le premier résultat s'affichait en tête mais
+   * l'état retenait toujours l'objet d'avant (au démarrage, `potion`). On
+   * croyait donner ce qu'on avait cherché, on donnait des potions de soin.
+   * On resynchronise dès que la sélection sort de la liste filtrée.
+   */
+  useEffect(() => {
+    if (filteredItems.length === 0) return;
+    if (!filteredItems.some((it) => it.id === giveItemId)) setGiveItemId(filteredItems[0].id);
+  }, [filteredItems, giveItemId]);
 
   useEffect(() => {
     loadPlayers();
@@ -101,6 +143,35 @@ export function AdminModal() {
     setEditFate(p.fateCoins ?? 0);
     setEditKills(p.kills ?? 0);
     setEditIgnoreRestrictions(p.ignoreRestrictions ?? false);
+    setEditArtifact(p.artifact?.level ?? 0);
+    setEditShards(p.relicShards ?? 0);
+    setEditPrestige(p.prestigeLevel ?? 0);
+    setEditTokens(p.classChangeTokens ?? 0);
+  }
+
+  /**
+   * Écrit le bloc saison/relique/prestige. L'artefact garde ses mods déjà
+   * achetés : seuls le niveau et l'XP du palier bougent, donc les points
+   * disponibles se recalculent (`level - pointsSpent`) sans jamais rembourser
+   * ni voler ce qui est déjà posé sur la grille. La saison de l'artefact est
+   * forcée à la saison courante, sinon la rotation le remettrait à zéro à la
+   * prochaine connexion et le test serait perdu.
+   */
+  async function saveSeasonBlock() {
+    if (!editingPlayer) return;
+    const cur = editingPlayer.artifact ?? { season, xp: 0, level: 0, mods: [] };
+    try {
+      await write({
+        artifact: { ...cur, season, level: editArtifact, xp: 0 },
+        relicShards: editShards,
+        prestigeLevel: editPrestige,
+        classChangeTokens: editTokens,
+      });
+      toast('Saison, Relique et Prestige mis à jour.', 'good');
+      loadPlayers();
+    } catch (e: any) {
+      toast('Erreur: ' + e.message, 'bad');
+    }
   }
 
   /**
@@ -206,17 +277,32 @@ export function AdminModal() {
         toast('Talents réinitialisés.', 'good');
       } else if (action === 'give_item') {
         if (giveItemQty <= 0) return;
-        const newInv = { ...editingPlayer.inventory, [giveItemId]: (editingPlayer.inventory[giveItemId] || 0) + giveItemQty };
+        const newInv = { ...editingPlayer.inventory };
+        // Passe par le helper d'inventaire : l'équipement doit être INSTANCIÉ
+        // (une clé unique par pièce). Écrire `inv[baseId] += n` créait une pile
+        // de gear que la migration d'instanciation, déjà passée, ne rattrapait
+        // plus — étoiles et durabilité auraient été partagées par la pile.
+        addItemToInventory(newInv, giveItemId, giveItemQty);
         await write({ inventory: newInv });
-        toast(`Donné ${giveItemQty}x ${ITEMS[giveItemId]?.name || giveItemId}.`, 'good');
+        toast(`Donné ${giveItemQty}x ${getItem(giveItemId)?.name || giveItemId}.`, 'good');
       } else if (action === 'remove_item') {
         if (giveItemQty <= 0) return;
-        const current = editingPlayer.inventory[giveItemId] || 0;
-        const next = Math.max(0, current - giveItemQty);
+        // Même raison : une pièce d'équipement est rangée sous une clé
+        // `baseId:qXXX:i1234`, donc `inventory[baseId]` est vide et le retrait
+        // ne faisait rien. On retire les exemplaires dont la base correspond.
         const newInv = { ...editingPlayer.inventory };
-        if (next === 0) delete newInv[giveItemId]; else newInv[giveItemId] = next;
+        let left = giveItemQty;
+        let removed = 0;
+        for (const key of Object.keys(newInv)) {
+          if (left <= 0) break;
+          if (key.split(':')[0] !== giveItemId) continue;
+          const take = Math.min(left, newInv[key]);
+          removed += take;
+          left -= take;
+          if (newInv[key] - take <= 0) delete newInv[key]; else newInv[key] -= take;
+        }
         await write({ inventory: newInv });
-        toast(`Retiré ${Math.min(giveItemQty, current)}x ${ITEMS[giveItemId]?.name || giveItemId}.`, 'good');
+        toast(removed > 0 ? `Retiré ${removed}x ${getItem(giveItemId)?.name || giveItemId}.` : 'Le joueur n\'en a aucun.', removed > 0 ? 'good' : 'bad');
       } else if (action === 'full_heal') {
         const maxHp = deriveStats(editingPlayer).maxHp;
         await write({ hp: maxHp });
@@ -340,6 +426,12 @@ export function AdminModal() {
                   </option>
                 ))}
               </select>
+              {/* Ce qui SERA donné, écrit noir sur blanc : le doute venait de là. */}
+              <div className="text-[11px] text-gray-400">
+                {filteredItems.length === 0
+                  ? <span className="text-rose-400">Aucun objet ne correspond à « {giveItemSearch} ».</span>
+                  : <>Sélection : <b className="text-green-300">{getItem(giveItemId)?.icon} {getItem(giveItemId)?.name}</b> <span className="text-gray-600">({giveItemId})</span> · {filteredItems.length} résultat{filteredItems.length > 1 ? 's' : ''}</>}
+              </div>
               <div className="flex flex-wrap gap-2">
                 <input
                   type="number"
@@ -370,10 +462,43 @@ export function AdminModal() {
               <button className="py-2 bg-yellow-700 hover:bg-yellow-600 text-yellow-100 rounded" onClick={() => handleAction('add_gold')}>🪙 +1000 Or</button>
               <button className="py-2 bg-yellow-900 hover:bg-yellow-800 text-yellow-100 rounded" onClick={() => handleAction('reset_talents')}>🔄 Reset Talents</button>
               <button className="py-2 bg-red-900 hover:bg-red-800 text-red-100 rounded col-span-2" onClick={() => handleAction('wipe_inventory')}>🗑️ Vider Inventaire</button>
-              <button className="py-2 bg-amber-800 hover:bg-amber-700 text-amber-100 rounded col-span-2 sm:col-span-3" onClick={async () => {
-                try { await broadcastRaid(); toast('🔱 Fenêtre de raid ouverte pour tous (10 min d\'inscription).', 'good'); }
-                catch { toast('Impossible (hors ligne ?).', 'bad'); }
-              }}>🔱 Ouvrir une fenêtre de Raid</button>
+            </div>
+
+            {/* ─── Saison, Relique et Prestige ──────────────────────────────
+                Ces jauges n'avaient AUCUN levier admin alors qu'elles portent
+                tout le end-game : impossible de tester un rang de saison, une
+                étoile de Relique ou un bonus de prestige sans jouer des heures.
+                Les Éclats se donnent en monnaie, pas en étoiles : une étoile
+                posée de force au-delà de la 5e laisserait `relic.effects` plus
+                court que `relic.stars`, et l'achat suivant choisirait un effet
+                du mauvais palier. */}
+            <div className="mt-6 border-t border-violet-500/30 pt-4">
+              <h3 className="text-violet-300 font-bold mb-2">Saison · Relique · Prestige</h3>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <label className="flex flex-col gap-1">
+                  <span className="text-gray-400 text-xs">🔮 Niveau d'artefact</span>
+                  <input type="number" min="0" value={editArtifact} onChange={e => setEditArtifact(Math.max(0, Number(e.target.value) || 0))} className="bg-gray-900 border border-violet-500/30 p-2 text-white rounded" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-gray-400 text-xs">✧ Éclats de Relique</span>
+                  <input type="number" min="0" value={editShards} onChange={e => setEditShards(Math.max(0, Number(e.target.value) || 0))} className="bg-gray-900 border border-violet-500/30 p-2 text-white rounded" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-gray-400 text-xs">✦ Prestige (cap {MAX_PRESTIGE_STACK} en stats)</span>
+                  <input type="number" min="0" value={editPrestige} onChange={e => setEditPrestige(Math.max(0, Number(e.target.value) || 0))} className="bg-gray-900 border border-violet-500/30 p-2 text-white rounded" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-gray-400 text-xs">🎫 Jetons de classe</span>
+                  <input type="number" min="0" value={editTokens} onChange={e => setEditTokens(Math.max(0, Number(e.target.value) || 0))} className="bg-gray-900 border border-violet-500/30 p-2 text-white rounded" />
+                </label>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-2">
+                Relique : <b className="text-violet-200">★{editingPlayer.relic?.stars ?? 0}</b> — les étoiles s'achètent en jeu avec les Éclats (le choix d'effet aux paliers 6-10 doit rester au joueur).
+                Points d'artefact disponibles après écriture : <b className="text-violet-200">{Math.max(0, editArtifact - pointsSpent(editingPlayer))}</b>.
+              </p>
+              <button className="mt-2 w-full py-2 bg-violet-800 hover:bg-violet-700 text-violet-100 rounded font-bold" onClick={saveSeasonBlock}>
+                Appliquer
+              </button>
             </div>
 
             <div className="mt-6 border-t border-green-500/30 pt-4">
@@ -476,7 +601,85 @@ export function AdminModal() {
         </div>
       ) : (
         <>
-          <div className="p-2 border-b border-red-500/30 bg-red-900/10 flex justify-end gap-2 mb-4">
+          {/* ─── Saisons ───────────────────────────────────────────────────
+              Une rotation ne touche AUCUN personnage : seuls l'artefact, le
+              rang, la passe et les classements de saison repartent de zéro, à
+              la reconnexion de chaque joueur. */}
+          <div className="pb-4">
+            <h3 className="text-violet-300 font-bold mb-1">Saisons</h3>
+            <p className="text-[11px] text-gray-500 mb-3">
+              Saison en cours : <b className="text-violet-200">{seasonTheme(season).emoji} Saison {season} · {seasonTheme(season).name}</b>.
+              Une rotation remet à zéro les artefacts, les rangs, les passes et les classements
+              d'Abysses. Niveau, équipement, métiers, maîtrises et Reliques ne sont jamais touchés.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {SEASON_THEMES.map((t, i) => {
+                const target = nextSeasonWithTheme(i, season);
+                return (
+                  <button
+                    key={t.name}
+                    className="rounded border border-white/10 py-2 text-xs hover:brightness-125"
+                    style={{ background: `${t.color}22`, color: t.color }}
+                    title={`Ouvrira la saison ${target}`}
+                    onClick={() => void rotate(target, `${t.emoji} ${t.name}`)}
+                  >
+                    <div className="text-lg leading-none">{t.emoji}</div>
+                    <div className="mt-1 font-semibold">{t.name}</div>
+                    <div className="text-[10px] opacity-70">saison {target}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                className="flex-1 rounded bg-violet-900 py-2 text-xs text-violet-100 hover:bg-violet-800"
+                onClick={() => void rotate(season + 1, `${seasonTheme(season + 1).emoji} ${seasonTheme(season + 1).name}`)}
+              >
+                🔮 Saison suivante ({season + 1})
+              </button>
+              {/* « Relancer » = repasser au numéro suivant. Réécrire le MÊME
+                  numéro ne ferait rien : les clients comparent leur saison
+                  d'artefact à la saison courante pour décider de repartir de
+                  zéro, donc un numéro identique n'est pas une rotation. */}
+              <button
+                className="flex-1 rounded bg-rose-900/70 py-2 text-xs text-rose-100 hover:bg-rose-900"
+                onClick={() => void rotate(season + 1, `${seasonTheme(season + 1).emoji} ${seasonTheme(season + 1).name}`, true)}
+              >
+                ♻️ Réinitialiser la saison
+              </button>
+            </div>
+          </div>
+
+          {/* ─── Monde ────────────────────────────────────────────────────
+              Le bouton de raid vivait dans les « Actions Rapides » de l'ÉDITEUR
+              D'UN JOUEUR alors qu'il ouvre la fenêtre pour tout le serveur : il
+              fallait choisir une victime au hasard pour lancer un événement
+              mondial. Même erreur que l'ancienne rotation de saison. */}
+          <div className="mt-6 border-t border-amber-500/30 pt-4">
+            <h3 className="text-amber-300 font-bold mb-1">Monde</h3>
+            <p className="text-[11px] text-gray-500 mb-2">
+              Événements diffusés à tous les joueurs connectés. Sans effet sur les personnages.
+            </p>
+            <button
+              className="w-full rounded bg-amber-800 py-2 text-xs font-bold text-amber-100 hover:bg-amber-700"
+              onClick={async () => {
+                try { await broadcastRaid(); toast('🔱 Fenêtre de raid ouverte pour tous (10 min d\'inscription).', 'good'); }
+                catch { toast('Impossible (hors ligne ?).', 'bad'); }
+              }}
+            >
+              🔱 Ouvrir une fenêtre de Raid (10 min)
+            </button>
+          </div>
+
+          <div className="mt-6 border-t border-red-500/30 pt-4">
+            <h3 className="text-red-300 font-bold mb-1">Zone rouge</h3>
+            <p className="text-[11px] text-gray-500 mb-2">
+              Irréversible. Les deux premiers boutons purgent une collection ; les deux derniers touchent les comptes.
+            </p>
+          </div>
+          <div className="p-2 border border-red-500/30 rounded bg-red-900/10 grid grid-cols-2 gap-2 mb-4">
             <button
               onClick={async () => {
                 if (window.confirm("Vider tous les chats (global, équipes, guildes, messagerie privée) ? Irréversible.")) {
@@ -507,21 +710,11 @@ export function AdminModal() {
             >
               🌌 VIDER CLASSEMENT ABYSSES
             </button>
-            <button
-              onClick={async () => {
-                if (window.confirm("Remettre à 0 les points de saison PvP de TOUS les joueurs (le ladder repart de zéro immédiatement, la saison en cours continue) ? Irréversible.")) {
-                  try {
-                    const n = await resetPvpSeason();
-                    toast(`Saison PvP réinitialisée (${n} joueur(s)).`, "good");
-                  } catch (e: any) {
-                    toast("Erreur reset saison: " + e.message, "bad");
-                  }
-                }
-              }}
-              className="px-3 py-1 bg-red-700/50 hover:bg-red-600/80 text-red-100 text-xs font-bold rounded border border-red-500/50"
-            >
-              🏆 RESET SAISON PVP
-            </button>
+            {/* « RESET SAISON PVP » retiré : il ne remettait à zéro que
+                `seasonPoints`, champ sorti du gameplay quand le rang de saison
+                est passé sur le niveau d'artefact. Il ne changeait plus rien à
+                l'écran. Réinitialiser la saison se fait dans le bloc Saisons
+                ci-dessus (`setSeason` fait déjà ce nettoyage Firestore). */}
             <button
               onClick={async () => {
                 if (window.confirm("DANGER : WIPE COMPLET —\n• Tous les joueurs renvoyés à la sélection de classe\n• Chat (global/équipe/guilde/privé) vidé\n• Classement (& saison PvP) vidé\n• Classement Abysses (solo+multi) vidé\n• Guildes supprimées\n• Stats/succès des joueurs repartent à zéro (nouveaux persos)\n\nEs-tu ABSOLUMENT certain ?") && window.confirm("C'EST LA PURGE FINALE. Confirmer ?")) {
@@ -564,41 +757,6 @@ export function AdminModal() {
             <button className="px-4 py-2 bg-green-900 hover:bg-green-800 text-green-100 rounded border border-green-500/30 transition-colors" onClick={loadPlayers}>
               Actualiser
             </button>
-            {player && (
-              <button 
-                className="px-4 py-2 bg-purple-900 hover:bg-purple-800 text-purple-100 rounded border border-purple-500/30 transition-colors" 
-                onClick={() => {
-                  const levels = [1, 5, 10, 15, 20, 30];
-                  console.log("=== SIMULATION DE COURBE DE STATS ===");
-                  const getBestStat = (slot: string, lvl: number, stat: 'atk' | 'def' | 'hp'): number => {
-                    const valid = Object.values(ITEMS)
-                      .filter((i: any) => i.slot === slot && (i.reqLevel || 1) <= lvl);
-                    return valid.reduce((max: number, i: any) => Math.max(max, i[stat] || 0), 0);
-                  };
-                  for (const lvl of levels) {
-                    const wp = getBestStat('weapon', lvl, 'atk');
-                    const am = getBestStat('armor', lvl, 'def');
-                    const ah = getBestStat('armor', lvl, 'hp');
-                    const tkA = getBestStat('trinket', lvl, 'atk');
-                    const tkD = getBestStat('trinket', lvl, 'def');
-                    const tkH = getBestStat('trinket', lvl, 'hp');
-                    
-                    const maxHpBase = 100 + (lvl - 1) * 20;
-                    const atkBase = 5 + (lvl - 1) * 2;
-                    const defBase = 5 + (lvl - 1) * 1;
-                    
-                    const hpStars = (ah + tkH) * 1.5;
-                    const atkStars = (wp + tkA) * 1.5;
-                    const defStars = (am + tkD) * 1.5;
-                    
-                    console.log(`Lvl ${lvl} | Base: HP=${maxHpBase} ATK=${atkBase} DEF=${defBase} | Gear (Max+Etoiles): HP=${Math.round(hpStars)} ATK=${Math.round(atkStars)} DEF=${Math.round(defStars)}`);
-                  }
-                  toast('Simulation terminée. Vérifiez la console (F12).', 'good');
-                }}
-              >
-                📊 Simuler Courbe (Console)
-              </button>
-            )}
           </div>
           
           <div className="flex-1 overflow-y-auto border border-green-500/20 rounded bg-black/40">

@@ -1,3 +1,4 @@
+import { grantArtifactXp, hasFlag } from './artifact';
 import type { PlayerState, BiomeId } from './types';
 import { addItem, cooldownLeft, applyBonuses } from './player';
 import { addQuestMetric } from './quests';
@@ -187,7 +188,9 @@ export function skillsForBiome(biome: BiomeId): GatherSkill[] {
 
 /** Cooldown UNIQUE de récolte (toutes les récoltes le partagent). */
 export function gatherCooldownLeft(p: PlayerState): number {
-  return cooldownLeft(p, 'gather', GATHER_COOLDOWN);
+  // Mod d'artefact « Moisson » : on récolte plus souvent.
+  const cd = hasFlag(p, 'harvest') ? Math.round(GATHER_COOLDOWN * 0.8) : GATHER_COOLDOWN;
+  return cooldownLeft(p, 'gather', cd);
 }
 
 export interface ExtractResult {
@@ -236,6 +239,9 @@ export function extractResource(p: PlayerState, skillId: GatherSkillId, qtyMult 
   const { xp: xpGain } = applyBonuses(p, { xp: baseXp, gold: 0 });
 
   p.farmXp = (p.farmXp ?? 0) + xpGain;
+  // Une seule jauge d'artefact pour toutes les activites : la recolte y
+  // contribue au meme titre que le combat.
+  grantArtifactXp(p, xpGain);
   const after = gatherProgress(p.farmXp);
 
   return { ok: true, itemId: d.id, qty, xpGain, leveledUp: after.level > lvlBefore, level: after.level };

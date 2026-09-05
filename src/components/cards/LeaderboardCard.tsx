@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { useUi } from '../../store/uiStore';
-import { watchLeaderboard, trackPresence, type LeaderRow, type OnlinePlayer } from '../../firebase/socialService';
+import { watchLeaderboard, trackPresence, rowPower, type LeaderRow, type OnlinePlayer } from '../../firebase/socialService';
 import { isFirebaseConfigured } from '../../firebase/config';
 import { CLASSES } from '../../game/classes';
 import { auraColor } from '../../game/prestige';
@@ -72,7 +72,10 @@ export default function LeaderboardCard() {
       )}
 
       <div>
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Top aventuriers</div>
+        <div className="mb-1 flex items-baseline justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Top aventuriers</span>
+          <span className="text-[10px] text-slate-500">classé par ⚡ Puissance</span>
+        </div>
         {loading ? (
           <div className="animate-pulse text-sm text-slate-500">Chargement…</div>
         ) : rows.length === 0 ? (
@@ -93,14 +96,25 @@ export default function LeaderboardCard() {
                 <span className="w-6 shrink-0 text-center font-bold text-slate-400">{i + 1}</span>
                 <span className="shrink-0">{CLASSES[r.classId]?.emoji ?? '🧑'}</span>
                 <button onClick={() => setViewing(r)} className="min-w-0 flex-1 truncate text-left hover:text-sky-300 hover:underline">
+                  {/* Ligne volontairement dépouillée : rang, classe, prestige, nom.
+                      L'emoji d'aura faisait doublon avec l'insigne ✦N juste à côté,
+                      et le titre entre crochets poussait le pseudo — l'information
+                      qui compte ici — hors de vue sur les noms longs. Les deux
+                      restent au Profil, qui est fait pour ça. L'aura n'est pas
+                      perdue : elle teinte toujours le pseudo. */}
                   {(r.prestigeLevel ?? 0) > 0 && (
                     <span className="mr-1 font-bold text-purple-300" title={`Prestige ${r.prestigeLevel}`}>✦{r.prestigeLevel}</span>
                   )}
-                  {r.prestigeAura && <span className="mr-1">{r.prestigeAura}</span>}
-                  {r.title && <span className="font-semibold text-amber-300 mr-1">[{r.title}]</span>}
                   <span style={{ color: auraColor(r.prestigeAura, r.auraColorOn ?? true) }}>{r.name}</span>
                 </button>
-                <span className="shrink-0 text-xs text-slate-400">Nv.{r.level} · {r.kills}☠</span>
+                {/* La Puissance mène le classement : elle passe donc devant, en
+                    évidence, et le niveau redevient une précision. */}
+                <span className="shrink-0 text-right text-xs leading-tight">
+                  <span className="block font-bold tabular-nums text-amber-300" title="Cote de Puissance — niveau, prestige, artefact, étoiles, maîtrises et Abysses réunis">
+                    ⚡{rowPower(r).toLocaleString()}
+                  </span>
+                  <span className="block text-[10px] text-slate-500">Nv.{r.level} · {r.kills}☠</span>
+                </span>
               </li>
             ))}
           </ol>

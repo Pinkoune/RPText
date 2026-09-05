@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useGame } from '../../store/gameStore';
 import { useFx } from '../../store/fxStore';
+import { isMuted, toggleMute } from '../../game/sound';
 
 export default function SettingsCard() {
   const p = useGame((s) => s.player);
   const mutate = useGame((s) => s.mutate);
   const toast = useGame((s) => s.toast);
+  const logout = useGame((s) => s.logout);
+  const backToSelect = useGame((s) => s.backToSelect);
 
   const [resetStep, setResetStep] = useState(0);
   const [resetText, setResetText] = useState('');
@@ -15,13 +18,22 @@ export default function SettingsCard() {
     muteSound: false,
     compactMode: false,
     disableAnimations: false,
+    // Desactive par defaut : voir PatchNotesModal. La pastille de la barre du
+    // haut signale les nouveautes sans bloquer l'entree en jeu.
+    showPatchModal: false,
+    ambientRail: true,
   });
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('rptext.settings');
-      if (saved) setSettings({ ...settings, ...JSON.parse(saved) });
-    } catch {}
+      // Le son fait autorité depuis game/sound (sa propre clé localStorage) :
+      // avant, cette case était enregistrée mais n'avait aucun effet.
+      const base = saved ? { ...settings, ...JSON.parse(saved) } : settings;
+      setSettings({ ...base, muteSound: isMuted() });
+    } catch {
+      setSettings((s0) => ({ ...s0, muteSound: isMuted() }));
+    }
   }, []);
 
   function updateSetting(key: keyof typeof settings, val: boolean) {
@@ -29,6 +41,8 @@ export default function SettingsCard() {
     setSettings(next);
     localStorage.setItem('rptext.settings', JSON.stringify(next));
     if (key === 'disableAnimations') useFx.getState().setReduced(val);
+    if (key === 'compactMode') useFx.getState().setCompact(val);
+    if (key === 'muteSound' && isMuted() !== val) toggleMute();
     toast('Paramètre sauvegardé.', 'info');
   }
 
@@ -57,19 +71,47 @@ export default function SettingsCard() {
       
       <div className="space-y-2 rounded-xl bg-black/25 p-4 text-sm">
         <label className="flex items-center justify-between hover:text-sky-300 cursor-pointer">
-          <span>Couper les effets sonores (si applicable)</span>
+          <span>Couper le son</span>
           <input type="checkbox" checked={settings.muteSound} onChange={(e) => updateSetting('muteSound', e.target.checked)} className="h-4 w-4 rounded bg-black/40 accent-sky-500" />
         </label>
         
         <label className="flex items-start justify-between gap-3 hover:text-sky-300 cursor-pointer">
-          <span>Réduire les animations <span className="block text-[10px] text-slate-500">Coupe le fond animé, les particules et les flous. Recommandé si le PC chauffe ou rame.</span></span>
+          <span>Mode économie <span className="block text-[10px] text-slate-500">Coupe les flous des fenêtres, les particules et le fond animé. C'est le réglage à activer si le PC chauffe ou si le ventilateur s'emballe.</span></span>
           <input type="checkbox" checked={settings.disableAnimations} onChange={(e) => updateSetting('disableAnimations', e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded bg-black/40 accent-sky-500" />
         </label>
 
-        <label className="flex items-center justify-between hover:text-sky-300 cursor-pointer">
-          <span>Mode Interface Compacte</span>
-          <input type="checkbox" checked={settings.compactMode} onChange={(e) => updateSetting('compactMode', e.target.checked)} className="h-4 w-4 rounded bg-black/40 accent-sky-500" />
+        <label className="flex items-start justify-between gap-3 hover:text-sky-300 cursor-pointer">
+          <span>Annoncer les nouveautés au démarrage <span className="block text-[10px] text-slate-500">Réaffiche la fenêtre « Quoi de neuf ? » à chaque nouvelle version. Désactivé, une pastille 📰 apparaît simplement dans la barre du haut.</span></span>
+          <input type="checkbox" checked={settings.showPatchModal} onChange={(e) => updateSetting('showPatchModal', e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded bg-black/40 accent-sky-500" />
         </label>
+
+        <label className="flex items-start justify-between gap-3 hover:text-sky-300 cursor-pointer">
+          <span>Infos ambiantes à l'écran <span className="block text-[10px] text-slate-500">Petites pastilles en bas à droite : équipe, joueurs en ligne, artefact, raid. Masquées par défaut sur mobile.</span></span>
+          <input type="checkbox" checked={settings.ambientRail} onChange={(e) => updateSetting('ambientRail', e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded bg-black/40 accent-sky-500" />
+        </label>
+
+        <label className="flex items-start justify-between gap-3 hover:text-sky-300 cursor-pointer">
+          <span>Interface compacte <span className="block text-[10px] text-slate-500">Resserre le contenu des fenêtres : textes et marges plus denses.</span></span>
+          <input type="checkbox" checked={settings.compactMode} onChange={(e) => updateSetting('compactMode', e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded bg-black/40 accent-sky-500" />
+        </label>
+      </div>
+
+      {/* Compte — ces actions étaient des boutons de la barre du haut, qu'elles
+          encombraient pour un usage rare. */}
+      <div className="space-y-2 rounded-xl bg-black/25 p-4 text-sm">
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Compte</div>
+        <button
+          onClick={() => void backToSelect()}
+          className="w-full rounded-lg bg-black/30 py-2 text-sm font-semibold text-slate-200 hover:bg-white/10"
+        >
+          🔄 Changer de personnage
+        </button>
+        <button
+          onClick={() => void logout()}
+          className="w-full rounded-lg bg-black/30 py-2 text-sm font-semibold text-slate-300 hover:bg-rose-500/30 hover:text-rose-200"
+        >
+          ⏻ Se déconnecter
+        </button>
       </div>
 
       <div className="mt-8 rounded-xl border border-rose-500/30 bg-rose-950/20 p-4">

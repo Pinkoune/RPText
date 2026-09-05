@@ -17,12 +17,17 @@ const NAV: { cat: string; items: NavItem[] }[] = [
   {
     cat: 'Aventure', items: [
       { kind: 'hunt', emoji: '⚔️', label: 'Chasse' },
+      // `cmd` prime sur `kind` dans go() : le repos exécute la commande sans
+      // ouvrir de fenêtre (le retour se fait par toast).
+      { kind: 'cooldown', cmd: 'rest', emoji: '🛌', label: 'Repos' },
+      { kind: 'cooldown', cmd: 'camp', emoji: '🏕️', label: 'Camp', reqLevel: 5 },
       { kind: 'map', emoji: '🗺️', label: 'Carte' },
       { kind: 'dungeon', emoji: '🏰', label: 'Donjons' },
       { kind: 'endless', emoji: '🕳️', label: 'Abysses' },
       { kind: 'boss', emoji: '🐲', label: 'Boss' },
       { kind: 'hunt', cmd: 'adventure', emoji: '🗡️', label: 'Aventure', reqLevel: 10 },
       { kind: 'hunt', cmd: 'miniboss', emoji: '👹', label: 'Mini-boss', reqLevel: 15 },
+      { kind: 'hunt', cmd: 'rift', emoji: '🌀', label: 'Faille', reqLevel: 20 },
       { kind: 'hunt', cmd: 'mercenary', emoji: '🎯', label: 'Mercenaire', reqLevel: 25 },
       { kind: 'hunt', cmd: 'sanctuary', emoji: '🗿', label: 'Sanctuaire', reqLevel: 40 },
       { kind: 'gather', emoji: '🌿', label: 'Récolte' },
@@ -38,6 +43,8 @@ const NAV: { cat: string; items: NavItem[] }[] = [
       { kind: 'experience', emoji: '📈', label: 'XP' },
       { kind: 'familiar', emoji: '🐾', label: 'Familiers' },
       { kind: 'experience', cmd: 'expedition', emoji: '🧭', label: 'Expédition', reqLevel: 35 },
+      { kind: 'artifact', emoji: '🔮', label: 'Artefact' },
+      { kind: 'relic', emoji: '✦', label: 'Relique', reqLevel: 20 },
       { kind: 'prestige', cmd: 'aura', emoji: '✨', label: 'Aura', reqLevel: 30 },
       { kind: 'quests', emoji: '📜', label: 'Quêtes' },
       { kind: 'achievements', emoji: '🏆', label: 'Succès' },
@@ -95,6 +102,7 @@ export default function MobileNav() {
   const open = useUi((s) => s.open);
   const close = useUi((s) => s.close);
   const focus = useUi((s) => s.focus);
+  const player = useGame((s) => s.player);
   const level = useGame((s) => s.player?.level ?? 1);
   const ignoreReq = useGame((s) => s.player?.ignoreRestrictions ?? false);
   const mutate = useGame((s) => s.mutate);
@@ -106,7 +114,12 @@ export default function MobileNav() {
   const CMD_KIND: Partial<Record<WindowKind, string>> = { hunt: 'hunt' };
 
   const reqForItem = (it: NavItem) => it.reqLevel ?? REQ_LEVEL[it.kind] ?? 1;
-  const isLockedItem = (it: NavItem) => !ignoreReq && level < reqForItem(it);
+  // Même dérogation que la barre de commandes : une renaissance ramène au Nv.1
+  // en gardant prestige, aura et Relique — les icônes correspondantes ne doivent
+  // pas se reverrouiller sur ce qu'on possède déjà.
+  const cmdFor = (it: NavItem) => COMMANDS.find((c) => c.name === (it.cmd ?? it.kind));
+  const isLockedItem = (it: NavItem) =>
+    !ignoreReq && level < reqForItem(it) && !(player && cmdFor(it)?.alsoIf?.(player));
 
   // Fenêtres réellement navigables (on ignore les modales internes).
   const tabs = windows.filter((w) => LABEL[w.kind]);

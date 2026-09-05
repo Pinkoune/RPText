@@ -136,6 +136,12 @@ export default function PresenceTracker() {
     return () => unsub();
   }, [status, player?.uid]);
 
+  // Publie présence + équipes dans le store : c'est l'unique abonnement du jeu,
+  // les autres composants (rail d'infos) lisent l'état partagé plutôt que de
+  // rouvrir un `trackPresence` concurrent.
+  const setPresence = useGame((s) => s.setPresence);
+  useEffect(() => { setPresence(onlinePlayers, teams); }, [onlinePlayers, teams, setPresence]);
+
   // Nettoyage automatique des équipes en fonction de la présence
   useEffect(() => {
     if (!player || teams.length === 0 || onlinePlayers.length === 0) return;

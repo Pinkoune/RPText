@@ -14,6 +14,10 @@ import {
   grantMonsterRewards,
   applyDeathPenalty,
   freshCombatState,
+  INTENT_INFO,
+  huntStreakMult,
+  HUNT_STREAK_CAP,
+  breakHuntStreak,
   getElementMult,
   getDmgTypeMult,
   type CombatState,
@@ -23,6 +27,7 @@ import {
   type HuntRewards,
 } from '../../game/combat';
 import { masteryProgress, biomeKills } from '../../game/mastery';
+import { currentRift, claimRift, RIFT_SHARDS } from '../../game/rift';
 import { BIOMES } from '../../game/biomes';
 
 import { useUi } from '../../store/uiStore';
@@ -52,11 +57,48 @@ interface BossTheme { label: string; sub: string; grad: string; ring: string; ba
 const BOSS_THEME: Record<string, BossTheme> = {
   miniboss:   { label: '☠ MINI-BOSS ☠', sub: 'Un colosse surgit des profondeurs.', grad: 'from-fuchsia-900/70 via-purple-800/50 to-indigo-950/70', ring: 'ring-fuchsia-500/50', bar: 'from-fuchsia-600 to-purple-400', text: 'text-fuchsia-200' },
   mercenaire: { label: '🎯 CONTRAT MERCENAIRE', sub: 'Élimine la cible pour toucher la prime.', grad: 'from-amber-900/70 via-red-800/50 to-rose-950/70', ring: 'ring-amber-500/50', bar: 'from-amber-500 to-red-400', text: 'text-amber-200' },
+  rift:       { label: '🌀 FAILLE DE LA SEMAINE', sub: 'Un défi qui changera lundi.', grad: 'from-cyan-900/70 via-sky-800/45 to-indigo-950/70', ring: 'ring-cyan-400/50', bar: 'from-cyan-400 to-sky-300', text: 'text-cyan-200' },
   sanctuaire: { label: '🏛️ ÉPREUVE DU SANCTUAIRE', sub: 'Le Gardien des Anciens juge ta valeur.', grad: 'from-yellow-800/60 via-amber-700/40 to-yellow-950/70', ring: 'ring-yellow-400/50', bar: 'from-yellow-300 to-amber-400', text: 'text-yellow-200' },
   default:    { label: '☠ COMBAT DE BOSS ☠', sub: 'Un adversaire redoutable te défie.', grad: 'from-rose-900/60 via-red-800/40 to-amber-900/50', ring: 'ring-rose-500/50', bar: 'from-rose-600 to-red-400', text: 'text-rose-200' },
 };
 
 type Status = 'fighting' | 'won' | 'lost' | 'fled';
+
+/** Nombre volant au-dessus d'une barre de PV. `side` désigne la barre visée. */
+interface Floater {
+  id: number;
+  side: 'you' | 'enemy';
+  text: string;
+  color: string;
+  big?: boolean;
+}
+
+/**
+ * Nombres volants au-dessus d'une barre de PV.
+ *
+ * Plusieurs peuvent partir du même tour (dégâts + parade + riposte) : ils sont
+ * décalés en X ET dans le temps, sinon ils se superposent et deviennent
+ * illisibles au moment précis où ils devraient informer.
+ */
+function Floaters({ items }: { items: Floater[] }) {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-2 z-10 h-0">
+      {items.map((f, i) => (
+        <span
+          key={f.id}
+          className={`hit-float absolute left-1/2 whitespace-nowrap font-black tabular-nums drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)] ${f.big ? 'text-xl' : 'text-base'}`}
+          style={{
+            color: f.color,
+            animationDelay: `${i * 130}ms`,
+            marginLeft: `${(i - (items.length - 1) / 2) * 46}px`,
+          }}
+        >
+          {f.text}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const p = useGame((s) => s.player);
@@ -78,6 +120,24 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   const [cstate, setCstate] = useState<CombatState>(freshCombatState());
   const [resourcePool, setResourcePool] = useState(0);
   const lastActionType = useRef<string | null>(null);
+
+  // ── Punch visuel ──
+  // `fx` du tour → nombres qui s'envolent, secousse, voile coloré. Purement
+  // décoratif : le journal reste la source de vérité, ces états n'influencent
+  // jamais le combat.
+  const [floaters, setFloaters] = useState<Floater[]>([]);
+  const [flash, setFlash] = useState<string | null>(null);
+  const [jolt, setJolt] = useState(false);
+  const [punch, setPunch] = useState(false);
+  const floaterId = useRef(0);
+
+  function pushFloaters(items: Omit<Floater, 'id'>[]) {
+    if (items.length === 0) return;
+    const withIds = items.map((f) => ({ ...f, id: ++floaterId.current }));
+    setFloaters((cur) => [...cur, ...withIds]);
+    const ids = new Set(withIds.map((f) => f.id));
+    setTimeout(() => setFloaters((cur) => cur.filter((f) => !ids.has(f.id))), 1000);
+  }
 
   // Réinitialise quand une nouvelle rencontre arrive (relance de hunt).
   useEffect(() => {
@@ -198,11 +258,12 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     }
 
     let newStatus: Status = 'fighting';
+    let lostStreak = 0;
     if (res.fled) newStatus = 'fled';
     else if (res.mhp <= 0) newStatus = 'won';
     else if (res.php <= 0) newStatus = 'lost';
 
-    const captured: { rewards: HuntRewards | null } = { rewards: null };
+    const captured: { rewards: HuntRewards | null; riftClaimed: boolean } = { rewards: null, riftClaimed: false };
     mutate((d) => {
       d.hp = res.php;
       if (potUse) removeItem(d, potUse, 1);
@@ -213,6 +274,13 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
 
       if (newStatus === 'won') {
         captured.rewards = grantMonsterRewards(d, m);
+        // Faille de la semaine : la prime ne tombe qu'au PREMIER passage de la
+        // semaine. Les tentatives suivantes restent possibles (et rapportent le
+        // butin de combat normal), mais ne repayent pas la prime.
+        if (encounter.riftKey) {
+          const rift = currentRift(Date.now(), d.level);
+          if (rift.key === encounter.riftKey) captured.riftClaimed = claimRift(d, rift);
+        }
         // Tracking mini-boss
         if (encounter.isMiniboss) {
           const prev = (d as any).minibossKills ?? 0;
@@ -225,6 +293,9 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       }
       if (newStatus === 'lost') {
         applyDeathPenalty(d);
+        // La série de chasse ne survit pas à la mort : c'est tout l'enjeu du
+        // « je continue ou je vais me soigner » quand elle est haute.
+        lostStreak = breakHuntStreak(d);
         if (encounter.isAdventure && d.cooldowns.adventure) {
           d.cooldowns.adventure = Date.now() - 10 * 60 * 1000; // CD devient 5 min
         }
@@ -261,18 +332,63 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     setCstate(res.state);
     setResourcePool(newResourcePool);
 
+    // ── Retour visuel du tour ──
+    const fx = res.fx;
+    const flying: Omit<Floater, 'id'>[] = [];
+    if (fx.dealt > 0) {
+      flying.push({
+        side: 'enemy',
+        text: `-${fx.dealt}${fx.crit ? ' CRIT !' : ''}`,
+        color: fx.crit ? '#fbbf24' : '#fca5a5',
+        big: fx.crit || fx.dealt > monsterHp * 0.25,
+      });
+      setPunch(false); setTimeout(() => setPunch(true), 0); setTimeout(() => setPunch(false), 400);
+    }
+    if (fx.interrupted) flying.push({ side: 'enemy', text: 'INTERROMPU', color: '#fbbf24' });
+    if (fx.parried > 0) flying.push({ side: 'you', text: `paré -${fx.parried}`, color: '#7dd3fc' });
+    if (fx.taken > 0) {
+      flying.push({
+        side: 'you',
+        text: `-${fx.taken}`,
+        color: fx.heavy || fx.exposed ? '#fb7185' : '#f8a4b4',
+        big: fx.heavy || fx.exposed,
+      });
+    }
+    pushFloaters(flying);
+    if (fx.heavy || fx.exposed) { setJolt(true); setTimeout(() => setJolt(false), 470); }
+    const flashColor = fx.exposed
+      ? 'rgba(244,63,94,0.85)'
+      : fx.interrupted
+        ? 'rgba(251,191,36,0.8)'
+        : fx.parried > 0
+          ? 'rgba(56,189,248,0.75)'
+          : fx.heavy
+            ? 'rgba(244,63,94,0.7)'
+            : null;
+    if (flashColor) {
+      setFlash(flashColor);
+      setTimeout(() => setFlash(null), 500);
+    }
+
     if (action === 'attack' || action === 'ability') playSound('hit');
+    if (action === 'parry' || action === 'interrupt') playSound('hit');
     if (newStatus === 'won') {
       setOutcome(captured.rewards);
       if (captured.rewards?.masteryUp) {
         const mu = captured.rewards.masteryUp;
         toast(`🏅 Maîtrise ${BIOMES[mu.biome as keyof typeof BIOMES]?.name ?? mu.biome} : palier atteint ! Titre « ${mu.title} » débloqué.`, 'gold');
       }
+      if (captured.riftClaimed) {
+        toast(`🌀 Faille franchie ! +${RIFT_SHARDS} ✧ Éclats de Relique.`, 'gold');
+      }
       if (captured.rewards && captured.rewards.levelsGained > 0) {
         playSound('levelup');
         useGame.getState().celebrateLevelUp();
       } else playSound('win');
-    } else if (newStatus === 'lost') playSound('lose');
+    } else if (newStatus === 'lost') {
+      playSound('lose');
+      if (lostStreak >= 3) toast(`💔 Série de ${lostStreak} kills perdue.`, 'bad');
+    }
   }
 
   const phpPct = Math.max(0, (p.hp / stats.maxHp) * 100);
@@ -297,26 +413,41 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       : { txt: '⚪ Arme neutre', cls: 'bg-white/10 text-slate-300', tip: `×${effMultVsMonster.toFixed(2)} dégâts` };
   // « Faille » : le monstre est sous contrôle → prochains coups amplifiés.
   const vulnActive = cstate.chill > 0 || cstate.stun > 0;
+  const intent = cstate.intent;
   // Maîtrise du biome courant (progression vers le palier suivant).
   const mastery = masteryProgress(biomeKills(p, p.biome));
 
   return (
-    <div className="space-y-3">
+    <div className={`relative space-y-3 ${jolt ? 'hit-jolt' : ''}`}>
+      {/* Voile coloré du tour : bleu = parade, ambre = interruption réussie,
+          rouge = coup pris de plein fouet. */}
+      {flash && (
+        <div
+          className="hit-flash pointer-events-none absolute -inset-3 z-20 rounded-2xl"
+          style={{ background: `radial-gradient(ellipse at center, transparent 35%, ${flash} 100%)` }}
+        />
+      )}
       {theme ? (
         <>
           {/* Arène de boss (dédiée, thématisée) */}
-          <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${theme.grad} p-4 text-center ring-1 ${theme.ring}`}>
-            <div className={`animate-pulse text-[11px] font-black uppercase tracking-[0.28em] ${theme.text}`}>{theme.label}</div>
-            <div className="mt-2 grid place-items-center">
-              <div className={`grid h-20 w-20 place-items-center rounded-full bg-black/40 text-5xl ring-2 ${theme.ring} ${phpPct > 0 && fighting ? 'animate-pulseGlow' : ''}`}>
+          {/* Arène compactée : l'emblème faisait 80px et le bloc poussait les
+              boutons d'action hors de l'écran — il fallait scroller pour jouer
+              son tour, sur la carte où c'est le plus pénible. */}
+          <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${theme.grad} p-3 ring-1 ${theme.ring}`}>
+            <div className={`text-center text-[10px] font-black uppercase tracking-[0.22em] ${theme.text}`}>{theme.label}</div>
+            <div className="relative mt-2 flex items-center gap-3">
+              <Floaters items={floaters.filter((f) => f.side === 'enemy')} />
+              <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-full bg-black/40 text-3xl ring-2 ${theme.ring} ${punch ? 'hit-punch' : phpPct > 0 && fighting ? 'animate-pulseGlow' : ''}`}>
                 {m.emoji}
               </div>
+              <div className="min-w-0 flex-1 text-left">
+                <div className="truncate text-base font-extrabold text-white drop-shadow">{m.name}</div>
+                <div className="truncate text-[11px] italic text-white/70">{theme.sub}</div>
+              </div>
             </div>
-            <div className="mt-2 text-lg font-extrabold text-white drop-shadow">{m.name}</div>
-            <div className="text-[11px] italic text-white/70">{theme.sub}</div>
 
-            {/* Barre de PV du boss (grande, thématisée) */}
-            <div className="mx-auto mt-3 max-w-xs">
+            {/* Barre de PV du boss */}
+            <div className="mt-2">
               <div className="mb-1 flex items-center justify-between text-[11px] text-white/80">
                 <span className="inline-flex items-center gap-1.5">PV du boss {statusBadges}</span>
                 <span className="tabular-nums">{Math.max(0, Math.round(monsterHp)).toLocaleString()} / {m.hp.toLocaleString()}</span>
@@ -328,7 +459,8 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
           </div>
 
           {/* Barre du joueur (pleine largeur sous l'arène) */}
-          <div className="rounded-lg bg-black/25 p-2">
+          <div className="relative rounded-lg bg-black/25 p-2">
+            <Floaters items={floaters.filter((f) => f.side === 'you')} />
             <div className="mb-1 flex items-center justify-between text-xs">
               <span className="font-semibold">
                 ⚔️ Toi
@@ -356,7 +488,8 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
       ) : (
         /* HUD classique de chasse */
         <div className="flex items-stretch gap-2">
-          <div className="flex-1 rounded-lg bg-black/25 p-2">
+          <div className="relative flex-1 rounded-lg bg-black/25 p-2">
+            <Floaters items={floaters.filter((f) => f.side === 'you')} />
             <div className="mb-1 flex items-center justify-between text-xs">
               <span className="font-semibold">
                 ⚔️ Toi
@@ -381,30 +514,51 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
             )}
           </div>
           <div className="grid place-items-center text-xs text-slate-500">VS</div>
-          <div className="flex-1 rounded-lg bg-black/25 p-2">
+          <div className="relative flex-1 rounded-lg bg-black/25 p-2">
+            <Floaters items={floaters.filter((f) => f.side === 'enemy')} />
             <div className="mb-1 flex items-center justify-between text-xs">
               <span className="inline-flex items-center gap-1 font-semibold">
-                <MonsterIcon id={m.id} emoji={m.emoji} size={16} title={m.name} /> {m.name} {statusBadges}
+                <span className={punch ? 'hit-punch inline-flex' : 'inline-flex'}>
+                  <MonsterIcon id={m.id} emoji={m.emoji} size={16} title={m.name} />
+                </span> {m.name} {statusBadges}
               </span>
               <span className="tabular-nums text-slate-400">{Math.max(0, Math.round(monsterHp))}/{m.hp}</span>
             </div>
             <div className="h-2 overflow-hidden rounded bg-black/40">
               <div className="h-2 rounded bg-orange-400 transition-all duration-300" style={{ width: `${mhpPct}%` }} />
             </div>
+            {/* Télégraphe : ce que le monstre prépare. Logé sous SA barre plutôt
+                qu'en bandeau séparé — c'est son information, pas la tienne. */}
+            {intent && (
+              <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: INTENT_INFO[intent].color }}>
+                <span className={intent === 'heavy' ? 'animate-pulse' : ''}>{INTENT_INFO[intent].icon}</span>
+                {INTENT_INFO[intent].label}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Bandeau tactique : efficacité d'arme + faille + maîtrise du biome */}
+      {/* Une seule ligne d'état : série, arme, faille, maîtrise. Trois bandeaux
+          séparés surchargeaient l'écran pour une information de coin d'œil. */}
       {fighting && (
-        <div className="flex flex-wrap items-center gap-2 text-[11px]">
-          <span className={`rounded px-2 py-0.5 font-medium ${effBadge.cls}`} title={effBadge.tip}>{effBadge.txt}</span>
-          {vulnActive && <span className="rounded px-2 py-0.5 font-bold bg-amber-400 text-black animate-pulse" title="Monstre sous contrôle : tes coups infligent +50% de dégâts">⚡ FAILLE — burst !</span>}
-          <span className="ml-auto inline-flex items-center gap-1.5 text-slate-400" title={mastery.next ? `${mastery.into}/${mastery.need} vers le palier suivant` : 'Maîtrise maximale'}>
-            🏅 {BIOMES[p.biome as keyof typeof BIOMES]?.name ?? p.biome} · {mastery.label}
-            {mastery.bonus > 0 && <span className="text-emerald-300">+{Math.round(mastery.bonus * 100)}% XP/Or</span>}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+          {(p.huntStreak ?? 0) > 0 && (
+            <span
+              className="font-bold"
+              style={{ color: '#e2913f' }}
+              title={`Série de ${p.huntStreak} kills sans mourir — XP et or multipliés (+${Math.round((huntStreakMult(p) - 1) * 100)}%). Perdue à la mort.`}
+            >
+              🔥 ×{p.huntStreak}{(p.huntStreak ?? 0) >= HUNT_STREAK_CAP ? ' MAX' : ''}
+            </span>
+          )}
+          <span className={`rounded px-1.5 py-0.5 ${effBadge.cls}`} title={effBadge.tip}>{effBadge.txt}</span>
+          {vulnActive && <span className="rounded bg-amber-400 px-1.5 py-0.5 font-bold text-black animate-pulse" title="Monstre sous contrôle : tes coups infligent +50% de dégâts">⚡ FAILLE</span>}
+          <span className="ml-auto inline-flex items-center gap-1.5 text-slate-500" title={mastery.next ? `${mastery.into}/${mastery.need} vers le palier suivant` : 'Maîtrise maximale'}>
+            🏅 {mastery.label}
+            {mastery.bonus > 0 && <span className="text-emerald-300">+{Math.round(mastery.bonus * 100)}%</span>}
             {mastery.next != null && (
-              <span className="inline-block h-1.5 w-16 overflow-hidden rounded bg-black/40 align-middle">
+              <span className="inline-block h-1.5 w-10 overflow-hidden rounded bg-black/40 align-middle">
                 <span className="block h-full rounded bg-amber-400" style={{ width: `${Math.min(100, (mastery.into / mastery.need) * 100)}%` }} />
               </span>
             )}
@@ -423,9 +577,11 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
         <div ref={logEnd} />
       </div>
 
-      {/* Actions */}
+      {/* Actions — collées en bas de la zone défilable. Quelle que soit la
+          longueur du journal ou la taille de l'arène, jouer son tour ne demande
+          jamais de faire défiler la carte. */}
       {fighting ? (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="sticky bottom-0 -mx-4 -mb-4 grid grid-cols-2 gap-2 border-t border-white/10 bg-[#0d1324]/95 px-4 pb-4 pt-3 backdrop-blur-sm">
           {showPotions ? (
             <div className="col-span-2 space-y-2">
               <div className="text-xs font-semibold text-slate-300">Choisir un soin :</div>
@@ -445,7 +601,29 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
             </div>
           ) : (
             <>
-              <button onClick={() => act('attack')} className="col-span-1 rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
+              <button onClick={() => act('attack')} className="col-span-2 rounded-lg bg-red-500/40 py-2.5 text-sm font-bold hover:bg-red-500/60">⚔️ Attaquer</button>
+              {/* Réponses au télégraphe. Chacune porte SON effet en sous-titre :
+                  sans ça les deux se ressemblaient, et rien ne disait que
+                  l'interruption est un pari (elle punit si le monstre ne
+                  préparait rien) là où la parade ne peut jamais mal tourner.
+                  La parade s'allume sur un coup lourd (gros blocage = grosse
+                  riposte), l'interruption sur tout ce qui est annoncé. */}
+              <button
+                onClick={() => act('parry')}
+                title="Tu ne frappes pas, tu n'encaisses qu'un quart des dégâts et tu renvoies 70% de ce que tu as bloqué. Sans risque."
+                className={`col-span-1 flex flex-col items-center rounded-lg py-1.5 leading-tight transition ${intent === 'heavy' ? 'bg-sky-500/60 text-white ring-1 ring-sky-300 hover:bg-sky-500/80' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
+              >
+                <span className="text-xs font-semibold">🛡️ Parer</span>
+                <span className="text-[9px] opacity-70">encaisse ¼ · riposte</span>
+              </button>
+              <button
+                onClick={() => act('interrupt')}
+                title="Annule le coup annoncé et étourdit (ouvre la Faille). Mais s'il ne préparait rien, tu te découvres et prends 50% de dégâts en plus."
+                className={`col-span-1 flex flex-col items-center rounded-lg py-1.5 leading-tight transition ${intent === 'heavy' || intent === 'special' ? 'bg-amber-500/60 text-white ring-1 ring-amber-300 hover:bg-amber-500/80' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
+              >
+                <span className="text-xs font-semibold">⚡ Interrompre</span>
+                <span className="text-[9px] opacity-70">annule · risqué</span>
+              </button>
               {activeSkills.map(skill => {
                 const onCd = (skillCds[skill.id] || 0) > 0;
                 const lacksResource = !!skill.resource && resourcePool < skill.resource.cost;
@@ -479,6 +657,14 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
                 🧪 Potion ({potionCount})
               </button>
               <button onClick={() => act('flee')} className="rounded-lg bg-slate-500/30 py-2.5 text-sm font-bold hover:bg-slate-500/50">🏃 Fuir</button>
+              {activeSkills.length === 0 && (
+                <button
+                  onClick={() => useUi.getState().open('talents', undefined, { singleton: true })}
+                  className="col-span-2 rounded-lg border border-dashed border-white/15 py-1.5 text-[11px] text-slate-500 hover:border-sky-400/40 hover:text-sky-300"
+                >
+                  Aucune compétence équipée — ouvrir l'arbre de talents
+                </button>
+              )}
             </>
           )}
         </div>

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { CLASSES, xpToNext } from '../../game/classes';
+import { powerScore, MASTERY_MAX } from '../../game/power';
+import { PROFILE_BGS, profileBg } from '../../game/seasonpass';
 import { BIOMES } from '../../game/biomes';
 import { deriveStats, changeBaseClass, BASE_CLASSES } from '../../game/player';
 import { farmProgress } from '../../game/gathering';
@@ -49,6 +51,7 @@ export default function ProfileCard() {
   if (!p) return null;
   const cls = CLASSES[p.classId];
   const prestigeN = Math.min(p.prestigeLevel ?? 0, 5);
+  const power = powerScore(p);
   const tokens = p.classChangeTokens ?? 0;
 
   function useToken(newClass: ClassId) {
@@ -76,6 +79,12 @@ export default function ProfileCard() {
 
   return (
     <div className="space-y-4">
+      {/* Fond de profil : cosmétique gagné à la passe de saison. Il habille
+          l'en-tête plutôt que toute la carte, pour rester lisible. */}
+      <div
+        className="-mx-1 rounded-xl px-3 py-3"
+        style={{ background: profileBg(p.profileBg)?.css ?? 'transparent' }}
+      >
       <div className="flex items-start gap-3">
         {p.photoURL ? (
           <img src={p.photoURL} alt="" className="h-14 w-14 rounded-xl" />
@@ -116,11 +125,60 @@ export default function ProfileCard() {
         </div>
       </div>
 
+      </div>
+
+      {/* Choix du fond, seulement si le joueur en a débloqué. */}
+      {(p.unlockedBgs?.length ?? 0) > 0 && (
+        <div className="rounded-lg bg-black/25 px-3 py-2">
+          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Fond de profil</div>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => mutate((d) => { d.profileBg = undefined; })}
+              className={`rounded-lg px-2.5 py-1 text-[11px] ${!p.profileBg ? 'bg-sky-500/30 text-sky-100' : 'bg-black/30 text-slate-400 hover:bg-white/10'}`}
+            >
+              Aucun
+            </button>
+            {PROFILE_BGS.filter((b) => p.unlockedBgs!.includes(b.id)).map((b) => (
+              <button
+                key={b.id}
+                onClick={() => mutate((d) => { d.profileBg = b.id; })}
+                className={`rounded-lg px-2.5 py-1 text-[11px] ${p.profileBg === b.id ? 'ring-1 ring-sky-400 text-slate-100' : 'text-slate-300 hover:brightness-125'}`}
+                style={{ background: b.css }}
+              >
+                {b.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {(p.talentPoints ?? 0) > 0 && (
         <div className="rounded-lg border border-sky-400/40 bg-sky-500/15 px-3 py-1.5 text-xs">
           🌟 {p.talentPoints} point{p.talentPoints > 1 ? 's' : ''} de talent à dépenser — tape « talents ».
         </div>
       )}
+
+      {/* Cote de Puissance : le classement se joue là-dessus, donc on montre
+          d'où vient le score — sinon c'est un nombre opaque de plus. Chaque
+          ligne est un levier concret sur lequel le joueur peut agir. */}
+      <div className="rounded-lg bg-black/25 px-3 py-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">⚡ Puissance</span>
+          <span className="text-base font-bold tabular-nums text-amber-300">{power.total.toLocaleString()}</span>
+        </div>
+        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-400">
+          <span>Niveau <b className="tabular-nums text-slate-200">{power.level}</b></span>
+          {power.prestige > 0 && <span>Prestige <b className="tabular-nums text-purple-300">{power.prestige}</b></span>}
+          <span>Artefact <b className="tabular-nums text-slate-200">{power.artifact}</b></span>
+          <span>Étoiles <b className="tabular-nums text-slate-200">{power.stars}</b></span>
+          <span>Maîtrises <b className="tabular-nums text-slate-200">{power.mastery}</b>/{MASTERY_MAX}</span>
+          {power.endless > 0 && <span>Abysses <b className="tabular-nums text-slate-200">{power.endless}</b></span>}
+          {power.relic > 0 && <span>Relique <b className="tabular-nums text-amber-300">{power.relic}</b></span>}
+          {power.kills > 0 && <span>Kills <b className="tabular-nums text-rose-300">{power.kills}</b></span>}
+          {power.dungeons > 0 && <span>Donjons <b className="tabular-nums text-slate-200">{power.dungeons}</b></span>}
+          {power.streak > 0 && <span>Série <b className="tabular-nums text-slate-200">{power.streak}</b></span>}
+        </div>
+      </div>
 
       {/* Prestige : insigne + bonus permanent */}
       {(p.prestigeLevel ?? 0) > 0 && (

@@ -29,6 +29,9 @@ import {
   GiStonePile, GiFireAxe, GiFlameSpin, GiAbdominalArmor, GiFireBottle, GiCrenelCrown, GiAngelWings,
   // Nécropole de Cristal (crypt, niv.30) + end-game
   GiCrystalCluster, GiBoneKnife, GiDeadHead, GiCrystalWand, GiRibcage,
+  // Abysse (givre du vide, niv.40) + palier primordial (niv.46-48)
+  GiIceSpear, GiIceBolt, GiFrozenOrb, GiIceShield, GiFrostfire, GiSnowflake2,
+  GiSunbeams, GiStarSwirl, GiCrystalBall, GiHolySymbol, GiWingedShield,
 } from 'react-icons/gi';
 
 // Registre id d'objet -> icône Game Icons (react-icons/gi). Les objets non mappés
@@ -114,6 +117,13 @@ export const ITEM_ICONS: Record<string, IconType> = {
   crypt_shard: GiCrystalCluster, bone_dust: GiBoneKnife, wraith_essence: GiDeadHead,
   crypt_edge: GiSwordWound, crypt_bow: GiBowArrow, crypt_scepter: GiWizardStaff,
   crypt_rod: GiMagicPalm, crypt_plate: GiRibcage, soul_ward: GiCrystalWand,
+  // Palier Givre du Vide (niv.40, ressources de l'Abysse)
+  rimeblade: GiIceSpear, rimebow: GiIceBolt, rimescepter: GiFrozenOrb,
+  rimestaff: GiIceShield, rime_plate: GiFrostfire, rime_sigil: GiSnowflake2,
+  // Palier Primordial (niv.46-48, le dernier)
+  primordial_edge: GiSunbeams, primordial_bow: GiStarSwirl,
+  primordial_scepter: GiCrystalBall, primordial_staff: GiHolySymbol,
+  primordial_aegis: GiWingedShield,
 };
 
 export function hasItemIcon(id: string): boolean {

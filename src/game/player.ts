@@ -1,5 +1,5 @@
 import type { PlayerState, ClassId, Stats, QuestState, ItemDef, EquipmentBuild, EquippedGear } from './types';
-import { CLASSES, xpToNext, xpToNextV3, MAX_LEVEL } from './classes';
+import { CLASSES, xpToNext, xpToNextV3, xpToNextV4, MAX_LEVEL } from './classes';
 import { getTeamBonus, getGuildBonus, getGuildGoldBonus } from '../firebase/groupsService';
 import { item, isGearId, hasInstanceTag, mintInstanceId, addItemToInventory } from './items';
 import { RECIPES, getCraftLevel } from './crafting';
@@ -7,8 +7,11 @@ import { BIOMES, BIOME_LIST } from './biomes';
 import { familiarBonus, familiarAbility } from './familiars';
 import { talentMods } from './talents';
 import { activeEventEffect } from './events';
-import { ensureSeason, seasonId } from './season';
-import { prestigeBonus } from './prestige';
+import { ensureSeason, seasonId, grantEndOfSeason } from './season';
+import { prestigeBonus, prestigeStatMult, prestigeXpGoldMult } from './prestige';
+import { freshArtifact, rotateSeason, artifactPowerPct, grantArtifactXp } from './artifact';
+import { freshRelic, relicStatMult } from './relic';
+import { ensureSeasonPass } from './seasonpass';
 
 /** Incrémenter force un reset unique des talents de tous les joueurs (bugfix). */
 export const TALENT_RESET_VERSION = 3;
@@ -61,20 +64,37 @@ export function freshQuestState(now = Date.now()): QuestState {
 
 /** Complète les champs manquants des anciennes sauvegardes (migration douce). */
 export function migratePlayer(p: PlayerState): PlayerState {
-  // Courbe v4 (niveau max 50) : reconstitue l'XP totale sous l'ancienne courbe (v3,
-  // plafond 30) puis re-nivelle sous la nouvelle. Une seule fois par joueur.
-  if (p.curveVersion !== 4) {
+  // ─── Migrations de courbe d'XP ────────────────────────────────────────────
+  // Principe commun : on reconstitue l'XP TOTALE accumulée sous l'ancienne
+  // courbe, puis on re-nivelle sous la nouvelle. Les niveaux gagnés au passage
+  // créditent leurs points de talent (1 par niveau, comme grantXp).
+  const relevel = (oldCurve: (l: number) => number, newCurve: (l: number) => number) => {
+    const prevLevel = Math.max(1, p.level || 1);
     let totalXp = Math.max(0, p.xp || 0);
-    for (let l = 1; l < (p.level || 1); l++) {
-      const step = xpToNextV3(l);
+    for (let l = 1; l < prevLevel; l++) {
+      const step = oldCurve(l);
       if (Number.isFinite(step)) totalXp += step;
     }
     let lvl = 1;
     let rem = totalXp;
-    while (lvl < MAX_LEVEL && rem >= xpToNext(lvl)) { rem -= xpToNext(lvl); lvl += 1; }
+    while (lvl < MAX_LEVEL && rem >= newCurve(lvl)) { rem -= newCurve(lvl); lvl += 1; }
     p.level = lvl;
     p.xp = Math.max(0, Math.floor(rem));
+    const gained = lvl - prevLevel;
+    if (gained > 0) p.talentPoints = Math.max(0, (p.talentPoints ?? 0) + gained);
+  };
+
+  // v3 (plafond 30) → v4 (plafond 50).
+  if ((p.curveVersion ?? 0) < 4) {
+    relevel(xpToNextV3, xpToNextV4);
     p.curveVersion = 4;
+  }
+  // v4 → v5 : end-game adouci (×1.18 → ×1.10). Les joueurs bloqués dans la
+  // tranche 40-50 récupèrent d'un coup les niveaux que leur XP déjà accumulée
+  // valait sous l'ancienne courbe — et les points de talent qui vont avec.
+  if (p.curveVersion === 4) {
+    relevel(xpToNextV4, xpToNext);
+    p.curveVersion = 5;
   }
   if (!p.quests) p.quests = freshQuestState();
   if (!p.settledDuels) p.settledDuels = [];
@@ -90,12 +110,41 @@ export function migratePlayer(p: PlayerState): PlayerState {
   if (p.endlessSessionId === undefined) p.endlessSessionId = null;
   if (!p.settledPvpDuels) p.settledPvpDuels = [];
   if (p.pvpDuelSessionId === undefined) p.pvpDuelSessionId = null;
+  // Personnages d'avant le multi-slot : ils occupent de fait l'emplacement 0,
+  // dont la clé est celle du compte.
+  if (p.accountUid === undefined) p.accountUid = accountOf(p.uid);
+  if (p.charSlot === undefined) p.charSlot = p.uid.includes('__') ? Number(p.uid.split('__')[1]) || 0 : 0;
   if (p.prestigeLevel === undefined) p.prestigeLevel = 0;
+  if (p.neantVictories === undefined) p.neantVictories = 0;
+  // Camp : on demarre le compteur maintenant plutot qu'a la creation du
+  // personnage, sinon un compte inactif depuis des mois recolterait
+  // instantanement le plafond des 12h a sa premiere reconnexion.
+  if (p.campCollectedAt === undefined) p.campCollectedAt = Date.now();
+  if (!p.dungeonTiers) p.dungeonTiers = {};
+  if (p.huntStreak === undefined) p.huntStreak = 0;
+  if (p.bestHuntStreak === undefined) p.bestHuntStreak = 0;
+  if (p.rebirthAvailable === undefined) p.rebirthAvailable = false;
+  // Artefact de saison : créé au besoin, puis remis à zéro si la saison a
+  // tourné depuis la dernière connexion (le personnage, lui, n'est pas touché).
+  if (!p.artifact) p.artifact = freshArtifact();
+  // La rotation rend le niveau d'artefact ATTEINT la saison passée — le seul
+  // moment où on le connaît encore. C'est lui qui détermine la récompense de
+  // rang, le classement de saison étant désormais indexé dessus.
+  const archived = rotateSeason(p);
+  if (archived) grantEndOfSeason(p, `s${archived.season}`, archived.artifactLevel);
   if (p.classChangeTokens === undefined) p.classChangeTokens = 0;
   if (p.playtimeMs === undefined) p.playtimeMs = 0;
   if (p.cjWins == null) p.cjWins = 0;
   if (p.teamId === undefined) p.teamId = null;
   if (p.endlessBest === undefined) p.endlessBest = 0;
+  // Relique : jamais réinitialisée par `applyRebirth` ni par `rotateSeason`,
+  // c'est tout son intérêt. On se contente de la créer si elle manque.
+  if (!p.relic) p.relic = freshRelic();
+  if (p.relicShards === undefined) p.relicShards = 0;
+  if (!p.unlockedBgs) p.unlockedBgs = [];
+  // Passe de saison : la piste se vide à la rotation (les titres et fonds déjà
+  // obtenus, eux, restent acquis).
+  ensureSeasonPass(p);
   if (!p.enchants) p.enchants = { weapon: [], armor: [], trinket: [] };
   // Titre par défaut retiré : les nouveaux joueurs n'ont plus aucun titre tant
   // qu'ils n'en débloquent pas un — nettoie ceux qui l'ont encore.
@@ -259,7 +308,11 @@ export function migratePlayer(p: PlayerState): PlayerState {
       let newLevel = 1;
       let remainingXp = maxLegitXp;
       
-      while (remainingXp >= xpToNext(newLevel) && newLevel < 30) {
+      // Plafond du re-nivellement : MAX_LEVEL, pas la constante 30 codée en dur
+      // à l'époque où c'était le niveau maximum. Depuis le passage à 50, un
+      // joueur qui déclenchait ce garde-fou était ramené à 30 même quand son XP
+      // légitime en valait davantage — l'anti-triche punissait au-delà de son rôle.
+      while (remainingXp >= xpToNext(newLevel) && newLevel < MAX_LEVEL) {
         remainingXp -= xpToNext(newLevel);
         newLevel++;
       }
@@ -458,16 +511,38 @@ export function migratePlayer(p: PlayerState): PlayerState {
   return p;
 }
 
+/** Nombre d'emplacements de personnage par compte. */
+export const MAX_CHARACTERS = 3;
+
+/**
+ * Clé de document d'un personnage. Le slot 0 garde la clé NUE du compte : les
+ * sauvegardes d'avant le multi-personnages restent donc valides telles quelles,
+ * sans migration Firestore. Les slots suivants sont suffixés.
+ */
+export function charKey(accountUid: string, slot: number): string {
+  return slot === 0 ? accountUid : `${accountUid}__${slot}`;
+}
+
+/** Compte propriétaire d'une clé de personnage (inverse de `charKey`). */
+export function accountOf(charId: string): string {
+  const i = charId.indexOf('__');
+  return i === -1 ? charId : charId.slice(0, i);
+}
+
 export function createPlayer(
-  uid: string,
+  accountUid: string,
   name: string,
   photoURL: string | null,
   classId: ClassId,
+  slot = 0,
 ): PlayerState {
   const cls = CLASSES[classId];
   const weapon = starterWeapon(classId);
+  const uid = charKey(accountUid, slot);
   const p: PlayerState = {
     uid,
+    accountUid,
+    charSlot: slot,
     name,
     photoURL: photoURL ?? null,
     classId,
@@ -480,6 +555,9 @@ export function createPlayer(
     inventory: { potion: 2 },
     equipped: { weapon, armor: null, trinket: null, tool: null, profession_armor: null },
     endlessBest: 0,
+    relic: freshRelic(),
+    relicShards: 0,
+    unlockedBgs: [],
     endlessSessionId: null,
     settledEndless: [],
     pvpDuelSessionId: null,
@@ -655,12 +733,19 @@ export function deriveStats(p: PlayerState, skipEquipCheck = false): Stats {
   }
 
   const prestige = prestigeBonus(p.prestigeAura);
-  // Bonus permanent de prestige (rituel Nv.50) : +8% ATK/DEF/PV par prestige,
-  // plafonné à 5 (voir ascension.ts PRESTIGE_BONUS_PER_LEVEL / MAX_PRESTIGE_STACK).
-  const presMult = 1 + Math.min(p.prestigeLevel ?? 0, 5) * 0.08;
-  atk = Math.round(atk * (1 + mods.atkPct + evt.atkPct + setAtkPct + enchAtkPct + prestige.atkPct) * presMult);
-  def = Math.round(def * (1 + mods.defPct + evt.defPct + setDefPct + enchDefPct + prestige.defPct) * presMult);
-  maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct + setHpPct + enchHpPct + prestige.hpPct) * presMult);
+  // Bonus permanent de prestige (rituel Nv.50). Valeurs dans prestige.ts —
+  // surtout pas réécrites ici : c'est ce doublon qui les avait fait diverger de
+  // l'interface, où elles n'apparaissaient plus du tout.
+  const presMult = prestigeStatMult(p);
+  // Artefact de saison : progression sans fin qui prend le relais du niveau une
+  // fois le plafond atteint. Logarithmique, donc sans plafond mais sans dérive.
+  const artMult = 1 + artifactPowerPct(p.artifact?.level ?? 0);
+  // Relique : seules les étoiles 1 à 5 donnent des stats (les suivantes donnent
+  // des effets, versés dans CombatMods par `applyRelicMods`).
+  const relMult = relicStatMult(p);
+  atk = Math.round(atk * (1 + mods.atkPct + evt.atkPct + setAtkPct + enchAtkPct + prestige.atkPct) * presMult * artMult * relMult);
+  def = Math.round(def * (1 + mods.defPct + evt.defPct + setDefPct + enchDefPct + prestige.defPct) * presMult * artMult * relMult);
+  maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct + setHpPct + enchHpPct + prestige.hpPct) * presMult * artMult * relMult);
 
 
   return { level: p.level, maxHp, atk, def, hp: Math.min(p.hp, maxHp), maxCp, maxGp, weaponElement,
@@ -794,8 +879,8 @@ export function applyBonuses(p: PlayerState, base: { xp: number; gold: number })
   const guildGoldMult = fin(getGuildGoldBonus(p.guildId), 1);
   const evt = activeEventEffect(p.biome);
   const prestige = prestigeBonus(p.prestigeAura);
-  // +10% XP/Or par prestige (plafonné à 5) — voir ascension.ts.
-  const presMult = 1 + Math.min(p.prestigeLevel ?? 0, 5) * 0.10;
+  // XP/Or par prestige — même source unique (prestige.ts).
+  const presMult = prestigeXpGoldMult(p);
   const baseXp = fin(base.xp, 0);
   const baseGold = fin(base.gold, 0);
   return {
@@ -806,6 +891,10 @@ export function applyBonuses(p: PlayerState, base: { xp: number; gold: number })
 
 /** Applique de l'XP et gère les montées de niveau. Retourne les niveaux gagnés. */
 export function grantXp(p: PlayerState, amount: number): number {
+  // L'artefact avance sur la MÊME XP que le personnage : une seule jauge qui
+  // monte quoi que le joueur fasse, et qui continue d'avancer une fois le
+  // niveau 50 atteint (où `p.xp` ne sert plus à rien).
+  grantArtifactXp(p, amount);
   p.xp += amount;
   let gained = 0;
   while (p.xp >= xpToNext(p.level)) {

@@ -95,6 +95,12 @@ export interface DungeonSession {
   startedAt: number;
   /** Raid : timestamp de démarrage automatique (fin des inscriptions, :10). */
   raidStartsAt?: number;
+  /**
+   * Palier de difficulté (1 = normal). Chaque palier renforce le donjon et ses
+   * récompenses, ce qui rend TOUT le contenu déjà écrit rejouable sans fin —
+   * le meilleur rapport contenu/travail du jeu.
+   */
+  tier?: number;
 }
 
 const ABILITY_CD = 4;
@@ -127,7 +133,7 @@ export function listenDungeonOpenBroadcast(cb: (b: DungeonOpenBroadcast | null) 
   return onValue(ref(rtdb, 'world/dungeonOpen'), (snap) => cb((snap.val() as DungeonOpenBroadcast | null) ?? null));
 }
 
-export async function createDungeonLobby(hostUid: string, hostName: string, hostClass: ClassId, dungeonId: string, pStats: any, pMods: any, pLevel: number, aura?: string | null, auraColorOn?: boolean, setProc?: SetProc | null): Promise<string> {
+export async function createDungeonLobby(hostUid: string, hostName: string, hostClass: ClassId, dungeonId: string, pStats: any, pMods: any, pLevel: number, aura?: string | null, auraColorOn?: boolean, setProc?: SetProc | null, tier: number = 1): Promise<string> {
   if (!rtdb) throw new Error('Firebase offline');
   const id = 'dgn-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   await runTransaction(ref(rtdb, `dungeons/${id}`), () => {
@@ -148,7 +154,8 @@ export async function createDungeonLobby(hostUid: string, hostName: string, host
           setProc: setProc || null,
         }
       },
-      turnOrder: [], turnIdx: 0, turnStartAt: 0, roundCount: 1, log: [], startedAt: 0
+      turnOrder: [], turnIdx: 0, turnStartAt: 0, roundCount: 1, log: [], startedAt: 0,
+      tier: Math.max(1, Math.min(MAX_DUNGEON_TIER, Math.floor(tier))),
     };
     return ds;
   });
@@ -235,8 +242,22 @@ export async function leaveDungeon(id: string, uid: string): Promise<void> {
   });
 }
 
-function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1, avgLevel: number = 1): DungeonMonster {
+/** Palier maximal proposable (au-dela, les nombres cessent d'avoir un sens). */
+export const MAX_DUNGEON_TIER = 20;
+
+/**
+ * Renforcement par palier. +35% par palier au-dela du premier, applique aux PV
+ * et a l'ATK du monstre (la DEF suit en racine, pour la meme raison qu'au
+ * scaling de niveau : `atk - def` est une soustraction plate, une DEF qui monte
+ * au meme rythme finirait par rendre le boss intouchable).
+ */
+export function tierMult(tier: number): number {
+  return 1 + Math.max(0, (tier ?? 1) - 1) * 0.35;
+}
+
+function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1, avgLevel: number = 1, tier: number = 1): DungeonMonster {
   const m = def.stages[idx];
+  const tMult = tierMult(tier);
   
   // Scaling par nombre de joueurs. AVANT : PV ∝ numPlayers^1.4 → super-linéaire,
   // donc la PART de PV à abattre PAR joueur grimpait avec la taille du groupe
@@ -251,7 +272,13 @@ function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1, avgLe
   // (combats de 100-300 tours). 1.6 garde une vraie montée sans exploser.
   const lvlMult = Math.pow(1 + Math.max(0, avgLevel - 1) / 30, avgLevel >= 20 ? 1.6 : 1.4);
   const hpMult  = numPlayers * (1 + (numPlayers - 1) * 0.12) * lvlMult; // ~linéaire (avant : ^1.4)
-  const atkMult = (1 + (numPlayers - 1) * 0.35) * lvlMult; // 0.5→0.35
+  // 0.5 → 0.35 → 0.28. Les PV du boss montent de +12% par membre mais son ATK
+  // montait de +35% : à 4 joueurs il frappait 2,05× plus fort alors que chaque
+  // membre garde UNE barre de vie et que le débit du soigneur, lui, ne monte
+  // pas. Mesuré sur la Forge Infernale en gear de craft : 100% à 2 joueurs mais
+  // 19% à 4 — le groupe complet était puni d'être complet. À 0.28 : 72% à 4,
+  // donc toujours plus dur qu'à 2, sans inverser la courbe.
+  const atkMult = (1 + (numPlayers - 1) * 0.28) * lvlMult;
   // La DEF scale en RACINE du lvlMult, pas plein : les dégâts sont `atk - def`
   // (soustraction plate), donc une DEF qui grimpait au même rythme que les PV
   // finissait par DÉPASSER l'ATK des joueurs (boss Nv40+ → dégâts floorés à 1,
@@ -259,9 +286,9 @@ function initMonster(def: DungeonDef, idx: number, numPlayers: number = 1, avgLe
   // jamais rendre le boss immunisé.
   const defMult = (1 + (numPlayers - 1) * 0.20) * Math.sqrt(lvlMult);
 
-  const hp = Math.floor(m.hp * hpMult);
-  const atk = Math.floor(m.atk * atkMult);
-  const defense = Math.floor(m.def * defMult);
+  const hp = Math.floor(m.hp * hpMult * tMult);
+  const atk = Math.floor(m.atk * atkMult * tMult);
+  const defense = Math.floor(m.def * defMult * Math.sqrt(tMult));
 
   const affixes: DungeonAffix[] = ['vampiric', 'armored', 'agile', 'none', 'none'];
   let affix = affixes[Math.floor(Math.random() * affixes.length)];
@@ -289,7 +316,7 @@ export async function startDungeon(id: string, force = false): Promise<void> {
     cur.startedAt = Date.now();
     const playersArr = Object.values(cur.players);
     const avgLevel = playersArr.reduce((sum, p) => sum + (p.level || 1), 0) / Math.max(1, playersArr.length);
-    cur.monster = initMonster(def, 0, playersArr.length, avgLevel);
+    cur.monster = initMonster(def, 0, playersArr.length, avgLevel, cur.tier ?? 1);
     
     // Create turn order: randomly shuffle players, then add monster
     const uids = Object.keys(cur.players).sort(() => Math.random() - 0.5);
@@ -798,7 +825,7 @@ export async function submitDungeonAction(id: string, uid: string, action: strin
       if (def && m.idx + 1 < def.stages.length) {
         const playersArr = Object.values(cur.players);
         const avgLevel = playersArr.reduce((sum, p) => sum + (p.level || 1), 0) / Math.max(1, playersArr.length);
-        cur.monster = initMonster(def, m.idx + 1, playersArr.length, avgLevel);
+        cur.monster = initMonster(def, m.idx + 1, playersArr.length, avgLevel, cur.tier ?? 1);
         cur.log.push({ text: `Un nouvel ennemi approche : ${cur.monster.name} !`, side: 'info' });
         cur.turnIdx = 0;
         cur.turnStartAt = Date.now();

@@ -16,6 +16,9 @@ const REGEN_CHANCE = 0.3;
  *  passif (poser le débuff, puis exploiter la fenêtre). */
 const VULN_MULT = 1.5;
 
+/** Part des dégâts bloqués par la parade renvoyée au monstre (riposte). */
+const PARRY_RIPOSTE = 0.7;
+
 export interface CombatStats {
   level: number;
   atk: number;
@@ -162,7 +165,26 @@ export function simulateCombat(
 
 // ─── Combat interactif (chasse au tour par tour) ───────────────────────────
 
-export type HuntAction = 'attack' | 'potion' | 'flee' | string;
+export type HuntAction = 'attack' | 'potion' | 'flee' | 'parry' | 'interrupt' | string;
+
+/**
+ * Intention du monstre pour le TOUR SUIVANT, annoncée au joueur.
+ *
+ * C'est ce qui transforme la chasse en suite de décisions : sans elle, chaque
+ * tour avait la même réponse optimale (compétence si dispo, sinon Attaquer) et
+ * le monstre n'était qu'un sac de PV qui ripostait.
+ * L'interface se contente d'annoncer l'intention et de mettre en valeur la
+ * réponse pertinente : c'est au joueur de faire le lien, pas à une phrase
+ * d'explication de le lui mâcher.
+ */
+export type MonsterIntent = 'quick' | 'heavy' | 'guard' | 'special';
+
+export const INTENT_INFO: Record<MonsterIntent, { icon: string; label: string; color: string }> = {
+  quick:   { icon: '👊', label: 'Attaque simple', color: '#94a3b8' },
+  heavy:   { icon: '💢', label: 'Coup lourd',     color: '#f4738d' },
+  guard:   { icon: '🛡️', label: 'Garde',          color: '#8cb4ff' },
+  special: { icon: '🌀', label: 'Incantation',    color: '#b088ff' },
+};
 
 export interface TurnEvent {
   text: string;
@@ -186,10 +208,14 @@ export interface CombatState {
   /** Nécromancien : tours restants et dégâts/tour d'un serviteur invoqué (frappe en fin de tour). */
   minion: number;
   minionPow: number;
+  /** Sursis (artefact) deja consomme sur ce combat. */
+  secondWindUsed?: boolean;
+  /** Ce que le monstre s'apprete a faire au prochain tour (telegraphe). */
+  intent?: MonsterIntent;
 }
 
 export function freshCombatState(): CombatState {
-  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, chill: 0, stun: 0, minion: 0, minionPow: 0 };
+  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, chill: 0, stun: 0, minion: 0, minionPow: 0, secondWindUsed: false, intent: 'quick' };
 }
 
 export interface TurnResult {
@@ -207,6 +233,30 @@ export interface TurnResult {
   resourceGained: number;
   /** Ressource dépensée pour la compétence utilisée ce tour (0 si aucune), à retirer par l'appelant. */
   resourceSpent: number;
+  /** Retour « punch » pour l'interface : de quoi animer le tour sans relire le journal. */
+  fx: TurnFx;
+}
+
+/**
+ * Résumé chiffré du tour, destiné au ressenti (nombres qui s'envolent, secousse,
+ * flash coloré). Le journal texte reste la source de vérité ; ceci évite juste à
+ * l'interface de le parser pour savoir quoi animer.
+ */
+export interface TurnFx {
+  /** Dégâts totaux infligés au monstre ce tour. */
+  dealt: number;
+  /** Dégâts totaux encaissés ce tour (après parade/bouclier). */
+  taken: number;
+  crit: boolean;
+  /** Le monstre a abattu son coup lourd. */
+  heavy: boolean;
+  /** Parade réussie : dégâts évités et riposte rendue. */
+  parried: number;
+  riposte: number;
+  /** Interruption réussie (le coup préparé est annulé). */
+  interrupted: boolean;
+  /** Interruption dans le vide : le joueur s'est découvert. */
+  exposed: boolean;
 }
 
 export interface HuntEncounter {
@@ -214,6 +264,8 @@ export interface HuntEncounter {
   id: number;
   isAdventure?: boolean;
   isMiniboss?: boolean;
+  /** Clé de semaine si ce combat est la Faille (voir `rift.ts`). */
+  riftKey?: string;
 }
 
 export interface HuntRewards {
@@ -245,9 +297,25 @@ export function combatTurn(
     resourceAmount?: number;
     /** Type de ressource passive de la classe du joueur (voir `classResourceType`). */
     resourceType?: 'rage' | 'combo' | 'grace' | 'mana' | 'sap' | 'zeal' | 'tempo' | 'overcharge' | 'instinct' | 'corruption' | 'vindicte' | 'souls' | 'traps' | 'presage' | null;
+    /**
+     * Multiplicateur sur tout le SUSTAIN régénératif : vol de vie, régénération,
+     * soins de compétence, boucliers, procs de set soignants. 1 par défaut.
+     *
+     * Sert aux combats volontairement longs (Rituel du Néant), où la simulation
+     * a montré qu'un mur calibré sur les STATS ne discrimine rien : sur 200
+     * tours, les classes à vol de vie ou à soin gagnent quels que soient les PV
+     * du boss, et les autres perdent. La potion n'est pas touchée — elle est en
+     * nombre limité, donc elle ne dérive pas avec la durée du combat.
+     */
+    sustainMult?: number;
   } = {},
   state: CombatState = freshCombatState(),
 ): TurnResult {
+  const sustain = opts.sustainMult ?? 1;
+  // Vol de vie et régénération passent par `mods` : on en fabrique une copie
+  // atténuée plutôt que de toucher aux six sites qui les lisent.
+  if (sustain !== 1) mods = { ...mods, lifesteal: mods.lifesteal * sustain, regen: mods.regen * sustain };
+
   let php = php0;
   let mhp = mhp0;
   const maxHp = stats.maxHp;
@@ -262,23 +330,56 @@ export function combatTurn(
   let resourceSpent = 0;
   let healDone = 0;
   let critLanded = false;
+  const mhpAtStart = mhp;
+  const phpAtStart = php;
+  const fx: TurnFx = { dealt: 0, taken: 0, crit: false, heavy: false, parried: 0, riposte: 0, interrupted: false, exposed: false };
 
   const atkMult = getElementMult(stats.weaponElement, monster.element) * getDmgTypeMult(stats.weaponDmgType, monster);
   const defMult = getElementMult(monster.element, stats.armorElement);
   // « Faille » : le monstre est-il sous contrôle (gel/étourdi) en début de tour ?
   // → les dégâts offensifs de ce tour sont amplifiés (fenêtre de burst).
   const vuln = state.chill > 0 || state.stun > 0;
+  // « Echo de Faille » (artefact) renforce la fenetre de burst : 1.5 -> 1.9.
+  const vulnMult = VULN_MULT + (mods.riftBonus ?? 0);
 
   // ── Phase joueur ──
   if (action === 'flee') {
     if (Math.random() < 0.55) {
       events.push({ text: 'Tu prends la fuite !', side: 'info' });
-      return { events, php, mhp, fled: true, abilityUsed: false, hitsDealt, hitsTaken, state, goldStolen, resourceGained: 0, resourceSpent };
+      return { events, php, mhp, fled: true, abilityUsed: false, hitsDealt, hitsTaken, state, goldStolen, resourceGained: 0, resourceSpent, fx };
     }
     events.push({ text: 'Fuite ratée ! Le monstre t\'attaque.', side: 'info' });
   } else if (action === 'potion') {
     php = Math.min(maxHp, php + (opts.potionHeal ?? 0));
     events.push({ text: `Tu te soignes (+${opts.potionHeal} PV).`, side: 'info' });
+  } else if (action === 'parry') {
+    // PARADE — la réponse sûre : on renonce à frapper, on encaisse une fraction
+    // des dégâts et on RIPOSTE avec une part de ce qu'on a bloqué. Elle marche
+    // contre n'importe quelle intention et ne peut jamais se retourner contre
+    // le joueur : plus le coup encaissé est gros, plus la riposte l'est.
+    // (Le calcul vit en phase monstre, voir `action === 'parry'` plus bas.)
+    events.push({ text: 'Tu lèves ta garde, prêt à renvoyer le coup.', side: 'info' });
+  } else if (action === 'interrupt') {
+    // INTERRUPTION — le pari : contre un coup ANNONCÉ (lourd/incantation) elle
+    // l'annule purement et simplement et étourdit, ce qui ouvre la Faille (×1.5)
+    // au tour suivant. Contre un monstre qui ne prépare rien, on frappe dans le
+    // vide en se découvrant : les dégâts encaissés ce tour sont majorés. C'est
+    // ce risque qui la distingue de la parade — et qui donne un sens à lire le
+    // télégraphe au lieu de spammer la même touche.
+    const dmg = Math.max(1, Math.round((roll(stats.atk, stats.atk + 3) - effDef) * atkMult * 0.6));
+    mhp = Math.max(0, mhp - dmg);
+    hitsDealt++;
+    const telegraphed = state.intent === 'heavy' || state.intent === 'special';
+    if (telegraphed) {
+      const cancelled = state.intent === 'heavy' ? 'son coup lourd' : 'son incantation';
+      state.intent = 'quick';
+      state.stun = Math.max(state.stun, 1);
+      fx.interrupted = true;
+      events.push({ text: `⚡ Tu coupes ${cancelled} ! ${monster.name} perd son tour (${dmg} dégâts) — Faille ouverte.`, side: 'you' });
+    } else {
+      fx.exposed = true;
+      events.push({ text: `Tu frappes dans le vide (${dmg} dégâts) : il ne préparait rien et te trouve découvert.`, side: 'you' });
+    }
   } else if (action !== 'attack') {
     // action est l'ID de la compétence (ex: 'skill_meteor')
     const skill = opts.activeSkill;
@@ -306,7 +407,7 @@ export function combatTurn(
           hitsDealt++;
           let dmg = Math.max(1, Math.round(stats.atk * effMult * (0.9 + Math.random() * 0.3)) - effDef);
           dmg = Math.round(dmg * atkMult);
-          if (vuln) dmg = Math.round(dmg * VULN_MULT);
+          if (vuln) dmg = Math.round(dmg * vulnMult);
           if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
           mhp -= dmg;
           if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
@@ -318,14 +419,14 @@ export function combatTurn(
           }
         }
         if (effHealFrac) {
-          const heal = Math.round(maxHp * effHealFrac);
+          const heal = Math.round(maxHp * effHealFrac * sustain);
           php = Math.min(maxHp, php + heal);
           healDone += heal;
           events.push({ text: `${skill.name} te rend ${heal} PV.`, side: 'info' });
         }
         if (skill.shield) {
           // Vrai bouclier : PV qui absorbent les prochains dégâts entrants.
-          const amount = Math.round(maxHp * skill.shield);
+          const amount = Math.round(maxHp * skill.shield * sustain);
           state.shield += amount;
           events.push({ text: `🛡️ ${skill.name} t'accorde un bouclier de ${amount} PV.`, side: 'info' });
         }
@@ -353,14 +454,17 @@ export function combatTurn(
       hitsDealt++;
       let dmg = Math.max(1, roll(stats.atk - 2, stats.atk + 3) - effDef) + mods.flatDmg;
       dmg = Math.round(dmg * atkMult);
-      if (vuln) dmg = Math.round(dmg * VULN_MULT);
+      if (vuln) dmg = Math.round(dmg * vulnMult);
       if (php < maxHp * 0.3 && mods.berserkBonus > 0) dmg = Math.round(dmg * (1 + mods.berserkBonus));
       if (mhp / monsterMaxHp < 0.2 && mods.execute > 0) dmg = Math.round(dmg * (1 + mods.execute));
       const crit = Math.random() < mods.crit;
       if (crit) { dmg = Math.round(dmg * (2 + mods.critMult)); critLanded = true; }
+      // Le monstre annonce sa garde : frapper maintenant, c'est frapper dans le
+      // bouclier. L'information avait été donnée au tour précédent.
+      if (state.intent === 'guard') dmg = Math.max(1, Math.round(dmg * 0.5));
       mhp -= dmg;
       if (mods.lifesteal > 0) php = Math.min(maxHp, php + Math.round(dmg * mods.lifesteal));
-      events.push({ text: `${h > 0 ? 'Tir double ! ' : ''}Tu infliges ${dmg}${crit ? ' (CRIT !)' : ''}${vuln ? ' ⚡Faille' : ''}.`, side: 'you' });
+      events.push({ text: `${h > 0 ? 'Tir double ! ' : ''}Tu infliges ${dmg}${crit ? ' (CRIT !)' : ''}${vuln ? ' ⚡Faille' : ''}${state.intent === 'guard' ? ' 🛡️(garde)' : ''}.`, side: 'you' });
     }
   }
 
@@ -375,11 +479,11 @@ export function combatTurn(
       state.chill = Math.max(state.chill, 2);
       if (mhp > 0) events.push({ text: `${sp.icon} ${sp.name} : ${monster.name} est gelé !`, side: 'you' });
     } else if (sp.kind === 'heal') {
-      const heal = Math.max(1, Math.round(maxHp * sp.power));
+      const heal = Math.max(1, Math.round(maxHp * sp.power * sustain));
       php = Math.min(maxHp, php + heal);
       events.push({ text: `${sp.icon} ${sp.name} : +${heal} PV.`, side: 'info' });
     } else if (sp.kind === 'shield') {
-      const amt = Math.max(1, Math.round(maxHp * sp.power));
+      const amt = Math.max(1, Math.round(maxHp * sp.power * sustain));
       state.shield += amt;
       events.push({ text: `${sp.icon} ${sp.name} : bouclier +${amt} PV.`, side: 'info' });
     } else if (sp.kind === 'extra' && mhp > 0) {
@@ -396,7 +500,10 @@ export function combatTurn(
     else if (opts.resourceType === 'mana') resourceGained = 15;
     else if (opts.resourceType === 'instinct' && critLanded) resourceGained = 30;
     else if (opts.resourceType === 'corruption' && hitsDealt > 0 && php < maxHp * 0.3) resourceGained = 35;
-    return { events, php, mhp: 0, fled, abilityUsed, hitsDealt, hitsTaken, state, goldStolen, resourceGained, resourceSpent };
+    fx.dealt = Math.max(0, mhpAtStart - 0);
+    fx.taken = Math.max(0, phpAtStart - php);
+    fx.crit = critLanded;
+    return { events, php, mhp: 0, fled, abilityUsed, hitsDealt, hitsTaken, state, goldStolen, resourceGained, resourceSpent, fx };
   }
 
   // ── Phase monstre (plus dangereux : la défense ne mitige qu'à 80%) ──
@@ -412,6 +519,32 @@ export function combatTurn(
     let mdmg = Math.max(1, Math.round(roll(monster.atk, monster.atk + 4) - stats.def * 0.8));
     mdmg = Math.round(mdmg * defMult);
     mdmg = Math.max(1, Math.round(mdmg * (1 - mods.dmgReduction)));
+    // L'intention annoncée au tour précédent se concrétise maintenant.
+    if (state.intent === 'heavy') {
+      mdmg = Math.round(mdmg * 1.8);
+      fx.heavy = true;
+      events.push({ text: `💢 ${monster.name} abat son coup lourd !`, side: 'enemy' });
+    } else if (state.intent === 'special') {
+      // L'incantation aboutit : altération posée sur le joueur (dégâts réduits
+      // mais il ripostera mieux au tour suivant via le gel/l'étourdissement).
+      state.chill = Math.max(state.chill, 0);
+      mdmg = Math.round(mdmg * 0.7);
+      events.push({ text: `🌀 ${monster.name} achève son incantation et te déstabilise.`, side: 'enemy' });
+    }
+    // Parade : l'action du joueur ce tour-ci était de se protéger. On annonce
+    // les DEUX chiffres (encaissé / évité) — sans eux la parade ne se « sent »
+    // pas, on voit juste un nombre plus petit sans savoir ce qu'on a gagné.
+    if (action === 'parry') {
+      const before = mdmg;
+      mdmg = Math.max(1, Math.round(mdmg * 0.25));
+      fx.parried = before - mdmg;
+      events.push({ text: `🛡️ Parade ! Tu encaisses ${mdmg} au lieu de ${before}.`, side: 'info' });
+    }
+    // Interruption ratée : le joueur s'est découvert en frappant dans le vide.
+    if (fx.exposed) {
+      mdmg = Math.round(mdmg * 1.5);
+      events.push({ text: `💥 Découvert ! Le coup porte de plein fouet.`, side: 'enemy' });
+    }
     if (state.chill > 0) mdmg = Math.max(1, Math.round(mdmg * 0.6)); // gel : dégâts réduits
     // Absorption par le bouclier avant les PV.
     if (state.shield > 0) {
@@ -424,6 +557,23 @@ export function combatTurn(
     dmgTakenThisTurn = Math.max(0, mdmg);
     if (mods.thorns > 0) { mhp = Math.max(0, mhp - Math.round((mdmg || 1) * mods.thorns)); thornsProced = true; }
     events.push({ text: `${monster.name} t'inflige ${mdmg}.`, side: 'enemy' });
+    // Riposte de parade : une part de ce qui a été bloqué revient au monstre.
+    // C'est ce qui fait de la parade un vrai tour d'action et non un tour perdu.
+    if (fx.parried > 0 && mhp > 0) {
+      const rip = Math.max(1, Math.round(fx.parried * PARRY_RIPOSTE));
+      mhp = Math.max(0, mhp - rip);
+      hitsDealt++;
+      fx.riposte = rip;
+      events.push({ text: `⚔️ Riposte ! Tu renvoies ${rip} dégâts.`, side: 'you' });
+    }
+    // « Sursis » (artefact) : un seul coup fatal par combat est converti en
+    // survie à 30% des PV. Le drapeau vit dans CombatState, donc il se remet à
+    // zéro à chaque nouveau combat mais pas entre deux tours du même combat.
+    if (php <= 0 && (mods.secondWind ?? 0) > 0 && !state.secondWindUsed) {
+      state.secondWindUsed = true;
+      php = Math.max(1, Math.round(maxHp * 0.3));
+      events.push({ text: `🕊️ Sursis ! Tu refuses de tomber et te relèves à ${php} PV.`, side: 'info' });
+    }
   }
 
   // Régénération : passif (Healer) 100% chance qui scale avec le niveau, mais dont la base est divisée pour compenser le déclenchement garanti
@@ -451,14 +601,18 @@ export function combatTurn(
   const wasPoisoned = state.poison > 0;
   let poisonTicked = false;
   if (mhp > 0) {
+    // « Propagation » (artefact) : les alterations rongent plus fort.
+    const statusMult = 1 + (mods.statusPow ?? 0);
     if (state.burn > 0 && state.burnPow > 0) {
-      mhp = Math.max(0, mhp - state.burnPow);
-      events.push({ text: `🔥 Brûlure : ${monster.name} perd ${state.burnPow} PV.`, side: 'you' });
+      const burnDmg = Math.round(state.burnPow * statusMult);
+      mhp = Math.max(0, mhp - burnDmg);
+      events.push({ text: `🔥 Brûlure : ${monster.name} perd ${burnDmg} PV.`, side: 'you' });
     }
     if (state.poison > 0 && state.poisonPow > 0) {
-      mhp = Math.max(0, mhp - state.poisonPow);
+      const poisonDmg = Math.round(state.poisonPow * statusMult);
+      mhp = Math.max(0, mhp - poisonDmg);
       poisonTicked = true;
-      events.push({ text: `🧪 Poison : ${monster.name} perd ${state.poisonPow} PV.`, side: 'you' });
+      events.push({ text: `🧪 Poison : ${monster.name} perd ${poisonDmg} PV.`, side: 'you' });
     }
     if (state.minion > 0 && state.minionPow > 0) {
       mhp = Math.max(0, mhp - state.minionPow);
@@ -471,6 +625,23 @@ export function combatTurn(
   if (state.chill > 0) state.chill -= 1;
   if (state.stun > 0) state.stun -= 1;
   if (state.minion > 0) state.minion -= 1;
+
+  // ── Télégraphe : on décide (et on annonce) ce que fera le monstre au tour
+  // suivant. C'est ce qui donne au joueur une information à exploiter, et donc
+  // une vraie décision à prendre au tour d'après.
+  if (mhp > 0 && php > 0 && !fled) {
+    const r = Math.random();
+    let next: MonsterIntent;
+    if (r < 0.30) next = 'heavy';
+    else if (r < 0.45) next = 'guard';
+    else if (r < 0.60) next = 'special';
+    else next = 'quick';
+    // Deux coups lourds d'affilée seraient injustes autant qu'illisibles.
+    if (next === 'heavy' && state.intent === 'heavy') next = 'quick';
+    state.intent = next;
+    const info = INTENT_INFO[next];
+    events.push({ text: `${info.icon} ${monster.name} — ${info.label.toLowerCase()} en préparation.`, side: 'enemy' });
+  }
 
   // Ressource d'archétype passive : rage se charge en encaissant, combo en touchant.
   let resourceGained = 0;
@@ -515,10 +686,28 @@ export function combatTurn(
   // pas ici — l'un dépend de l'action du tour précédent (variété), l'autre du
   // nombre de compétences lancées, deux signaux hors du périmètre de ce combat.
 
-  return { events, php: Math.max(0, php), mhp: Math.max(0, mhp), fled, abilityUsed, hitsDealt, hitsTaken, state, goldStolen, resourceGained, resourceSpent };
+  fx.dealt = Math.max(0, mhpAtStart - mhp);
+  fx.taken = Math.max(0, phpAtStart - php);
+  fx.crit = critLanded;
+  return { events, php: Math.max(0, php), mhp: Math.max(0, mhp), fled, abilityUsed, hitsDealt, hitsTaken, state, goldStolen, resourceGained, resourceSpent, fx };
 }
 
 /** Récompenses de victoire (mute le joueur). */
+/** Plafond de la série : au-delà, le multiplicateur n'augmente plus. */
+export const HUNT_STREAK_CAP = 20;
+
+/** Multiplicateur d'XP et d'or apporté par la série de chasse en cours. */
+export function huntStreakMult(p: PlayerState): number {
+  return 1 + Math.min(p.huntStreak ?? 0, HUNT_STREAK_CAP) * 0.02;
+}
+
+/** Brise la série (mort ou fuite). Retourne la série perdue, pour l'affichage. */
+export function breakHuntStreak(p: PlayerState): number {
+  const lost = p.huntStreak ?? 0;
+  p.huntStreak = 0;
+  return lost;
+}
+
 export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRewards {
   const phase = currentPhase();
   const mod = PHASE_MODIFIERS[phase];
@@ -527,9 +716,13 @@ export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRe
   const biomeXpMult = biome?.xpMult ?? 1.0;
   // Bonus de maîtrise du biome courant (palier atteint) appliqué à l'XP et l'Or.
   const mMult = masteryMult(p, p.biome);
+  // Série de chasse : chaque kill consécutif sans mourir renforce la récolte.
+  // Plafonnée à 20 kills (+40%) pour rester une tension, pas une obligation de
+  // farm parfait — et entièrement perdue à la mort (voir `breakHuntStreak`).
+  const streakMult = huntStreakMult(p);
   const base = {
-    xp: Math.round(monster.xp * mod.xp * biomeXpMult * mMult),
-    gold: Math.round(roll(monster.gold[0], monster.gold[1]) * mod.gold * mMult)
+    xp: Math.round(monster.xp * mod.xp * biomeXpMult * mMult * streakMult),
+    gold: Math.round(roll(monster.gold[0], monster.gold[1]) * mod.gold * mMult * streakMult)
   };
   const { xp, gold } = applyBonuses(p, base);
 
@@ -548,6 +741,8 @@ export function grantMonsterRewards(p: PlayerState, monster: MonsterDef): HuntRe
     masteryUp = { biome: p.biome, tier: mUp.newTier, title };
   }
   p.kills += 1;
+  p.huntStreak = (p.huntStreak ?? 0) + 1;
+  if (p.huntStreak > (p.bestHuntStreak ?? 0)) p.bestHuntStreak = p.huntStreak;
   // Objectif de guilde : compte le kill localement (flushé à la sauvegarde).
   if (p.guildId) {
     const wk = String(Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)));

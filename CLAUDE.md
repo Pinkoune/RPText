@@ -1,6 +1,208 @@
 # CLAUDE.md — RPText
 
-RPG textuel multijoueur web. **Vite + React + TypeScript + Tailwind + Zustand**, backend **Firebase** (Auth, Firestore, Realtime DB) avec **repli localStorage** complet (`isFirebaseConfigured`). Utilisateur FR. Vérif = `npm run build` (le preview live est bloqué par le popup OAuth).
+RPG textuel multijoueur web. **Vite + React + TypeScript + Tailwind + Zustand**, backend **Firebase** (Auth, Firestore, Realtime DB) avec **repli localStorage** complet (`isFirebaseConfigured`). Utilisateur FR. Vérif = `npx tsc -b` + `npm run build`, **et le jeu tourne réellement
+en local** (voir « Vérifier en jeu » ci-dessous).
+
+---
+
+## Refonte saisonnière (branche `feat/Refonte-saison`) — fait (C)
+
+Grosse MAJ de rentrée, conçue à partir des **données réelles de la bêta de juillet**
+(Nv.20 en 2-3 jours, Nv.40 en 2,5 semaines, meilleur joueur arrêté au Nv.45).
+**Claude possède tout ce lot** (plus de répartition avec Gemini, à la demande de
+l'utilisateur). ⚠️ `firestore.rules` a changé → **à redéployer**.
+
+- **Courbe d'XP v5** (`classes.ts`) : end-game ×1.18 → **×1.12**. La tranche 40-50
+  pesait 81% du grind et 45→50 coûtait 1,3× le trajet 1→45 (≈7,5 semaines au rythme
+  observé). Divisé par ~2. Phases 1-30 inchangées (le Nv.20 ne pèse que 0,5%, sain).
+  ×1.10 écarté : il propulsait les joueurs de fin de bêta directement au niveau max.
+  Migration `relevel()` dans `migratePlayer` (v3→v4 puis v4→v5) qui **crédite les
+  points de talent** des niveaux gagnés — ce que la migration v4 omettait.
+- **Multi-personnages ×3** (`player.ts charKey/accountOf`, `CharacterSelect.tsx`,
+  `playerService.listCharacters/deleteCharacter`) : le **slot 0 garde la clé nue du
+  compte** → aucune migration Firestore. Slots 1-2 suffixés `uid__1`. ⚠️ Toutes les
+  règles Firestore passent par `ownsCharacter()` : les services envoient l'id du
+  **personnage** (`p.uid`), pas du compte. Statut Vétéran/Admin reste au slot 0.
+  **Reprise automatique du dernier personnage joué** : `lastSlotKey` était écrit à
+  chaque sélection mais **jamais relu**, donc chaque rechargement de page repassait
+  par l'écran de choix — même avec un seul personnage. `initAuth` le relit et entre
+  directement en jeu (repli : slot unique, sinon écran de choix). L'écran reste
+  atteignable par « Changer de personnage » (Réglages → `backToSelect`), qui pose
+  `status: 'select'` sans repasser par cette reprise.
+- **Camp** (`game/camp.ts`) : accumulation hors-ligne dès le Nv.5, plafond 12h.
+- **Donjons à paliers** (`dungeonService.tierMult`, `p.dungeonTiers`) : +35%/palier.
+- **Fin du wipe au boss final** (`ascension.ts`) : la victoire ouvre `applyRebirth`,
+  déclenché par le joueur depuis PrestigeCard.
+- **Chasse interactive** (`combat.ts`) : `MonsterIntent` (télégraphe annoncé au tour
+  précédent) + `parry`/`interrupt` ; **série de chasse** (`huntStreak`, +2%/kill
+  plafonné +40%, perdue à la mort).
+
+---
+
+## Progression : les six jauges (⚠️ lire avant d'en ajouter une septième)
+
+L'utilisateur s'est explicitement dit **perdu** (« qui fait quoi et quel exp, ça fait
+beaucoup »). On a répondu en SUPPRIMANT un compteur, pas en en ajoutant. Toute
+nouvelle mécanique doit se brancher sur l'une de ces jauges plutôt qu'en créer une.
+Elles sont expliquées en jeu dans la carte Aide (section « Les jauges du jeu »).
+
+| Jauge | Monte avec | Sert à | Reset |
+|---|---|---|---|
+| **Niveau** 1→50 | combat, donjon, récolte, forge, camp | stats + 1 point de talent/niveau | renaissance |
+| **Artefact = la saison** | la MÊME XP que le niveau, **+ victoires PvP** | mods, rang de saison, paliers de passe | rotation de saison |
+| **Métiers** | récolter, forger, concocter | recettes et ressources | renaissance |
+| **Éclats ✧** | succès (+3), passe, artefact au-delà de la grille (+1/niv) | étoiles de la Relique | jamais |
+| **Maîtrise de biome** | kills par zone (paliers 100/500/1500/4000) | bonus XP/Or permanent + titre | jamais |
+| **Puissance ⚡** | somme dérivée de tout | classement uniquement | — |
+
+**Ce qui traverse tout** (ni renaissance ni saison) : Relique, Éclats, maîtrises,
+familiers, titres, succès, fonds de profil.
+
+### Saison unifiée (`season.ts` + `artifact.ts`)
+Il y avait DEUX saisons : ladder PvP au mois calendaire, et artefact piloté admin.
+Fusionnées. `seasonId()` dérive du numéro de saison de l'artefact (`s<N>`) ;
+`nextSeasonAt` a disparu (une saison finit quand l'admin la fait tourner).
+`seasonPoints` est **retiré du gameplay** (champ conservé pour compat Firestore) :
+les rangs Bronze→Maître sont indexés sur le **niveau d'artefact** (0/8/20/35/55/85),
+et les victoires PvP versent de l'XP d'artefact (`PVP_ARTIFACT_XP`, ×40/×30 le niveau).
+`advanceSeason` balaie artefact + points PvP + classements d'Abysses d'un coup.
+La récompense de fin de saison est créditée dans `migratePlayer` depuis l'archive
+que rend `rotateSeason` — seul endroit qui connaisse le niveau atteint avant reset.
+
+### Artefact (`game/artifact.ts`)
+Puissance `0.35*log10(1+level/10)`, sans plafond mais logarithmique. Grille de
+17 mods (**62 points**). Au-delà de `artifactGridCost()`, chaque niveau donne
+**1 Éclat** au lieu d'un point mort — la queue de l'artefact valait sinon +0,1%
+de puissance par niveau. Mods de combat agrégés dans `talentMods` → `CombatMods`.
+
+### Relique (`game/relic.ts`) — l'axe permanent
+Entité autonome (PAS une pièce d'équipement : elle serait détruite par
+`applyRebirth`, entrerait en concurrence avec le stuff farmé, et devrait battre
+`void_mantle` pour être portée). ★1-5 = **+2%** ATK/DEF/PV chacune (et non +10% :
+en autonome ça s'AJOUTE à l'artefact et au prestige). ★6-10 = **un effet au choix
+parmi trois**, versé dans `CombatMods`, aucune stat brute. Coûts 8/14/20/26/32.
+
+### Passe de saison (`game/seasonpass.ts`)
+Gratuite, 10 paliers indexés sur le **niveau d'artefact** (pas de compteur dédié).
+Donne des Éclats (~26/saison, seule source répétable), des fonds de profil et des
+titres saisonniers nommés d'après le thème. `ensureSeasonPass` vide la piste à la
+rotation ; titres et fonds restent acquis.
+
+### Faille de la semaine (`game/rift.ts`)
+Biome + modificateur déduits de l'horloge (`Math.floor(now / RIFT_WEEK_MS)`), zéro
+backend. ⚠️ Le pas du modificateur (**5**) doit rester premier avec leur nombre (6) :
+avec 3, quatre modificateurs sur six ne sortaient jamais. Calibrée RELATIVEMENT au
+mini-boss (0,21-0,40× ses PV, 0,40-1,32× son ATK) — `simulateCombat` sort 0% de
+victoire même contre un monstre normal, ses taux absolus sont inutilisables.
+Prime (2 Éclats + or) au premier passage de la semaine, pas de cooldown.
+
+### Puissance (`game/power.ts`)
+Unité : **1 point ≈ un niveau de personnage d'effort**. Niveau ×1, prestige ×50
+(une renaissance ne doit PAS faire chuter au fond du classement), artefact ×1,
+étoiles portées ×1, maîtrises ×1, Abysses ×0.5, étoile de Relique ×12, kills et
+donjons en **racine carrée** (×0.5 / ×1.5 — en linéaire 60 000 kills écraseraient
+tout), meilleure série ×1.
+⚠️ Le tri Firestore reste `orderBy('level')` et le classement se fait **côté
+client** : un `orderBy` sur `power` exclurait les lignes d'anciens clients qui ne
+portent pas le champ. `fallbackPower` leur reconstruit un score. Sur-échantillonnage
+×4 avant de trancher, sinon `limit` couperait sur le mauvais critère.
+
+### Panneau admin — saisons
+`setSeason(n)` (seasonService) remplace `advanceSeason` : elle écrit n'importe
+quel numéro dans `system/season`. Comme les clients comparent
+`artifact.season !== saison courante` pour décider de repartir de zéro,
+**écrire un numéro DIFFÉRENT suffit à tout réinitialiser** — réécrire le même
+numéro ne fait rien. Le thème étant dérivé du numéro (`(n-1) % 4`),
+`nextSeasonWithTheme(themeIndex, from)` traduit « je veux l'Hiver » en un numéro,
+sans jamais reculer (un numéro qui recule ferait réapparaître des saisons déjà
+archivées chez les joueurs). Le bloc vit dans les actions **globales** du panneau
+— l'ancien bouton de rotation était enfoui dans l'éditeur d'un joueur.
+
+### Panneau admin — le reste (revue faite, C)
+Règle de rangement : **une action qui touche le serveur entier ne va jamais dans
+l'éditeur d'un joueur.** Même faute que la rotation de saison, retrouvée une fois
+de plus : « Ouvrir une fenêtre de Raid » (`broadcastRaid`, RTDB `world/raid`) y
+vivait dans les « Actions Rapides », donc il fallait ouvrir la fiche d'un joueur
+au hasard pour lancer un événement mondial. Déplacé dans une section **Monde**.
+
+- **Bug du don d'objet** : la recherche filtrait la liste du `<select>` sans
+  jamais toucher `giveItemId`, resté sur sa valeur initiale `'potion'`. On
+  cherchait un objet, on lisait son nom en tête de liste, on donnait des potions
+  de soin. Un `useEffect` resynchronise la sélection dès qu'elle sort de la liste
+  filtrée, et une ligne « Sélection : … » affiche ce qui sera réellement donné.
+- **Don/retrait d'objet instanciés** : le don écrivait `inv[baseId] += n`, ce qui
+  fabriquait une **pile de gear** alors que chaque pièce doit avoir sa clé unique
+  (`baseId:qXXX:i1234`) — la migration d'instanciation étant déjà passée, rien ne
+  l'aurait rattrapée (étoiles/durabilité partagées). Passe par
+  `addItemToInventory`. Symétriquement le retrait cherchait `inv[baseId]`, absent
+  pour du gear, et ne faisait donc **rien** : il balaie maintenant les clés dont
+  la base correspond.
+- **Bloc « Saison · Relique · Prestige »** (éditeur de joueur) : niveau
+  d'artefact, Éclats, prestige, jetons de classe. Ces jauges n'avaient aucun
+  levier admin. Les **étoiles de Relique se donnent en Éclats, pas en étoiles** :
+  poser une étoile ≥6 de force laisserait `relic.effects` plus court que
+  `relic.stars`, et l'achat suivant choisirait un effet du mauvais palier.
+- **Hors ligne** : `getAllPlayers`/`updatePlayerAdmin` retombent sur les clés
+  `rptext.player.*` du localStorage. Le panneau était vide et inerte en dev — ce
+  qui rendait tout le panel invérifiable en local, alors que c'est justement là
+  qu'on veut tester.
+- **Supprimés** : `📊 Simuler Courbe` (bouton) et la commande `admin_curve`
+  (alias `curve`) — même code, formules de stats écrites en dur
+  (`100 + 20/niv`, `atk 5 + 2/niv`) qui ne correspondent à **aucune** classe
+  (`base.maxHp` 130, `growth` 18-25) et qui ignorent talents, artefact, prestige.
+  Les vrais chiffres sont dans `scripts/` (harnais tour-par-tour).
+  `🏆 RESET SAISON PVP` aussi : il ne remettait à zéro que `seasonPoints`, champ
+  sorti du gameplay quand le rang de saison est passé sur le niveau d'artefact.
+
+### Commandes admin — ne pas fuiter leur existence
+`ADMIN_ONLY` (commands.ts) est filtré **au dispatch** : un non-admin reçoit le
+message d'une commande inexistante, mot pour mot. Avant, `admin` répondait
+« Commande introuvable. » là où l'inconnue répond « Commande inconnue : "x". » —
+la différence de formulation révélait l'existence de la commande. Ajouter une
+commande admin = l'inscrire dans `ADMIN_ONLY`, rien d'autre.
+
+### Prestige — pièges connus
+- Les constantes vivent dans `prestige.ts` (`PRESTIGE_BONUS_PER_LEVEL` 0.08,
+  `PRESTIGE_XPGOLD_PER_LEVEL` 0.10, `MAX_PRESTIGE_STACK` 5). Elles étaient
+  dupliquées en dur dans `player.ts`, ce qui les avait fait diverger de l'interface
+  — **ne jamais les réécrire ailleurs**.
+- `applyRebirth` remet `classId` à la classe de BASE. Sans ça un Berserker
+  renaissait « Berserker niveau 1 » et le garde-fou de `migratePlayer` le corrigeait
+  seulement au chargement suivant, sans explication.
+- `computeAscensionBoss` compte **la moitié** du prestige. À 0, un archer passait de
+  0% à 97% de victoire entre prestige 0 et 5 ; à plein, la renaissance n'apporterait
+  plus rien face au Néant.
+- `CommandDef.alsoIf` : dérogation au `reqLevel`. Une renaissance ramène au Nv.1 en
+  gardant prestige, aura et Relique — sans ça leurs cartes redevenaient inaccessibles.
+
+### Empilement des buffs (mesuré en simulation, corrigé)
+Chasseur Nv.50 gear q150 5★, via `balance-sim-turns.ts` (section « empilement de
+saison ») : ATK **478 nu → 1190 tout maxé (×2.49) → 1393 à artefact Nv.300 (×2.91)**.
+⚠️ Le chiffre précédemment noté ici (×2.08) était calculé à la main en multipliant
+les seuls multiplicateurs de stats (`presMult × artMult × relMult`) : il **oubliait
+les mods de la grille d'artefact**, qui ajoutent leur propre `atkPct`/`hpPct` dans
+`(1 + mods.atkPct + …)` (art_edge +6%, art_vigor +8%, art_apex +10%). ~20% d'écart.
+
+Conséquence mesurée, plus parlante que le multiplicateur : contre les monstres des
+Abysses au Nv.50, **la grille d'artefact seule fait passer de 48% à 100%** de
+victoire. Le levier le plus simple à baisser reste la Relique, mais le vrai poids
+est dans la grille.
+
+---
+
+## Performances (⚠️ cause de chauffe identifiée)
+
+`.glass` applique un `backdrop-filter` à **chaque fenêtre** plus la barre du haut.
+Chaque surface floutée fait ré-échantillonner tout l'arrière-plan à chaque image :
+c'est de loin l'effet le plus coûteux du jeu. Ne pas l'étendre à d'autres éléments.
+
+- Flou par défaut **10px** (le fond est opaque à 86%, un flou plus large ne se voit pas).
+- `fxStore` reflète son état sur l'élément racine (`fx-reduced`, `fx-compact`) —
+  indispensable, car aucune prop React ne peut désactiver une règle CSS.
+- `.fx-reduced` retire le flou (`none`, PAS `blur(0)` qui garderait une couche de
+  composition), met les particules à 0 et allège les ombres.
+- Les réglages doivent faire ce qu'ils annoncent : `muteSound` et `compactMode`
+  étaient tous deux sauvegardés et branchés sur rien.
 
 ---
 
@@ -161,6 +363,144 @@ Murs de difficulté localisés par la simu et corrigés :
 
 Constats clés (tour-par-tour, Nv.50 maxé) : toutes les **sous-classes** sont saines (100% survie, endHP 36-100%) ; les **bases** Mage/Archer faibles à 50 mais normal (on ascensionne à 20) ; **Berserker** cumule top-3 DPS + survie parfaite (vol de vie passif) = à surveiller sans nerf urgent ; les 4 Soigneurs paraissent 0% en sim **passif** (leur kit est 100% actif) → juger au tour-par-tour uniquement. ⚠️ Le sim co-op ne modélise pas encore le **soin de groupe** des soigneurs en donjon → winrates absolus des donjons Nv.30+ pessimistes (le fix de scaling reste valide, mesuré en relatif).
 
+### Passe de mesure de la refonte saisonnière (fait, C) — trois biais du harness
+
+Le harness disait des choses fausses parce qu'il mesurait les mauvais sujets.
+Corrigé, et **à ne pas réintroduire** :
+
+1. **La référence de chasse restait Archer de BASE jusqu'au Nv.50** — la classe
+   la plus faible du jeu à 50 (2% de survie), justement parce qu'on ascensionne
+   à 20. Elle ascensionne maintenant (`played()`). Effet : Nécropole Nv.30
+   **16% → 70%**, volcan 72% → 80%. Le « mur de la crypte » n'existait pas ; il
+   décrivait un personnage que personne ne joue.
+2. **La composition de groupe n'était pas cumulative** : la rotation
+   `[guerrier, mage, soigneur, archer]` ne mettait un soigneur qu'à partir de
+   3 joueurs. La Forge Infernale sortait `0% / 6% / 100% / 33%` — une courbe qui
+   suivait la présence du soigneur, pas l'effectif. Ordre cumulatif désormais
+   (`guerrier → +soigneur → +mage → +archer`).
+3. **`turns` renvoyait `maxTurns` en dur** : la colonne affichait 120 pour tout
+   le monde, quelle que soit la durée réelle. Les combats font en fait 17 à 46
+   tours (et non « 100-300 » comme noté ailleurs dans ce fichier).
+
+Deux mesures ajoutées : `season()` (artefact/Relique/prestige, cf. « Empilement
+des buffs ») et le **Rituel du Néant par sous-classe**, jamais simulé jusqu'ici.
+
+**Résultats à traiter** (aucun correctif appliqué, ce sont des constats) :
+- **Le Néant ne discrimine plus.** Dès artefact + Relique ★5, les 16
+  sous-classes le battent à ≥97% ; six (Berserker, Chevalier Noir, Cryomancien,
+  Prêtre de l'Aube, Moine, Oracle) le battent à **100% sans aucune saison**. Il
+  est calibré sur la seule montée en stats, or un combat long est gagné par le
+  sustain, pas par les stats. Levier : plafonner les soins/vol de vie pendant le
+  rituel, pas gonfler ses PV.
+- **Les gros groupes sont encore punis.** Forge Infernale en gear de craft :
+  `0% / 100% / 99% / 25%` de 1 à 4 joueurs. L'ATK du boss monte de +35% par
+  membre (`atkMult`) alors que chaque membre garde une seule barre de vie et que
+  le débit du soigneur, lui, ne monte pas. Le passage 0.5 → 0.35 avait réduit le
+  problème, pas supprimé.
+- ~~**Falaise d'Abysses (endless) au palier 50**~~ — **fausse alerte, deux
+  artefacts de mesure cumulés** : la référence était l'Archer de BASE, et la
+  liste d'étages testés (10/20/30/40/50…) ne contenait **que des multiples de
+  5**, or `generateEndlessMonster` fait un BOSS tous les 5 étages (×2 PV, ×1.5
+  ATK). On ne mesurait que des boss. Avec un Chasseur maxé et des étages
+  intercalés : 100% jusqu'au 57, boss du 60 à 54%, boss du 75 à 3%. C'est une
+  courbe de score, pas une marche. Rien à corriger.
+- **Les donjons de fin ne sont PAS cassés** : le `0%` de la Citadelle Abyssale
+  mesure un groupe en gear de craft au niveau minimum. Avec un groupe réellement
+  équipé (Nv.50 maxé + artefact + ★5), Forge et Citadelle sont à **100% de 1 à
+  4 joueurs**. C'est une porte d'entrée, pas un mur.
+
+### Correctifs d'équilibrage end-game (fait, C) — le craft doit suivre jusqu'à 50
+
+Constat de l'utilisateur, confirmé par les données : **un joueur gardait le même
+équipement du Nv.36 au Nv.50**. La dernière arme du jeu était le Sceptre
+Nécrotique (Nv.36) ; côté armure, plus rien après `void_mantle` (42) ; côté
+bijou, plus rien après `primordial_crown` (45). Or la tranche 40-50 pèse la
+majorité du temps de jeu : le craft cessait d'exister pile là où le joueur passe
+le plus de temps.
+
+**Deux paliers ajoutés** (`items.ts` + `crafting.ts` + `icons.ts`), 11 objets :
+- **« Givre du Vide » Nv.40** — 4 armes (78/74/76/70 ATK), 1 armure (51/245),
+  1 bijou (12/12/120). Se fabrique avec les ressources de l'**Abysse** (cristal,
+  lotus des glaces, poussière du vide) : le biome final s'ouvre au Nv.38, on y
+  entre avec le stuff de la Nécropole et on en ressort avec le sien.
+- **« Primordial » Nv.46-48** — 4 armes (92/88/90/84 ATK), 1 armure (64/300).
+  Coûte des **Âmes de Boss** : la dernière marche se gagne au Sanctuaire (CD 24h)
+  ou en Citadelle, pas à la récolte. Volontairement le palier le plus long.
+
+Courbe d'armes lissée : 46 (Nv.22) → 62 (30) → 68 (34) → **78 (40)** → **92 (46)**.
+Armures : 198 → 260 → 312 → **340** → 370 → **428** (score `def×2 + hp`).
+
+⚠️ **L'Égide primordiale n'a PAS d'élément**, exprès. Une armure `light` prend
++50% des attaques `dark` (`getElementMult`) et l'Abysse — la zone où on porte ce
+set — est intégralement peuplée de monstres sombres : la meilleure armure du jeu
+aurait été un handicap là où on la porte (-36 points de winrate, mesuré). Les
+ARMES du palier restent `light`, donc +50% contre ces mêmes monstres.
+
+**Rituel du Néant recalibré**, parce qu'il ne faisait plus barrage du tout :
+1. `BEST_WEAPON` était une **table écrite en dur** figée sur le palier volcanique
+   (Nv.30-32). Le palier Nécropole était sorti sans qu'on y touche : le « joueur
+   idéal » sur lequel se calibre le boss se battait avec une arme deux paliers en
+   retard, et le mur s'effondrait un peu plus à chaque ajout de contenu. Remplacé
+   par `bestGear()`, **dérivé d'`ITEMS`** — tout nouvel objet met le boss à jour
+   tout seul.
+2. **`ASCENSION_SUSTAIN_MULT = 0.60`** : le Néant draine. Vol de vie,
+   régénération, soins de compétence, boucliers et procs de set sont ramenés à
+   60% pendant le rituel (`combatTurn` opt `sustainMult`). **Les potions ne sont
+   pas touchées** — elles sont en nombre limité, donc elles récompensent la
+   préparation sans dériver avec la durée du combat. Un mur calibré sur les
+   STATS ne triait que par archétype : sur un combat de centaines de tours, les
+   classes à sustain gagnaient quels que soient les PV du boss.
+3. **Dégâts du boss +30%** (`s.maxHp / 6` → `/ 4.6`, `s.def * 0.6` → `* 0.78`),
+   valeur balayée en simulation (`SWEEP=1`) sur 16 sous-classes × 3 profils.
+
+4. **`NEANT_LEGACY` déplacé de `AscensionCard.tsx` vers `ascension.ts`.** Il
+   vivait dans le composant React, donc **les harnais ne pouvaient pas s'en
+   servir** : ils mesuraient le rituel avec des ultimes à 3s de cooldown là où
+   le jeu les remet à 20-35s. Toutes les mesures du Néant portaient donc sur un
+   joueur plus fort que le vrai. Maintenant en logique pure, vu à l'identique
+   par le jeu et par la simulation.
+5. **Quatre sous-classes manquaient à `NEANT_LEGACY`** — Sentinelle,
+   Nécromancien, Piégeur, Oracle, ajoutées après l'écriture de la table. Leur
+   finisher restait à 3s pendant le rituel quand les douze autres remontaient à
+   20-35s. Ajoutées, et `neutralizeForNeant` neutralise désormais **toute**
+   compétence portant une `resource`, listée ou non (repli 25s) : une classe
+   future ne peut plus passer au travers.
+
+Résultat mesuré (winrate, 16 sous-classes, règles du rituel appliquées) — avant :
+six classes le battaient à **100% sans aucune progression de saison**, tout le
+monde à 100% avec. Après :
+
+| Profil | avant | après (min / médiane / max) |
+|---|---|---|
+| Nv.50 gear maxé, aucune saison | médiane 71% | 0% / **2%** / 72% |
+| + artefact grille + Relique ★5 | 100% partout | 0% / 37% / 100% |
+| tout maxé (artefact + ★10 + prestige 5) | 100% partout | **88%** / 100% / 100% |
+
+C'est le contrat de la feature : infranchissable sans équipement à jour,
+franchissable par **toutes** les classes avec.
+
+⚠️ Le « Prêtre de l'Aube à 100% sans saison » signalé au passage précédent
+**n'existait pas** : c'était l'artefact de mesure ci-dessus (sa Nova à 3s au lieu
+de 30s). Il est en réalité à 0% sans saison. Ne pas le nerfer.
+
+Écart résiduel assumé : à investissement égal (gear maxé, aucune saison),
+Berserker 72%, Piégeur 56%, Voleur 55% et Cryomancien 55% passent là où les
+autres sont à 0-15%. Ce sont les quatre profils burst/esquive, qui ne dépendent
+pas du sustain bridé. Le choix de classe pèse donc à ce palier — jugé acceptable
+plutôt que d'aplatir les identités.
+
+**Donjons : `atkMult` 0.35 → 0.28 par membre** (`dungeonService.initMonster`).
+Les PV du boss montent de +12% par membre mais son ATK montait de +35% : à
+4 joueurs il frappait 2,05× plus fort alors que chaque membre garde UNE barre de
+vie et que le débit du soigneur ne monte pas. Forge Infernale en gear de craft :
+`0% / 100% / 99% / 19%` de 1 à 4 joueurs — le groupe complet était puni d'être
+complet. Après : **72% à 4 joueurs**, toujours plus dur qu'à 2, sans inverser la
+courbe. ⚠️ Miroir à tenir dans `scripts/balance-sim-turns.ts` (`dungeonScale`).
+
+Effet du lot sur la chasse en Abysses (Chasseur en gear de craft, sans saison) :
+Nv.40 17% → **25%**, Nv.50 17% → **40%**. Dur, mais plus une porte fermée — et
+c'est le craft du biome qui l'ouvre, pas le niveau.
+
 ## Amusement — 3 features (fait, C)
 
 - **Maîtrise des biomes** (`game/mastery.ts`, nouveau) : chaque kill compte pour le biome courant (`p.biomeKills`, migré). Paliers 100/500/1500/4000 → titre (`Novice/Familier/Vétéran/Maître/Légende · <Biome>`, ajouté à `unlockedTitles`) + **bonus permanent XP/Or dans ce biome** (+5/10/15/25%, appliqué dans `grantMonsterRewards`). But concret au farm end-game (Nv.40-50 = 81% du temps, sans nouvelle zone). Affiché : bandeau dans HuntCard (biome courant) + liste complète dans MapCard + toast au palier franchi (`HuntRewards.masteryUp`).
@@ -262,15 +602,96 @@ Répartition proposée (C = Claude / G = Gemini) :
 
 ## Sécurité (repo public + GitHub Pages)
 
-- **Firebase apiKey/config = publics par design** (`import.meta.env.VITE_*`, `.env` gitignoré, seul `.env.example` versionné). La sécurité repose **entièrement sur les règles** (`firestore.rules`, `database.rules.json`), pas sur le secret des clés.
-- ⚠️ **NE JAMAIS** autoriser un joueur à écrire `isAdmin` sur son propre doc. `firestore.rules` : `players/{uid}` write = `isAdminUser()` OU (`auth.uid==uid` ET `adminFlagUntouched()`) → le flag `isAdmin` ne peut être introduit/modifié que par un admin déjà confirmé (ou la console). Sinon = **prise de contrôle totale** (wipe, écriture sur tous les comptes). Bootstrap du 1er admin = console Firebase. Le re-grant post-wipe marche car l'ancien doc admin (isAdmin=true) existe encore quand `isAdminUser()` le lit.
-- `system/*` write = admin only ; `teams`/`guilds` **delete** = host/owner ou admin ; `endlessScores*` write = son propre uid ou admin (pour le wipe).
-- **Risque résiduel accepté** = *jeu client-authoritative* : un client modifié peut falsifier ses propres stats/or (Firestore fait confiance au doc) et griefer les sessions RTDB partagées (chat/dungeons/endlessSessions/pvpDuels/world = `.write: auth != null`, les règles RTDB ne peuvent pas lire `isAdmin` de Firestore). Mitigation optionnelle = déplacer les actions à enjeu dans `functions/` (Cloud Functions, plan Blaze, non déployé). Ne pas prétendre que c'est « sécurisé » côté triche solo.
+Audit fait, correctifs appliqués et **testés contre l'émulateur** :
+`npm run test:rules` (Firestore, 33 tests). ⚠️ `npm run test:rules:rtdb` existe
+mais **l'émulateur RTDB ne démarre pas dans le conteneur de dev** (il échoue
+aussi sur le fichier de règles d'origine — c'est l'environnement, pas les
+règles) : les règles RTDB sont relues et validées avec le parseur `cjson` de la
+CLI, pas exécutées. À faire tourner sur une machine avec un vrai accès réseau.
+
+- **Firebase apiKey/config = publics par design** (`import.meta.env.VITE_*`, `.env` gitignoré, seul `.env.example` versionné). La sécurité repose **entièrement sur les règles** (`firestore.rules`, `database.rules.json`), pas sur le secret des clés. Vérifié : aucun secret n'a jamais été commité.
+- ⚠️ **NE JAMAIS** autoriser un joueur à écrire `isAdmin` sur son propre doc. `adminFlagUntouched()` + `isAdminUser()`. Bootstrap du 1er admin = console Firebase.
+- ⚠️ **`isAdminUser()` doit tester `'isAdmin' in d` AVANT `d.isAdmin`.** L'accès direct (et même `d.get('isAdmin', false)`) **lève une erreur d'évaluation** sur les documents qui ne portent pas le champ — c'est-à-dire tous les joueurs normaux. Ça passait par court-circuit du `||`, mais une règle qui aurait mis `isAdminUser()` en premier opérande d'un `&&` aurait refusé des écritures légitimes. Vu dans les logs de l'émulateur, pas à la relecture.
+
+### Anti-triche : ce que le serveur refuse désormais (`playerSane`)
+Le jeu reste *client-authoritative* — Firestore ne peut pas RECALCULER une
+progression. Mais il peut refuser l'absurde, et surtout tout ce qui **déborde
+sur les autres**. Vérifié côté serveur, donc incontournable par un client modifié :
+- **niveau plafonné à 50** (`MAX_LEVEL`) ; devises ≥ 0 et bornées ;
+- **kills et prestige monotones** — ce sont les deux axes qui pèsent le plus au
+  classement (`power.ts` : prestige ×50). `applyRebirth` remet l'or à 100 et le
+  niveau à 1 mais n'y touche jamais, donc la contrainte ne gêne aucun jeu légitime ;
+- **`createdAt` immuable** : il suffisait de réécrire sa date de création pour
+  **survivre à un wipe global** (`loadPlayer` compare à `system/config.lastWipe`) ;
+- **la ligne de classement doit refléter le doc joueur** (niveau, kills,
+  prestige, artefact, via un `get()`). Avant, on pouvait laisser son personnage
+  intact et n'envoyer qu'une ligne mensongère — tricher le ladder ne demandait
+  même pas de toucher à sa sauvegarde. `savePlayer` écrit le doc AVANT la ligne,
+  donc le `get()` voit les bonnes valeurs.
+
+Pas de plafond « par delta » sur l'or : une vente au marché se fait à prix libre,
+donc un gain légitime peut être arbitrairement gros. Ce qui reste possible :
+monter **lentement des valeurs plausibles**. Pour fermer ça il faut déplacer les
+gains dans `functions/` (Cloud Functions, plan Blaze, non déployé) — `resolveDuel`
+et `buyMarketListing` y sont déjà écrits comme point de départ.
+
+### Ce qui a été fermé côté joueurs
+- **Messagerie privée** : les MP vivaient sous `chat/inbox/<pseudo>` avec
+  `.read: auth != null` sur tout le sous-arbre → **toutes les conversations
+  privées du serveur étaient lisibles par n'importe quel compte connecté**, les
+  clés s'énuméraient depuis le classement, et comme les pseudos sont libres et
+  **non uniques** (`ProfileCard`), se renommer comme quelqu'un suffisait à
+  recevoir ses messages. Re-keyées par **UID de personnage** (`chatService`,
+  `ChatCard`, `App`, `ChatNotifs`) ; la règle vérifie enfin la propriété.
+  `findUidByName` (socialService) résout le raccourci `/w Nom` via le classement.
+- **Chat vandalisable** : `chat` avait un `.write` racine qui cascadait, donc un
+  `set(ref('chat'), null)` vidait le serveur. Réservé aux admins ; les messages
+  sont en **création seule** (`!data.exists()`).
+- **Actions admin RTDB non protégées** : les règles RTDB ne peuvent pas lire
+  `isAdmin` (Firestore). Nouveau nœud **`admins/<uid>`**, lisible par tous et
+  écrivable **console uniquement**. ⚠️ **À créer à la main au déploiement**,
+  sinon « Vider les chats » et « Ouvrir une fenêtre de Raid » seront refusés.
+- ⚠️ **NE PAS verrouiller tout `world` sur les admins** : `world/boss` est écrit
+  par CHAQUE joueur qui frappe le boss mondial, `world/dungeonOpen` par quiconque
+  ouvre un donjon. Seul `world/raid` est administratif.
+- **Marché / équipes / guildes** : l'`update` était ouvert à tout compte connecté
+  (annuler l'annonce d'un autre, se déclarer hôte d'une équipe, s'approprier une
+  guilde). Champs d'identité figés, et le marché n'accepte que
+  `status`/`buyerUid`/`soldAt` — un acheteur ne peut plus baisser le prix.
+- **Règles mortes supprimées** : `duels` (remplacé par `pvpDuelService`) et
+  `gifts` (jamais branché) laissaient `update`/`delete` ouverts sur des
+  collections que plus personne n'écrit.
+
+### Risque résiduel, assumé
+Sessions temps réel partagées (`dungeons`/`endlessSessions`/`pvpDuels`) toujours
+en `.write: auth != null` : les deux camps y écrivent tour à tour, les verrouiller
+demanderait des Cloud Functions. Griefing d'une session en cours possible, pas de
+vol. Et `power` reste calculé par le client (les règles ne peuvent pas rejouer
+`powerScore`) : seul un plafond l'empêche d'écraser l'affichage.
+`dangerouslySetInnerHTML` dans `NewsCard`/`PatchNotesModal` n'est pas un XSS
+aujourd'hui (source = constante du dépôt) mais le deviendrait si les patch notes
+passaient un jour par Firestore. `npm audit` remonte `undici` (Firebase SDK) :
+**absent du bundle navigateur**, donc non exploitable ici.
 
 ## Règles pour agents
 
 - Toujours `item(id)` (jamais `ITEMS[id]`). Ajouter l'icône dans `icons.ts` en même temps qu'un nouvel objet.
 - Toute écriture de save passe par `mutate` (gameStore) ; migrations dans `migratePlayer`.
 - Restriction de classe : les objets listent les **classes de base** ; `canEquip` compare à la classe **de base** du joueur (ascension incluse).
-- `npx tsc -b` doit passer avant de conclure. Ne pas prétendre « vérifié en jeu » (preview OAuth bloqué) — dire « vérif build seulement ».
+- `npx tsc -b` **et** `npm run build` doivent passer avant de conclure.
+- **Vérifier en jeu est possible, et c'est attendu pour tout changement visuel.**
+  Sans `.env`, `isFirebaseConfigured` est faux : l'app bascule en mode local
+  (localStorage), le bouton « Se connecter avec Google » crée un compte local sans
+  aucun popup OAuth, et tout le solo est jouable. `npm run dev` + Playwright
+  (`/opt/node22/lib/node_modules/playwright`, Chromium `/opt/pw-browsers/chromium`)
+  permet donc de piloter le vrai jeu. Cette session y a trouvé des défauts que le
+  typecheck ne voyait pas : nœuds de talents incliquables, boutons de combat hors
+  écran, quatre modificateurs de Faille sur six qui ne sortaient jamais.
+  Pour forcer un état de test : écrire dans `localStorage` (`rptext.player.<uid>`)
+  depuis une page, la FERMER, puis rouvrir une page — sinon la sauvegarde débouncée
+  de la page encore ouverte écrase le patch. ⚠️ Penser à donner assez de `kills` :
+  l'anti-triche de `migratePlayer` re-nivelle tout personnage dont l'XP dépasse
+  `kills*50 + donjons*800 + 3000`, ce qui ramenait les persos de test au Nv.10.
+  Ce qui reste invérifiable en local : classements, ladder, chat, donjons multi,
+  duels temps réel (tout ce qui demande Firestore/RTDB) — le dire explicitement.
 - Respecter la répartition Claude/Gemini ci-dessus pour éviter les conflits de merge.

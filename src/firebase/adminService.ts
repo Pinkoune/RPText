@@ -2,14 +2,42 @@ import { collection, getDocs, doc, getDoc, updateDoc, query, where } from 'fireb
 import { db } from './config';
 import type { PlayerState } from '../game/types';
 
+const LOCAL_PREFIX = 'rptext.player.';
+
+/**
+ * Personnages stockés en localStorage, en mode hors-ligne (`.env` absent).
+ *
+ * Sans ça le panneau admin était vide et inerte dès qu'on développait en
+ * local : liste de joueurs vide, écritures silencieusement ignorées. Or c'est
+ * précisément là qu'on veut tester un rang de saison ou un objet donné, sans
+ * toucher à la base de production.
+ */
+function localPlayers(): PlayerState[] {
+  const out: PlayerState[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith(LOCAL_PREFIX)) continue;
+      const raw = localStorage.getItem(key);
+      if (raw) out.push(JSON.parse(raw) as PlayerState);
+    }
+  } catch { /* stockage indisponible : on rend ce qu'on a */ }
+  return out;
+}
+
 export async function getAllPlayers(): Promise<PlayerState[]> {
-  if (!db) return [];
+  if (!db) return localPlayers();
   const snap = await getDocs(collection(db, 'players'));
   return snap.docs.map(d => d.data() as PlayerState);
 }
 
 export async function updatePlayerAdmin(uid: string, data: Partial<PlayerState>): Promise<void> {
-  if (!db) return;
+  if (!db) {
+    const raw = localStorage.getItem(LOCAL_PREFIX + uid);
+    if (!raw) return;
+    localStorage.setItem(LOCAL_PREFIX + uid, JSON.stringify({ ...JSON.parse(raw), ...data }));
+    return;
+  }
   await updateDoc(doc(db, 'players', uid), data);
 }
 

@@ -1,7 +1,28 @@
-import { collection, getDocs, query, orderBy, limit, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { ref, onValue, onDisconnect, set, serverTimestamp } from 'firebase/database';
 import { db, rtdb, isFirebaseConfigured } from './config';
 import type { ClassId, PlayerState } from '../game/types';
+import { fallbackPower } from '../game/power';
+
+/**
+ * Retrouve l'UID d'un personnage depuis son pseudo, via le classement (qui
+ * porte `uid` et `name`). Sert au raccourci `/w Nom` : les messages privés sont
+ * rangés par UID, donc il faut résoudre le pseudo — y compris pour quelqu'un de
+ * déconnecté, absent de la liste de présence.
+ *
+ * ⚠️ Les pseudos ne sont pas uniques (chacun choisit le sien dans le Profil) :
+ * en cas d'homonymie on prend la première ligne trouvée. C'est le raccourci de
+ * confort ; le chemin fiable reste de cliquer sur la personne.
+ */
+export async function findUidByName(name: string): Promise<string | null> {
+  if (!isFirebaseConfigured || !db) return null;
+  try {
+    const snap = await getDocs(query(collection(db, 'leaderboard'), where('name', '==', name), limit(1)));
+    return snap.empty ? null : (snap.docs[0].data() as { uid?: string }).uid ?? snap.docs[0].id;
+  } catch {
+    return null;
+  }
+}
 
 /** Lit le profil public d'un joueur (best-effort). Null si indisponible. */
 export async function fetchPublicProfile(uid: string): Promise<Partial<PlayerState> | null> {
@@ -31,6 +52,10 @@ export interface LeaderRow {
   prestigeAura?: string;
   prestigeLevel?: number;
   auraColorOn?: boolean;
+  /** Cote de Puissance (voir game/power.ts). Absente sur les lignes d'anciens clients. */
+  power?: number;
+  /** Niveau d'artefact = progression de saison (voir game/season.ts). */
+  artifactLevel?: number;
 }
 
 export interface OnlinePlayer {
@@ -43,12 +68,26 @@ export interface OnlinePlayer {
   playtimeMs?: number;
 }
 
+/** Puissance d'une ligne, avec repli pour les lignes d'avant la cote. */
+export function rowPower(r: LeaderRow): number {
+  return r.power ?? fallbackPower(r);
+}
+
 /**
- * Départage à niveau égal par l'XP brute : comme le seuil pour passer au
+ * Classement par Puissance, puis niveau, puis XP brute.
+ *
+ * Le tri se fait ICI plutôt que dans la requête Firestore : un `orderBy('power')`
+ * exclurait purement et simplement les documents qui ne portent pas encore le
+ * champ (les lignes écrites par un client plus ancien disparaîtraient du
+ * tableau jusqu'à la prochaine connexion de leur propriétaire).
+ *
+ * Départage à Puissance égale par l'XP brute : comme le seuil pour passer au
  * niveau suivant ne dépend que du niveau (pas du joueur), comparer l'XP brute
  * entre deux joueurs du même niveau revient à comparer leur % de progression.
  */
-function byLevelThenXp(a: LeaderRow, b: LeaderRow): number {
+function byPower(a: LeaderRow, b: LeaderRow): number {
+  const d = rowPower(b) - rowPower(a);
+  if (d !== 0) return d;
   if (b.level !== a.level) return b.level - a.level;
   return (b.xp ?? 0) - (a.xp ?? 0);
 }
@@ -58,12 +97,28 @@ function isHiddenName(name: string | undefined): boolean {
   return (name ?? '').trim().toLowerCase() === 'admin';
 }
 
-/** Top joueurs par niveau. Vide en mode local. */
+/**
+ * Facteur de sur-échantillonnage.
+ *
+ * La requête doit trier sur `level` (seul champ présent sur TOUTES les lignes,
+ * y compris celles d'anciens clients), mais le classement affiché est celui de
+ * la Puissance. Sans marge, `limit` couperait sur le mauvais critère : un joueur
+ * qui vient de renaître est au Nv.1 tout en pesant très lourd en Puissance, et
+ * il serait purement et simplement absent du tableau. On rapatrie donc large,
+ * on trie, puis on tranche.
+ */
+const OVERFETCH = 4;
+
+function rank(rows: LeaderRow[], max: number): LeaderRow[] {
+  return rows.filter((r) => !isHiddenName(r.name)).sort(byPower).slice(0, max);
+}
+
+/** Top joueurs par Puissance. Vide en mode local. */
 export async function fetchLeaderboard(max = 20): Promise<LeaderRow[]> {
   if (!isFirebaseConfigured || !db) return [];
-  const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max));
+  const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max * OVERFETCH));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as LeaderRow).filter((r) => !isHiddenName(r.name)).sort(byLevelThenXp);
+  return rank(snap.docs.map((d) => d.data() as LeaderRow), max);
 }
 
 export function watchLeaderboard(max: number, onChange: (rows: LeaderRow[]) => void): () => void {
@@ -71,9 +126,9 @@ export function watchLeaderboard(max: number, onChange: (rows: LeaderRow[]) => v
     onChange([]);
     return () => {};
   }
-  const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max));
+  const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max * OVERFETCH));
   return onSnapshot(q, (snap) => {
-    onChange(snap.docs.map((d) => d.data() as LeaderRow).filter((r) => !isHiddenName(r.name)).sort(byLevelThenXp));
+    onChange(rank(snap.docs.map((d) => d.data() as LeaderRow), max));
   });
 }
 
@@ -87,11 +142,15 @@ export function watchSeasonLadder(currentSeasonId: string, max: number, onChange
     onChange([]);
     return () => {};
   }
-  const q = query(collection(db, 'leaderboard'), orderBy('seasonPoints', 'desc'), limit(max * 2));
+  // Même précaution que pour la Puissance : trier côté serveur sur un champ que
+  // toutes les lignes ne portent pas encore exclurait les anciennes. On trie sur
+  // `level`, présent partout, puis on classe côté client sur l'artefact.
+  const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max * 4));
   return onSnapshot(q, (snap) => {
     const rows = snap.docs
       .map((d) => d.data() as LeaderRow)
-      .filter((r) => r.seasonId === currentSeasonId && (r.seasonPoints ?? 0) > 0 && !isHiddenName(r.name))
+      .filter((r) => r.seasonId === currentSeasonId && (r.artifactLevel ?? 0) > 0 && !isHiddenName(r.name))
+      .sort((a, b) => (b.artifactLevel ?? 0) - (a.artifactLevel ?? 0))
       .slice(0, max);
     onChange(rows);
   });

@@ -1,16 +1,22 @@
 import { create } from 'zustand';
 import type { PlayerState, ClassId } from '../game/types';
-import { createPlayer, migratePlayer, deriveStats } from '../game/player';
+import { createPlayer, migratePlayer, deriveStats, charKey } from '../game/player';
 import { claimDailyLogin, type DailyReward } from '../game/daily';
 import type { SeasonReward } from '../game/season';
 import { signInWithProvider, signOut, watchAuth, type AppUser, type AuthProviderType } from '../firebase/auth';
-import { loadPlayer, savePlayer, watchGlobalWipe } from '../firebase/playerService';
+import { loadPlayer, savePlayer, watchGlobalWipe, listCharacters, deleteCharacter, type CharacterSlot } from '../firebase/playerService';
 import { touchPresence } from '../firebase/socialService';
 import { isFirebaseConfigured } from '../firebase/config';
 import { sendAutoAnnounce } from '../firebase/chatService';
-import { leaveTeam } from '../firebase/groupsService';
+import { leaveTeam, type Team } from '../firebase/groupsService';
+import type { OnlinePlayer } from '../firebase/socialService';
+import { fetchSeason, watchSeason } from '../firebase/seasonService';
+import { getCurrentSeason } from '../game/artifact';
 
-export type Status = 'loading' | 'login' | 'create' | 'ready';
+export type Status = 'loading' | 'login' | 'select' | 'create' | 'ready';
+
+/** Dernier emplacement joué, pour le reproposer en tête à la reconnexion. */
+const lastSlotKey = (accountUid: string) => `rptext.lastSlot.${accountUid}`;
 
 export interface Toast {
   id: number;
@@ -25,6 +31,8 @@ export interface ChatNotif {
   channel: ChatChannelKind;
   name: string;
   text: string;
+  /** UID de l'expéditeur — les MP sont keyés par UID, pas par pseudo. */
+  uid?: string;
 }
 
 interface GameState {
@@ -39,6 +47,13 @@ interface GameState {
   dailyReward: DailyReward | null;
   setDailyReward: (reward: DailyReward) => void;
   clearDailyReward: () => void;
+  /**
+   * Durée d'absence depuis la dernière session (ms), capturée AU CHARGEMENT.
+   * Indispensable : `savePlayer` écrase `lastSeen` avec l'heure courante dès
+   * l'entrée en jeu, donc la lire plus tard donnerait toujours zéro.
+   */
+  awayMs: number;
+  clearAway: () => void;
   /** Récompense de fin de saison PvP à afficher (null = rien). */
   seasonReward: { tierName: string; reward: SeasonReward } | null;
   clearSeasonReward: () => void;
@@ -46,6 +61,20 @@ interface GameState {
   signIn: (provider: AuthProviderType) => Promise<void>;
   logout: () => Promise<void>;
   chooseClass: (cls: ClassId, name?: string) => Promise<void>;
+  /** Emplacements de personnage du compte (écran de sélection). */
+  characters: CharacterSlot[];
+  /** Emplacement visé par la création en cours. */
+  pendingSlot: number;
+  /** Recharge la liste des personnages depuis la base. */
+  refreshCharacters: () => Promise<void>;
+  /** Entre en jeu avec le personnage de cet emplacement. */
+  selectCharacter: (slot: number) => Promise<void>;
+  /** Ouvre la création de personnage sur un emplacement vide. */
+  startCreateCharacter: (slot: number) => void;
+  /** Supprime définitivement le personnage d'un emplacement. */
+  removeCharacter: (slot: number) => Promise<void>;
+  /** Revient à l'écran de sélection depuis la partie en cours. */
+  backToSelect: () => Promise<void>;
   /** Mute le joueur via un brouillon puis sauvegarde (debounce). */
   mutate: (fn: (p: PlayerState) => void) => void;
   toast: (text: string, tone?: Toast['tone'], durationMs?: number) => void;
@@ -58,14 +87,24 @@ interface GameState {
   hasUnreadChat: boolean;
   markChatRead: () => void;
   /** Onglet/conversation actuellement affiché dans ChatCard (si ouvert) — évite de notifier une conversation déjà sous les yeux. */
-  activeChatView: { tab: ChatChannelKind; dmPeer?: string } | null;
-  setActiveChatView: (v: { tab: ChatChannelKind; dmPeer?: string } | null) => void;
+  activeChatView: { tab: ChatChannelKind; dmPeer?: { uid: string; name: string } } | null;
+  setActiveChatView: (v: { tab: ChatChannelKind; dmPeer?: { uid: string; name: string } } | null) => void;
   inCombat: boolean;
   setInCombat: (val: boolean) => void;
+  /**
+   * Joueurs en ligne et equipes, publies par PresenceTracker (unique
+   * abonne). Tout autre composant qui en a besoin lit ici : un second
+   * `trackPresence` reecrirait la presence et poserait un deuxieme
+   * onDisconnect sur le meme noeud.
+   */
+  onlinePlayers: OnlinePlayer[];
+  teams: Team[];
+  setPresence: (online: OnlinePlayer[], teams: Team[]) => void;
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let wipeUnsub: (() => void) | null = null;
+let seasonUnsub: (() => void) | null = null;
 let toastId = 0;
 let chatNotifId = 0;
 
@@ -80,8 +119,13 @@ export const useGame = create<GameState>((set, get) => ({
   levelCelebration: 0,
   dailyReward: null,
   seasonReward: null,
+  awayMs: 0,
+  clearAway: () => set({ awayMs: 0 }),
   inCombat: false,
   setInCombat: (val) => set({ inCombat: val }),
+  onlinePlayers: [],
+  teams: [],
+  setPresence: (onlinePlayers, teams) => set({ onlinePlayers, teams }),
 
   celebrateLevelUp: () => set((s) => ({ levelCelebration: s.levelCelebration + 1 })),
   setDailyReward: (dailyReward) => set({ dailyReward }),
@@ -105,26 +149,39 @@ export const useGame = create<GameState>((set, get) => ({
         setTimeout(() => window.location.reload(), 1200);
       });
       try {
-        const existing = await loadPlayer(user.uid);
-        if (existing) {
-          migratePlayer(existing);
-          // Resync identité Google (avatar/nom peuvent changer).
-          existing.name = existing.name || user.name;
-          existing.photoURL = user.photoURL;
-          // Récompense de connexion journalière : créditée automatiquement au
-          // démarrage (nouveau jour). La modale s'affiche pour la montrer ; le
-          // bouton de l'onglet Quêtes sert seulement à la ré-afficher ensuite.
-          const reward = claimDailyLogin(existing);
-          // Récompense de fin de saison (créditée par migratePlayer si rotation).
-          let seasonReward: { tierName: string; reward: SeasonReward } | null = null;
-          if (existing.lastSeasonReward) {
-            seasonReward = { tierName: existing.lastSeasonReward.tierName, reward: existing.lastSeasonReward.reward };
-            delete existing.lastSeasonReward;
-          }
-          set({ player: existing, status: 'ready', dailyReward: reward, seasonReward });
-          if (reward || seasonReward) void savePlayer(existing);
+        // La saison doit être connue AVANT de charger un personnage : c'est
+        // `migratePlayer` qui fait tourner l'artefact, et il lui faut le bon
+        // numéro sous peine de remettre l'artefact à zéro à tort.
+        await fetchSeason();
+        seasonUnsub?.();
+        seasonUnsub = watchSeason((info) => {
+          if (info.number === getCurrentSeason()) return;
+          get().toast(`Une nouvelle saison commence ! Rechargement…`, 'gold');
+          setTimeout(() => window.location.reload(), 1500);
+        });
+        const slots = await listCharacters(user.uid);
+        const existing = slots.filter((s) => s.player);
+        set({ characters: slots });
+        if (existing.length === 0) {
+          // Aucun personnage : on va droit à la création du premier.
+          set({ status: 'create', pendingSlot: 0 });
         } else {
-          set({ status: 'create' });
+          // Reprise du DERNIER personnage joué. `lastSlotKey` était déjà écrit à
+          // chaque sélection mais n'était jamais relu : on repassait donc par
+          // l'écran de choix à chaque rechargement, même avec un seul
+          // personnage. On ne s'y arrête plus que si le dernier slot connu
+          // n'existe pas (ou n'a jamais été enregistré).
+          //
+          // L'écran reste accessible : « Changer de personnage » dans les
+          // Réglages (`backToSelect`), qui pose `status: 'select'` directement
+          // et n'est donc pas court-circuité par cette reprise.
+          let last = -1;
+          try { last = Number(localStorage.getItem(lastSlotKey(user.uid)) ?? -1); } catch { /* ignore */ }
+          const resume = existing.find((s) => s.slot === last)
+            // Un seul personnage : il n'y a rien à choisir, on entre directement.
+            ?? (existing.length === 1 ? existing[0] : undefined);
+          if (resume) await get().selectCharacter(resume.slot);
+          else set({ status: 'select' });
         }
       } catch (err) {
         console.error("Erreur de chargement Firebase:", err);
@@ -132,6 +189,79 @@ export const useGame = create<GameState>((set, get) => ({
         get().toast("Erreur de base de données. As-tu bien activé Firestore ?", "bad");
       }
     });
+  },
+
+  characters: [],
+  pendingSlot: 0,
+
+  refreshCharacters: async () => {
+    const user = get().user;
+    if (!user) return;
+    set({ characters: await listCharacters(user.uid) });
+  },
+
+  selectCharacter: async (slot) => {
+    const user = get().user;
+    if (!user) return;
+    set({ status: 'loading' });
+    try {
+      const existing = await loadPlayer(charKey(user.uid, slot));
+      if (!existing) {
+        set({ status: 'create', pendingSlot: slot });
+        return;
+      }
+      // Capturé AVANT toute sauvegarde : savePlayer met `lastSeen` à l'heure
+      // courante, ce qui effacerait la trace de l'absence.
+      const awayMs = Math.max(0, Date.now() - (existing.lastSeen ?? Date.now()));
+      migratePlayer(existing);
+      // Resync identité Google (l'avatar peut changer ; le nom, lui, appartient
+      // au personnage — deux persos du même compte ont des pseudos distincts).
+      existing.photoURL = user.photoURL;
+      // Récompense de connexion journalière : créditée automatiquement à
+      // l'entrée en jeu (nouveau jour). La modale s'affiche pour la montrer ; le
+      // bouton de l'onglet Quêtes sert seulement à la ré-afficher ensuite.
+      const reward = claimDailyLogin(existing);
+      // Récompense de fin de saison (créditée par migratePlayer si rotation).
+      let seasonReward: { tierName: string; reward: SeasonReward } | null = null;
+      if (existing.lastSeasonReward) {
+        seasonReward = { tierName: existing.lastSeasonReward.tierName, reward: existing.lastSeasonReward.reward };
+        delete existing.lastSeasonReward;
+      }
+      try { localStorage.setItem(lastSlotKey(user.uid), String(slot)); } catch { /* ignore */ }
+      set({ player: existing, status: 'ready', dailyReward: reward, seasonReward, awayMs });
+      // La migration peut avoir changé le personnage (courbe d'XP, defaults) :
+      // on persiste dans tous les cas, pas seulement s'il y a une récompense.
+      void savePlayer(existing);
+    } catch (err) {
+      console.error('Erreur de chargement du personnage:', err);
+      set({ status: 'select' });
+      get().toast('Impossible de charger ce personnage.', 'bad');
+    }
+  },
+
+  startCreateCharacter: (slot) => set({ status: 'create', pendingSlot: slot }),
+
+  removeCharacter: async (slot) => {
+    const user = get().user;
+    if (!user) return;
+    try {
+      await deleteCharacter(charKey(user.uid, slot));
+      await get().refreshCharacters();
+      get().toast('Personnage supprimé.', 'info');
+    } catch (e) {
+      console.error('Suppression impossible:', e);
+      get().toast('Suppression impossible.', 'bad');
+    }
+  },
+
+  backToSelect: async () => {
+    // On quitte proprement l'équipe : sinon le personnage laissé derrière reste
+    // listé comme membre alors qu'il n'est plus en ligne.
+    const cur = get().player;
+    if (cur?.teamId) { try { await leaveTeam(cur.teamId, cur.uid); } catch { /* ignore */ } }
+    set({ player: null, status: 'loading' });
+    await get().refreshCharacters();
+    set({ status: 'select' });
   },
 
   signIn: async (provider: AuthProviderType) => {
@@ -155,16 +285,20 @@ export const useGame = create<GameState>((set, get) => ({
     const cur = get().player;
     if (cur?.teamId) { try { await leaveTeam(cur.teamId, cur.uid); } catch { /* ignore */ } }
     await signOut();
-    set({ user: null, player: null, status: 'login' });
+    set({ user: null, player: null, status: 'login', characters: [], pendingSlot: 0 });
   },
 
   chooseClass: async (cls, name) => {
     const user = get().user;
     if (!user) return;
-    const p = createPlayer(user.uid, name || user.name, user.photoURL, cls);
-    const isLegacy = localStorage.getItem(`rptext.legacy.${user.uid}`) === 'true';
+    const slot = get().pendingSlot;
+    const p = createPlayer(user.uid, name || user.name, user.photoURL, cls, slot);
+    // Le statut Vétéran/Admin est rattaché au COMPTE, pas au personnage : il ne
+    // se transfère donc qu'au premier personnage créé (slot 0), pour éviter de
+    // dupliquer la médaille de pionnier sur chaque nouvel emplacement.
+    const isLegacy = slot === 0 && localStorage.getItem(`rptext.legacy.${user.uid}`) === 'true';
     const legacyCreatedAtStr = localStorage.getItem(`rptext.legacyCreatedAt.${user.uid}`);
-    const wasAdmin = localStorage.getItem(`rptext.wasAdmin.${user.uid}`) === 'true';
+    const wasAdmin = slot === 0 && localStorage.getItem(`rptext.wasAdmin.${user.uid}`) === 'true';
     if (isLegacy) {
       p.gold = (p.gold || 0) + 1000;
       p.inventory['pioneer_medallion'] = (p.inventory['pioneer_medallion'] || 0) + 1;
@@ -183,8 +317,10 @@ export const useGame = create<GameState>((set, get) => ({
     }
     
     await savePlayer(p);
+    try { localStorage.setItem(lastSlotKey(user.uid), String(slot)); } catch { /* ignore */ }
     set({ player: p, status: 'ready' });
-    
+    void get().refreshCharacters();
+
     if (isLegacy) {
       useUi.getState().open('veteran', undefined, { singleton: true });
     } else {

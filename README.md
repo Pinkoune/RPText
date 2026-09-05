@@ -1,126 +1,270 @@
-# RPText ⚔️🎲
+<div align="center">
 
-Un RPG textuel **multijoueur** dans le navigateur, inspiré de **EPIC RPG**, **World of Warcraft** et **Final Fantasy XIV**.
+# RPText
 
-Une seule barre de commande au centre (comme un site d'IA) : on tape des commandes
-(`hunt`, `profile`, `map`, `casino`…) qui ouvrent des **cartes flottantes** éphémères.
-Au rechargement de la page, l'interface revient à son état neutre — mais la progression
-est sauvegardée dans Firebase.
+**Un RPG textuel multijoueur qui tient dans une barre de commande.**
 
-## ✨ Fonctionnalités
+Tu tapes `hunt`, une carte s'ouvre, tu combats. Tu tapes `close`, l'écran redevient
+vide. La progression, elle, reste.
 
-- **Connexion Google** (Firebase Auth) — avec un **mode local** automatique si Firebase n'est pas configuré (pratique pour développer sans clés).
-- **Cycle jour/nuit en temps réel** : le fond d'écran (soleil, lune, étoiles) et les monstres/loot changent selon l'heure réelle (Aube / Jour / Crépuscule / Nuit).
-- **Biomes** débloqués par niveau (forêt, plaines, montagnes, désert, marais, abysse gelé). Le fond change selon le biome.
-- **Combat interactif** au tour par tour (`hunt`, cooldown 90s) : Attaquer, **capacité de classe**, Potion, Fuir — les monstres frappent fort. Montée de niveau, inventaire, boutique.
-- **Classes distinctes et équilibrées** : armes restreintes par classe + **trait inné** (Guerrier −10% dégâts subis, Mage +6% critique, Archer +6% double frappe, Soigneur +5 PV/tour). Carte d'équipement dédiée.
-- **Card-Jitsu** : mini-jeu de cartes PvP (feu>neige>eau>feu) avec mise en or, contre une IA.
-- **Carte du monde** visuelle : régions reliées par un chemin, débloquées par niveau, voyage au clic, le décor change selon le biome.
-- **Récolte de ressources** (à la EPIC RPG) : bûcheronnage, minage, pêche, cueillette selon le biome (bois, pierre, fer, mithril, cristal, poisson, herbes…). **Une seule récolte à la fois** (cooldown partagé) qui fait monter un **niveau de farm global** débloquant les ressources rares et le rendement. Carte `experience` dédiée (aventure + farm).
-- **Donjons** à étapes : enchaînement de combats (PV non régénérés entre les salles) + boss final, gros butin, longue récupération.
-- **Talents par classe** : 1 point de talent par niveau, à investir dans des passifs (critique, réduction de dégâts, esquive, double frappe, régénération, furie…) qui modifient le combat.
-- **Craft / Forge** : transforme matériaux de chasse **et ressources récoltées** en équipement, potions et nourriture (recettes exigeantes — progression longue).
-- **Marché entre joueurs** (trade non abusif) : vente/achat d'objets avec **taxe de 10%** (puits d'or), max 5 annonces, niveau 5+ requis.
-- **Quêtes** journalières et hebdomadaires + récompense de connexion quotidienne.
-- **Gambling — le « Casino du Destin »** : pile/face, **blackjack**, machine à sous, et une **roue liée au cycle jour/nuit** (segments x10 la nuit). Monnaie premium « Fate Coins ».
-- **Multijoueur** :
-  - **Duels PvP** au pile/face avec mise en or (le gagnant rafle tout).
-  - **Boss mondial** partagé : **une attaque puissante toutes les 2h** par joueur, PV synchronisés, butin partagé au prorata des dégâts, classement des assaillants.
-  - **Chat mondial** temps réel.
-  - **Équipes** : petits groupes (4 max) avec **partage d'or** entre coéquipiers.
-  - **Guildes** : groupes persistants (nom + tag), **contributions → niveau de guilde**, classement.
-  - **Présence** (qui est en ligne) + **classement** global.
-- **Sons + musique d'ambiance** procéduraux (Web Audio, aucun asset) : l'ambiance musicale change selon le biome et la phase. Bouton mute.
-- **Capacités actives de classe** : chaque classe a une capacité spéciale (gros dégâts, soin) déclenchable manuellement dans le combat de boss mondial.
-- **100% responsive** (mobile, tablette, desktop).
+Vite · React · TypeScript · Tailwind · Zustand · Firebase
 
-## 🚀 Démarrage rapide
+</div>
+
+---
+
+## Ce que c'est
+
+Un jeu de rôle textuel dans le navigateur, dans l'esprit d'**EPIC RPG** — mais avec
+un vrai combat tactique, un arbre de talents par classe, des saisons, et de quoi
+continuer à jouer une fois le niveau maximum atteint.
+
+L'interface n'est pas un menu : c'est **une barre de commande** au centre de
+l'écran. Chaque commande ouvre une **fenêtre flottante** qu'on déplace, empile ou
+ferme. Rien n'est permanent à l'écran, tout est à un mot de distance.
+
+> **Ça marche sans rien installer côté serveur.** Sans configuration Firebase, le jeu
+> bascule en mode local : ton héros vit dans le `localStorage`. Le multijoueur
+> s'active en ajoutant des clés.
+
+---
+
+## La boucle de jeu
+
+```
+  hunt ──▶ combat au tour par tour ──▶ butin + XP ──▶ craft / équipement
+    ▲                │                                        │
+    │                └──▶ série de chasse (+40% max)           │
+    └────────────────────── plus fort ◀──────────────────────┘
+```
+
+Le combat n'est pas un échange de clics. Le monstre **annonce son intention** au tour
+précédent — coup lourd, garde, incantation — et tu réponds :
+
+| Action | Effet | Quand |
+|---|---|---|
+| ⚔️ **Attaquer** | dégâts normaux | par défaut |
+| 🛡️ **Parer** | n'encaisse qu'un quart, et **riposte** avec 70% de ce qui a été bloqué | sans risque, d'autant meilleur que le coup est gros |
+| ⚡ **Interrompre** | **annule** le coup annoncé et étourdit | un pari : s'il ne préparait rien, tu prends +50% |
+
+S'ajoutent les compétences actives de ta spécialisation, les ressources d'archétype
+(Rage, Combo, Mana, Âmes, Présage…), les éléments, les altérations, et la **Faille** —
+une fenêtre de dégâts ×1.5 qui s'ouvre quand l'ennemi est gelé ou étourdi.
+
+---
+
+## Progression : six jauges, et une seule qui compte pour la saison
+
+C'est la partie qui distingue RPText d'un jeu de commandes classique. Chaque jauge
+monte avec des choses différentes et sert à des choses différentes.
+
+| Jauge | Monte avec | Sert à |
+|---|---|---|
+| ⭐ **Niveau** (1 → 50) | combat, donjon, récolte, forge, camp | statistiques, 1 point de talent par niveau |
+| 🔮 **Artefact** | la **même XP** que ton niveau, **plus le PvP** | ta saison : mods, rang, paliers de passe |
+| 🔨 **Métiers** | récolter, forger, concocter | recettes et ressources de meilleur niveau |
+| ✧ **Éclats** | succès, passe de saison, artefact au-delà de sa grille | les étoiles de ta Relique |
+| 🏅 **Maîtrise** | tes kills, comptés par zone | bonus d'XP et d'or permanent dans cette zone |
+| ⚡ **Puissance** | rien — c'est la somme de tout le reste | ta place au classement |
+
+**L'artefact EST la saison.** Il monte sur tout ce que tu fais, donne ton rang
+(Bronze → Maître) et remplit la passe. À la rotation, il repart à zéro avec les
+classements — mais **ton personnage n'est jamais touché**.
+
+---
+
+## Choisir sa voie
+
+**4 classes de base**, et au niveau 20 une **ascension** vers l'une des 4
+spécialisations de ta famille — soit **20 classes** en tout, chacune avec son arbre de
+talents complet et sa ressource propre.
+
+| Famille | Spécialisations |
+|---|---|
+| ⚔️ **Guerrier** | Paladin · Berserker · Chevalier Noir · Sentinelle |
+| 🔮 **Mage** | Pyromancien · Cryomancien · Arcaniste · Nécromancien |
+| 🏹 **Archer** | Voleur · Barde · Chasseur · Piégeur |
+| ❤️ **Soigneur** | Prêtre de l'Aube · Druide · Moine · Oracle |
+
+**3 personnages par compte** : tester une autre voie ne détruit plus celle qu'on a
+montée.
+
+---
+
+## Le end-game
+
+Une fois le niveau 50 atteint, la progression continue ailleurs.
+
+- 🕳️ **Le Rituel du Néant** — un boss unique calibré sur un build **parfait**. Ton
+  équipement réel ne baisse jamais la barre : si tu n'es pas optimisé, tu perds.
+- ✦ **La Renaissance** — repartir du niveau 1 contre un niveau de Prestige
+  (+8% ATK/DEF/PV et +10% XP/Or, cumulables 5 fois) et un jeton de changement de
+  classe. Familiers, titres, succès, maîtrises et Relique traversent.
+- 💠 **La Relique** — **le seul objet qui survit à la renaissance ET aux saisons.**
+  Ses cinq premières étoiles donnent des statistiques ; les cinq suivantes donnent
+  **un effet au choix parmi trois**, alors deux Reliques ★10 ne jouent pas pareil.
+  Elle change de nom et d'apparence en montant, jusqu'à *Relique primordiale*.
+- 🌀 **La Faille de la semaine** — un biome et un monstre du jeu revisités par un
+  modificateur qui change tous les lundis : Enragé, Colossal, Carapacé, Cœur de
+  givre, Voile d'ombre, Verre et lames. Chacun demande d'adapter son build, pas
+  seulement d'être plus fort.
+- 🎟️ **La passe de saison**, gratuite : dix paliers qui donnent des Éclats, des fonds
+  de profil et des titres saisonniers qu'on ne pourra plus jamais regagner.
+
+---
+
+## Le contenu
+
+|  |  |
+|---|---|
+| 🗺️ **8 biomes** | Forêt, Plaines, Montagnes, Désert, Marais, Volcan, Nécropole de Cristal, Abysses du Vide |
+| 🐺 **28 monstres** | avec éléments, faiblesses, résistances et phases d'apparition |
+| ⚗️ **215 objets** · **149 recettes** | armes, armures, bijoux, consommables, matériaux |
+| 🌟 **147 talents** | répartis sur les 20 arbres de classe |
+| 🐣 **11 familiers** | avec leurs capacités passives en combat |
+| 🏆 **29 succès** | qui donnent titres et Éclats de Relique |
+| 🏰 **5 donjons** | à paliers de difficulté, plus un raid à 12 étages |
+
+Et aussi : cycle jour/nuit réel qui change le décor et les monstres, événements
+mondiaux et régionaux, camp hors-ligne, marché entre joueurs, casino, Card-Jitsu,
+Abysses infinis, boss mondial partagé, équipes, guildes et objectifs collectifs.
+
+---
+
+## Démarrage
 
 ```bash
 npm install
 npm run dev
 ```
 
-Ouvre http://localhost:5173. **Sans configuration Firebase**, le jeu démarre en
-*mode local* : la connexion crée un héros stocké dans le `localStorage` de l'appareil.
-Idéal pour tester immédiatement.
+Ouvre <http://localhost:5173>. **Sans configuration Firebase**, la connexion crée un
+héros local — tout le solo est jouable immédiatement.
 
-## 🔥 Activer Firebase (Google + multijoueur)
+### Activer le multijoueur
 
-1. Crée un projet sur [console.firebase.google.com](https://console.firebase.google.com).
-2. **Authentication** → active le fournisseur **Google**.
-3. **Firestore Database** → crée la base (mode production), puis déploie les règles de [`firestore.rules`](firestore.rules).
-4. **Realtime Database** → crée la base (pour la présence multijoueur). Note son URL.
-5. **Project settings → Tes applications → Web** : copie la config SDK.
-6. Crée `.env.local` à partir de [`.env.example`](.env.example) et colle tes valeurs.
-7. Relance `npm run dev`. La connexion Google et le multijoueur sont actifs.
+<details>
+<summary>Configuration Firebase (6 étapes)</summary>
 
-> Pense à ajouter ton domaine de prod (et `localhost`) dans
+1. Crée un projet sur [console.firebase.google.com](https://console.firebase.google.com)
+2. **Authentication** → active le fournisseur **Google**
+3. **Firestore Database** → crée la base, puis déploie [`firestore.rules`](firestore.rules)
+4. **Realtime Database** → crée la base (présence, chat, sessions temps réel)
+5. **Paramètres du projet → Applications Web** → copie la config SDK
+6. Crée `.env.local` à partir de [`.env.example`](.env.example)
+
+> Ajoute ton domaine de production **et** `localhost` dans
 > *Authentication → Settings → Authorized domains*.
 
-## 🕹️ Commandes
+</details>
 
-| Commande | Alias | Effet |
-|---|---|---|
-| `hunt` | chasse, h | Combat un monstre du biome/phase actuels |
-| `dungeon` | donjon, dj | Donjons à étapes (gros butin) |
-| `talents` | skills, competences | Arbre de talents de ta classe |
-| `profile` | profil, p | Profil détaillé, éditable (nom + titre) |
-| `experience` | xp, exp, level | Niveaux d'aventure et de farm |
-| `map` | carte, m | Voyage entre biomes |
-| `inventory` | inv, sac | Inventaire : utiliser / vendre |
-| `equipment` | equip, gear | Gérer l'équipement (arme/armure/bijou) |
-| `cooldown` | cd, recup | Récupérations en cours |
-| `craft` | forge | Forger équipement, potions et nourriture |
-| `gather` | farm, recolte | Vue d'ensemble des récoltes du biome |
-| `chop`/`mine`/`fish`/`forage` | bois/miner/peche/cueillette | Récolter directement une ressource |
-| `quests` | quetes, daily | Quêtes journalières/hebdo + récompense quotidienne |
-| `casino` | gamble, pari | Casino du Destin |
-| `shop` | boutique | Acheter potions & équipement |
-| `market` | marche, hv, vente | Marché entre joueurs (vendre/acheter) |
-| `heal` | soin | Boire une potion |
-| `duel` | pvp | Défier un joueur au pile/face (mise en or) |
-| `cardjitsu` | cj, ninja, cartes | Duel de cartes Card-Jitsu (feu/eau/neige) |
-| `team` | equipe, party | Former une équipe et partager des ressources |
-| `guild` | guilde, clan | Rejoindre ou fonder une guilde |
-| `boss` | raid | Attaquer le boss mondial avec les autres |
-| `chat` | tchat | Chat mondial |
-| `leaderboard` | classement, top | Joueurs en ligne + classement |
-| `help` | aide, ? | Liste des commandes |
-| `close` | clear (Échap) | Ferme toutes les fenêtres |
+---
 
-Astuces : `Tab` complète la commande, `↑/↓` rappelle l'historique, `Échap` ferme tout.
+## Les commandes
 
-## 🏗️ Stack
+Une seule barre, en bas. `Tab` complète, `↑` `↓` rappellent l'historique, `Échap`
+ferme tout. La carte `help` cherche parmi les commandes et explique les jauges.
 
-Vite · React · TypeScript · Tailwind CSS · Framer Motion · Zustand · Firebase
-(Auth / Firestore / Realtime Database).
+<details open>
+<summary><b>Progresser</b></summary>
 
-Voir [`GAME_DESIGN.md`](GAME_DESIGN.md) pour l'architecture et la feuille de route.
+| Commande | Effet |
+|---|---|
+| `hunt` | Combattre un monstre du biome et de la phase actuels |
+| `rest` | Récupérer ses PV (10 min de récupération) |
+| `map` | Voyager entre les biomes |
+| `talents` | Arbre de talents, compétences équipées, ascension |
+| `equipment` | Équipement, étoiles, comparaison avant d'équiper |
+| `craft` · `gather` | Forger · récolter (bois, minerai, poisson, herbes) |
+| `experience` · `profile` | Progression et fiche de personnage |
 
-## 📦 Build & déploiement
+</details>
 
-```bash
-npm run build      # génère dist/
-npm run preview    # prévisualise le build
+<details>
+<summary><b>Se mesurer</b></summary>
 
-# Déploiement Firebase (firebase.json est déjà fourni)
-npm i -g firebase-tools
-firebase login
-firebase use --add                         # sélectionne ton projet
-firebase deploy --only hosting,firestore,database   # site + règles Firestore + règles RTDB
+| Commande | Effet |
+|---|---|
+| `miniboss` | Colosse des Abysses (12 h de récupération) |
+| `rift` | 🌀 La Faille de la semaine |
+| `mercenary` · `sanctuary` | Contrats et épreuves de fin de jeu |
+| `dungeon` · `raid` | Donjons à paliers · raid à 12 étages |
+| `endless` | Abysses infinis, solo ou en groupe |
+| `boss` | Boss mondial partagé |
+| `duel` · `cardjitsu` | Duels PvP temps réel (1v1, 2v2) · Card-Jitsu |
+
+</details>
+
+<details>
+<summary><b>La saison et l'après-50</b></summary>
+
+| Commande | Effet |
+|---|---|
+| `season` | Rang, passe de saison, classement |
+| `artifact` | Grille de mods de l'artefact |
+| `relic` | Ta Relique et ses Éclats |
+| `aura` | Aura de prestige et renaissance |
+| `prestige` | *(secret — niveau 50, depuis les Abysses)* |
+
+</details>
+
+<details>
+<summary><b>Vivre ensemble</b></summary>
+
+| Commande | Effet |
+|---|---|
+| `chat` | Chat mondial, canaux et messages privés |
+| `team` · `guild` | Équipe (4 max) · guilde et objectifs collectifs |
+| `leaderboard` | Qui est en ligne et classement par Puissance |
+| `market` · `shop` · `casino` | Marché entre joueurs · boutique · Casino du Destin |
+| `quests` · `achievements` | Quêtes et succès |
+
+</details>
+
+---
+
+## Architecture
+
+```
+src/
+├── game/          Logique pure — aucun React. Le cœur du jeu.
+│                  combat, classes, talents, items, saison, artefact, relique…
+├── firebase/      Services : joueur, social, donjons, duels, saison…
+├── components/    Interface. `cards/` = une carte par fenêtre.
+└── store/         Zustand : gameStore (joueur) · uiStore (fenêtres) · fxStore
 ```
 
-Les règles de sécurité Firestore ([`firestore.rules`](firestore.rules)) et Realtime
-Database ([`database.rules.json`](database.rules.json)) sont versionnées et déployées
-par la commande ci-dessus.
+`src/game/` ne dépend jamais de React ni de Firebase : le combat, l'équilibrage et
+la progression sont des fonctions pures, testables en Node. C'est ce qui permet
+[les harnais de simulation](scripts/README-balance.md) qui font tourner des milliers
+de combats pour valider l'équilibrage avant de toucher au jeu.
 
-### Cloud Functions (optionnel, anti-triche)
+Les notes de conception détaillées sont dans [`GAME_DESIGN.md`](GAME_DESIGN.md), et
+les conventions du projet dans [`CLAUDE.md`](CLAUDE.md).
 
-L'état est calculé côté client. Pour une version compétitive, le dossier
-[`functions/`](functions/) contient un exemple de **résolution sécurisée de duel**
-côté serveur. Nécessite le plan Blaze :
+---
+
+## Build et déploiement
 
 ```bash
-cd functions && npm install && npm run deploy
+npx tsc -b && npm run build   # vérification + génération de dist/
+npm run preview               # prévisualiser le build
+
+firebase deploy --only hosting,firestore,database
 ```
+
+Les règles de sécurité [`firestore.rules`](firestore.rules) et
+[`database.rules.json`](database.rules.json) sont versionnées et déployées avec le
+site.
+
+> **Note honnête sur la sécurité.** L'état du jeu est calculé côté client : un client
+> modifié peut falsifier sa propre progression. Les règles empêchent d'écrire chez
+> les autres et de s'attribuer les droits d'administration, mais RPText n'est pas
+> protégé contre la triche solo. Le dossier [`functions/`](functions/) montre comment
+> déplacer une action sensible côté serveur.
+
+---
+
+<div align="center">
+<sub>Fait pour une classe de copains, un été.</sub>
+</div>

@@ -37,6 +37,9 @@ import SeasonCard from './cards/SeasonCard';
 import EnchantCard from './cards/EnchantCard';
 import ForgeronCard from './cards/ForgeronCard';
 import PrestigeCard from './cards/PrestigeCard';
+import ArtifactCard from './cards/ArtifactCard';
+import RelicCard from './cards/RelicCard';
+import NotificationsCard from './cards/NotificationsCard';
 import AscensionCard from './cards/AscensionCard';
 import EndlessCard from './cards/EndlessCard';
 import SettingsCard from './cards/SettingsCard';
@@ -56,6 +59,9 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   enchant: { title: '✨ Enchantement', accent: '#a78bfa' },
   forgeron: { title: '🧔‍♂️ Forgeron Renold', accent: '#f0b46a' },
   prestige: { title: '✨ Aura de Prestige', accent: '#ffd45a' },
+  artifact: { title: '🔮 Artefact de saison', accent: '#b088ff' },
+  relic: { title: '✦ Relique', accent: '#f0b543' },
+  notifications: { title: '🔔 Notifications', accent: '#8cb4ff' },
   ascension: { title: '🕳️ Le Néant', accent: '#a855f7' },
   endless: { title: '🕳️ Abysses Infinis', accent: '#dc2626' },
   concoction: { title: '🧪 Concoction', accent: '#10b981' },
@@ -84,7 +90,7 @@ const META: Record<WindowKind, { title: string; accent: string }> = {
   events: { title: '🌍 Événements', accent: '#c084fc' },
   achievements: { title: '🏆 Succès', accent: '#ffd45a' },
   fateshop: { title: '🎲 Boutique du Destin', accent: '#e879f9' },
-  season: { title: '🏅 Saison PvP', accent: '#7ad0ff' },
+  season: { title: '🏅 Saison', accent: '#7ad0ff' },
   settings: { title: '⚙️ Paramètres', accent: '#94a3b8' },
   tuto: { title: '🎓 Tutoriel', accent: '#4ade80' },
   levelup: { title: '🌟 Niveau Supérieur', accent: '#fbbf24' },
@@ -127,7 +133,7 @@ export default function WindowManager() {
               {w.kind === 'guild' && <GuildCard />}
               {w.kind === 'familiar' && <FamiliarCard />}
               {w.kind === 'boss' && <BossCard />}
-              {w.kind === 'chat' && <ChatCard initialPayload={w.payload as { tab?: ChatChannel; dmPeer?: string } | undefined} />}
+              {w.kind === 'chat' && <ChatCard initialPayload={w.payload as { tab?: ChatChannel; dmPeer?: { uid: string; name: string } } | undefined} />}
               {w.kind === 'leaderboard' && <LeaderboardCard />}
               {w.kind === 'stats' && <StatsCard />}
               {w.kind === 'news' && <NewsCard />}
@@ -140,6 +146,9 @@ export default function WindowManager() {
               {w.kind === 'enchant' && <EnchantCard />}
               {w.kind === 'forgeron' && <ForgeronCard />}
               {w.kind === 'prestige' && <PrestigeCard />}
+              {w.kind === 'artifact' && <ArtifactCard />}
+              {w.kind === 'relic' && <RelicCard />}
+              {w.kind === 'notifications' && <NotificationsCard />}
               {w.kind === 'ascension' && <AscensionCard />}
               {w.kind === 'endless' && <EndlessCard />}
               {w.kind === 'settings' && <SettingsCard />}

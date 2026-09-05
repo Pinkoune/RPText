@@ -9,3 +9,6 @@ dist-ssr
 firebase-debug.log
 functions/node_modules
 functions/lib
+
+# Émulateurs Firebase (tests de règles)
+*-debug.log

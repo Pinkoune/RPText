@@ -1,6 +1,8 @@
-import { doc, getDoc, setDoc, collection, query, where, limit, getDocs, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, collection, query, where, limit, getDocs, onSnapshot } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
 import type { PlayerState } from '../game/types';
+import { charKey, MAX_CHARACTERS } from '../game/player';
+import { powerScore } from '../game/power';
 import { syncGuildMember, contributeGuildGoal } from './groupsService';
 
 const localKey = (uid: string) => `rptext.player.${uid}`;
@@ -45,6 +47,46 @@ export function watchGlobalWipe(onWipe: () => void): () => void {
     const lastWipe = snap.exists() ? (snap.data().lastWipe ?? 0) : 0;
     if (lastWipe > since) onWipe();
   });
+}
+
+/** Résumé d'un personnage, pour l'écran de sélection. */
+export interface CharacterSlot {
+  slot: number;
+  /** null = emplacement vide. */
+  player: PlayerState | null;
+}
+
+/**
+ * Liste les personnages d'un compte (un par emplacement, `null` si vide).
+ * S'appuie sur `loadPlayer`, donc hérite du contrôle de reset global : un
+ * personnage antérieur au dernier wipe est vu comme un emplacement vide.
+ */
+export async function listCharacters(accountUid: string): Promise<CharacterSlot[]> {
+  const slots: CharacterSlot[] = [];
+  for (let slot = 0; slot < MAX_CHARACTERS; slot++) {
+    let player: PlayerState | null = null;
+    try {
+      player = await loadPlayer(charKey(accountUid, slot));
+    } catch (e) {
+      console.error(`Chargement du personnage ${slot} impossible :`, e);
+    }
+    slots.push({ slot, player });
+  }
+  return slots;
+}
+
+/** Supprime définitivement un personnage (et son entrée de classement). */
+export async function deleteCharacter(charId: string): Promise<void> {
+  if (!isFirebaseConfigured || !db) {
+    localStorage.removeItem(localKey(charId));
+    return;
+  }
+  await deleteDoc(doc(db, 'players', charId));
+  try {
+    await deleteDoc(doc(db, 'leaderboard', charId));
+  } catch (e) {
+    console.error('Suppression de l\'entrée de classement impossible :', e);
+  }
 }
 
 /** Charge le joueur (Firestore ou localStorage). null si inexistant. */
@@ -114,10 +156,18 @@ export async function savePlayer(p: PlayerState): Promise<void> {
     lastSeen: p.lastSeen,
     title: p.title ?? null,
     seasonId: p.seasonId ?? null,
+    // Le ladder de saison se classe sur l'artefact (voir season.ts) ;
+    // `seasonPoints` reste écrit pour les anciens clients, sans effet.
     seasonPoints: p.seasonPoints ?? 0,
+    artifactLevel: p.artifact?.level ?? 0,
     prestigeAura: p.prestigeAura ?? null,
     prestigeLevel: p.prestigeLevel ?? 0,
     auraColorOn: p.auraColorOn ?? true,
+    // Cote de Puissance : c'est elle qui classe désormais, le niveau seul se
+    // figeant dès que plusieurs joueurs atteignent le plafond. Pré-calculée ici
+    // parce que la ligne de classement ne transporte pas les composants (sac,
+    // maîtrises, artefact) et qu'on ne veut pas les y dupliquer.
+    power: powerScore(p).total,
   });
   // Garde la fiche membre de guilde à jour (niveau/titre figés sinon depuis l'entrée dans la guilde).
   // `savePlayer` est appelé très souvent (mutate débounced à 800ms) : ne réécrit

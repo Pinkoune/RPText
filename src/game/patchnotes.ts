@@ -4,9 +4,21 @@
 // chaque vague de modifs ; l'utilisateur indique quand marquer une version
 // comme "vue" pour tous (au push).
 
+/** Nature d'une section, pour la pastille de couleur dans l'historique. */
+export type PatchKind = 'new' | 'content' | 'balance' | 'fix';
+
+export const PATCH_KIND_META: Record<PatchKind, { label: string; color: string }> = {
+  new: { label: 'Nouveauté', color: '#5fd0a0' },
+  content: { label: 'Contenu', color: '#8cb4ff' },
+  balance: { label: 'Équilibrage', color: '#f0b543' },
+  fix: { label: 'Correction', color: '#b088ff' },
+};
+
 export interface PatchSection {
   title: string;
   items: string[];
+  /** Absent = pas de pastille (anciennes entrées). */
+  kind?: PatchKind;
 }
 
 export interface PatchRelease {
@@ -17,6 +29,168 @@ export interface PatchRelease {
 
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
+  {
+    version: 'refonte-saison-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '👥 Trois personnages par compte',
+        kind: 'new',
+        items: [
+          'Tu peux désormais mener <b>jusqu\'à trois héros</b> en parallèle, chacun avec sa classe, son niveau et son équipement.',
+          'Envie d\'essayer une autre voie ? On crée un personnage — on ne détruit plus celui qu\'on a monté. Le changement de classe disparaît, remplacé par ça.',
+          'Un écran de sélection s\'affiche à la connexion, et on peut changer de personnage à tout moment depuis les <b>Paramètres</b>.',
+        ],
+      },
+      {
+        title: '🔮 Saisons et artefact',
+        kind: 'new',
+        items: [
+          'Une <b>Relique de saison</b> accompagne désormais chaque personnage : une jauge unique qui monte sur <b>tout</b> ce que tu fais (chasse, donjon, récolte, forge) et qui, elle, ne s\'arrête jamais.',
+          'Chaque niveau donne un point à dépenser dans une grille de 17 mods répartis en 5 colonnes — dont de vraies mécaniques : Propagation (brûlures et poisons +50%), Écho de Faille, Sursis (survivre à un coup fatal), Forge économe, Moisson.',
+          'À chaque changement de saison, la Relique repart de zéro et les records sont archivés — mais <b>ton personnage n\'est jamais touché</b> : niveau, équipement et métiers restent acquis.',
+        ],
+      },
+      {
+        title: '⚔️ La chasse devient tactique',
+        kind: 'new',
+        items: [
+          'Le monstre <b>annonce son intention</b> pour le tour suivant : coup lourd, garde, incantation ou attaque simple.',
+          'Deux nouvelles réponses, aux rôles opposés : <b>Parer</b> n\'encaisse qu\'un quart des dégâts et <b>renvoie 70% de ce qui a été bloqué</b> — sans risque, et d\'autant plus payant contre un gros coup. <b>Interrompre</b> annule le coup annoncé et <b>étourdit</b> (la Faille s\'ouvre), mais si le monstre ne préparait rien tu te découvres et prends 50% de dégâts en plus.',
+          'Frapper une garde ne fait que la moitié des dégâts.',
+          'Les coups portés, parades et interruptions se voient enfin : nombres qui s\'envolent, secousse sur les gros coups, voile coloré selon l\'issue du tour.',
+          'Nouvelle <b>série de chasse</b> : chaque kill consécutif sans mourir renforce l\'XP et l\'or (jusqu\'à +40%). Elle est entièrement perdue si tu tombes.',
+        ],
+      },
+      {
+        title: '🏕️ Le camp et le repos',
+        kind: 'new',
+        items: [
+          'Dès le <b>niveau 5</b>, ton camp produit pendant ton absence (or, XP, ressource du biome), jusqu\'à 12h — de quoi récolter le midi et le soir.',
+          'Nouvelle commande <b>rest</b> : repos complet gratuit hors combat, toutes les 10 minutes. Plus de blocage quand on n\'a ni potion ni or.',
+          'Après une longue absence, un écran de retour résume ce qui t\'attend.',
+        ],
+      },
+      {
+        title: '🏰 Donjons à paliers',
+        kind: 'content',
+        items: [
+          'Chaque donjon peut désormais être relancé à des <b>paliers de difficulté croissants</b> : monstres et récompenses montent ensemble. Tout le contenu existant devient rejouable sans fin.',
+          'On ne peut tenter qu\'un palier au-dessus du meilleur réussi.',
+        ],
+      },
+      {
+        title: '⚖️ Le mur du niveau 40-50 est tombé',
+        kind: 'balance',
+        items: [
+          'La tranche 40→50 représentait <b>81% de tout le grind</b>, et passer du 45 au 50 coûtait à lui seul 1,3 fois le trajet du niveau 1 au 45. La courbe a été adoucie : le trajet complet est divisé par deux.',
+          'Les niveaux que ton XP déjà accumulée vaut sous la nouvelle courbe te sont rendus à la connexion, avec les points de talent correspondants.',
+          'Vaincre le <b>Néant Originel ne remet plus rien à zéro</b> : tu gardes tout et gagnes un titre. La Renaissance devient un choix, à saisir quand tu veux depuis la carte Prestige.',
+          'La série de connexion tolère désormais un jour manqué.',
+        ],
+      },
+      {
+        title: '⚙️ Confort et performances',
+        kind: 'fix',
+        items: [
+          '<b>Mode économie</b> (ex « Réduire les animations ») : il annonçait couper « les flous » mais ne le faisait pas. Il coupe désormais réellement le <b>flou des fenêtres</b>, de loin l\'effet le plus coûteux du jeu — chaque fenêtre ouverte en avait un, et c\'est la cause principale de la chauffe sur portable. Les particules passent aussi à zéro au lieu de 40%.',
+          'Le flou par défaut passe de 14 à 10 pixels : le fond des fenêtres est opaque à 86%, un flou plus large coûtait cher pour une différence invisible.',
+          '<b>Interface compacte</b> : le réglage existait, était sauvegardé, et n\'était branché sur rien. Il resserre maintenant réellement le contenu des fenêtres.',
+          'Les <b>boutons d\'action en combat restent collés en bas</b> de la carte : plus besoin de faire défiler pour jouer son tour contre un boss ou dans la Faille. L\'arène de boss a été compactée dans la foulée.',
+          'Sur mobile, les pastilles d\'info en bas à droite ne passent plus <b>par-dessus les cartes</b> ouvertes. Et le compteur de joueurs en ligne ne te compte plus toi-même — il n\'affichait « 1 en ligne » en permanence, même seul.',
+        ],
+      },
+      {
+        title: '⚡ La Puissance compte le temps de jeu',
+        kind: 'balance',
+        items: [
+          'La cote de Puissance intègre désormais tes <b>monstres vaincus</b>, tes <b>donjons terminés</b> et ta <b>meilleure série de chasse</b>. Deux joueurs au niveau maximum peuvent enfin se départager sur ce qu\'ils ont réellement joué.',
+          'Kills et donjons comptent en <b>racine carrée</b> : 100 kills valent 5 points, 2 500 en valent 25, 40 000 en valent 100. Ça départage sans jamais écraser le reste du classement.',
+        ],
+      },
+      {
+        title: '🔮 Une seule jauge de saison',
+        kind: 'balance',
+        items: [
+          'Il y avait deux compteurs de saison : les <b>points de saison</b>, gagnés uniquement en PvP, et le <b>niveau d\'artefact</b>, qui montait sur tout le reste. Les points de saison sont <b>supprimés</b>.',
+          'Ton <b>niveau d\'artefact EST ta progression de saison</b>. Il monte sur tout ce que tu fais — chasse, donjon, récolte, forge, camp — et désormais aussi sur les <b>victoires PvP</b>, qui versent dans la même jauge au lieu d\'un compteur à part.',
+          'Ton rang de saison (Bronze → Maître) suit maintenant ton artefact, tout comme la passe. Une seule jauge, un seul classement.',
+          'La carte <b>Saison</b> s\'ouvre dès le <b>niveau 1</b> (au lieu de 8) et explique en toutes lettres ce qui monte avec quoi.',
+        ],
+      },
+      {
+        title: '❓ L\'aide n\'est plus un mur',
+        kind: 'new',
+        items: [
+          'Une <b>recherche</b> filtre les 63 commandes, et les commandes verrouillées sont masquées par défaut (un bouton les réaffiche).',
+          'Nouvelle section <b>« Les jauges du jeu — qui monte avec quoi »</b> : niveau, artefact/saison, métiers, Éclats, maîtrises et Puissance, avec pour chacune ce qui la fait monter et ce à quoi elle sert.',
+        ],
+      },
+      {
+        title: '🌀 La Faille de la semaine',
+        kind: 'new',
+        items: [
+          'Un défi qui <b>change tous les lundis</b> : un biome et un monstre du jeu, revisités par un modificateur qui t\'oblige à changer quelque chose. Enragé (frappe deux fois plus fort mais tombe vite), Colossal, Carapacé (sans pénétration d\'armure tes coups s\'écrasent), Cœur de givre et Voile d\'ombre (change d\'arme ou souffre), Verre et lames.',
+          '<b>Aucun cooldown</b> : réessaie autant que tu veux, la mort te coûte déjà ta série. Mais la prime — <b>2 ✧ Éclats de Relique</b> et de l\'or — ne tombe qu\'au premier passage de la semaine.',
+          'Tape « rift » (ou « faille ») à partir du niveau 20. Une pastille apparaît en bas à droite tant que tu ne l\'as pas franchie, et disparaît une fois validée.',
+        ],
+      },
+      {
+        title: '🏅 Les saisons prennent enfin du poids',
+        kind: 'new',
+        items: [
+          'Il y avait <b>deux systèmes de saison</b> qui ne se parlaient pas : le ladder PvP tournait au mois calendaire, l\'artefact tournait quand l\'admin le décidait. Il n\'y en a plus qu\'un — la Saison N fait autorité pour tout.',
+          'Une rotation remet désormais à zéro <b>d\'un seul coup</b> : l\'artefact, les points de saison PvP et les <b>classements d\'Abysses</b> (solo et multi). Les records redeviennent contestables au lieu de traîner d\'une saison sur l\'autre.',
+          '<b>Ton personnage n\'est jamais touché</b> : niveau, équipement, métiers, maîtrises et Relique traversent la rotation.',
+          '<b>Passe de saison gratuite</b> — dix paliers, aucune piste payante. Elle se remplit sur ton niveau d\'artefact, donc sur tout ce que tu fais. Au menu : des Éclats de Relique, des <b>fonds de profil</b> à collectionner (Aube, Braise, Abysse, Primordial…) et des <b>titres saisonniers</b> nommés d\'après le thème — « Champion · Automne » ne se regagnera plus jamais.',
+        ],
+      },
+      {
+        title: '✦ La Relique — l\'objet qui traverse tout',
+        kind: 'new',
+        items: [
+          'Un objet unique, lié à ton personnage, qui <b>survit à la renaissance ET au changement de saison</b>. C\'est la seule chose du jeu dans ce cas : quand tout repart à zéro, elle reste.',
+          '<b>Étoiles 1 à 5</b> : +2% ATK/DEF/PV chacune. <b>Étoiles 6 à 10</b> : pas de statistiques, mais un <b>effet au choix parmi trois</b> à chaque palier — critique, pénétration, esquive, ronces, vol de vie, Sursis, Propagation… Deux Reliques ★10 ne jouent pas pareil.',
+          'Elle change de nom, d\'icône et de couleur en montant : Éclat sans nom, Fragment éveillé, Relique ascendante, Relique souveraine, puis <b>Relique primordiale</b>.',
+          'Elle se grave avec des <b>Éclats</b> : +3 par succès accompli, +1 par niveau d\'artefact <b>au-delà de la grille pleine</b> (ces niveaux ne servaient plus à rien), et des paliers de la passe de saison.',
+          'Tape « relic » à partir du niveau 20.',
+        ],
+      },
+      {
+        title: '⚡ Cote de Puissance — le classement ne se fige plus',
+        kind: 'new',
+        items: [
+          'Le classement triait sur le niveau. Le jour où plusieurs joueurs atteignent le Nv.50 (plafond dur), il se figeait et tout le monde se retrouvait ex æquo — au pire moment.',
+          'Il classe désormais sur la <b>Puissance</b> : une seule note qui additionne niveau, prestige, niveau d\'artefact, étoiles de l\'équipement porté, paliers de maîtrise et meilleur étage d\'Abysses. En début de partie le niveau domine, donc rien ne change ; au plafond, ce sont les autres axes qui départagent.',
+          'Une <b>renaissance ne te fait pas chuter au fond du tableau</b> : le prestige pèse autant que le trajet 1→50 qu\'il te fait recommencer.',
+          'Le détail de ta Puissance est affiché dans ton <b>Profil</b> — chaque ligne est un levier sur lequel tu peux agir.',
+        ],
+      },
+      {
+        title: '✦ Prestige : on te dit enfin ce que ça rapporte',
+        kind: 'balance',
+        items: [
+          'La carte Prestige affiche en permanence <b>tes bonus chiffrés</b> : +8% ATK/DEF/PV et +10% XP/Or par renaissance, et le nombre de jetons de classe qu\'il te reste. Avant, « bonus permanent » n\'était accompagné d\'aucun nombre — impossible de savoir ce qu\'on avait gagné.',
+          'L\'écran de renaissance présente le marché terme à terme : ce que tu perds, ce que tu gagnes (avec les valeurs avant / après), et surtout <b>ce qui est conservé</b> — familiers, titres, succès, artefact de saison et maîtrises de biome.',
+          '<b>Correction</b> : renaître en tant que sous-classe te laissait « Berserker niveau 1 », un état impossible, et tu redevenais Guerrier au chargement suivant sans explication. La renaissance ramène désormais franchement à ta classe de base, à ré-ascensionner au Nv.20.',
+          '<b>Le Néant</b> tient compte de la moitié de ton prestige. Il ignorait complètement ces bonus : à prestige 5 le mur de fin de partie n\'en était plus un. Chaque renaissance reste ressentie, mais le combat reste un combat.',
+          '<b>Correction</b> : le garde-fou anti-triche ramenait au niveau 30 (l\'ancien maximum) au lieu du niveau que l\'XP légitime valait vraiment.',
+          '<b>Correction</b> : après une renaissance, les cartes <b>Aura</b> (Nv.30) et <b>Relique</b> (Nv.20) redevenaient inaccessibles jusqu\'à ce que tu aies remonté ces niveaux — alors que tu gardes justement ton prestige, ton aura et ta Relique. Elles restent ouvertes tant que tu possèdes ce qu\'elles servent à gérer.',
+        ],
+      },
+      {
+        title: '✨ Interface',
+        kind: 'new',
+        items: [
+          'La carte <b>Équipement</b> est entièrement refaite : ta fiche et tes stats en tête, tes cinq emplacements visibles d\'un seul coup d\'œil, et le détail de celui que tu choisis juste en dessous — avec la comparaison des stats avant d\'équiper.',
+          'L\'<b>arbre de talents</b> est réorganisé en onglets (arbre, compétences, ascension) : l\'arbre entier tient désormais à l\'écran, trace ses liens de prérequis et affiche le gain réel du prochain point dans un panneau fixe.',
+          'Un bouton <b>🔔 Notifications</b> regroupe messages et mises à jour au même endroit, et ne s\'affiche que s\'il y a quelque chose à lire.',
+          'La barre du haut est allégée : son, changement de personnage et déconnexion ont rejoint les <b>Paramètres</b>, et l\'artefact y gagne un accès direct.',
+          'Un petit rail d\'infos apparaît en bas à droite : équipe, joueurs en ligne, artefact, raid ouvert.',
+        ],
+      },
+    ],
+  },
   {
     version: 'new-subclasses-v1',
     date: new Date().toLocaleDateString('fr-FR'),

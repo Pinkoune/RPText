@@ -10,7 +10,14 @@ import { simulateCombat } from '../src/game/combat';
 import { xpToNext, MAX_LEVEL } from '../src/game/classes';
 import type { PlayerState, ClassId, ItemDef } from '../src/game/types';
 import * as fs from 'fs';
-const OUT='/private/tmp/claude-501/-Users-jeremy-Projects-RPText/b80104e0-3060-4633-b23d-b3224ca13748/scratchpad';
+/**
+ * Dossier de sortie. C'ÉTAIT un chemin absolu vers le scratchpad d'une session
+ * qui n'existe plus : les trois harnais plantaient (`ENOENT`) sur toute autre
+ * machine que celle d'origine. Relatif au repo, créé au besoin, surchargeable
+ * par `BALANCE_OUT`.
+ */
+const OUT=process.env.BALANCE_OUT ?? 'scripts/balance-output';
+fs.mkdirSync(OUT, { recursive: true });
 
 function bp(c:ClassId,l:number):PlayerState{return {uid:'s',name:'S',photoURL:null,classId:c,level:l,xp:0,hp:9e5,inventory:{},equipped:{weapon:null,armor:null,trinket:null,tool:null,profession_armor:null},talents:{},equippedSkills:[],gearStars:{},gearDurability:{},enchants:{},prestigeLevel:0,gold:0,fateCoins:0,gems:0,familiars:{},activeFamiliarId:null,biome:'forest',cooldowns:{},statistics:{goldEarned:0,gamblesPlayed:0,gamblesWon:0,mobsKilled:{},mobsEncountered:{}} as any} as any;}
 function fam(c:ClassId){return (CLASSES[c].parent??c) as ClassId;}

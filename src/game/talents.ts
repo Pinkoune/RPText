@@ -1,5 +1,7 @@
 import type { PlayerState, ClassId } from './types';
 import { CLASSES } from './classes';
+import { applyArtifactMods } from './artifact';
+import { applyRelicMods } from './relic';
 
 export interface CombatMods {
   crit: number;
@@ -17,6 +19,12 @@ export interface CombatMods {
   atkPct: number;
   defPct: number;
   hpPct: number;
+  /** Bonus multiplicatif sur les degats de bruleure/poison (mod d'artefact « Propagation »). */
+  statusPow: number;
+  /** S'ajoute au multiplicateur de Faille (1.5 de base) — mod « Echo de Faille ». */
+  riftBonus: number;
+  /** > 0 : survit une fois par combat a un coup fatal (mod « Sursis »). */
+  secondWind: number;
 }
 
 export function emptyMods(): CombatMods {
@@ -24,6 +32,7 @@ export function emptyMods(): CombatMods {
     crit: 0, critMult: 0, flatDmg: 0, dmgReduction: 0, dodge: 0, doubleHit: 0,
     regen: 0, berserkBonus: 0, lifesteal: 0, armorPen: 0, execute: 0, thorns: 0,
     atkPct: 0, defPct: 0, hpPct: 0,
+    statusPow: 0, riftBonus: 0, secondWind: 0,
   };
 }
 
@@ -284,14 +293,14 @@ export const TALENTS: TalentDef[] = [
 
   // --- Passifs avancés (end-game, niv.30+) — permettent d'absorber les points en excès ---
   // Guerrier
-  { id: 'w_endure', classId: 'warrior', name: 'Endurance', icon: '💪', desc: '+3% PV max par rang.', maxRank: 5, requires: ['w_might'], pos: { x: 2, y: 2 }, perRank: { hpPct: 0.03 } },
+  { id: 'w_endure', classId: 'warrior', name: 'Endurance', icon: '💪', desc: '+3% PV max par rang.', maxRank: 5, requires: ['w_might'], pos: { x: 3, y: 2 }, perRank: { hpPct: 0.03 } },
   { id: 'w_mastery', classId: 'warrior', name: 'Maîtrise guerrière', icon: '⚔️', desc: '+3% ATK par rang.', maxRank: 5, requires: ['w_bulwark'], pos: { x: -2, y: 3 }, perRank: { atkPct: 0.03 } },
   // Mage
   { id: 'm_arcana', classId: 'mage', name: 'Arcane profonde', icon: '✨', desc: '+3% ATK par rang.', maxRank: 5, requires: ['m_overload'], pos: { x: -2, y: 3 }, perRank: { atkPct: 0.03 } },
-  { id: 'm_resilience', classId: 'mage', name: 'Résilience', icon: '🛡️', desc: '+3% PV max par rang.', maxRank: 5, requires: ['m_ward'], pos: { x: 2, y: 2 }, perRank: { hpPct: 0.03 } },
+  { id: 'm_resilience', classId: 'mage', name: 'Résilience', icon: '🛡️', desc: '+3% PV max par rang.', maxRank: 5, requires: ['m_ward'], pos: { x: 3, y: 2 }, perRank: { hpPct: 0.03 } },
   // Archer
   { id: 'a_swiftness', classId: 'archer', name: 'Agilité', icon: '💨', desc: '+3% esquive par rang.', maxRank: 5, requires: ['a_lethal'], pos: { x: -2, y: 3 }, perRank: { dodge: 0.03 } },
-  { id: 'a_sharpshoot', classId: 'archer', name: 'Tir maîtrisé', icon: '🎯', desc: '+3% critique par rang.', maxRank: 5, requires: ['a_hawk'], pos: { x: 2, y: 2 }, perRank: { crit: 0.03 } },
+  { id: 'a_sharpshoot', classId: 'archer', name: 'Tir maîtrisé', icon: '🎯', desc: '+3% critique par rang.', maxRank: 5, requires: ['a_hawk'], pos: { x: 3, y: 2 }, perRank: { crit: 0.03 } },
   // Soigneur
   { id: 'h_endurance', classId: 'healer', name: 'Endurance sacrée', icon: '💪', desc: '+3% PV max par rang.', maxRank: 5, requires: ['h_zeal'], pos: { x: -2, y: 3 }, perRank: { hpPct: 0.03 } },
   { id: 'h_devotion', classId: 'healer', name: 'Dévotion', icon: '💙', desc: '+3% DEF par rang.', maxRank: 5, requires: ['h_grace'], pos: { x: 2, y: 3 }, perRank: { defPct: 0.03 } },
@@ -380,6 +389,14 @@ export function talentMods(p: PlayerState): CombatMods {
       }
     }
   }
+  // Mods de l'artefact de saison. Ils sont agrégés ici — et non dans un appel
+  // séparé — parce que `talentMods` est le point de passage unique des
+  // modificateurs passifs de combat (12 sites d'appel : chasse, donjon, duel,
+  // abysses, guilde, équipe…). Les brancher ailleurs les rendrait absents de la
+  // moitié du jeu. Le plafonnement ci-dessous s'applique donc aussi à eux.
+  applyArtifactMods(p, mods);
+  applyRelicMods(p, mods);
+
   for (const [key, cap] of Object.entries(CAPS) as [keyof CombatMods, number][]) {
     mods[key] = Math.min(mods[key], cap);
   }

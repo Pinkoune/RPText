@@ -24,7 +24,9 @@ export default function ChatNotifs() {
           <button
             key={n.id}
             onClick={() => {
-              const payload = n.channel === 'private' ? { dmPeer: n.name } : { tab: n.channel };
+              const payload = n.channel === 'private' && n.uid
+                ? { dmPeer: { uid: n.uid, name: n.name } }
+                : { tab: n.channel };
               open('chat', payload, { singleton: true });
               dismiss(n.id);
             }}
