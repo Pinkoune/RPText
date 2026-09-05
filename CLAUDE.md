@@ -23,6 +23,12 @@ l'utilisateur). ⚠️ `firestore.rules` a changé → **à redéployer**.
   compte** → aucune migration Firestore. Slots 1-2 suffixés `uid__1`. ⚠️ Toutes les
   règles Firestore passent par `ownsCharacter()` : les services envoient l'id du
   **personnage** (`p.uid`), pas du compte. Statut Vétéran/Admin reste au slot 0.
+  **Reprise automatique du dernier personnage joué** : `lastSlotKey` était écrit à
+  chaque sélection mais **jamais relu**, donc chaque rechargement de page repassait
+  par l'écran de choix — même avec un seul personnage. `initAuth` le relit et entre
+  directement en jeu (repli : slot unique, sinon écran de choix). L'écran reste
+  atteignable par « Changer de personnage » (Réglages → `backToSelect`), qui pose
+  `status: 'select'` sans repasser par cette reprise.
 - **Camp** (`game/camp.ts`) : accumulation hors-ligne dès le Nv.5, plafond 12h.
 - **Donjons à paliers** (`dungeonService.tierMult`, `p.dungeonTiers`) : +35%/palier.
 - **Fin du wipe au boss final** (`ascension.ts`) : la victoire ouvre `applyRebirth`,

@@ -166,9 +166,22 @@ export const useGame = create<GameState>((set, get) => ({
           // Aucun personnage : on va droit à la création du premier.
           set({ status: 'create', pendingSlot: 0 });
         } else {
-          // Au moins un personnage : écran de sélection. Un clic de plus, mais
-          // c'est ce qui rend le roster visible et permet d'en changer.
-          set({ status: 'select' });
+          // Reprise du DERNIER personnage joué. `lastSlotKey` était déjà écrit à
+          // chaque sélection mais n'était jamais relu : on repassait donc par
+          // l'écran de choix à chaque rechargement, même avec un seul
+          // personnage. On ne s'y arrête plus que si le dernier slot connu
+          // n'existe pas (ou n'a jamais été enregistré).
+          //
+          // L'écran reste accessible : « Changer de personnage » dans les
+          // Réglages (`backToSelect`), qui pose `status: 'select'` directement
+          // et n'est donc pas court-circuité par cette reprise.
+          let last = -1;
+          try { last = Number(localStorage.getItem(lastSlotKey(user.uid)) ?? -1); } catch { /* ignore */ }
+          const resume = existing.find((s) => s.slot === last)
+            // Un seul personnage : il n'y a rien à choisir, on entre directement.
+            ?? (existing.length === 1 ? existing[0] : undefined);
+          if (resume) await get().selectCharacter(resume.slot);
+          else set({ status: 'select' });
         }
       } catch (err) {
         console.error("Erreur de chargement Firebase:", err);
