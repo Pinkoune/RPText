@@ -531,6 +531,30 @@ Trois défauts remontés par l'utilisateur en jeu, tous confirmés par la mesure
   posée par `Window.tsx`. Mesuré en 390×667, combat actif à 7 boutons et 172px
   de débordement : `scrollTop` 35 → **0**, haut du contenu −19px → **+16px**.
   ⚠️ Ne pas revenir à `scrollIntoView` dans une carte à journal.
+- **Carte Donjon tronquée sur mobile** (signalé après le lot ci-dessus, donc
+  *en plus* du fix de défilement, pas à sa place). Mesuré avec un faux
+  `DungeonSession` injecté dans le composant (le donjon multi n'est pas jouable
+  sans RTDB) : la vue Combat fait **619px de contenu** pour ~515px utiles sur un
+  iPhone 15. En haut de course on ne voyait que le monstre — les boutons
+  d'action étaient à 130px SOUS le bas de l'écran ; en bas de course les boutons
+  étaient là mais la barre de vie du boss avait disparu. Jamais les deux.
+  Trois postes, tous mobile-only (`sm:` = le bureau garde l'ancien rendu) :
+  1. `Window.tsx` réservait **`pb-28` (112px)** pour un dock qui n'en fait que
+     **62** — 50px de vide volés à la zone utile de **chaque** carte. Remplacé
+     par `calc(4.5rem + env(safe-area-inset-bottom))` : la hauteur réelle du dock
+     (pt-2 + bouton `h-11` + son propre padding), plus l'encoche quand il y en a
+     une. ⚠️ Ne pas repasser à une valeur fixe : sans le `env()` le dock
+     recouvrirait le bas du contenu sur les téléphones à barre d'accueil.
+  2. HUD du monstre compacté (emoji `text-3xl`, padding `p-2`) et **les PV
+     chiffrés passent DANS la barre** au lieu d'une ligne sous elle.
+  3. Journal `h-24` au lieu de `h-32`, grille d'équipe resserrée, et le libellé
+     « Combat de donjon » masqué (il faisait passer l'en-tête sur deux lignes dès
+     360px de large — le titre de la fenêtre dit déjà « Donjons »).
+  Résultat mesuré (contenu vs zone utile, cas courant / pire cas tous statuts) :
+  393×852 **−104px → +92 / +24px** (tient à l'écran), 360×740 −224 → −20 / −88,
+  390×667 −289 → −93 / −161. Le petit écran défile encore un peu, mais un
+  téléphone moderne affiche enfin la barre de vie du boss, les quatre barres
+  d'équipe, le journal et les boutons **ensemble**.
 
 ## Amusement — 3 features (fait, C)
 

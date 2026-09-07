@@ -143,7 +143,19 @@ export default function Window({ win, index, title, accent, wide, medium, short,
               ✕
             </button>
           </div>
-          <div data-window-scroll className="flex-1 overflow-auto p-4 pb-28">{children}</div>
+          {/* Le padding bas réserve la place du dock (MobileNav). Il valait
+              `pb-28` (112px) pour un dock qui n'en fait que 62 — 50px de vide
+              pris sur la zone utile de CHAQUE carte, ce qui se paie cher en
+              combat où la carte déborde déjà. On réserve la hauteur réelle du
+              dock (pt-2 + bouton h-11 + son propre padding de sécurité), plus
+              l'encoche du bas quand il y en a une. */}
+          <div
+            data-window-scroll
+            className="flex-1 overflow-auto p-4"
+            style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}
+          >
+            {children}
+          </div>
         </motion.div>
       </div>
     );
