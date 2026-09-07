@@ -501,6 +501,37 @@ Effet du lot sur la chasse en Abysses (Chasseur en gear de craft, sans saison) :
 Nv.40 17% → **25%**, Nv.50 17% → **40%**. Dur, mais plus une porte fermée — et
 c'est le craft du biome qui l'ouvre, pas le niveau.
 
+### Retours de production après merge (fait, C)
+
+Trois défauts remontés par l'utilisateur en jeu, tous confirmés par la mesure :
+
+- **Commande `news` inexistante.** Le `case 'news'` était présent dans le
+  dispatch et la fenêtre câblée (`uiStore` + `WindowManager`), mais la commande
+  n'avait **jamais été déclarée dans `COMMANDS`** : `resolveCommand` renvoyait
+  null, donc « Commande inconnue » et la carte était inatteignable. Déclarée
+  (alias `patch`/`patchnotes`/`nouveautes`/`maj`) + entrée MobileNav.
+  ⚠️ Déclarer la commande ET le `case` — l'un sans l'autre ne se voit pas au
+  typecheck.
+- **Puissance incohérente au classement.** Tous les joueurs pas encore
+  reconnectés affichaient une Puissance **exactement égale à leur niveau** — un
+  vétéran Nv.42 à 1 830 kills était classé sous un Nv.19 actif. Cause :
+  `fallbackPower` ne reconstruisait le score que depuis `level` et
+  `prestigeLevel`, alors que la ligne de classement transporte **aussi**
+  `kills` et `artifactLevel`. Ajoutés, avec les mêmes poids que `powerScore` —
+  le repli reste donc ≤ au score réel et ne peut surclasser personne à tort.
+  Mesuré sur les données réelles de la capture : Velstroke 42 → 63,
+  Sowfird 45 → 64, Ilala 23 → 37.
+- **Barres de vie invisibles en combat sur mobile.** Les six cartes à journal
+  (Chasse, Donjon, Abysses, Duel, Rituel, Chat) faisaient
+  `logEnd.scrollIntoView()`. Or `scrollIntoView` défile **tous les conteneurs
+  ancêtres**, pas seulement le cadre du journal : sur mobile, où la fenêtre
+  occupe l'écran et défile elle-même, chaque ligne de log poussait le HUD
+  (et les barres de vie) hors champ. Remplacé par `scrollLogToEnd`
+  (`components/scrollLog.ts`), qui s'arrête à la limite `data-window-scroll`
+  posée par `Window.tsx`. Mesuré en 390×667, combat actif à 7 boutons et 172px
+  de débordement : `scrollTop` 35 → **0**, haut du contenu −19px → **+16px**.
+  ⚠️ Ne pas revenir à `scrollIntoView` dans une carte à journal.
+
 ## Amusement — 3 features (fait, C)
 
 - **Maîtrise des biomes** (`game/mastery.ts`, nouveau) : chaque kill compte pour le biome courant (`p.biomeKills`, migré). Paliers 100/500/1500/4000 → titre (`Novice/Familier/Vétéran/Maître/Légende · <Biome>`, ajouté à `unlockedTitles`) + **bonus permanent XP/Or dans ce biome** (+5/10/15/25%, appliqué dans `grantMonsterRewards`). But concret au farm end-game (Nv.40-50 = 81% du temps, sans nouvelle zone). Affiché : bandeau dans HuntCard (biome courant) + liste complète dans MapCard + toast au palier franchi (`HuntRewards.masteryUp`).

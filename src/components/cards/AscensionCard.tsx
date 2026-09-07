@@ -10,6 +10,7 @@ import { item, HP_CONSUMABLES } from '../../game/items';
 import { playSound, stopAmbientMusic, setAmbient } from '../../game/sound';
 import { currentPhase } from '../../game/daynight';
 import ItemIcon from '../ItemIcon';
+import { scrollLogToEnd } from '../scrollLog';
 
 type Transition = 'enter' | 'none' | 'win' | 'dead';
 
@@ -57,7 +58,7 @@ export default function AscensionCard() {
   }, [phase]);
   useEffect(() => () => { if (player) setAmbient(currentPhase(), player.biome); }, []);
 
-  useEffect(() => { logEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [fs?.logs]);
+  useEffect(() => { scrollLogToEnd(logEnd.current); }, [fs?.logs]);
 
   if (!player) return null;
   const stats = deriveStats(player);

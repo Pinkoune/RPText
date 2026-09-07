@@ -143,7 +143,7 @@ export default function Window({ win, index, title, accent, wide, medium, short,
               ✕
             </button>
           </div>
-          <div className="flex-1 overflow-auto p-4 pb-28">{children}</div>
+          <div data-window-scroll className="flex-1 overflow-auto p-4 pb-28">{children}</div>
         </motion.div>
       </div>
     );

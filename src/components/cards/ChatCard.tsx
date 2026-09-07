@@ -8,6 +8,7 @@ import { auraColor } from '../../game/prestige';
 import { fetchPublicProfile } from '../../firebase/socialService';
 import PlayerProfileModal, { type ProfileSeed } from '../PlayerProfileModal';
 import { COMMANDS } from '../../game/commands';
+import { scrollLogToEnd } from '../scrollLog';
 
 const TEAM_REQ_LEVEL = COMMANDS.find((c) => c.name === 'team')?.reqLevel ?? 1;
 const GUILD_REQ_LEVEL = COMMANDS.find((c) => c.name === 'guild')?.reqLevel ?? 1;
@@ -104,7 +105,7 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
     return msgs.filter((m) => (m.uid === p.uid ? m.toUid === dmPeer.uid : m.uid === dmPeer.uid));
   }, [msgs, dmPeer, p?.uid]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs, dmPeer, activeTab]);
+  useEffect(() => { scrollLogToEnd(endRef.current); }, [msgs, dmPeer, activeTab]);
 
   if (!p) return null;
 

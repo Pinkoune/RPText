@@ -17,6 +17,7 @@ import {
   tierMult, MAX_DUNGEON_TIER,
   startDungeon, submitDungeonAction, cleanupDungeon, broadcastDungeonOpen, type DungeonSession
 } from '../../firebase/dungeonService';
+import { scrollLogToEnd } from '../scrollLog';
 
 const POTIONS = HP_CONSUMABLES;
 
@@ -223,7 +224,7 @@ export default function DungeonCard() {
     }
   }, [session?.state]);
 
-  useEffect(() => { logEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [session?.log]);
+  useEffect(() => { scrollLogToEnd(logEnd.current); }, [session?.log]);
 
   if (!p) return null;
 
