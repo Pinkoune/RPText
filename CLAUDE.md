@@ -359,7 +359,7 @@ Murs de difficulté localisés par la simu et corrigés :
 
 **Trous de progression d'items comblés** (`analyze-progression.ts` les a localisés) : **aucune arme entre Nv20 et Nv30**, **aucune armure entre Nv15 et Nv32** — on entrait au volcan (Nv24) avec le gear du Nv15, ce qui aggravait le mur. Ajout d'un **set de transition « Marais-Braise » Nv22-24** (`items.ts`+`crafting.ts`+`icons.ts`) : 4 armes (warlord_axe/swiftwind_bow/emberflow_staff/marsh_cane, ATK ~44) + 3 armures par poids (warplate/scout_leathers/mystic_garb), craftables avec des matériaux du marais + entrée du volcan. Courbe lissée : armes 32→46→62, armures 158→204→260.
 
-**Constats de progression (analyse, non « corrigés » — à surveiller)** : courbes d'**artisanat** et de **récolte** saines (~4-5 actions par niveau de métier). Mais l'**XP global est très end-loaded** : Nv40-50 = **81% du grind total** (Nv45→50 seul = 56%), et tous les biomes sont débloqués dès Nv28 → le end-game (Nv40-50) est un très long grind sans nouvelle zone. Piste si trop punitif : adoucir le multiplicateur `1.18` post-Nv30 dans `xpToNext`.
+**Constats de progression (analyse, non « corrigés » — à surveiller)** : courbes d'**artisanat** et de **récolte** saines (~4-5 actions par niveau de métier). L'**XP globale reste end-loaded** : avec la courbe v5 (×1.12) Nv40-50 = **70,8%** du grind total (Nv45→50 seul = 45,2%). ⚠️ Les chiffres « 81% / 56% » qui traînaient ici décrivaient la courbe **v4** (×1.18), remplacée depuis — ne pas les reciter. Le multiplicateur post-Nv30 est déjà passé à `1.12` ; le levier restant n'est plus la courbe mais le **contenu** (voir « Trou de contenu 38→50 » plus bas).
 
 Constats clés (tour-par-tour, Nv.50 maxé) : toutes les **sous-classes** sont saines (100% survie, endHP 36-100%) ; les **bases** Mage/Archer faibles à 50 mais normal (on ascensionne à 20) ; **Berserker** cumule top-3 DPS + survie parfaite (vol de vie passif) = à surveiller sans nerf urgent ; les 4 Soigneurs paraissent 0% en sim **passif** (leur kit est 100% actif) → juger au tour-par-tour uniquement. ⚠️ Le sim co-op ne modélise pas encore le **soin de groupe** des soigneurs en donjon → winrates absolus des donjons Nv.30+ pessimistes (le fix de scaling reste valide, mesuré en relatif).
 
@@ -619,9 +619,198 @@ tous réels, tous confirmés dans le code.
   joueur courant **par pseudo** — les pseudos ne sont pas uniques — passé à l'UID.
   ⚠️ **Non vérifiable en local** (présence = RTDB) : à retester en ligne.
 
+### Deux zones de fin (fait, C) — le trou 38→50 est comblé
+
+Réponse au constat ci-dessous. **`frozen` n'est PLUS la dernière zone.**
+
+| Zone | Niv. | Élément dominant | Rôle |
+|---|---|---|---|
+| Abysses du Vide (`frozen`) | 38 | dark | entrée du dernier acte |
+| **Cieux Déchirés** (`skyreach`) ⛈️ | **42** | wind (+1 light) | îlots flottants, orage permanent |
+| **Berceau du Monde** (`cradle`) 🕯️ | **46** | light + neutral + gardien dark | **dernière zone**, porte le Rituel |
+
+- **Rituel du Néant déplacé** : `commands.ts` teste `biome === 'cradle'` (et non
+  plus `'frozen'`). ⚠️ Laisser la porte sur `frozen` aurait mis le combat de fin
+  de jeu au milieu du parcours, avec un boss calibré par `computeAscensionBoss`
+  sur le meilleur équipement du jeu opposé à un joueur de niveau 38.
+- **Deux paliers de craft** : « Tempête » Nv.43 (6 objets, armes 78-86) et
+  « Genèse » Nv.48-50 (6 objets, armes 96-104, la seule marche qui coûte des
+  **Graines-monde**, exclusives à la dernière zone). Courbe d'armes :
+  46 (22) → 62 (30) → 68 (34) → 78 (40) → **86 (43)** → 92 (46) → **104 (48)**.
+- **Fil visuel du Rituel** : `AscensionCard` ouvre le combat sur un trou noir
+  violet. Tant que le rituel partait de l'Abysse, cette forme citait le trou noir
+  du fond d'écran de l'Abysse — on voyait la chose avant de l'affronter. Le
+  déplacement au Berceau rendait la citation orpheline (un trou noir surgissant
+  dans une zone dorée qui n'en montrait aucun). La MÊME forme est donc posée en
+  petit et en sourdine dans le ciel du Berceau (`Background.tsx`, `biome ===
+  'cradle'`) : la fissure dormante qui s'ouvre en grand pendant le rituel.
+  ⚠️ Si le rituel change encore de zone, déplacer aussi cette citation.
+- **Wiki** : entièrement data-driven (`Object.values(ITEMS)` / `MONSTERS`), donc
+  les 12 objets et 10 monstres y sont sans câblage. Vérifié en jeu : objets
+  10/10 tout de suite ; monstres 10/10 **une fois rencontrés** — le bestiaire est
+  à découverte (`statistics.mobsEncountered`, « ❓ Monstre inconnu » sinon), ce
+  qui vaut pour tous les monstres du jeu, pas seulement les nouveaux.
+- ⚠️ **`genesis_aegis` n'a PAS d'élément**, comme `primordial_aegis` et pour une
+  raison encore plus forte : le Berceau mêle `light`, `neutral` et un gardien
+  `dark`, donc AUCUN élément d'armure n'y serait sûr, et le rituel qui suit est
+  `dark`. Les ARMES du palier restent `light` (+50% contre Le Néant) — elles
+  n'ont donc aucun bonus contre les monstres du Berceau lui-même, c'est assumé :
+  ce palier vise le rituel, pas le farm.
+
+**Trois erreurs de calibrage que j'ai commises, mesurées puis corrigées** — à ne
+pas refaire pour une zone future :
+1. **La DEF, pas l'ATK.** Premier jet : 0% de victoire partout. Cause : DEF de
+   monstre ≈ ATK du joueur, or les dégâts sont `atk - def` **planchés à 1** — le
+   Gardien du Berceau demandait **16 655 coups**. Exactement le piège déjà
+   documenté pour `dungeonService`. Règle : **DEF scalée ≤ ~60% de l'ATK scalée
+   du joueur** (au Nv.48 la référence en gear de craft a ATK 457, pas 700).
+2. **Double résistance = intouchable.** `resistances: ['physical','magical']`
+   divise TOUS les dégâts par deux ; cumulée à une grosse DEF elle mettait les
+   deux mini-boss à 0% pour les deux types de dégâts. Passés à une résistance
+   unique. (`lava_titan`/`crypt_warden` gardent la double, mais ils ont une DEF
+   bien plus basse.)
+3. **Ne pas juger sur une seule référence.** Mesuré à l'archer seul, les Cieux
+   semblaient équilibrés ; au mage ils sortaient à 57% contre 28% pour l'Abysse,
+   soit une zone plus TARDIVE mais plus FACILE. Corrigé en donnant au Séraphin
+   une résistance magique.
+
+Résultat mesuré (chasse, gear de craft, sans saison) :
+frozen 34% → **skyreach 24-33%** → **cradle 28-36%**. À NIVEAU ÉGAL les nouvelles
+zones restent les plus dures : au Nv.48 l'Abysse est à 58% (le joueur l'a
+dépassée) contre 42% aux Cieux et 34% au Berceau. Les zones favorisent le
+magique — deux de leurs tanks résistent au physique, `rune_shift` existe pour ça.
+
+⚠️ **Le piège du rythme : une zone plus dure peut quand même accélérer le jeu.**
+Premier jet mesuré : `xpMult` 3.0/3.4 + monstres à 1000-2800 XP → aller du Nv.40
+au Nv.50 devenait **42% plus rapide** qu'avec l'Abysse seule, alors que le but
+affiché était l'inverse (« si tu veux rendre ça plus long, il faudrait rajouter
+du contenu »). Le winrate plus bas ne compensait pas du tout la hausse d'XP.
+Recalé (`xpMult` 2.8/3.0, XP des monstres ÷1,6 à ÷2) : **+10%** seulement, ce
+qui paie le risque pris sans raccourcir le end-game.
+⚠️ Mesurer le **nombre de tentatives pour passer 40→50**, pas le winrate seul :
+`xp du monstre × xpMult × winrate` est la seule quantité qui dit si une zone
+raccourcit le jeu. Un winrate qui baisse rassure à tort.
+
+⚠️ Le **contrat du Rituel est préservé** alors que `bestGear()` a intégré le
+palier Genèse (le boss s'est donc durci tout seul) : `0% / 36% / 100%` par
+profil, contre `0% / 37% / 100%` avant ce lot. Rien à retoucher dans
+`ascension.ts` — j'ai failli y baisser `s.atk * 36` sur une **médiane de 5% qui
+était un artefact de ma propre extraction** (mon `grep` comptait le « 5 » de
+« ★5 » comme une valeur). Vérifier l'outil de mesure avant de toucher au jeu.
+
+### Rythme réel de la montée 1→50 (mesuré et calibré sur la bêta)
+
+Question récurrente (« la montée est bonne ? pas trop rapide ? ») — voici le
+modèle et ses chiffres, pour ne pas avoir à les refaire.
+
+**Méthode** : pour chaque niveau, on prend la MEILLEURE zone ouverte, on calcule
+`xp du monstre × xpMult × winrate` (harnais tour-par-tour, archer Chasseur), et
+on convertit en temps avec `HUNT_COOLDOWN` (20s) + durée réelle du combat (~3s
+par tour). Le modèle est **validé contre les données de la bêta** : rejoué sur le
+jeu de l'époque (courbe v4, 8 biomes) il donne Nv.20 = 1,3 h et Nv.40 = 16,8 h,
+ce qui correspond aux 2-3 jours et 2,5 semaines observés à un rythme de
+**~0,74 h de jeu par jour**. C'est ce rythme qui sert de conversion ci-dessous.
+
+| | Jeu de la bêta (v4, 8 biomes) | Jeu actuel (v5, 10 biomes) |
+|---|---|---|
+| Nv.20 | 1,3 h (~2 j) | 1,3 h (~2 j) |
+| Nv.40 | 16,8 h (~23 j) | 13,3 h (~18 j) |
+| Nv.50 | 69,0 h (~94 j) | **36,0 h (~48 j)** |
+
+**Le trajet jusqu'au Nv.40 est quasi inchangé.** Tout le raccourcissement est
+dans 40→50 (52 h → 23 h) : c'est la décision assumée de la courbe v5 (« divisé
+par ~2 »), les deux nouvelles zones n'ajoutant que ~10% par-dessus.
+
+Répartition du temps par tranche (jeu actuel) : 1→10 **1%**, 10→20 **2%**,
+20→30 **8%**, 30→38 **17%**, 38→42 **15%**, 42→46 **23%**, 46→50 **35%**.
+⚠️ La fin reste très chargée : **46→50 pèse à lui seul 35% du jeu entier**. Un
+joueur au Nv.46 a encore un tiers de la partie devant lui. C'est voulu (c'est la
+queue de progression), mais c'est le premier endroit à regarder si quelqu'un
+trouve la fin trop longue.
+
+⚠️ **36 h est un MAJORANT du temps de chasse**, pas une prévision :
+le modèle ne compte que la chasse (ni récolte, ni forge, ni donjon, ni camp, ni
+quêtes, ni journalier), suppose qu'on combat **jusqu'à la mort sans jamais fuir**,
+et ignore les buffs de saison (artefact + Relique montent les winrates de fin à
+100%). Un joueur réel ira plus vite. Avec du gear q150 5★ le même modèle donne
+**27,9 h**.
+
+**Levier si c'est jugé trop rapide** : ce n'est PAS `xpToNext` (le testeur juge
+la courbe bonne, cf. plus bas) mais l'XP des nouvelles zones — `xpMult` dans
+`biomes.ts` et le champ `xp` des monstres de `skyreach`/`cradle`. Les ramener au
+niveau de l'Abysse rendrait le rythme strictement identique à avant.
+
+### Recettes débloquées (fait, C) — le craft ne dépend plus d'un biome hors de portée
+
+Audit de craftabilité (matériau → premier biome qui le donne, vs niveau
+d'utilisation de l'objet) : **14 recettes en défaut**, bien au-delà de ce que la
+note d'origine signalait.
+
+- **7 recettes exigeaient `crystal`**, exclusif à l'Abysse (Nv.38), à des
+  niveaux de craft 4 à 27 — dont **trois armes de soigneur** (Bâton lunaire,
+  Bâton de cristal, Sceptre Divin) : toute la ligne mid-game du soigneur était
+  infabricable avant la dernière zone, là où mage/guerrier/archer avaient des
+  options à 30-32 ATK au Nv.20. Remplacé par des matériaux de niveau cohérent
+  (`frost_shard` Nv.8, `obsidian` Nv.14, `sun_orb` Nv.14, `ember_core` Nv.14).
+- **`star_fragment` n'avait AUCUNE source dans le jeu** — ni récolte, ni loot, ni
+  boutique. Le Bâton lunaire était donc infabricable *tout court*. Posé sur le
+  Spectre des cimes (montagne, de nuit — l'objet dit « brille doucement dans
+  l'obscurité »).
+- **`stone` ne se minait que dans les montagnes (Nv.8)** alors que la Hache de
+  pierre est une recette de niveau 1 : infabricable pendant toute la période où
+  elle sert. Ajoutée à la cueillette en forêt.
+
+Reste 3 écarts, **volontaires** : Eau de cactus, Croc venimeux et Potion des
+cavernes sont des *spécialités régionales* (section dédiée dans `crafting.ts`) —
+leur intérêt est justement d'être débloquées en atteignant leur région.
+
+⚠️ L'audit se rejoue : il reconstruit la provenance de chaque matériau depuis
+`GATHER_SKILLS` + les `loot` de `MONSTERS`, puis propage à travers les recettes.
+À relancer après tout ajout d'objet.
+
+### Trou de contenu 38→50 — le constat de bêta qui a déclenché le lot ci-dessus
+
+Retour du testeur, validé par l'utilisateur : « la courbe est moins frustrante
+qu'avant, c'est assez uniforme et harmonisé entre la récolte, la forge et l'XP
+globale. Si tu veux rendre ça plus difficile et long, pourquoi pas, mais il
+faudrait rajouter du contenu (1 ou 2 maps) pour les grinds du niveau 40 à 50.
+Ça motive pas mal de découvrir les nouveaux biomes. »
+
+⚠️ **Ne PAS répondre en retouchant `xpToNext`.** Le testeur dit explicitement
+que la courbe est bonne, et elle a déjà été divisée par deux (v4→v5). Le
+problème n'est pas la pente, c'est ce qu'il y a à voir pendant qu'on la monte.
+
+Part du grind 1→50 par « ère de biome » (courbe v5 actuelle, calculée sur
+`xpToNext`) :
+
+Répartition **avant** l'ajout des deux zones :
+
+| Ère | Niveaux | Durée | Part du grind |
+|---|---|---|---|
+| Forêt → Caldeira (6 biomes) | 1→30 | 29 niv. | **6,3%** |
+| Nécropole | 30→38 | 8 niv. | 16,0% |
+| **Abysses** | **38→50** | **12 niv.** | **77,6%** |
+
+Le dernier palier était **à la fois le plus long en niveaux et les trois quarts
+du jeu en temps**, dans une seule zone, quand tous les autres intervalles font
+2 à 8 niveaux pour ≤16%. Le craft, lui, suivait déjà jusqu'au bout : c'était bien
+un trou de ZONES, pas d'équipement. Les Cieux (42) et le Berceau (46) coupent
+désormais cette tranche en trois.
+
+**Annexes à toucher pour tout nouveau biome** (liste vérifiée sur cet ajout) :
+`types.ts` (`BiomeId`), `biomes.ts`, `MapCard` POS + ORDER, `monsters.ts` +
+`monsterIcons.ts`, `gathering.ts`, `items.ts` + `crafting.ts` + `icons.ts`,
+`Scenery.tsx`, `Background.tsx` si la zone n'a pas d'astre, `events.ts`,
+`BIOME_RESOURCE` (commands.ts) **et** `biomeRes` (commands.ts, second endroit)
+**et** `BIOME_RES` (camp.ts) — trois tables séparées qui font la même chose —,
+et le succès Globe-trotteur (`achievements.ts`, `goal`).
+⚠️ `Background.tsx` : `isVoid` (le trou noir violet) est propre à l'**Abysse** ;
+`noSky` (pas d'astre) vaut pour l'Abysse **et** le Berceau. Les avoir confondus
+mettait le trou noir de l'Abysse dans le ciel doré du Berceau — vu en capture.
+
 ## Amusement — 3 features (fait, C)
 
-- **Maîtrise des biomes** (`game/mastery.ts`, nouveau) : chaque kill compte pour le biome courant (`p.biomeKills`, migré). Paliers 100/500/1500/4000 → titre (`Novice/Familier/Vétéran/Maître/Légende · <Biome>`, ajouté à `unlockedTitles`) + **bonus permanent XP/Or dans ce biome** (+5/10/15/25%, appliqué dans `grantMonsterRewards`). But concret au farm end-game (Nv.40-50 = 81% du temps, sans nouvelle zone). Affiché : bandeau dans HuntCard (biome courant) + liste complète dans MapCard + toast au palier franchi (`HuntRewards.masteryUp`).
+- **Maîtrise des biomes** (`game/mastery.ts`, nouveau) : chaque kill compte pour le biome courant (`p.biomeKills`, migré). Paliers 100/500/1500/4000 → titre (`Novice/Familier/Vétéran/Maître/Légende · <Biome>`, ajouté à `unlockedTitles`) + **bonus permanent XP/Or dans ce biome** (+5/10/15/25%, appliqué dans `grantMonsterRewards`). But concret au farm end-game (Nv.40-50 = ~71% du temps avec la courbe v5, sans nouvelle zone). Affiché : bandeau dans HuntCard (biome courant) + liste complète dans MapCard + toast au palier franchi (`HuntRewards.masteryUp`).
 - **Faille (combat moins passif)** (`combat.ts` `combatTurn`, `VULN_MULT=1.5`) : quand le monstre est **gelé/étourdi** en début de tour, les dégâts offensifs sont ×1.5. Récompense poser un contrôle puis burst (gel cryo, étourdissement moine à Combo plein, sets givre). Badge « ⚡ FAILLE » clignotant dans HuntCard. Hunt/adventure uniquement (le donjon a déjà son stagger).
 - **Lisibilité phys/mag** : indicateur d'**efficacité d'arme** 🟢/⚪/🔴 dans HuntCard (calcul `getElementMult × getDmgTypeMult` de l'arme vs le monstre en cours) — le joueur voit s'il tape fort/faible avant d'agir. Explication (éléments + faille) dans le Wiki (onglet Bestiaire).
 

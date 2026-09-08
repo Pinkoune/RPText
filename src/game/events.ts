@@ -94,6 +94,16 @@ export const BIOME_EVENTS: Record<BiomeId, EventDef[]> = {
     { id: 'fr_aurora', name: 'Aurore boréale', icon: '🌌', kind: 'buff', desc: '+10% ATK dans l\'Abysse.', effect: { atkPct: 0.10 } },
     { id: 'fr_frostbite', name: 'Gelures', icon: '🥶', kind: 'debuff', desc: '-8% DEF dans l\'Abysse.', effect: { defPct: -0.08 } },
   ],
+  skyreach: [
+    { id: 'sk_calm', name: 'Accalmie', icon: '⛅', kind: 'neutral', desc: 'Rien de particulier dans les Cieux.', effect: {} },
+    { id: 'sk_surge', name: 'Surtension', icon: '⚡', kind: 'buff', desc: '+12% ATK dans les Cieux.', effect: { atkPct: 0.12 } },
+    { id: 'sk_gale', name: 'Bourrasque', icon: '🌀', kind: 'debuff', desc: '-10% DEF dans les Cieux.', effect: { defPct: -0.10 } },
+  ],
+  cradle: [
+    { id: 'cd_calm', name: 'Souffle suspendu', icon: '🕯️', kind: 'neutral', desc: 'Rien de particulier au Berceau.', effect: {} },
+    { id: 'cd_genesis', name: 'Première lueur', icon: '🌟', kind: 'buff', desc: '+12% XP au Berceau.', effect: { xpMult: 0.12 } },
+    { id: 'cd_unmaking', name: 'Défaite du monde', icon: '🕳️', kind: 'debuff', desc: '-10% PV max au Berceau.', effect: { hpPct: -0.10 } },
+  ],
 };
 
 function pickDeterministic<T>(list: T[], seed: number): T {

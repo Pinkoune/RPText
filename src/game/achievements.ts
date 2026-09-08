@@ -42,7 +42,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'cj_10', name: 'Ninja', icon: '🥷', desc: 'Gagne 10 duels Card-Jitsu.', goal: 10, value: (p) => p.cjWins, reward: { fateCoins: 10 }, rewardLabel: '10 🎲 + Titre', titleReward: 'Ninja' },
   { id: 'gamble_50', name: 'Flambeur', icon: '🎰', desc: 'Gagne 50 paris au casino.', goal: 50, value: (p) => p.statistics?.gamblesWon ?? 0, reward: { fateCoins: 15 }, rewardLabel: '15 🎲 + Titre', titleReward: 'Joueur' },
   { id: 'gold_50k', name: 'Fortune', icon: '🪙', desc: 'Gagne 50 000 or au total.', goal: 50000, value: (p) => p.statistics?.goldEarned ?? 0, reward: { gems: 2 }, rewardLabel: '2 💎 + Titre', titleReward: 'Riche' },
-  { id: 'biomes_all', name: 'Globe-trotteur', icon: '🗺️', desc: 'Débloque les 8 biomes.', goal: 8, value: (p) => p.unlockedBiomes?.length ?? 1, reward: { gold: 1500 }, rewardLabel: '1500 or + Titre', titleReward: 'Trotteur' },
+  { id: 'biomes_all', name: 'Globe-trotteur', icon: '🗺️', desc: 'Débloque les 10 biomes.', goal: 10, value: (p) => p.unlockedBiomes?.length ?? 1, reward: { gold: 1500 }, rewardLabel: '1500 or + Titre', titleReward: 'Trotteur' },
   { id: 'star_5', name: 'Légendaire', icon: '🏆', desc: 'Amène un équipement à 5 étoiles.', goal: 5, value: (p) => Math.max(0, ...Object.values(p.gearStars ?? {})), reward: { gems: 5 }, rewardLabel: '5 💎 + Titre', titleReward: 'Forgeron' },
   { id: 'familiars_3', name: 'Ami des bêtes', icon: '🐾', desc: 'Possède 3 familiers.', goal: 3, value: (p) => Object.keys(p.familiars ?? {}).length, reward: { gold: 800 }, rewardLabel: '800 or + Titre', titleReward: 'Ami des Bêtes' },
   

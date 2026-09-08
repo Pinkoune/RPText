@@ -35,7 +35,7 @@ export const RECIPES: Recipe[] = [
   // ── Équipements de Métier ──
   { output: 'smith_apron', qty: 1, materials: { sturdy_leather: 6, iron_ingot: 2 }, gold: 200, levelReq: 3, difficulty: 60, maxQuality: 150, durability: 50 },
   { output: 'master_hammer', qty: 1, materials: { iron_ingot: 8, wood: 4, stone: 10 }, gold: 500, levelReq: 5, difficulty: 100, maxQuality: 250, durability: 60 },
-  { output: 'craft_goggles', qty: 1, materials: { iron_ingot: 2, crystal: 2, slime_gel: 4 }, gold: 300, levelReq: 4, difficulty: 80, maxQuality: 200, durability: 50 },
+  { output: 'craft_goggles', qty: 1, materials: { iron_ingot: 2, frost_shard: 2, slime_gel: 4 }, gold: 300, levelReq: 4, difficulty: 80, maxQuality: 200, durability: 50 },
   
   { output: 'farmer_boots', qty: 1, materials: { wolf_pelt: 6, sturdy_leather: 2, herb: 10 }, gold: 200, levelReq: 3, difficulty: 60, maxQuality: 150, durability: 50 },
   { output: 'golden_sickle', qty: 1, materials: { iron_ingot: 5, wood: 4, sun_shard: 2 }, gold: 500, levelReq: 5, difficulty: 100, maxQuality: 250, durability: 60 },
@@ -54,7 +54,7 @@ export const RECIPES: Recipe[] = [
   { output: 'sunplate_armor', qty: 1, materials: { sun_shard: 10, iron_ingot: 8 }, gold: 1400, levelReq: 11, difficulty: 140, maxQuality: 550, durability: 70 },
   { output: 'sunplate_leather', qty: 1, materials: { sun_shard: 10, iron_ingot: 8 }, gold: 1400, levelReq: 11, difficulty: 140, maxQuality: 550, durability: 70 },
   { output: 'venom_fang', qty: 1, materials: { bog_root: 12, mudfish: 6, sturdy_leather: 3 }, gold: 1000, levelReq: 13, difficulty: 160, maxQuality: 500, durability: 60 },
-  { output: 'phoenix_elixir', qty: 1, materials: { frost_lotus: 6, crystal: 4, herb: 10 }, gold: 800, levelReq: 20, difficulty: 350, maxQuality: 1200, durability: 80 },
+  { output: 'phoenix_elixir', qty: 1, materials: { ember_core: 6, sun_orb: 4, herb: 10 }, gold: 800, levelReq: 20, difficulty: 350, maxQuality: 1200, durability: 80 },
 
   // ── Équipement Basique (Débutant) ──
   { output: 'wooden_club', qty: 1, materials: { wood: 12 }, gold: 10, levelReq: 1, difficulty: 20, maxQuality: 50, durability: 30 },
@@ -106,8 +106,8 @@ export const RECIPES: Recipe[] = [
   { output: 'priest_crozier', qty: 1, materials: { iron_ingot: 4, magic_dust: 4, refined_wood: 4 }, gold: 600, levelReq: 8, difficulty: 80, maxQuality: 300, durability: 60 },
   { output: 'frost_scepter', qty: 1, materials: { refined_wood: 4, frost_shard: 10, magic_dust: 5 }, gold: 900, levelReq: 11, difficulty: 130, maxQuality: 500, durability: 60 },
   { output: 'moon_staff', qty: 1, materials: { mithril_ingot: 2, magic_dust: 8, star_fragment: 2 }, gold: 1300, levelReq: 11, difficulty: 150, maxQuality: 600, durability: 60 },
-  { output: 'crystal_staff', qty: 1, materials: { mithril_ingot: 4, crystal: 15, magic_dust: 8 }, gold: 5000, levelReq: 20, difficulty: 300, maxQuality: 1200, durability: 80 },
-  { output: 'divine_scepter', qty: 1, materials: { mithril_ingot: 10, sun_shard: 15, void_dust: 5, crystal: 5 }, gold: 5000, levelReq: 19, difficulty: 300, maxQuality: 1000, durability: 80 },
+  { output: 'crystal_staff', qty: 1, materials: { mithril_ingot: 4, frost_shard: 10, obsidian: 5, magic_dust: 8 }, gold: 5000, levelReq: 20, difficulty: 300, maxQuality: 1200, durability: 80 },
+  { output: 'divine_scepter', qty: 1, materials: { mithril_ingot: 10, sun_shard: 15, void_dust: 5, sun_orb: 5 }, gold: 5000, levelReq: 19, difficulty: 300, maxQuality: 1000, durability: 80 },
   // ── Sets d'Équipement ──
   { output: 'wind_blade', qty: 1, materials: { iron_ingot: 6, wildflower: 15 }, gold: 800, levelReq: 9, difficulty: 110, maxQuality: 400, durability: 60 },
   { output: 'wind_cloak', qty: 1, materials: { silk_thread: 10, sturdy_leather: 5 }, gold: 800, levelReq: 9, difficulty: 110, maxQuality: 400, durability: 60 },
@@ -159,15 +159,15 @@ export const RECIPES: Recipe[] = [
   { output: 'ironwood_bow', qty: 1, materials: { ironwood: 8, sturdy_leather: 4 }, gold: 1800, levelReq: 13, difficulty: 160, maxQuality: 600, durability: 70 },
   { output: 'shadow_tome', qty: 1, materials: { void_dust: 6, magic_dust: 4 }, gold: 1500, levelReq: 12, difficulty: 150, maxQuality: 600, durability: 70 },
   { output: 'world_tree_staff', qty: 1, materials: { ironwood: 12, mana_bloom: 10, magic_dust: 8 }, gold: 4500, levelReq: 20, difficulty: 280, maxQuality: 1000, durability: 80 },
-  { output: 'star_orb', qty: 1, materials: { crystal: 20, sun_orb: 10, magic_dust: 12 }, gold: 8000, levelReq: 27, difficulty: 450, maxQuality: 2000, durability: 90 },
+  { output: 'star_orb', qty: 1, materials: { obsidian: 12, sun_orb: 10, magic_dust: 12 }, gold: 8000, levelReq: 27, difficulty: 450, maxQuality: 2000, durability: 90 },
   { output: 'mana_ring', qty: 1, materials: { mana_bloom: 10, magic_dust: 6 }, gold: 2000, levelReq: 14, difficulty: 180, maxQuality: 700, durability: 60 },
   { output: 'cave_potion', qty: 1, materials: { cave_fish: 2, herb: 10 }, gold: 300, levelReq: 10, difficulty: 100, maxQuality: 350, durability: 40 },
 
   // ── Maîtrise & Bijoux ──
   { output: 'mithril_blade', qty: 1, materials: { mithril_ingot: 8, sturdy_leather: 6, magic_dust: 4 }, gold: 5000, levelReq: 18, difficulty: 250, maxQuality: 1000, durability: 80 },
-  { output: 'crystal_charm', qty: 1, materials: { crystal: 12, mithril_ingot: 2, magic_dust: 6 }, gold: 3000, levelReq: 15, difficulty: 220, maxQuality: 900, durability: 70 },
+  { output: 'crystal_charm', qty: 1, materials: { frost_shard: 12, mithril_ingot: 2, magic_dust: 6 }, gold: 3000, levelReq: 15, difficulty: 220, maxQuality: 900, durability: 70 },
   { output: 'lucky_coin', qty: 1, materials: { void_dust: 4, mithril_ingot: 3 }, gold: 1000, levelReq: 24, difficulty: 400, maxQuality: 1500, durability: 80 },
-  { output: 'gambler_ring', qty: 1, materials: { void_dust: 6, magic_dust: 10, crystal: 5 }, gold: 3000, levelReq: 25, difficulty: 500, maxQuality: 1800, durability: 90 },
+  { output: 'gambler_ring', qty: 1, materials: { void_dust: 6, magic_dust: 10, obsidian: 5 }, gold: 3000, levelReq: 25, difficulty: 500, maxQuality: 1800, durability: 90 },
   { output: 'void_reaver', qty: 1, materials: { void_dust: 12, mithril_ingot: 10, magic_dust: 10 }, gold: 12000, levelReq: 28, difficulty: 800, maxQuality: 3000, durability: 100 },
   // Recettes manquantes (items sans source de drop)
   { output: 'spirit_staff', qty: 1, materials: { refined_wood: 8, mana_bloom: 10, magic_dust: 4 }, gold: 2000, levelReq: 13, difficulty: 160, maxQuality: 650, durability: 70 },
@@ -220,6 +220,27 @@ export const RECIPES: Recipe[] = [
   { output: 'primordial_scepter', qty: 1, materials: { boss_soul: 4, void_dust: 14, magic_dust: 12 }, gold: 23000, levelReq: 46, difficulty: 940, maxQuality: 3350, durability: 120 },
   { output: 'primordial_staff', qty: 1, materials: { boss_soul: 4, frost_lotus: 14, magic_dust: 12 }, gold: 23000, levelReq: 46, difficulty: 940, maxQuality: 3350, durability: 120 },
   { output: 'primordial_aegis', qty: 1, materials: { boss_soul: 6, void_dust: 18, crystal: 14 }, gold: 28000, levelReq: 48, difficulty: 1000, maxQuality: 3500, durability: 150 },
+
+  // ── Palier « Tempête », niv.43 (ressources des Cieux Déchirés, niv.42) ──
+  // Se glisse entre Givre du Vide (40) et Primordial (46) : sans lui, ouvrir une
+  // zone au niv.42 n'aurait rien donné à fabriquer avant quatre niveaux.
+  { output: 'tempest_edge', qty: 1, materials: { storm_core: 8, sky_iron: 12, mithril_ingot: 8 }, gold: 12000, levelReq: 43, difficulty: 740, maxQuality: 2800, durability: 115 },
+  { output: 'tempest_bow', qty: 1, materials: { storm_core: 6, sky_iron: 10, ironwood: 12 }, gold: 12000, levelReq: 43, difficulty: 740, maxQuality: 2800, durability: 115 },
+  { output: 'tempest_scepter', qty: 1, materials: { storm_core: 10, zephyr_bloom: 8, magic_dust: 10 }, gold: 12500, levelReq: 43, difficulty: 760, maxQuality: 2850, durability: 115 },
+  { output: 'tempest_staff', qty: 1, materials: { zephyr_bloom: 12, storm_core: 6, magic_dust: 10 }, gold: 12500, levelReq: 43, difficulty: 760, maxQuality: 2850, durability: 115 },
+  { output: 'storm_plate', qty: 1, materials: { sky_iron: 16, storm_core: 8, iron_ingot: 12 }, gold: 13000, levelReq: 43, difficulty: 780, maxQuality: 2900, durability: 145 },
+  { output: 'storm_sigil', qty: 1, materials: { storm_core: 10, zephyr_bloom: 8, sky_iron: 6 }, gold: 10500, levelReq: 43, difficulty: 700, maxQuality: 2700, durability: 100 },
+
+  // ── Palier « Genèse », niv.48-50 — LE DERNIER ──
+  // Coûte des Graines-monde, qui ne tombent qu'au Berceau (et surtout sur son
+  // gardien) : il faut avoir habité la dernière zone, pas seulement l'avoir
+  // atteinte. Volontairement le palier le plus cher du jeu.
+  { output: 'genesis_edge', qty: 1, materials: { world_seed: 3, dawn_shard: 16, boss_soul: 4 }, gold: 40000, levelReq: 48, difficulty: 1100, maxQuality: 3900, durability: 130 },
+  { output: 'genesis_bow', qty: 1, materials: { world_seed: 3, dawn_shard: 14, ironwood: 16 }, gold: 40000, levelReq: 48, difficulty: 1100, maxQuality: 3900, durability: 130 },
+  { output: 'genesis_scepter', qty: 1, materials: { world_seed: 3, origin_ash: 16, magic_dust: 14 }, gold: 41000, levelReq: 48, difficulty: 1120, maxQuality: 3950, durability: 130 },
+  { output: 'genesis_staff', qty: 1, materials: { world_seed: 3, origin_ash: 14, dawn_shard: 12 }, gold: 41000, levelReq: 48, difficulty: 1120, maxQuality: 3950, durability: 130 },
+  { output: 'genesis_aegis', qty: 1, materials: { world_seed: 5, dawn_shard: 20, boss_soul: 4 }, gold: 52000, levelReq: 50, difficulty: 1220, maxQuality: 4100, durability: 165 },
+  { output: 'genesis_seal', qty: 1, materials: { world_seed: 4, origin_ash: 18, storm_core: 10 }, gold: 34000, levelReq: 48, difficulty: 1050, maxQuality: 3800, durability: 110 },
 ];
 
 export function missingFor(p: PlayerState, r: Recipe): { materials: Record<string, number>; gold: number } {

@@ -14,7 +14,11 @@ export type BiomeId =
   | 'swamp'
   | 'volcano'
   | 'crypt'
-  | 'frozen';
+  | 'frozen'
+  // Les deux zones de fin. ⚠️ `cradle` est désormais la DERNIÈRE : c'est elle
+  // qui porte le Rituel du Néant (`commands.ts`), plus `frozen`.
+  | 'skyreach'
+  | 'cradle';
 
 export type Phase = 'dawn' | 'day' | 'dusk' | 'night';
 

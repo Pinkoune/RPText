@@ -44,6 +44,15 @@ function particleFx(biome: BiomeId, phase: Phase): PFX | null {
       return { anim: 'riseUp', count: 34, color: '#ff5a1a', min: 2, max: 5, durMin: 4, durMax: 9 }; // cendres et braises
     case 'crypt':
       return { anim: 'twinkle', count: 24, color: '#7dd3c8', min: 2, max: 4, durMin: 3, durMax: 7 }; // feux follets
+    case 'skyreach':
+      // Orage permanent : des étincelles qui MONTENT (le sol est en dessous du
+      // vide, tout retombe vers le haut) — lecture immédiatement différente des
+      // cendres du volcan, qui montent aussi mais en rouge et bien plus denses.
+      return { anim: 'riseUp', count: 22, color: '#fde047', min: 2, max: 4, durMin: 3, durMax: 8 };
+    case 'cradle':
+      // Poussière d'origine en suspension, très lente : la zone doit se sentir
+      // immobile, à l'opposé de l'orage juste avant.
+      return { anim: 'drift', count: 20, color: '#fff4d6', min: 2, max: 6, durMin: 14, durMax: 24 };
     default:
       return null;
   }
@@ -196,6 +205,48 @@ function Silhouettes({ biome, phase }: Props) {
         </>
       );
       break;
+    case 'skyreach': {
+      const bolt = { stroke: '#fde047', fill: 'none', filter: 'blur(0.5px)', transition: T };
+      shapes = (
+        <>
+          {/* PAS de ligne de sol : on est au-dessus du vide. Des îlots flottent,
+              et l'horizon bas reste ouvert — c'est ce qui distingue la zone de
+              toutes les autres au premier coup d'œil. */}
+          <path style={sFar} d="M60 300 L150 250 L280 268 L330 320 L210 352 L100 340 Z" />
+          <path style={sNear} d="M900 340 L1030 268 L1220 292 L1290 356 L1120 400 L950 388 Z" />
+          <path style={sFar} d="M600 190 L680 152 L780 172 L800 216 L690 238 Z" />
+          <path style={sNear} d="M340 120 L400 96 L470 116 L450 150 L370 152 Z" />
+          {/* Éclats du monde qui pendent sous les îlots */}
+          <g style={sFar} opacity={0.8}>
+            <path d="M180 352 L200 400 L215 352 Z" />
+            <path d="M690 238 L706 290 L724 238 Z" />
+          </g>
+          {/* Éclairs, tracés fins pour ne pas manger le fond */}
+          <g style={bolt} strokeWidth={3} opacity={0.9}>
+            <path d="M520 0 L500 90 L545 84 L512 190" />
+            <path d="M1140 20 L1122 96 L1160 92 L1136 176" />
+          </g>
+        </>
+      );
+      break;
+    }
+    case 'cradle': {
+      const halo = { fill: '#fff4d6', filter: 'blur(3px)', transition: T };
+      shapes = (
+        <>
+          {/* Sol lisse, presque plat : rien n'a encore été façonné ici. */}
+          <path style={sFar} d="M0 400 L0 330 Q720 312 1440 330 L1440 400 Z" />
+          <path style={sNear} d="M0 400 L0 362 Q720 350 1440 362 L1440 400 Z" />
+          {/* Arches d'origine, symétriques — la seule zone construite du jeu */}
+          <path style={sFar} d="M330 362 L330 214 Q330 168 386 168 Q442 168 442 214 L442 362 L410 362 L410 218 Q410 200 386 200 Q362 200 362 218 L362 362 Z" />
+          <path style={sNear} d="M980 362 L980 190 Q980 136 1048 136 Q1116 136 1116 190 L1116 362 L1078 362 L1078 196 Q1078 174 1048 174 Q1018 174 1018 196 L1018 362 Z" />
+          {/* Le foyer : la lueur d'où part le monde */}
+          <circle cx={720} cy={262} r={64} style={halo} opacity={0.5} />
+          <circle cx={720} cy={262} r={26} style={halo} opacity={0.85} />
+        </>
+      );
+      break;
+    }
     case 'desert':
       shapes = (
         <>

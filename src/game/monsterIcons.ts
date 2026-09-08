@@ -5,6 +5,10 @@ import {
   GiTroll, GiVortex, GiShadowFollower, GiEyeball,
   // Nécropole de Cristal
   GiGhostAlly, GiBoneKnife, GiHoodedAssassin, GiCrystalCluster, GiTombstone,
+  // Cieux Déchirés
+  GiHarpy, GiTornado, GiSpermWhale, GiAngelWings, GiLightningStorm,
+  // Berceau du Monde
+  GiEyeOfHorus, GiRockGolem, GiBubbles, GiCandleFlame, GiCandleLight,
 } from 'react-icons/gi';
 
 // Registre id de monstre -> icône Game Icons (react-icons/gi). Les monstres non
@@ -18,6 +22,10 @@ export const MONSTER_ICONS: Record<string, IconType> = {
   voidling: GiVortex, shadow_stalker: GiShadowFollower, abyssal_horror: GiEyeball,
   crypt_wraith: GiGhostAlly, bone_golem: GiBoneKnife, crypt_lich: GiHoodedAssassin,
   crystal_horror: GiCrystalCluster, crypt_warden: GiTombstone,
+  storm_harpy: GiHarpy, thunder_djinn: GiTornado, sky_leviathan: GiSpermWhale,
+  lightning_seraph: GiAngelWings, tempest_sovereign: GiLightningStorm,
+  dawn_watcher: GiEyeOfHorus, origin_golem: GiRockGolem, the_unmade: GiBubbles,
+  first_flame: GiCandleFlame, world_warden: GiCandleLight,
 };
 
 export function hasMonsterIcon(id: string): boolean {

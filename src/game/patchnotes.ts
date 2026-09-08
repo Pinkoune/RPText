@@ -30,6 +30,31 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'fin-du-monde-v1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '⛈️🕯️ Deux nouvelles régions — et une vraie fin',
+        kind: 'content',
+        items: [
+          'Les <b>Cieux Déchirés</b> (Nv.42) : au-dessus de l\'Abysse, le ciel s\'est fendu. Des éclats du monde y flottent dans un orage qui ne finit jamais.',
+          'Le <b>Berceau du Monde</b> (Nv.46) : là où tout a commencé, et où quelque chose attend de tout défaire. C\'est désormais la <b>dernière zone du jeu</b> — et c\'est là, plus dans l\'Abysse, que se tente le rituel de fin.',
+          'Dix monstres inédits, six nouvelles ressources, et deux paliers d\'équipement à fabriquer : <b>Tempête</b> (Nv.43) et <b>Genèse</b> (Nv.48), le dernier du jeu. L\'Égide de Genèse monte à 72 DEF / 340 PV.',
+          'L\'Abysse n\'est plus le bout du chemin : elle en devient l\'entrée. Avant, elle couvrait à elle seule les niveaux 38 à 50 — plus des trois quarts du temps de jeu dans une seule zone.',
+        ],
+      },
+      {
+        title: '🔨 Des recettes qui étaient infabricables',
+        kind: 'fix',
+        items: [
+          'Sept recettes exigeaient du <b>Cristal</b>, qu\'on ne trouve que dans l\'Abysse (Nv.38), à des niveaux d\'artisanat allant de 4 à 27. Trois d\'entre elles étaient des <b>armes de soigneur</b> : sa progression du milieu de partie était bloquée derrière la dernière zone. Elles utilisent désormais des matériaux de leur époque.',
+          'Le <b>Bâton lunaire</b> demandait un Fragment d\'étoile… qui n\'existait nulle part dans le jeu. Le Spectre des cimes en lâche maintenant, la nuit.',
+          'La <b>Hache de pierre</b> (recette de niveau 1) demandait de la pierre, qu\'on ne minait qu\'en montagne au Nv.8. On en ramasse enfin en forêt.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'refonte-saison-v1.1',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [

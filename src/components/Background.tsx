@@ -28,7 +28,15 @@ export default function Background({ biome, phase }: Props) {
     [],
   );
 
+  // ⚠️ DEUX notions distinctes, à ne pas refusionner :
+  //  - `noSky` : pas d'astre ni d'étoiles. L'Abysse (la lumière n'y arrive pas)
+  //    et le Berceau, qui est hors du temps — ses quatre phases sont identiques,
+  //    donc un soleil qui s'y déplacerait contredirait le fond fixe.
+  //  - `isVoid` : le trou noir violet, qui appartient à l'Abysse SEULE.
+  // Les avoir confondus mettait le trou noir de l'Abysse dans le ciel doré du
+  // Berceau, vu en capture avant correction.
   const isVoid = biome === 'frozen';
+  const noSky = biome === 'frozen' || biome === 'cradle';
   const isVolcano = biome === 'volcano';
 
   return (
@@ -39,7 +47,7 @@ export default function Background({ biome, phase }: Props) {
       />
 
       {/* Astre : soleil le jour, lune la nuit */}
-      {!isVoid && (
+      {!noSky && (
         <div
           className="absolute rounded-full transition-all duration-[2000ms]"
           style={{
@@ -54,6 +62,31 @@ export default function Background({ biome, phase }: Props) {
               : 'radial-gradient(circle, #fff7d6, #ffe08a 55%, transparent 72%)',
             boxShadow: night ? '0 0 60px 10px rgba(200,210,255,0.25)' : '0 0 90px 30px rgba(255,220,140,0.35)',
             filter: 'blur(0.5px)',
+          }}
+        />
+      )}
+
+      {/* Le Néant, encore endormi, au-dessus du Berceau.
+          Le combat de prestige (`AscensionCard`) s'ouvre sur un trou noir violet.
+          Tant que le rituel se lançait depuis l'Abysse, ce trou noir citait celui
+          du fond d'écran de l'Abysse — le joueur voyait la chose avant de
+          l'affronter. En déplaçant le rituel au Berceau, cette citation devenait
+          orpheline : on combattait un trou noir dans une zone dorée qui n'en
+          montrait aucun. On repose donc ici la MÊME forme, en petit et en
+          sourdine — la fissure qui s'ouvrira en grand pendant le rituel. */}
+      {biome === 'cradle' && (
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: 120,
+            height: 120,
+            left: '50%',
+            top: '17%',
+            transform: 'translate(-50%, -50%)',
+            background: 'radial-gradient(circle, #05030a 40%, #2e1065 68%, transparent 82%)',
+            boxShadow: '0 0 60px 14px rgba(88,28,135,0.35)',
+            filter: 'blur(3px)',
+            opacity: 0.75,
           }}
         />
       )}
@@ -76,7 +109,7 @@ export default function Background({ biome, phase }: Props) {
       )}
 
       {/* Étoiles la nuit (coupées en mode réduit : animation GPU permanente) */}
-      {night && !isVoid && !reduced &&
+      {night && !noSky && !reduced &&
         stars.map((st, i) => (
           <span
             key={i}

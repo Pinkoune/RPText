@@ -32,6 +32,11 @@ import {
   // Abysse (givre du vide, niv.40) + palier primordial (niv.46-48)
   GiIceSpear, GiIceBolt, GiFrozenOrb, GiIceShield, GiFrostfire, GiSnowflake2,
   GiSunbeams, GiStarSwirl, GiCrystalBall, GiHolySymbol, GiWingedShield,
+  // Cieux Déchirés + Berceau du Monde (niv.42 / 46)
+  GiLightningTrio, GiThunderStruck, GiLightningBow, GiTornado, GiWindHole,
+  GiFlowerTwirl, GiLightningHelix,
+  GiSunRadiations, GiCandleFlame, GiSprout, GiStarProminences, GiSunrise,
+  GiHolyGrail, GiSpiralBloom, GiSeedling,
 } from 'react-icons/gi';
 
 // Registre id d'objet -> icône Game Icons (react-icons/gi). Les objets non mappés
@@ -123,6 +128,16 @@ export const ITEM_ICONS: Record<string, IconType> = {
   // Palier Primordial (niv.46-48, le dernier)
   primordial_edge: GiSunbeams, primordial_bow: GiStarSwirl,
   primordial_scepter: GiCrystalBall, primordial_staff: GiHolySymbol,
+  // Matériaux et équipement des Cieux Déchirés (niv.42-43)
+  storm_core: GiLightningTrio, sky_iron: GiStoneBlock, zephyr_bloom: GiFlowerTwirl,
+  tempest_edge: GiThunderStruck, tempest_bow: GiLightningBow,
+  tempest_scepter: GiTornado, tempest_staff: GiWindHole,
+  storm_plate: GiChestArmor, storm_sigil: GiLightningHelix,
+  // Matériaux et équipement du Berceau du Monde (niv.46-50, le dernier palier)
+  dawn_shard: GiStarProminences, origin_ash: GiCandleFlame, world_seed: GiSprout,
+  genesis_edge: GiSunRadiations, genesis_bow: GiSunrise,
+  genesis_scepter: GiSpiralBloom, genesis_staff: GiHolyGrail,
+  genesis_aegis: GiWingedShield, genesis_seal: GiSeedling,
   primordial_aegis: GiWingedShield,
 };
 

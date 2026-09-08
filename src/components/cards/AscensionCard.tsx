@@ -207,7 +207,11 @@ export default function AscensionCard() {
 
       {/* Scène : trou noir + barre du boss */}
       <div className="relative flex flex-1 flex-col items-center justify-center px-5">
-        {/* Trou noir des Abysses */}
+        {/* Le Néant Originel. La même forme est posée en petit dans le ciel du
+            Berceau (`Background.tsx`) : on voit la fissure dormante en arrivant
+            dans la zone, elle s'ouvre en grand ici. ⚠️ Si le rituel change encore
+            de zone, déplacer aussi cette citation — sinon on affronte un trou
+            noir qui ne vient de nulle part. */}
         <div className="relative grid h-56 w-56 place-items-center sm:h-72 sm:w-72">
           <div
             className="asc-blackhole absolute inset-0 rounded-full"
