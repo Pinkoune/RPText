@@ -359,7 +359,7 @@ Murs de difficulté localisés par la simu et corrigés :
 
 **Trous de progression d'items comblés** (`analyze-progression.ts` les a localisés) : **aucune arme entre Nv20 et Nv30**, **aucune armure entre Nv15 et Nv32** — on entrait au volcan (Nv24) avec le gear du Nv15, ce qui aggravait le mur. Ajout d'un **set de transition « Marais-Braise » Nv22-24** (`items.ts`+`crafting.ts`+`icons.ts`) : 4 armes (warlord_axe/swiftwind_bow/emberflow_staff/marsh_cane, ATK ~44) + 3 armures par poids (warplate/scout_leathers/mystic_garb), craftables avec des matériaux du marais + entrée du volcan. Courbe lissée : armes 32→46→62, armures 158→204→260.
 
-**Constats de progression (analyse, non « corrigés » — à surveiller)** : courbes d'**artisanat** et de **récolte** saines (~4-5 actions par niveau de métier). Mais l'**XP global est très end-loaded** : Nv40-50 = **81% du grind total** (Nv45→50 seul = 56%), et tous les biomes sont débloqués dès Nv28 → le end-game (Nv40-50) est un très long grind sans nouvelle zone. Piste si trop punitif : adoucir le multiplicateur `1.18` post-Nv30 dans `xpToNext`.
+**Constats de progression (analyse, non « corrigés » — à surveiller)** : courbes d'**artisanat** et de **récolte** saines (~4-5 actions par niveau de métier). L'**XP globale reste end-loaded** : avec la courbe v5 (×1.12) Nv40-50 = **70,8%** du grind total (Nv45→50 seul = 45,2%). ⚠️ Les chiffres « 81% / 56% » qui traînaient ici décrivaient la courbe **v4** (×1.18), remplacée depuis — ne pas les reciter. Le multiplicateur post-Nv30 est déjà passé à `1.12` ; le levier restant n'est plus la courbe mais le **contenu** (voir « Trou de contenu 38→50 » plus bas).
 
 Constats clés (tour-par-tour, Nv.50 maxé) : toutes les **sous-classes** sont saines (100% survie, endHP 36-100%) ; les **bases** Mage/Archer faibles à 50 mais normal (on ascensionne à 20) ; **Berserker** cumule top-3 DPS + survie parfaite (vol de vie passif) = à surveiller sans nerf urgent ; les 4 Soigneurs paraissent 0% en sim **passif** (leur kit est 100% actif) → juger au tour-par-tour uniquement. ⚠️ Le sim co-op ne modélise pas encore le **soin de groupe** des soigneurs en donjon → winrates absolus des donjons Nv.30+ pessimistes (le fix de scaling reste valide, mesuré en relatif).
 
@@ -619,9 +619,49 @@ tous réels, tous confirmés dans le code.
   joueur courant **par pseudo** — les pseudos ne sont pas uniques — passé à l'UID.
   ⚠️ **Non vérifiable en local** (présence = RTDB) : à retester en ligne.
 
+### Trou de contenu 38→50 — À FAIRE (constat de bêta, chiffré, rien de codé)
+
+Retour du testeur, validé par l'utilisateur : « la courbe est moins frustrante
+qu'avant, c'est assez uniforme et harmonisé entre la récolte, la forge et l'XP
+globale. Si tu veux rendre ça plus difficile et long, pourquoi pas, mais il
+faudrait rajouter du contenu (1 ou 2 maps) pour les grinds du niveau 40 à 50.
+Ça motive pas mal de découvrir les nouveaux biomes. »
+
+⚠️ **Ne PAS répondre en retouchant `xpToNext`.** Le testeur dit explicitement
+que la courbe est bonne, et elle a déjà été divisée par deux (v4→v5). Le
+problème n'est pas la pente, c'est ce qu'il y a à voir pendant qu'on la monte.
+
+Part du grind 1→50 par « ère de biome » (courbe v5 actuelle, calculée sur
+`xpToNext`) :
+
+| Ère | Niveaux | Durée | Part du grind |
+|---|---|---|---|
+| Forêt → Caldeira (6 biomes) | 1→30 | 29 niv. | **6,3%** |
+| Nécropole | 30→38 | 8 niv. | 16,0% |
+| **Abysses** | **38→50** | **12 niv.** | **77,6%** |
+
+Le dernier palier est **à la fois le plus long en niveaux et les trois quarts du
+jeu en temps**, dans une seule zone. Tous les autres intervalles font 2 à 8
+niveaux pour ≤16%. Le craft, lui, suit déjà jusqu'au bout (paliers Givre du Vide
+Nv.40 et Primordial Nv.46-48, cf. section end-game) : **c'est bien un trou de
+ZONES, pas d'équipement.**
+
+⚠️ **Contrainte à respecter avant d'insérer quoi que ce soit après le Nv.38** :
+la porte du Rituel du Néant est codée en dur sur `biome === 'frozen'`
+(`commands.ts`), et `computeAscensionBoss` suppose que l'Abysse est le bout du
+jeu. Ajouter un biome au-delà de 38 sans déplacer cette porte mettrait le rituel
+de fin de jeu dans une zone intermédiaire. Deux découpages possibles :
+un biome vers Nv.42 + un vers Nv.46 (l'Abysse redevient un palier de passage,
+la porte suit le dernier), ou l'Abysse scindée en deux zones distinctes.
+Annexes à ne pas oublier pour tout nouveau biome (liste tirée de l'ajout de la
+Nécropole) : `types.ts`, `biomes.ts`, `MapCard` POS/ORDER, `monsters.ts` +
+`monsterIcons.ts`, `gathering.ts`, `items.ts` + `crafting.ts` + `icons.ts`,
+`Scenery.tsx`, `events.ts`, `BIOME_RESOURCE`/`biomeRes` (commands.ts, ×2) et le
+succès Globe-trotteur (`achievements.ts`, `goal`).
+
 ## Amusement — 3 features (fait, C)
 
-- **Maîtrise des biomes** (`game/mastery.ts`, nouveau) : chaque kill compte pour le biome courant (`p.biomeKills`, migré). Paliers 100/500/1500/4000 → titre (`Novice/Familier/Vétéran/Maître/Légende · <Biome>`, ajouté à `unlockedTitles`) + **bonus permanent XP/Or dans ce biome** (+5/10/15/25%, appliqué dans `grantMonsterRewards`). But concret au farm end-game (Nv.40-50 = 81% du temps, sans nouvelle zone). Affiché : bandeau dans HuntCard (biome courant) + liste complète dans MapCard + toast au palier franchi (`HuntRewards.masteryUp`).
+- **Maîtrise des biomes** (`game/mastery.ts`, nouveau) : chaque kill compte pour le biome courant (`p.biomeKills`, migré). Paliers 100/500/1500/4000 → titre (`Novice/Familier/Vétéran/Maître/Légende · <Biome>`, ajouté à `unlockedTitles`) + **bonus permanent XP/Or dans ce biome** (+5/10/15/25%, appliqué dans `grantMonsterRewards`). But concret au farm end-game (Nv.40-50 = ~71% du temps avec la courbe v5, sans nouvelle zone). Affiché : bandeau dans HuntCard (biome courant) + liste complète dans MapCard + toast au palier franchi (`HuntRewards.masteryUp`).
 - **Faille (combat moins passif)** (`combat.ts` `combatTurn`, `VULN_MULT=1.5`) : quand le monstre est **gelé/étourdi** en début de tour, les dégâts offensifs sont ×1.5. Récompense poser un contrôle puis burst (gel cryo, étourdissement moine à Combo plein, sets givre). Badge « ⚡ FAILLE » clignotant dans HuntCard. Hunt/adventure uniquement (le donjon a déjà son stagger).
 - **Lisibilité phys/mag** : indicateur d'**efficacité d'arme** 🟢/⚪/🔴 dans HuntCard (calcul `getElementMult × getDmgTypeMult` de l'arme vs le monstre en cours) — le joueur voit s'il tape fort/faible avant d'agir. Explication (éléments + faille) dans le Wiki (onglet Bestiaire).
 
