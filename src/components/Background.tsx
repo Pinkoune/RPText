@@ -66,6 +66,31 @@ export default function Background({ biome, phase }: Props) {
         />
       )}
 
+      {/* Le Néant, encore endormi, au-dessus du Berceau.
+          Le combat de prestige (`AscensionCard`) s'ouvre sur un trou noir violet.
+          Tant que le rituel se lançait depuis l'Abysse, ce trou noir citait celui
+          du fond d'écran de l'Abysse — le joueur voyait la chose avant de
+          l'affronter. En déplaçant le rituel au Berceau, cette citation devenait
+          orpheline : on combattait un trou noir dans une zone dorée qui n'en
+          montrait aucun. On repose donc ici la MÊME forme, en petit et en
+          sourdine — la fissure qui s'ouvrira en grand pendant le rituel. */}
+      {biome === 'cradle' && (
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: 120,
+            height: 120,
+            left: '50%',
+            top: '17%',
+            transform: 'translate(-50%, -50%)',
+            background: 'radial-gradient(circle, #05030a 40%, #2e1065 68%, transparent 82%)',
+            boxShadow: '0 0 60px 14px rgba(88,28,135,0.35)',
+            filter: 'blur(3px)',
+            opacity: 0.75,
+          }}
+        />
+      )}
+
       {/* Trou noir abyssal */}
       {isVoid && (
         <div

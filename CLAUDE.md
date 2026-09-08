@@ -637,6 +637,19 @@ Réponse au constat ci-dessous. **`frozen` n'est PLUS la dernière zone.**
   « Genèse » Nv.48-50 (6 objets, armes 96-104, la seule marche qui coûte des
   **Graines-monde**, exclusives à la dernière zone). Courbe d'armes :
   46 (22) → 62 (30) → 68 (34) → 78 (40) → **86 (43)** → 92 (46) → **104 (48)**.
+- **Fil visuel du Rituel** : `AscensionCard` ouvre le combat sur un trou noir
+  violet. Tant que le rituel partait de l'Abysse, cette forme citait le trou noir
+  du fond d'écran de l'Abysse — on voyait la chose avant de l'affronter. Le
+  déplacement au Berceau rendait la citation orpheline (un trou noir surgissant
+  dans une zone dorée qui n'en montrait aucun). La MÊME forme est donc posée en
+  petit et en sourdine dans le ciel du Berceau (`Background.tsx`, `biome ===
+  'cradle'`) : la fissure dormante qui s'ouvre en grand pendant le rituel.
+  ⚠️ Si le rituel change encore de zone, déplacer aussi cette citation.
+- **Wiki** : entièrement data-driven (`Object.values(ITEMS)` / `MONSTERS`), donc
+  les 12 objets et 10 monstres y sont sans câblage. Vérifié en jeu : objets
+  10/10 tout de suite ; monstres 10/10 **une fois rencontrés** — le bestiaire est
+  à découverte (`statistics.mobsEncountered`, « ❓ Monstre inconnu » sinon), ce
+  qui vaut pour tous les monstres du jeu, pas seulement les nouveaux.
 - ⚠️ **`genesis_aegis` n'a PAS d'élément**, comme `primordial_aegis` et pour une
   raison encore plus forte : le Berceau mêle `light`, `neutral` et un gardien
   `dark`, donc AUCUN élément d'armure n'y serait sûr, et le rituel qui suit est
@@ -662,9 +675,21 @@ pas refaire pour une zone future :
    une résistance magique.
 
 Résultat mesuré (chasse, gear de craft, sans saison) :
-frozen 34% → **skyreach 18-21%** → **cradle 17-21%** pour un archer ;
-28% → 48% → 49% pour un mage (ces zones favorisent le magique, deux de leurs
-tanks résistant au physique — `rune_shift` existe pour ça).
+frozen 34% → **skyreach 24-33%** → **cradle 28-36%**. À NIVEAU ÉGAL les nouvelles
+zones restent les plus dures : au Nv.48 l'Abysse est à 58% (le joueur l'a
+dépassée) contre 42% aux Cieux et 34% au Berceau. Les zones favorisent le
+magique — deux de leurs tanks résistent au physique, `rune_shift` existe pour ça.
+
+⚠️ **Le piège du rythme : une zone plus dure peut quand même accélérer le jeu.**
+Premier jet mesuré : `xpMult` 3.0/3.4 + monstres à 1000-2800 XP → aller du Nv.40
+au Nv.50 devenait **42% plus rapide** qu'avec l'Abysse seule, alors que le but
+affiché était l'inverse (« si tu veux rendre ça plus long, il faudrait rajouter
+du contenu »). Le winrate plus bas ne compensait pas du tout la hausse d'XP.
+Recalé (`xpMult` 2.8/3.0, XP des monstres ÷1,6 à ÷2) : **+10%** seulement, ce
+qui paie le risque pris sans raccourcir le end-game.
+⚠️ Mesurer le **nombre de tentatives pour passer 40→50**, pas le winrate seul :
+`xp du monstre × xpMult × winrate` est la seule quantité qui dit si une zone
+raccourcit le jeu. Un winrate qui baisse rassure à tort.
 
 ⚠️ Le **contrat du Rituel est préservé** alors que `bestGear()` a intégré le
 palier Genèse (le boss s'est donc durci tout seul) : `0% / 36% / 100%` par

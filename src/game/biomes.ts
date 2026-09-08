@@ -165,7 +165,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Cieux Déchirés',
     emoji: '⛈️',
     minLevel: 42,
-    xpMult: 3.0,
+    xpMult: 2.8,
     desc: 'Au-dessus de l\'Abysse, le ciel s\'est fendu. Des éclats du monde y flottent dans un orage qui ne finit jamais.',
     accent: '#fde047',
     bg: {
@@ -186,7 +186,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     name: 'Berceau du Monde',
     emoji: '🕯️',
     minLevel: 46,
-    xpMult: 3.4,
+    xpMult: 3.0,
     desc: 'Là où tout a commencé, et où quelque chose attend de tout défaire. La dernière zone du jeu.',
     accent: '#fafaf9',
     // Hors du temps : les quatre phases sont identiques, comme pour l'Abysse.
