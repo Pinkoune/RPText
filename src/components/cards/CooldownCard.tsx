@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { cooldownLeft } from '../../game/player';
 import { HUNT_COOLDOWN, DAILY_COOLDOWN, REST_COOLDOWN } from '../../game/commands';
-import { GATHER_COOLDOWN } from '../../game/gathering';
-import { DUNGEONS } from '../../game/dungeons';
+import { gatherCooldownLeft } from '../../game/gathering';
+import { DUNGEONS, dungeonCooldownLeft } from '../../game/dungeons';
 import { BOSS_ATTACK_CD } from '../../firebase/bossService';
 
 function fmt(ms: number): string {
@@ -24,6 +24,11 @@ export default function CooldownCard() {
   }, []);
   if (!p) return null;
 
+  // ⚠️ Toujours passer par le MÊME helper que la carte concernée, jamais par la
+  // constante brute. La récolte affichait ici 60s alors que la carte Récolte
+  // affichait 48s : le mod d'artefact « Moisson » (-20%) vit dans
+  // `gatherCooldownLeft`, que cette carte court-circuitait en recalculant depuis
+  // `GATHER_COOLDOWN`. Deux écrans, deux chiffres, pour le même cooldown.
   const entries: { icon: string; label: string; left: number }[] = [
     { icon: '⚔️', label: 'Chasse', left: cooldownLeft(p, 'hunt', HUNT_COOLDOWN) },
     { icon: '🏕️', label: 'Repos', left: cooldownLeft(p, 'rest', REST_COOLDOWN) },
@@ -33,11 +38,11 @@ export default function CooldownCard() {
     { icon: '🗿', label: 'Sanctuaire', left: cooldownLeft(p, 'sanctuaire', 24 * 60 * 60 * 1000) },
     { icon: '🕳️', label: 'Rituel du Néant', left: Math.max(0, (p.ascensionCooldownUntil ?? 0) - Date.now()) },
     { icon: '🐲', label: 'Attaque du boss', left: cooldownLeft(p, 'boss', BOSS_ATTACK_CD) },
-    { icon: '🌾', label: 'Récolte', left: cooldownLeft(p, 'gather', GATHER_COOLDOWN) },
+    { icon: '🌾', label: 'Récolte', left: gatherCooldownLeft(p) },
     { icon: '🎁', label: 'Récompense quotidienne', left: cooldownLeft(p, 'daily', DAILY_COOLDOWN) },
   ];
   for (const d of DUNGEONS) {
-    entries.push({ icon: d.emoji, label: d.name, left: cooldownLeft(p, `dungeon:${d.id}`, d.cooldownMs) });
+    entries.push({ icon: d.emoji, label: d.name, left: dungeonCooldownLeft(p, d) });
   }
   entries.push({ icon: '🏰', label: 'Boss de guilde', left: cooldownLeft(p, 'guildboss', 30 * 60 * 1000) });
 

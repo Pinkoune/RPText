@@ -211,6 +211,15 @@ export interface PlayerState {
   lastLoginDay?: string;
   /** Succès dont la récompense a été réclamée. */
   claimedAchievements?: string[];
+  /**
+   * Succès ayant DÉJÀ versé leurs Éclats de Relique. Registre séparé de
+   * `claimedAchievements` parce que les Éclats sont arrivés après les succès :
+   * tout ce qui avait été réclamé avant n'en avait jamais reçu, et
+   * `claimAchievement` refuse de rejouer un succès déjà réclamé. C'est ce
+   * registre qui permet le rattrapage (`backfillAchievementShards`), et il le
+   * rend idempotent — pas de flag de version à incrémenter.
+   */
+  shardedAchievements?: string[];
   title?: string;
   unlockedTitles?: string[];
   /** Aura de prestige (cosmétique) affichée sur le classement. */

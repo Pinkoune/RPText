@@ -56,6 +56,11 @@ export default function ArtifactCard() {
           <span className="shrink-0 tabular-nums">{a.xp.toLocaleString('fr-FR')} / {need.toLocaleString('fr-FR')} XP</span>
           <span className="truncate">Monte sur toutes tes activités</span>
         </div>
+        {/* Les deux jauges se confondaient à la sortie (elles portaient toutes
+            deux le mot « Relique »). Une ligne suffit à les séparer. */}
+        <div className="mt-2 border-t border-white/10 pt-2 text-[10px] text-slate-500">
+          Remis à zéro à la fin de la saison. La <b className="text-slate-400">Relique</b> ✧, elle, est permanente.
+        </div>
       </div>
 
       <div className="flex items-center justify-between rounded-lg bg-black/25 px-3 py-2 text-sm">

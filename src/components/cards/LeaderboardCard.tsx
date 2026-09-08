@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { useUi } from '../../store/uiStore';
-import { watchLeaderboard, trackPresence, rowPower, type LeaderRow, type OnlinePlayer } from '../../firebase/socialService';
+import { watchLeaderboard, rowPower, type LeaderRow, type OnlinePlayer } from '../../firebase/socialService';
 import { isFirebaseConfigured } from '../../firebase/config';
 import { CLASSES } from '../../game/classes';
 import { auraColor } from '../../game/prestige';
@@ -10,27 +10,20 @@ import PlayerProfileModal from '../PlayerProfileModal';
 export default function LeaderboardCard() {
   const p = useGame((s) => s.player);
   const [rows, setRows] = useState<LeaderRow[]>([]);
-  const [online, setOnline] = useState<OnlinePlayer[]>([]);
+  // Présence lue dans le store et non via un `trackPresence` propre : c'est la
+  // règle posée par gameStore (« PresenceTracker, unique abonné »). Cette carte
+  // l'enfreignait — elle REDÉCLARAIT la présence du joueur et posait un second
+  // onDisconnect sur le même nœud ; fermer la carte retirait donc le joueur de
+  // la liste alors qu'il jouait toujours.
+  const online = useGame((s) => s.onlinePlayers);
   const [loading, setLoading] = useState(true);
   const [viewing, setViewing] = useState<LeaderRow | null>(null);
 
   useEffect(() => {
-    let unsubLeader = () => {};
-    let unsubOnline = () => {};
-    
-    unsubLeader = watchLeaderboard(15, (data) => {
+    return watchLeaderboard(15, (data) => {
       setRows(data);
       setLoading(false);
     });
-
-    if (p) {
-      unsubOnline = trackPresence({ uid: p.uid, name: p.name, level: p.level, playtimeMs: p.playtimeMs ?? 0 }, setOnline);
-    }
-    
-    return () => {
-      unsubLeader();
-      unsubOnline();
-    };
   }, [p?.uid, p?.level]);
 
   // Actifs (< 5 min), inactifs (5-30 min), le reste (> 30 min) masqué.

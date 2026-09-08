@@ -556,6 +556,69 @@ Trois défauts remontés par l'utilisateur en jeu, tous confirmés par la mesure
   téléphone moderne affiche enfin la barre de vie du boss, les quatre barres
   d'équipe, le journal et les boutons **ensemble**.
 
+### Retours de bêta après la sortie (fait, C) — quatre défauts signalés par un joueur
+
+Le testeur a joué la MAJ le jour de sa sortie. Les quatre points remontés sont
+tous réels, tous confirmés dans le code.
+
+- **Artefact vs Relique : les deux jauges portaient le même mot.** Les quatre
+  thèmes de saison s'appelaient « **Relique** des Feuilles Mortes », « Relique
+  de Givre »… alors que la Relique (`relic.ts`) est l'AUTRE jauge, l'axe
+  permanent. Le testeur : « ce qui est confusant c'est que l'artefact de cette
+  saison s'appelle Relique des feuilles mortes ». Renommés en **Sceau**
+  (`artifact.ts SEASON_THEMES`). ⚠️ Le mot « Relique » est réservé à
+  `RELIC_TIERS` — ne jamais le remettre dans un `artifactName`. La **note de
+  patch** annonçait elle aussi « une Relique de saison » : c'était le premier
+  texte lu au lancement, donc la source de la confusion, corrigé aussi. Une
+  ligne dans ArtifactCard oppose désormais explicitement les deux.
+- **Éclats de succès non rétroactifs.** `grantShards` est appelé par
+  `claimAchievement`, or les succès existaient bien avant les Éclats : un
+  vétéran qui avait déjà tout réclamé n'en avait jamais reçu un seul, et ne le
+  pouvait plus (`claimAchievement` refuse un succès déjà réclamé). Rattrapage
+  `backfillAchievementShards` (relic.ts) appelé par `migratePlayer`.
+  ⚠️ Le registre `shardedAchievements` (nouveau champ) sert de ledger : c'est
+  lui qui rend l'opération **idempotente**, et non un flag de version — un
+  succès futur qui oublierait de créditer serait rattrapé tout seul. Vérifié en
+  jeu : 6 succès réclamés, 0 Éclat → **18 Éclats**, puis **18 sur trois
+  rechargements consécutifs**. ⚠️ `backfillAchievementShards` doit rester dans
+  `relic.ts` : le mettre dans `achievements.ts` créerait le cycle
+  `player → achievements → gathering → player`.
+  Imprécision assumée, une seule fois : les succès réclamés entre la sortie et
+  ce correctif sont recrédités (ils avaient bien touché leurs Éclats mais le
+  registre n'existait pas). Cadeau borné, l'inverse étant le bug signalé.
+- **Deux chiffres pour le même cooldown de récolte.** `CooldownCard`
+  recalculait depuis la constante `GATHER_COOLDOWN` au lieu d'appeler
+  `gatherCooldownLeft`, qui porte le mod d'artefact « Moisson » (-20%) → 60s
+  affichés d'un côté, 48s de l'autre. ⚠️ **Règle : la carte Récupérations doit
+  passer par le MÊME helper que la carte concernée**, jamais par la constante.
+  `dungeonCooldownLeft` appliqué pour la même raison. Mesuré après correctif :
+  32s / 31s (1s d'écart = les deux lectures ne sont pas au même instant).
+- **Un joueur « en ligne » alors qu'on est seul.** Trois causes cumulées, toutes
+  dans `socialService.trackPresence` :
+  1. le nettoyage **ne retirait pas le nœud de présence** — il coupait juste
+     l'écoute. Changer de personnage laissait donc le précédent listé, et le
+     joueur se voyait lui-même comme « 1 autre joueur ». `onDisconnect` ne
+     rattrape que la coupure de CONNEXION, pas un changement de perso ;
+  2. **aucun filtre de péremption** : un onglet tué ou un mobile en veille
+     laissait une entrée éternellement « en ligne ». Filtre `PRESENCE_STALE_MS`
+     (30 min) posé à la source, calé sur le seuil que LeaderboardCard appliquait
+     déjà — ses blocs « En ligne » (<5 min) et « Inactif » (5-30 min) sont
+     inchangés. ⚠️ `lastActive` absent = périmé, et surtout PAS actif : avant,
+     `idleMs` renvoyait 0 pour ce cas, donc « en ligne » pour toujours ;
+  3. `logout` appelait `signOut()` **avant** que le nettoyage React ne parte :
+     une fois désauthentifié, la règle RTDB (`auth.uid === $uid`) refuse le
+     retrait. D'où `clearPresence()`, appelé explicitement dans `logout` ET
+     `backToSelect` **avant** la déconnexion.
+  ⚠️ `ChatCard` et `LeaderboardCard` ouvraient chacun leur propre
+  `trackPresence`, en violation de la règle déjà écrite dans `gameStore`
+  (« PresenceTracker, unique abonné ») : ils redéclaraient la présence et
+  posaient un second `onDisconnect` sur le même nœud. Latent jusqu'ici, mais le
+  retrait au nettoyage l'aurait rendu visible (fermer le classement t'aurait
+  sorti de la liste). Les deux lisent maintenant `useGame(s => s.onlinePlayers)`,
+  ce qui supprime au passage deux écoutes RTDB. `ChatCard` filtrait aussi le
+  joueur courant **par pseudo** — les pseudos ne sont pas uniques — passé à l'UID.
+  ⚠️ **Non vérifiable en local** (présence = RTDB) : à retester en ligne.
+
 ## Amusement — 3 features (fait, C)
 
 - **Maîtrise des biomes** (`game/mastery.ts`, nouveau) : chaque kill compte pour le biome courant (`p.biomeKills`, migré). Paliers 100/500/1500/4000 → titre (`Novice/Familier/Vétéran/Maître/Légende · <Biome>`, ajouté à `unlockedTitles`) + **bonus permanent XP/Or dans ce biome** (+5/10/15/25%, appliqué dans `grantMonsterRewards`). But concret au farm end-game (Nv.40-50 = 81% du temps, sans nouvelle zone). Affiché : bandeau dans HuntCard (biome courant) + liste complète dans MapCard + toast au palier franchi (`HuntRewards.masteryUp`).
