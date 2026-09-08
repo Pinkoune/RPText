@@ -2,7 +2,7 @@ import { collection, getDocs, query, orderBy, limit, where, onSnapshot, doc, get
 import { ref, onValue, onDisconnect, set, remove, serverTimestamp } from 'firebase/database';
 import { db, rtdb, isFirebaseConfigured } from './config';
 import type { ClassId, PlayerState } from '../game/types';
-import { fallbackPower } from '../game/power';
+import { fallbackPower, powerScore } from '../game/power';
 
 /**
  * Retrouve l'UID d'un personnage depuis son pseudo, via le classement (qui
@@ -68,9 +68,57 @@ export interface OnlinePlayer {
   playtimeMs?: number;
 }
 
-/** Puissance d'une ligne, avec repli pour les lignes d'avant la cote. */
+/**
+ * Puissance reconstruite depuis le doc joueur, pour les lignes écrites avant
+ * l'arrivée du champ `power`. Clé = uid de personnage, valeur = score complet.
+ *
+ * Pourquoi ce détour : le repli `fallbackPower` ne dispose que de ce que la
+ * LIGNE transporte (niveau, kills, prestige), et surtout pas de l'artefact —
+ * `power` et `artifactLevel` ayant été ajoutés à la ligne dans la même
+ * livraison, une ligne sans `power` n'a jamais d'`artifactLevel`. Le classement
+ * mélangeait donc deux échelles : les joueurs reconnectés depuis affichaient
+ * leur score complet (artefact, Relique, maîtrises, étoiles…), les autres un
+ * niveau + racine de kills. D'où des inversions visibles en jeu — un Nv.45 à
+ * 1 418 kills classé sous un Nv.20 actif — et le constat « la Puissance ne
+ * compte pas l'artefact », exact pour ces lignes-là.
+ *
+ * Le doc `players/<uid>` est lisible par tout compte connecté (règle
+ * `match /players/{charId}: allow read`), donc on peut y calculer le vrai
+ * `powerScore`. Une seule lecture par joueur et par session (`tried` empêche
+ * de rejouer un échec ou un doc absent), et seulement pour les lignes qui n'ont
+ * pas déjà `power` — le nombre de lectures tend vers zéro à mesure que les
+ * joueurs se reconnectent.
+ */
+const hydratedPower = new Map<string, number>();
+const triedPower = new Set<string>();
+
+/** Plafond de lectures par instantané, pour ne pas exploser le quota Firestore. */
+const HYDRATE_MAX = 40;
+
+/**
+ * Complète les lignes sans `power`. Renvoie `true` si au moins une valeur a été
+ * récupérée, donc s'il faut reclasser.
+ */
+async function hydratePower(rows: LeaderRow[]): Promise<boolean> {
+  const todo = rows.filter((r) => r.power == null && r.uid && !triedPower.has(r.uid)).slice(0, HYDRATE_MAX);
+  if (todo.length === 0) return false;
+  for (const r of todo) triedPower.add(r.uid);
+  const got = await Promise.all(
+    todo.map(async (r) => {
+      const doc = await fetchPublicProfile(r.uid);
+      return [r.uid, doc ? powerScore(doc as PlayerState).total : null] as const;
+    }),
+  );
+  let any = false;
+  for (const [uid, total] of got) {
+    if (total != null) { hydratedPower.set(uid, total); any = true; }
+  }
+  return any;
+}
+
+/** Puissance d'une ligne : la vraie, sinon celle reconstruite, sinon le repli. */
 export function rowPower(r: LeaderRow): number {
-  return r.power ?? fallbackPower(r);
+  return r.power ?? hydratedPower.get(r.uid) ?? fallbackPower(r);
 }
 
 /**
@@ -118,7 +166,9 @@ export async function fetchLeaderboard(max = 20): Promise<LeaderRow[]> {
   if (!isFirebaseConfigured || !db) return [];
   const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max * OVERFETCH));
   const snap = await getDocs(q);
-  return rank(snap.docs.map((d) => d.data() as LeaderRow), max);
+  const rows = snap.docs.map((d) => d.data() as LeaderRow);
+  await hydratePower(rows);
+  return rank(rows, max);
 }
 
 export function watchLeaderboard(max: number, onChange: (rows: LeaderRow[]) => void): () => void {
@@ -127,9 +177,16 @@ export function watchLeaderboard(max: number, onChange: (rows: LeaderRow[]) => v
     return () => {};
   }
   const q = query(collection(db, 'leaderboard'), orderBy('level', 'desc'), limit(max * OVERFETCH));
-  return onSnapshot(q, (snap) => {
-    onChange(rank(snap.docs.map((d) => d.data() as LeaderRow), max));
+  let stopped = false;
+  const unsub = onSnapshot(q, (snap) => {
+    const rows = snap.docs.map((d) => d.data() as LeaderRow);
+    // Affiche tout de suite avec ce qu'on a, puis reclasse si la reconstruction
+    // rapporte quelque chose — sinon le classement attendrait un aller-retour
+    // réseau par joueur à chaque ouverture de la carte.
+    onChange(rank(rows, max));
+    void hydratePower(rows).then((any) => { if (any && !stopped) onChange(rank(rows, max)); });
   });
+  return () => { stopped = true; unsub(); };
 }
 
 /**

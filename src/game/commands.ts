@@ -185,6 +185,20 @@ export const DAILY_COOLDOWN = 20 * 60 * 60 * 1000; // 20h
  */
 export const REST_COOLDOWN = 10 * 60 * 1000; // 10 min
 
+/**
+ * Durée restante lisible. ⚠️ Le calcul naïf `floor(ms/1h)` + `ceil(reste/1min)`
+ * produit « 11h60min » dès que le reste frôle l'heure pleine (vu en jeu sur la
+ * Faille, et le mini-boss portait la même formule). On arrondit les MINUTES en
+ * premier, puis on les découpe — l'heure ne peut plus déborder.
+ */
+function fmtCooldown(ms: number): string {
+  const mins = Math.ceil(Math.max(0, ms) / 60_000);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h <= 0) return `${m}min`;
+  return m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
+}
+
 /** Commandes réservées à l'administration — invisibles pour les autres. */
 const ADMIN_ONLY = new Set(['admin']);
 
@@ -550,9 +564,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
     case 'miniboss': {
       const left = cooldownLeft(p!, 'miniboss', 12 * 60 * 60 * 1000);
       if (left > 0) {
-        const h = Math.floor(left / 3_600_000);
-        const m = Math.ceil((left % 3_600_000) / 60_000);
-        ctx.toast(`Le mini-boss se repose. Reviens dans ${h > 0 ? `${h}h` : ''}${m}min.`, 'bad');
+        ctx.toast(`Le mini-boss se repose. Reviens dans ${fmtCooldown(left)}.`, 'bad');
         break;
       }
       if (p!.hp <= 0) {
@@ -686,8 +698,13 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       if (p!.hp <= 0) { ctx.toast('Tu es K.O. Soigne-toi avant d\'entrer dans la Faille.', 'bad'); break; }
       const rift = currentRift(Date.now(), p!.level);
       const monster = buildRiftMonster(p!, rift);
-      // Pas de cooldown : l'échec coûte déjà la mort (pénalité + série perdue),
-      // et la récompense ne tombe qu'une fois par semaine de toute façon.
+      // ⚠️ AUCUN cooldown, décision explicite de l'utilisateur : la Faille est un
+      // défi hebdomadaire, sa prime ne tombe qu'une fois par semaine et l'échec
+      // coûte déjà la mort et la série de chasse. Un cooldown punirait deux fois.
+      // Le butin de COMBAT, lui, retombe à chaque passage (~9× l'XP d'une chasse
+      // normale au Nv.50) : si la Faille devient une source de farm, le levier à
+      // actionner est l'XP des passages RÉPÉTÉS (dans l'esprit d'`applyZonePenalty`),
+      // pas une porte fermée.
       ctx.mutate((d) => {
         if (!d.statistics.mobsEncountered) d.statistics.mobsEncountered = {};
         d.statistics.mobsEncountered['rift'] = (d.statistics.mobsEncountered['rift'] ?? 0) + 1;

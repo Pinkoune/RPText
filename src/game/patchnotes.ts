@@ -40,7 +40,25 @@ export const PATCH_HISTORY: PatchRelease[] = [
           'Les <b>Cieux Déchirés</b> (Nv.42) : au-dessus de l\'Abysse, le ciel s\'est fendu. Des éclats du monde y flottent dans un orage qui ne finit jamais.',
           'Le <b>Berceau du Monde</b> (Nv.46) : là où tout a commencé, et où quelque chose attend de tout défaire. C\'est désormais la <b>dernière zone du jeu</b> — et c\'est là, plus dans l\'Abysse, que se tente le rituel de fin.',
           'Dix monstres inédits, six nouvelles ressources, et deux paliers d\'équipement à fabriquer : <b>Tempête</b> (Nv.43) et <b>Genèse</b> (Nv.48), le dernier du jeu. L\'Égide de Genèse monte à 72 DEF / 340 PV.',
+          'Nouvelle rareté <b style="color:#e0454f">Mythique</b>, un cran au-dessus de Légendaire : elle marque les deux derniers paliers du jeu, <b>Primordial</b> et <b>Genèse</b>. La rareté de chaque objet est aussi écrite en toutes lettres dans le Wiki (avant, elle n\'existait que comme couleur du nom).',
           'L\'Abysse n\'est plus le bout du chemin : elle en devient l\'entrée. Avant, elle couvrait à elle seule les niveaux 38 à 50 — plus des trois quarts du temps de jeu dans une seule zone.',
+        ],
+      },
+      {
+        title: '🚪 Fermer une carte de combat ne l\'annule plus',
+        kind: 'fix',
+        items: [
+          'Fermer la fenêtre d\'un combat avec la croix — ou recharger la page — faisait <b>disparaître le combat sans aucune conséquence</b>. Fuir n\'a que 55% de réussite : la croix était donc une fuite garantie et gratuite, en chasse comme en Faille ou contre un mini-boss.',
+          'Au <b>Rituel du Néant</b> c\'était pire : le combat ne touche pas tes PV pendant les tours, donc quitter annulait <b>tout</b> le risque — ni perte de niveaux, ni cooldown de 8h. L\'écran de confirmation promettait pourtant qu\'il n\'y a pas de retour en arrière.',
+          'Désormais, <b>abandonner un combat engagé, c\'est le perdre</b> : par la croix, par un rechargement, ou en relançant une chasse par-dessus la précédente. La règle est écrite sous les boutons d\'action.',
+        ],
+      },
+      {
+        title: '⚡ Puissance du classement',
+        kind: 'fix',
+        items: [
+          'La Puissance affichée pour les joueurs qui ne s\'étaient pas reconnectés depuis la mise à jour ne comptait <b>ni l\'artefact, ni la Relique, ni les maîtrises, ni les étoiles</b> : leur ligne de classement ne transporte tout simplement pas ces chiffres. Un Nv.45 à 1 418 monstres passait ainsi derrière un Nv.20 actif.',
+          'Le classement va désormais chercher la vraie valeur dans la fiche du joueur au lieu de la deviner. Une seule lecture par joueur et par session, et plus du tout dès que chacun s\'est reconnecté une fois.',
         ],
       },
       {

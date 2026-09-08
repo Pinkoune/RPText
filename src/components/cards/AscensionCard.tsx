@@ -11,6 +11,7 @@ import { playSound, stopAmbientMusic, setAmbient } from '../../game/sound';
 import { currentPhase } from '../../game/daynight';
 import ItemIcon from '../ItemIcon';
 import { scrollLogToEnd } from '../scrollLog';
+import { beginCombat, endCombat, resolveAbandon } from '../../game/abandon';
 
 type Transition = 'enter' | 'none' | 'win' | 'dead';
 
@@ -60,6 +61,27 @@ export default function AscensionCard() {
 
   useEffect(() => { scrollLogToEnd(logEnd.current); }, [fs?.logs]);
 
+  // Fermer la fenêtre pendant le rituel = l'avoir perdu.
+  //
+  // C'était de loin la pire échappatoire du jeu : le combat ne touche pas
+  // `d.hp` pendant les tours, donc la croix ✕ annulait TOUT le risque — pas de
+  // perte de niveaux, pas de cooldown de 8h, pas même les PV. L'écran de
+  // confirmation promet pourtant qu'« il n'y a pas de retour en arrière ».
+  // ⚠️ Même précaution que dans HuntCard : on ne résout que si la fenêtre a
+  // vraiment disparu, sinon le double-montage de React StrictMode volerait
+  // trois niveaux à chaque ouverture de la carte, en développement seulement.
+  const phaseRef = useRef<Phase>('intro');
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => {
+    return () => {
+      if (phaseRef.current !== 'fight') return;
+      if (useUi.getState().windows.some((w) => w.kind === 'ascension')) return;
+      let msg: string | null = null;
+      useGame.getState().mutate((d) => { msg = resolveAbandon(d); });
+      if (msg) useGame.getState().toast(msg, 'bad');
+    };
+  }, []);
+
   if (!player) return null;
   const stats = deriveStats(player);
   const mods = talentMods(player);
@@ -67,6 +89,8 @@ export default function AscensionCard() {
 
   function begin() {
     const boss = computeAscensionBoss(player!);
+    // Engagement persisté AVANT le premier tour : à partir d'ici, quitter coûte.
+    mutate((d) => beginCombat(d, 'ascension', 'Le Néant Originel', `neant-${Date.now()}`));
     setFs({
       boss, combat: freshCombatState(), php: player!.hp, bhp: boss.hp,
       logs: [
@@ -81,7 +105,7 @@ export default function AscensionCard() {
 
   function finish(won: boolean, bhpFraction: number) {
     const res = ascensionOutcome(bhpFraction, won);
-    mutate((d) => applyAscensionResult(d, res));
+    mutate((d) => { endCombat(d); applyAscensionResult(d, res); });
     setResult({ won: res.won, message: res.message, levelsLost: res.won ? undefined : res.levelsLost });
     playSound(won ? 'levelup' : 'lose');
     if (won) useGame.getState().celebrateLevelUp();
@@ -120,6 +144,9 @@ export default function AscensionCard() {
 
     if (res.mhp <= 0) { setFs({ ...fs, php: res.php, bhp: 0, combat: res.state, logs, skillCds: nextCds, bonusAtk: nextBonusAtk }); finish(true, 0); return; }
     if (res.php <= 0) { setFs({ ...fs, php: 0, bhp: res.mhp, combat: res.state, logs, skillCds: nextCds, bonusAtk: nextBonusAtk }); finish(false, res.mhp / fs.boss.maxHp); return; }
+    // PV du boss suivis dans la sauvegarde : si la page est rechargée en plein
+    // rituel, l'abandon sera jugé sur l'état réel du combat et non au pire cas.
+    mutate((d) => { if (d.pendingCombat) d.pendingCombat.bossHpFrac = res.mhp / fs.boss.maxHp; });
     setFs({ ...fs, php: res.php, bhp: res.mhp, combat: res.state, logs, skillCds: nextCds, bonusAtk: nextBonusAtk });
   }
 

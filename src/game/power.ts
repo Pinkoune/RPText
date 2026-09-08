@@ -116,16 +116,23 @@ export function powerScore(p: PlayerState): PowerBreakdown {
  * porte pas encore de `power`.
  *
  * ⚠️ Il ne reconstruisait le score QUE depuis `level` et `prestigeLevel`, alors
- * que la ligne de classement transporte AUSSI `kills` et `artifactLevel`
- * (`playerService.savePlayer`). Résultat observé en production : tous les
- * joueurs pas encore reconnectés affichaient une Puissance **exactement égale à
- * leur niveau**, et un vétéran Nv.42 à 1 830 kills se retrouvait classé sous un
- * Nv.19 actif. Le classement avait l'air cassé alors que seules les données
- * disponibles étaient sous-exploitées.
+ * que la ligne transporte AUSSI `kills` : tous les joueurs pas encore
+ * reconnectés affichaient une Puissance **exactement égale à leur niveau**, et
+ * un vétéran Nv.42 à 1 830 kills se retrouvait classé sous un Nv.19 actif.
+ * Corrigé (42 → 63 sur les données réelles).
+ *
+ * ⚠️⚠️ Le terme `artifactLevel` ci-dessous, lui, **ne peut jamais rien
+ * apporter**, et il ne faut pas croire qu'il compte l'artefact : `power` et
+ * `artifactLevel` ont été ajoutés à la ligne de classement dans la MÊME
+ * livraison, donc une ligne qui n'a pas `power` n'a pas non plus
+ * `artifactLevel`. Il est gardé pour la seule forme d'une ligne future qui
+ * porterait l'un sans l'autre. La vraie réponse à « la Puissance ne compte pas
+ * l'artefact » est ailleurs : `socialService.hydratePower` va lire le doc
+ * joueur et calcule le score COMPLET. Ce repli ne sert plus que le temps d'un
+ * aller-retour réseau.
  *
  * Les termes et les poids sont les MÊMES que dans `powerScore` : le repli est
  * donc toujours ≤ au score réel, et il ne peut pas surclasser quelqu'un à tort.
- * Il redevient exact dès que le joueur se reconnecte une fois.
  */
 export function fallbackPower(row: {
   level?: number; prestigeLevel?: number; kills?: number; artifactLevel?: number;

@@ -94,7 +94,8 @@ backend. ⚠️ Le pas du modificateur (**5**) doit rester premier avec leur nom
 avec 3, quatre modificateurs sur six ne sortaient jamais. Calibrée RELATIVEMENT au
 mini-boss (0,21-0,40× ses PV, 0,40-1,32× son ATK) — `simulateCombat` sort 0% de
 victoire même contre un monstre normal, ses taux absolus sont inutilisables.
-Prime (2 Éclats + or) au premier passage de la semaine, pas de cooldown.
+Prime (2 Éclats + or) au premier passage de la semaine, **pas de cooldown**
+(décision explicite de l'utilisateur — voir la section dédiée plus bas).
 
 ### Puissance (`game/power.ts`)
 Unité : **1 point ≈ un niveau de personnage d'effort**. Niveau ×1, prestige ×50
@@ -656,6 +657,155 @@ Réponse au constat ci-dessous. **`frozen` n'est PLUS la dernière zone.**
   `dark`. Les ARMES du palier restent `light` (+50% contre Le Néant) — elles
   n'ont donc aucun bonus contre les monstres du Berceau lui-même, c'est assumé :
   ce palier vise le rituel, pas le farm.
+
+### Rareté Mythique (fait, C)
+
+Cran ajouté **au-dessus de `legendary`** (`types.ts ItemRarity`), rouge sombre
+`#e0454f` (`RARITY_COLOR`), porté par les **12 objets des deux derniers
+paliers** : Primordial (Nv.45-48) et Genèse (Nv.48-50). Critère à tenir si un
+palier s'ajoute : *est mythique ce qui ne se fabrique PAS avec de la récolte
+ordinaire* — Âmes de Boss pour Primordial, Graines-monde de la dernière zone
+pour Genèse. Tout ce qui descend jusqu'à Tempête (43) reste légendaire.
+
+⚠️ **La rareté est purement cosmétique** : aucun fichier de `game/` ni de
+`firebase/` ne lit `.rarity` (vérifié par `grep`). Elle ne pilote que la couleur
+du nom/de l'icône, l'ordre de tri de l'inventaire et le badge du Wiki. Ajouter
+ce cran ne touche donc **aucun équilibrage**, et le Néant n'a rien à
+recalibrer : `bestGear()` (`ascension.ts`) choisit par **score de stats**, il
+prenait déjà le palier Genèse depuis son ajout.
+
+Deux annexes obligatoires en même temps que le cran, sinon il passe inaperçu ou
+casse un tri : `InventoryCard.RARITY_ORDER` (un cran absent de cette table tombe
+au fond via son `?? 9`) et `RARITY_LABEL`, **nouveau** — la rareté n'était écrite
+en toutes lettres nulle part dans le jeu, elle n'existait que comme couleur du
+nom, donc indevinable. Badge ajouté à la fiche d'objet du Wiki.
+
+### ⚠️ Carte du monde : les positions se RÉPARTISSENT, elles ne s'ajoutent pas
+
+Défaut signalé en capture (« les bulles de la carte sont toutes écrasées »).
+En posant les deux zones de fin au-dessus de l'Abysse (`MapCard.POS`, y 12) sans
+retoucher le reste de l'échelle, elles étaient tombées à **y 7 et y 2** : trois
+pastilles dans les 12% du haut. Or un nœud n'est pas la bulle seule mais
+**bulle + nom + niveau ≈ 86px**, quand 5% de la carte n'en font que ~28.
+Mesuré avant : Abysses ∩ Berceau **44×35px** de chevauchement, le Berceau
+**33px au-dessus du cadre** (coupé par l'`overflow-hidden`), la Forêt à ras du
+bas. Après redistribution des 10 étapes de y 90 à y 10 (pas constant ~8,9%, x
+alterné d'au moins 26%) : **0 chevauchement, 0 nœud hors cadre**.
+⚠️ Ajouter un 11e biome = **rescaler toute la table**, pas empiler un cran de
+plus en haut.
+
+### Puissance au classement : le repli ne peut PAS inventer l'artefact (fait, C)
+
+Suite du correctif précédent, qui était **incomplet et dont la note était
+fausse**. J'avais ajouté `kills` ET `artifactLevel` à `fallbackPower` en
+écrivant que le classement comptait désormais l'artefact. `kills` marchait
+(Velstroke 42 → 63, vérifié sur la capture) ; `artifactLevel` **ne pouvait rien
+faire** : `power` et `artifactLevel` ont été ajoutés à la ligne de classement
+dans la MÊME livraison (commits 70 et 76 de la branche), donc une ligne sans
+`power` n'a jamais d'`artifactLevel`. Le terme est du code mort, gardé pour la
+forme — ⚠️ **ne pas le relire comme « l'artefact est compté »**.
+
+Symptôme en jeu, reconnu par l'utilisateur (« la puissance ne compte pas
+l'artefact ») : le tableau mélangeait **deux échelles**. Vérifié au chiffre près
+sur sa capture — Sowfird 45 + √1418×0,5 = **64**, Velstroke **63**, Ilala
+**37**, Zarlixoff **34** : tous exactement `niveau + kills`, donc sur le repli ;
+Pinkoune Nv.20 à **75** (au lieu de 28) et Galelix à **744** sur le vrai score.
+Un Nv.45 passait derrière un Nv.20.
+
+Correctif : `socialService.hydratePower` lit `players/<uid>` (lisible par tout
+compte connecté) pour les seules lignes **sans** `power` et y calcule le vrai
+`powerScore`. Une lecture par joueur et par session (`triedPower` mémorise même
+les échecs), plafond de 40 par instantané, et le classement s'affiche d'abord
+avec ce qu'il a puis se reclasse — pas d'attente réseau à l'ouverture. Le nombre
+de lectures tend vers zéro à mesure que les joueurs se reconnectent.
+⚠️ **Non vérifiable en local** (Firestore) : à confirmer en ligne.
+
+### La Faille de la semaine n'a PAS de cooldown — décision assumée
+
+Constat mesuré, à garder sous la main : `buildRiftMonster` calibre sur le
+mini-boss (`xp = base.xp*5 + niv*70`, puis ×`xpMult` du biome dans
+`grantMonsterRewards`), soit au Nv.50 au Berceau **≈ 23 900 XP par passage
+contre 2 670 pour une chasse normale (×9)**. La prime (`claimRift` : 2 Éclats +
+or) est bien hebdomadaire, mais le **butin de combat retombe à chaque
+passage** — c'est ce point-là qui fait de la Faille une source de farm, pas la
+prime.
+
+⚠️ **Ne pas y remettre de cooldown** : j'en avais posé un (12h après validation),
+l'utilisateur l'a explicitement retiré — la Faille est un défi hebdomadaire,
+l'échec coûte déjà la mort et la série, un cooldown punirait deux fois. Si le
+farm devient un problème en jeu, le levier est l'**XP des passages RÉPÉTÉS**
+(dans l'esprit d'`applyZonePenalty`), pas une porte fermée.
+
+🐛 Reste de ce passage : `fmtCooldown` (commands.ts). La formule
+`floor(ms/1h)` + `ceil(reste/1min)` affichait « **11h60min** » dès que le reste
+frôlait l'heure pleine. Les minutes sont arrondies d'abord, puis découpées.
+Le **mini-boss portait la même formule** et est corrigé.
+
+### Abandon de combat = défaite (fait, C)
+
+Défaut signalé en jeu : « on peut fermer les cartes de combat avec la petite
+croix (ou en rafraîchissant la page) et ça annule le combat ». Exact, et gratuit.
+L'état d'un combat solo vit **entièrement dans le composant React**
+(`HuntCard`, `AscensionCard`) : le démonter effaçait monstre, PV et tour en
+cours. Ce n'était pas anodin — **fuir n'a que 55% de réussite** (`combat.ts`,
+`action === 'flee'`) et l'échec fait encaisser un tour : la croix était donc une
+fuite **garantie et gratuite**.
+
+Au **Rituel du Néant** c'était bien pire : `act()` ne touche jamais `d.hp`,
+seules les potions sont consommées. Fermer la fenêtre annulait donc **tout** le
+risque — pas de perte de 1 à 3 niveaux, pas de cooldown de 8h, pas même les PV.
+L'écran de confirmation promet pourtant « il n'y a pas de retour en arrière une
+fois le regard du Néant posé sur toi ».
+
+Règle posée : **abandonner un combat engagé, c'est le perdre.** Nouveau champ
+`p.pendingCombat` (`types.ts`) posé à l'engagement, effacé à la résolution, et
+`game/abandon.ts` (`beginCombat` / `endCombat` / `resolveAbandon`).
+⚠️ **`abandon.ts` doit rester un fichier à part** : il dépend de `combat.ts` ET
+d'`ascension.ts`, donc le mettre dans `player.ts` créerait le cycle
+`player → ascension → player` (même piège que `backfillAchievementShards`).
+
+**TROIS portes à fermer, pas une** — chacune a son point de rattrapage :
+
+| Porte | Rattrapée par |
+|---|---|
+| croix ✕ | nettoyage de l'effet de démontage, dans la carte |
+| rechargement / onglet fermé / plantage | `gameStore.selectCharacter` au chargement suivant (aucun code React n'a pu tourner) |
+| relancer `hunt` par-dessus un combat | `beginCombat` : un `id` différent = l'ancien est abandonné |
+
+⚠️ **Le démontage seul ne suffit pas comme signal.** React **StrictMode est
+actif** (`main.tsx`) : il monte, démonte puis remonte chaque composant en
+développement. Résoudre sur un simple démontage infligerait donc une mort
+fantôme à chaque ouverture de carte — **en dev uniquement**, donc invisible en
+production. Les deux cartes vérifient que la fenêtre a réellement disparu de
+`useUi` avant de résoudre (`close()` a déjà mis le store à jour quand le
+démontage arrive, le double-montage de StrictMode la laisse ouverte). Même
+raison pour l'`id` de `pendingCombat` : sans lui, le second passage de
+StrictMode compterait un abandon.
+
+Le rituel enregistre `bossHpFrac` **à chaque tour** dans la sauvegarde : un
+abandon est jugé sur l'état réel du combat, avec le barème de la défaite
+normale — on ne punit pas l'abandon plus qu'une défaite, on refuse juste qu'il
+ne coûte rien.
+
+Vérifié en jeu (Playwright, mode local), les quatre chemins :
+
+| Cas | Avant | Après |
+|---|---|---|
+| ✕ en chasse | rien | or 10 100 → 9 090, morts 0 → 1, série 7 → 0 |
+| F5 en chasse | rien | or 9 000 → 8 100, morts 2 → 3 |
+| relance de `hunt` | rien | or 10 100 → 9 090, morts 0 → 1, série 7 → 0 |
+| ✕ pendant le Rituel | rien | **Nv.50 → 47** + cooldown 8h posé |
+
+⚠️ Piège de banc d'essai rencontré : un personnage de test forcé au Nv.50 dans
+`localStorage` **retombait à 41**. Ce n'était PAS l'anti-triche des kills mais
+`relevel()` — un perso créé porte `curveVersion: 2`, donc `migratePlayer`
+convertit v3→v4→v5 et recalcule le niveau depuis l'XP totale. Poser
+**`curveVersion: 5`** dans le patch de test, sinon toute vérification au niveau
+max est faussée.
+
+Une ligne sous les boutons d'action l'annonce (« Fermer cette fenêtre compte
+comme une défaite ») : la règle doit être lisible AVANT de cliquer, pas
+seulement dans le toast qui suit.
 
 **Trois erreurs de calibrage que j'ai commises, mesurées puis corrigées** — à ne
 pas refaire pour une zone future :

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useGame } from '../../store/gameStore';
-import { ITEMS, RARITY_COLOR } from '../../game/items';
+import { ITEMS, RARITY_COLOR, RARITY_LABEL } from '../../game/items';
 import { MONSTERS } from '../../game/monsters';
 import type { ItemDef, MonsterDef } from '../../game/types';
 import { RECIPES } from '../../game/crafting';
@@ -154,6 +154,9 @@ export default function WikiCard() {
                 <ItemIcon id={it.id} size={18} /> {it.name}
               </span>
               {it.slot && <span className="text-[10px] bg-slate-800 px-1.5 rounded text-slate-300">{it.slot}</span>}
+              {/* La rareté n'était nulle part écrite en toutes lettres : elle
+                  n'existait que comme couleur du nom, indevinable. */}
+              <span className="text-[10px] px-1.5 rounded font-semibold" style={{ background: `${RARITY_COLOR[it.rarity]}22`, color: RARITY_COLOR[it.rarity] }}>{RARITY_LABEL[it.rarity]}</span>
               {classBadge(it) && <span className={`text-[10px] px-1.5 rounded font-semibold ${classBadge(it)!.cls}`}>{classBadge(it)!.label}</span>}
               <span className="text-xs text-amber-300 ml-auto">{it.value} Sol</span>
             </div>

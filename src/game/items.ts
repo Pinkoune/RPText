@@ -253,7 +253,7 @@ export const ITEMS: Record<string, ItemDef> = {
   volcanic_armor: { id: 'volcanic_armor', name: 'Armure volcanique', icon: '🛡️', rarity: 'legendary', slot: 'armor', def: 40, hp: 180, value: 2800, desc: 'Forgée dans la roche en fusion.', element: 'fire', maxDurability: 1200, reqLevel: 32 },
   infernal_elixir: { id: 'infernal_elixir', name: 'Élixir infernal', icon: '⚗️', rarity: 'epic', slot: 'consumable', hp: 1200, value: 350, desc: 'Rend 1200 PV. Brûle la gorge mais ravive.', reqLevel: 38 },
   void_mantle: { id: 'void_mantle', name: 'Manteau du Vide', icon: '🧥', rarity: 'legendary', slot: 'armor', def: 55, hp: 260, value: 5000, desc: 'Tissé de néant, absorbe la lumière.', element: 'dark', maxDurability: 1400, reqLevel: 42 },
-  primordial_crown: { id: 'primordial_crown', name: 'Couronne primordiale', icon: '👑', rarity: 'legendary', slot: 'trinket', atk: 18, def: 18, hp: 150, value: 8000, desc: 'Relique des premiers âges du monde.', element: 'light', maxDurability: 500, reqLevel: 45 },
+  primordial_crown: { id: 'primordial_crown', name: 'Couronne primordiale', icon: '👑', rarity: 'mythic', slot: 'trinket', atk: 18, def: 18, hp: 150, value: 8000, desc: 'Relique des premiers âges du monde.', element: 'light', maxDurability: 500, reqLevel: 45 },
 
   // ── Équipement end-game (niv.34-36, ressources de la Nécropole) ──
   crypt_edge: { id: 'crypt_edge', name: 'Lame des Catacombes', icon: '⚔️', rarity: 'legendary', slot: 'weapon', atk: 68, classes: ['warrior'], value: 3200, desc: 'Chuchote les noms de ceux qu\'elle a fauchés.', element: 'dark', dmgType: 'physical', maxDurability: 800, reqLevel: 34 },
@@ -286,16 +286,16 @@ export const ITEMS: Record<string, ItemDef> = {
   // Se fabrique avec des Âmes de Boss : il faut donc être passé par le
   // Sanctuaire (niv.40, CD 24h) plusieurs fois. C'est le seul palier dont le
   // matériau ne se récolte pas — la dernière marche se mérite en combat.
-  primordial_edge: { id: 'primordial_edge', name: 'Tranchant primordial', icon: '⚔️', rarity: 'legendary', slot: 'weapon', atk: 92, classes: ['warrior'], value: 9000, desc: 'Forgé avant que le monde n\'ait un nom.', element: 'light', dmgType: 'physical', maxDurability: 900, reqLevel: 46 },
-  primordial_bow: { id: 'primordial_bow', name: 'Arc primordial', icon: '🏹', rarity: 'legendary', slot: 'weapon', atk: 88, classes: ['archer'], value: 8800, desc: 'Sa corde est un rayon de la première aube.', element: 'light', dmgType: 'physical', maxDurability: 900, reqLevel: 46 },
-  primordial_scepter: { id: 'primordial_scepter', name: 'Sceptre primordial', icon: '🪄', rarity: 'legendary', slot: 'weapon', atk: 90, classes: ['mage'], value: 9200, desc: 'Contient la première étincelle de magie.', element: 'light', dmgType: 'magical', maxDurability: 900, reqLevel: 46 },
-  primordial_staff: { id: 'primordial_staff', name: 'Bâton primordial', icon: '✨', rarity: 'legendary', slot: 'weapon', atk: 84, hp: 210, classes: ['healer'], value: 9400, desc: 'Le premier souffle, gardé intact.', element: 'light', dmgType: 'magical', maxDurability: 900, reqLevel: 46 },
+  primordial_edge: { id: 'primordial_edge', name: 'Tranchant primordial', icon: '⚔️', rarity: 'mythic', slot: 'weapon', atk: 92, classes: ['warrior'], value: 9000, desc: 'Forgé avant que le monde n\'ait un nom.', element: 'light', dmgType: 'physical', maxDurability: 900, reqLevel: 46 },
+  primordial_bow: { id: 'primordial_bow', name: 'Arc primordial', icon: '🏹', rarity: 'mythic', slot: 'weapon', atk: 88, classes: ['archer'], value: 8800, desc: 'Sa corde est un rayon de la première aube.', element: 'light', dmgType: 'physical', maxDurability: 900, reqLevel: 46 },
+  primordial_scepter: { id: 'primordial_scepter', name: 'Sceptre primordial', icon: '🪄', rarity: 'mythic', slot: 'weapon', atk: 90, classes: ['mage'], value: 9200, desc: 'Contient la première étincelle de magie.', element: 'light', dmgType: 'magical', maxDurability: 900, reqLevel: 46 },
+  primordial_staff: { id: 'primordial_staff', name: 'Bâton primordial', icon: '✨', rarity: 'mythic', slot: 'weapon', atk: 84, hp: 210, classes: ['healer'], value: 9400, desc: 'Le premier souffle, gardé intact.', element: 'light', dmgType: 'magical', maxDurability: 900, reqLevel: 46 },
   // ⚠️ SANS élément, volontairement. Une armure `light` prend +50% des attaques
   // `dark` (`getElementMult`), or l'Abysse — la zone où on porte ce set — est
   // entièrement peuplée de monstres sombres : la meilleure armure du jeu aurait
   // été un handicap là où on la porte. Mesuré : -36 points de winrate en Abysses.
   // Les ARMES du palier restent `light` (+50% contre ces mêmes monstres).
-  primordial_aegis: { id: 'primordial_aegis', name: 'Égide primordiale', icon: '🛡️', rarity: 'legendary', slot: 'armor', def: 64, hp: 300, value: 11000, desc: 'Ce qui restait du monde avant qu\'il ne se brise.', maxDurability: 1500, reqLevel: 48 },
+  primordial_aegis: { id: 'primordial_aegis', name: 'Égide primordiale', icon: '🛡️', rarity: 'mythic', slot: 'armor', def: 64, hp: 300, value: 11000, desc: 'Ce qui restait du monde avant qu\'il ne se brise.', maxDurability: 1500, reqLevel: 48 },
 
   // ── Palier « Tempête » (niv.43, ressources des Cieux Déchirés) ──
   // Comble le trou entre Givre du Vide (40) et Primordial (46) — six niveaux
@@ -319,15 +319,15 @@ export const ITEMS: Record<string, ItemDef> = {
   // elles visent **Le Néant Originel**, qui est `dark` (+50%). Elles n'ont donc
   // AUCUN bonus contre les monstres `light` du Berceau lui-même — c'est assumé,
   // ce palier est un investissement pour le rituel, pas un outil de farm.
-  genesis_edge: { id: 'genesis_edge', name: 'Tranchant de Genèse', icon: '⚔️', rarity: 'legendary', slot: 'weapon', atk: 104, classes: ['warrior'], value: 16000, desc: 'Tranche ce qui n\'a pas encore été décidé.', element: 'light', dmgType: 'physical', maxDurability: 1000, reqLevel: 48 },
-  genesis_bow: { id: 'genesis_bow', name: 'Arc de Genèse', icon: '🏹', rarity: 'legendary', slot: 'weapon', atk: 100, classes: ['archer'], value: 15600, desc: 'Vise un point qui n\'existe pas encore.', element: 'light', dmgType: 'physical', maxDurability: 1000, reqLevel: 48 },
-  genesis_scepter: { id: 'genesis_scepter', name: 'Sceptre de Genèse', icon: '🪄', rarity: 'legendary', slot: 'weapon', atk: 102, classes: ['mage'], value: 16400, desc: 'La magie avant qu\'on lui donne des règles.', element: 'light', dmgType: 'magical', maxDurability: 1000, reqLevel: 48 },
-  genesis_staff: { id: 'genesis_staff', name: 'Bâton de Genèse', icon: '🕯️', rarity: 'legendary', slot: 'weapon', atk: 96, hp: 230, classes: ['healer'], value: 16800, desc: 'Rend aux vivants ce qui ne leur avait pas encore été pris.', element: 'light', dmgType: 'magical', maxDurability: 1000, reqLevel: 48 },
+  genesis_edge: { id: 'genesis_edge', name: 'Tranchant de Genèse', icon: '⚔️', rarity: 'mythic', slot: 'weapon', atk: 104, classes: ['warrior'], value: 16000, desc: 'Tranche ce qui n\'a pas encore été décidé.', element: 'light', dmgType: 'physical', maxDurability: 1000, reqLevel: 48 },
+  genesis_bow: { id: 'genesis_bow', name: 'Arc de Genèse', icon: '🏹', rarity: 'mythic', slot: 'weapon', atk: 100, classes: ['archer'], value: 15600, desc: 'Vise un point qui n\'existe pas encore.', element: 'light', dmgType: 'physical', maxDurability: 1000, reqLevel: 48 },
+  genesis_scepter: { id: 'genesis_scepter', name: 'Sceptre de Genèse', icon: '🪄', rarity: 'mythic', slot: 'weapon', atk: 102, classes: ['mage'], value: 16400, desc: 'La magie avant qu\'on lui donne des règles.', element: 'light', dmgType: 'magical', maxDurability: 1000, reqLevel: 48 },
+  genesis_staff: { id: 'genesis_staff', name: 'Bâton de Genèse', icon: '🕯️', rarity: 'mythic', slot: 'weapon', atk: 96, hp: 230, classes: ['healer'], value: 16800, desc: 'Rend aux vivants ce qui ne leur avait pas encore été pris.', element: 'light', dmgType: 'magical', maxDurability: 1000, reqLevel: 48 },
   // ⚠️ SANS élément, même raison que l'Égide primordiale — et elle est plus
   // forte ici : le Berceau mêle `light`, `neutral` et un gardien `dark`, donc
   // AUCUN élément d'armure n'y serait sûr. Le rituel qui suit est `dark`.
-  genesis_aegis: { id: 'genesis_aegis', name: 'Égide de Genèse', icon: '🛡️', rarity: 'legendary', slot: 'armor', def: 72, hp: 340, value: 19000, desc: 'La première chose que le monde ait su protéger.', maxDurability: 1600, reqLevel: 48 },
-  genesis_seal: { id: 'genesis_seal', name: 'Sceau de Genèse', icon: '🌱', rarity: 'legendary', slot: 'trinket', atk: 18, def: 16, hp: 150, value: 14000, desc: 'Un monde entier y attend son tour.', maxDurability: 620, reqLevel: 48 },
+  genesis_aegis: { id: 'genesis_aegis', name: 'Égide de Genèse', icon: '🛡️', rarity: 'mythic', slot: 'armor', def: 72, hp: 340, value: 19000, desc: 'La première chose que le monde ait su protéger.', maxDurability: 1600, reqLevel: 48 },
+  genesis_seal: { id: 'genesis_seal', name: 'Sceau de Genèse', icon: '🌱', rarity: 'mythic', slot: 'trinket', atk: 18, def: 16, hp: 150, value: 14000, desc: 'Un monde entier y attend son tour.', maxDurability: 620, reqLevel: 48 },
 };
 /**
  * Tous les consommables de soin (slot consumable + hp défini), triés du moins
@@ -347,6 +347,21 @@ export const RARITY_COLOR: Record<ItemDef['rarity'], string> = {
   rare: '#5aa6ff',
   epic: '#c46bff',
   legendary: '#ffae42',
+  // Rouge sombre : le seul cran au-dessus du légendaire, porté par les DEUX
+  // derniers paliers (Primordial et Genèse). Assez clair pour rester lisible en
+  // petit sur les fonds noirs des cartes (l'inventaire écrit les noms en 12px
+  // dans cette couleur).
+  mythic: '#e0454f',
+};
+
+/** Nom affiché de la rareté (badge du Wiki). */
+export const RARITY_LABEL: Record<ItemDef['rarity'], string> = {
+  common: 'Commun',
+  uncommon: 'Peu commun',
+  rare: 'Rare',
+  epic: 'Épique',
+  legendary: 'Légendaire',
+  mythic: 'Mythique',
 };
 
 /**

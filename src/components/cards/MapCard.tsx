@@ -4,20 +4,28 @@ import type { BiomeId } from '../../game/types';
 import { currentGlobalEvent, currentBiomeEvent } from '../../game/events';
 import { masteryProgress } from '../../game/mastery';
 
-// Serpentin harmonieux du bas (Forêt niv.1) vers le haut (Abysses niv.38).
+// Serpentin du bas (Forêt niv.1) vers le haut (Berceau niv.46).
+//
+// ⚠️ Ces coordonnées se REPARTISSENT, elles ne s'ajoutent pas. En posant les
+// deux zones de fin au-dessus de l'Abysse (y 12) sans toucher au reste, elles
+// s'étaient retrouvées à y 7 et y 2 : trois pastilles dans les 12% du haut,
+// donc empilées les unes sur les autres, et le Berceau à moitié coupé par le
+// cadre (chaque bouton fait la bulle PLUS deux lignes de texte, soit ~86px de
+// haut, quand 5% de la carte n'en font que ~28). Toute l'échelle est donc
+// redistribuée : 10 étapes de y 90 à y 10, un pas constant de ~8,9%, et un x
+// qui alterne assez largement (≥26%) pour que deux étapes voisines ne se
+// touchent jamais, ni par la bulle ni par l'étiquette.
 const POS: Record<BiomeId, { x: number; y: number }> = {
-  forest: { x: 20, y: 92 },
-  plains: { x: 60, y: 82 },
-  mountains: { x: 84, y: 68 },
-  desert: { x: 56, y: 58 },
-  swamp: { x: 18, y: 47 },
-  volcano: { x: 48, y: 36 },
-  crypt: { x: 82, y: 24 },
-  frozen: { x: 54, y: 12 },
-  // Les deux zones de fin remontent encore : l'Abysse n'est plus le sommet du
-  // chemin, elle en devient l'avant-dernière étape.
-  skyreach: { x: 22, y: 7 },
-  cradle: { x: 60, y: 2 },
+  forest: { x: 20, y: 90 },
+  plains: { x: 58, y: 81 },
+  mountains: { x: 84, y: 72 },
+  desert: { x: 55, y: 63 },
+  swamp: { x: 18, y: 54 },
+  volcano: { x: 48, y: 46 },
+  crypt: { x: 82, y: 37 },
+  frozen: { x: 52, y: 28 },
+  skyreach: { x: 20, y: 19 },
+  cradle: { x: 58, y: 10 },
 };
 
 const ORDER: BiomeId[] = ['forest', 'plains', 'mountains', 'desert', 'swamp', 'volcano', 'crypt', 'frozen', 'skyreach', 'cradle'];
