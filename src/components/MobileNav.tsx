@@ -79,6 +79,7 @@ const NAV: { cat: string; items: NavItem[] }[] = [
       { kind: 'events', emoji: '🌍', label: 'Events' },
       { kind: 'stats', emoji: '📊', label: 'Stats' },
       { kind: 'wiki', emoji: '📚', label: 'Wiki' },
+      { kind: 'news', emoji: '📰', label: 'Nouveautés' },
       { kind: 'help', emoji: '❔', label: 'Aide' },
       { kind: 'settings', emoji: '⚙️', label: 'Options' },
     ],

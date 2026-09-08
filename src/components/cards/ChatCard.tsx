@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { useUi } from '../../store/uiStore';
 import { watchChat, sendChat, chatOnline, type ChatMessage, type ChatChannel } from '../../firebase/chatService';
-import { findUidByName, trackPresence, type OnlinePlayer } from '../../firebase/socialService';
+import { findUidByName } from '../../firebase/socialService';
 import { item, addItemToInventory } from '../../game/items';
 import { auraColor } from '../../game/prestige';
 import { fetchPublicProfile } from '../../firebase/socialService';
 import PlayerProfileModal, { type ProfileSeed } from '../PlayerProfileModal';
 import { COMMANDS } from '../../game/commands';
+import { scrollLogToEnd } from '../scrollLog';
 
 const TEAM_REQ_LEVEL = COMMANDS.find((c) => c.name === 'team')?.reqLevel ?? 1;
 const GUILD_REQ_LEVEL = COMMANDS.find((c) => c.name === 'guild')?.reqLevel ?? 1;
@@ -28,7 +29,11 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
   const [activeTab, setActiveTab] = useState<ChatChannel>(initialPayload?.dmPeer ? 'private' : initialPayload?.tab ?? 'global');
   const [dmPeer, setDmPeer] = useState<DmPeer | null>(initialPayload?.dmPeer ?? null); // conversation privée ouverte
   const [showNewDm, setShowNewDm] = useState(false);
-  const [online, setOnline] = useState<OnlinePlayer[]>([]);
+  // Présence lue dans le store (PresenceTracker est l'unique abonné, cf.
+  // gameStore) : cette carte ouvrait son propre `trackPresence`, qui
+  // redéclarait la présence du joueur et posait un second onDisconnect sur le
+  // même nœud.
+  const online = useGame((s) => s.onlinePlayers);
   const [viewingProfile, setViewingProfile] = useState<ProfileSeed | null>(null);
   const [avatars, setAvatars] = useState<Record<string, string | null>>({});
   const endRef = useRef<HTMLDivElement>(null);
@@ -59,12 +64,6 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
     if (activeTab === 'private') targetId = p.uid; // ma boîte de réception est keyée par UID
     return watchChat(activeTab, targetId, setMsgs);
   }, [activeTab, p?.teamId, p?.guildId, p?.uid]);
-
-  // Joueurs en ligne (pour choisir un destinataire de DM).
-  useEffect(() => {
-    if (!p) return;
-    return trackPresence({ uid: p.uid, name: p.name, level: p.level, playtimeMs: p.playtimeMs ?? 0 }, setOnline);
-  }, [p?.uid, p?.name, p?.level]);
 
   // Fils de discussion privés dérivés de la boîte de réception.
   //
@@ -104,7 +103,7 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
     return msgs.filter((m) => (m.uid === p.uid ? m.toUid === dmPeer.uid : m.uid === dmPeer.uid));
   }, [msgs, dmPeer, p?.uid]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs, dmPeer, activeTab]);
+  useEffect(() => { scrollLogToEnd(endRef.current); }, [msgs, dmPeer, activeTab]);
 
   if (!p) return null;
 
@@ -177,7 +176,10 @@ export default function ChatCard({ initialPayload }: { initialPayload?: { tab?: 
     setText('');
   }
 
-  const onlineOthers = online.filter((o) => o.name !== p.name);
+  // Par UID, pas par pseudo : les pseudos ne sont pas uniques (même règle que
+  // les fils de DM plus haut), donc se filtrer par le nom laissait passer soi-même
+  // dès qu'un autre personnage portait le même, et masquait un vrai homonyme.
+  const onlineOthers = online.filter((o) => o.uid !== p.uid);
 
   return (
     <div className="flex h-[55vh] max-h-[440px] flex-col">

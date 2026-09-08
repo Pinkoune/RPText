@@ -113,13 +113,28 @@ export function powerScore(p: PlayerState): PowerBreakdown {
 
 /**
  * Repli pour une ligne de classement écrite par un client plus ancien, qui ne
- * porte pas encore de `power`. On reconstruit ce qu'on peut depuis les champs
- * déjà présents : le joueur garde une place cohérente en attendant sa prochaine
- * connexion, au lieu de tomber en bas du tableau.
+ * porte pas encore de `power`.
+ *
+ * ⚠️ Il ne reconstruisait le score QUE depuis `level` et `prestigeLevel`, alors
+ * que la ligne de classement transporte AUSSI `kills` et `artifactLevel`
+ * (`playerService.savePlayer`). Résultat observé en production : tous les
+ * joueurs pas encore reconnectés affichaient une Puissance **exactement égale à
+ * leur niveau**, et un vétéran Nv.42 à 1 830 kills se retrouvait classé sous un
+ * Nv.19 actif. Le classement avait l'air cassé alors que seules les données
+ * disponibles étaient sous-exploitées.
+ *
+ * Les termes et les poids sont les MÊMES que dans `powerScore` : le repli est
+ * donc toujours ≤ au score réel, et il ne peut pas surclasser quelqu'un à tort.
+ * Il redevient exact dès que le joueur se reconnecte une fois.
  */
-export function fallbackPower(row: { level?: number; prestigeLevel?: number }): number {
+export function fallbackPower(row: {
+  level?: number; prestigeLevel?: number; kills?: number; artifactLevel?: number;
+}): number {
+  const w = POWER_WEIGHTS;
   return Math.round(
-    Math.max(0, row.level ?? 0) * POWER_WEIGHTS.level
-    + Math.max(0, row.prestigeLevel ?? 0) * POWER_WEIGHTS.prestige,
+    Math.max(0, row.level ?? 0) * w.level
+    + Math.max(0, row.prestigeLevel ?? 0) * w.prestige
+    + Math.max(0, row.artifactLevel ?? 0) * w.artifact
+    + Math.sqrt(Math.max(0, row.kills ?? 0)) * w.killsSqrt,
   );
 }

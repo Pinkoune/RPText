@@ -27,15 +27,24 @@ export interface SeasonTheme {
   name: string;
   emoji: string;
   color: string;
-  /** Nom de l'artefact de la saison. */
+  /**
+   * Nom de l'artefact de la saison.
+   *
+   * ⚠️ NE JAMAIS y remettre le mot « Relique ». Les quatre thèmes s'appelaient
+   * « Relique des Feuilles Mortes », « Relique de Givre »… alors que la Relique
+   * (`relic.ts`) est une AUTRE jauge — l'axe permanent, celui qui survit à la
+   * saison. Un testeur a confondu les deux dès la sortie : « ce qui est
+   * confusant c'est que l'artefact de cette saison s'appelle Relique des
+   * feuilles mortes ». Le mot est réservé à `RELIC_TIERS`.
+   */
   artifactName: string;
 }
 
 export const SEASON_THEMES: SeasonTheme[] = [
-  { name: 'Automne', emoji: '🍂', color: '#e2913f', artifactName: 'Relique des Feuilles Mortes' },
-  { name: 'Hiver', emoji: '❄️', color: '#8cd0ff', artifactName: 'Relique de Givre' },
-  { name: 'Printemps', emoji: '🌸', color: '#f39ac7', artifactName: 'Relique de Sève' },
-  { name: 'Été', emoji: '☀️', color: '#ffd45a', artifactName: 'Relique de Braise' },
+  { name: 'Automne', emoji: '🍂', color: '#e2913f', artifactName: 'Sceau des Feuilles Mortes' },
+  { name: 'Hiver', emoji: '❄️', color: '#8cd0ff', artifactName: 'Sceau de Givre' },
+  { name: 'Printemps', emoji: '🌸', color: '#f39ac7', artifactName: 'Sceau de Sève' },
+  { name: 'Été', emoji: '☀️', color: '#ffd45a', artifactName: 'Sceau de Braise' },
 ];
 
 export function seasonTheme(season = currentSeason): SeasonTheme {

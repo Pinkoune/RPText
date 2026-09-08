@@ -5,7 +5,7 @@ import { claimDailyLogin, type DailyReward } from '../game/daily';
 import type { SeasonReward } from '../game/season';
 import { signInWithProvider, signOut, watchAuth, type AppUser, type AuthProviderType } from '../firebase/auth';
 import { loadPlayer, savePlayer, watchGlobalWipe, listCharacters, deleteCharacter, type CharacterSlot } from '../firebase/playerService';
-import { touchPresence } from '../firebase/socialService';
+import { touchPresence, clearPresence } from '../firebase/socialService';
 import { isFirebaseConfigured } from '../firebase/config';
 import { sendAutoAnnounce } from '../firebase/chatService';
 import { leaveTeam, type Team } from '../firebase/groupsService';
@@ -259,6 +259,10 @@ export const useGame = create<GameState>((set, get) => ({
     // listé comme membre alors qu'il n'est plus en ligne.
     const cur = get().player;
     if (cur?.teamId) { try { await leaveTeam(cur.teamId, cur.uid); } catch { /* ignore */ } }
+    // Le personnage qu'on quitte doit disparaître de la présence tout de suite :
+    // sinon il reste listé « en ligne » et le joueur se voit lui-même comme un
+    // autre joueur une fois entré dans un autre slot.
+    await clearPresence();
     set({ player: null, status: 'loading' });
     await get().refreshCharacters();
     set({ status: 'select' });
@@ -284,6 +288,8 @@ export const useGame = create<GameState>((set, get) => ({
     // par PresenceTracker chez les autres joueurs en ligne.
     const cur = get().player;
     if (cur?.teamId) { try { await leaveTeam(cur.teamId, cur.uid); } catch { /* ignore */ } }
+    // AVANT signOut : une fois désauthentifié, la règle RTDB refuse le retrait.
+    await clearPresence();
     await signOut();
     set({ user: null, player: null, status: 'login', characters: [], pendingSlot: 0 });
   },

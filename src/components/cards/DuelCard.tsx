@@ -14,6 +14,7 @@ import {
   togglePvpReady, leavePvpDuel, startPvpDuel, submitPvpAction,
   type PvpDuelSession, type DuelMode, type DuelSide,
 } from '../../firebase/pvpDuelService';
+import { scrollLogToEnd } from '../scrollLog';
 
 const POTIONS = HP_CONSUMABLES;
 
@@ -67,7 +68,7 @@ export default function DuelCard() {
     toast(won ? `⚔️ Duel gagné ! +${session.bet * 2} 🪙 · progression de saison` : `Duel perdu… -${session.bet} 🪙`, won ? 'gold' : 'bad');
   }, [session?.state]);
 
-  useEffect(() => { logEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [session?.log]);
+  useEffect(() => { scrollLogToEnd(logEnd.current); }, [session?.log]);
 
   if (!p) return null;
   const stats = deriveStats(p);

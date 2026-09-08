@@ -501,6 +501,124 @@ Effet du lot sur la chasse en Abysses (Chasseur en gear de craft, sans saison) :
 Nv.40 17% → **25%**, Nv.50 17% → **40%**. Dur, mais plus une porte fermée — et
 c'est le craft du biome qui l'ouvre, pas le niveau.
 
+### Retours de production après merge (fait, C)
+
+Trois défauts remontés par l'utilisateur en jeu, tous confirmés par la mesure :
+
+- **Commande `news` inexistante.** Le `case 'news'` était présent dans le
+  dispatch et la fenêtre câblée (`uiStore` + `WindowManager`), mais la commande
+  n'avait **jamais été déclarée dans `COMMANDS`** : `resolveCommand` renvoyait
+  null, donc « Commande inconnue » et la carte était inatteignable. Déclarée
+  (alias `patch`/`patchnotes`/`nouveautes`/`maj`) + entrée MobileNav.
+  ⚠️ Déclarer la commande ET le `case` — l'un sans l'autre ne se voit pas au
+  typecheck.
+- **Puissance incohérente au classement.** Tous les joueurs pas encore
+  reconnectés affichaient une Puissance **exactement égale à leur niveau** — un
+  vétéran Nv.42 à 1 830 kills était classé sous un Nv.19 actif. Cause :
+  `fallbackPower` ne reconstruisait le score que depuis `level` et
+  `prestigeLevel`, alors que la ligne de classement transporte **aussi**
+  `kills` et `artifactLevel`. Ajoutés, avec les mêmes poids que `powerScore` —
+  le repli reste donc ≤ au score réel et ne peut surclasser personne à tort.
+  Mesuré sur les données réelles de la capture : Velstroke 42 → 63,
+  Sowfird 45 → 64, Ilala 23 → 37.
+- **Barres de vie invisibles en combat sur mobile.** Les six cartes à journal
+  (Chasse, Donjon, Abysses, Duel, Rituel, Chat) faisaient
+  `logEnd.scrollIntoView()`. Or `scrollIntoView` défile **tous les conteneurs
+  ancêtres**, pas seulement le cadre du journal : sur mobile, où la fenêtre
+  occupe l'écran et défile elle-même, chaque ligne de log poussait le HUD
+  (et les barres de vie) hors champ. Remplacé par `scrollLogToEnd`
+  (`components/scrollLog.ts`), qui s'arrête à la limite `data-window-scroll`
+  posée par `Window.tsx`. Mesuré en 390×667, combat actif à 7 boutons et 172px
+  de débordement : `scrollTop` 35 → **0**, haut du contenu −19px → **+16px**.
+  ⚠️ Ne pas revenir à `scrollIntoView` dans une carte à journal.
+- **Carte Donjon tronquée sur mobile** (signalé après le lot ci-dessus, donc
+  *en plus* du fix de défilement, pas à sa place). Mesuré avec un faux
+  `DungeonSession` injecté dans le composant (le donjon multi n'est pas jouable
+  sans RTDB) : la vue Combat fait **619px de contenu** pour ~515px utiles sur un
+  iPhone 15. En haut de course on ne voyait que le monstre — les boutons
+  d'action étaient à 130px SOUS le bas de l'écran ; en bas de course les boutons
+  étaient là mais la barre de vie du boss avait disparu. Jamais les deux.
+  Trois postes, tous mobile-only (`sm:` = le bureau garde l'ancien rendu) :
+  1. `Window.tsx` réservait **`pb-28` (112px)** pour un dock qui n'en fait que
+     **62** — 50px de vide volés à la zone utile de **chaque** carte. Remplacé
+     par `calc(4.5rem + env(safe-area-inset-bottom))` : la hauteur réelle du dock
+     (pt-2 + bouton `h-11` + son propre padding), plus l'encoche quand il y en a
+     une. ⚠️ Ne pas repasser à une valeur fixe : sans le `env()` le dock
+     recouvrirait le bas du contenu sur les téléphones à barre d'accueil.
+  2. HUD du monstre compacté (emoji `text-3xl`, padding `p-2`) et **les PV
+     chiffrés passent DANS la barre** au lieu d'une ligne sous elle.
+  3. Journal `h-24` au lieu de `h-32`, grille d'équipe resserrée, et le libellé
+     « Combat de donjon » masqué (il faisait passer l'en-tête sur deux lignes dès
+     360px de large — le titre de la fenêtre dit déjà « Donjons »).
+  Résultat mesuré (contenu vs zone utile, cas courant / pire cas tous statuts) :
+  393×852 **−104px → +92 / +24px** (tient à l'écran), 360×740 −224 → −20 / −88,
+  390×667 −289 → −93 / −161. Le petit écran défile encore un peu, mais un
+  téléphone moderne affiche enfin la barre de vie du boss, les quatre barres
+  d'équipe, le journal et les boutons **ensemble**.
+
+### Retours de bêta après la sortie (fait, C) — quatre défauts signalés par un joueur
+
+Le testeur a joué la MAJ le jour de sa sortie. Les quatre points remontés sont
+tous réels, tous confirmés dans le code.
+
+- **Artefact vs Relique : les deux jauges portaient le même mot.** Les quatre
+  thèmes de saison s'appelaient « **Relique** des Feuilles Mortes », « Relique
+  de Givre »… alors que la Relique (`relic.ts`) est l'AUTRE jauge, l'axe
+  permanent. Le testeur : « ce qui est confusant c'est que l'artefact de cette
+  saison s'appelle Relique des feuilles mortes ». Renommés en **Sceau**
+  (`artifact.ts SEASON_THEMES`). ⚠️ Le mot « Relique » est réservé à
+  `RELIC_TIERS` — ne jamais le remettre dans un `artifactName`. La **note de
+  patch** annonçait elle aussi « une Relique de saison » : c'était le premier
+  texte lu au lancement, donc la source de la confusion, corrigé aussi. Une
+  ligne dans ArtifactCard oppose désormais explicitement les deux.
+- **Éclats de succès non rétroactifs.** `grantShards` est appelé par
+  `claimAchievement`, or les succès existaient bien avant les Éclats : un
+  vétéran qui avait déjà tout réclamé n'en avait jamais reçu un seul, et ne le
+  pouvait plus (`claimAchievement` refuse un succès déjà réclamé). Rattrapage
+  `backfillAchievementShards` (relic.ts) appelé par `migratePlayer`.
+  ⚠️ Le registre `shardedAchievements` (nouveau champ) sert de ledger : c'est
+  lui qui rend l'opération **idempotente**, et non un flag de version — un
+  succès futur qui oublierait de créditer serait rattrapé tout seul. Vérifié en
+  jeu : 6 succès réclamés, 0 Éclat → **18 Éclats**, puis **18 sur trois
+  rechargements consécutifs**. ⚠️ `backfillAchievementShards` doit rester dans
+  `relic.ts` : le mettre dans `achievements.ts` créerait le cycle
+  `player → achievements → gathering → player`.
+  Imprécision assumée, une seule fois : les succès réclamés entre la sortie et
+  ce correctif sont recrédités (ils avaient bien touché leurs Éclats mais le
+  registre n'existait pas). Cadeau borné, l'inverse étant le bug signalé.
+- **Deux chiffres pour le même cooldown de récolte.** `CooldownCard`
+  recalculait depuis la constante `GATHER_COOLDOWN` au lieu d'appeler
+  `gatherCooldownLeft`, qui porte le mod d'artefact « Moisson » (-20%) → 60s
+  affichés d'un côté, 48s de l'autre. ⚠️ **Règle : la carte Récupérations doit
+  passer par le MÊME helper que la carte concernée**, jamais par la constante.
+  `dungeonCooldownLeft` appliqué pour la même raison. Mesuré après correctif :
+  32s / 31s (1s d'écart = les deux lectures ne sont pas au même instant).
+- **Un joueur « en ligne » alors qu'on est seul.** Trois causes cumulées, toutes
+  dans `socialService.trackPresence` :
+  1. le nettoyage **ne retirait pas le nœud de présence** — il coupait juste
+     l'écoute. Changer de personnage laissait donc le précédent listé, et le
+     joueur se voyait lui-même comme « 1 autre joueur ». `onDisconnect` ne
+     rattrape que la coupure de CONNEXION, pas un changement de perso ;
+  2. **aucun filtre de péremption** : un onglet tué ou un mobile en veille
+     laissait une entrée éternellement « en ligne ». Filtre `PRESENCE_STALE_MS`
+     (30 min) posé à la source, calé sur le seuil que LeaderboardCard appliquait
+     déjà — ses blocs « En ligne » (<5 min) et « Inactif » (5-30 min) sont
+     inchangés. ⚠️ `lastActive` absent = périmé, et surtout PAS actif : avant,
+     `idleMs` renvoyait 0 pour ce cas, donc « en ligne » pour toujours ;
+  3. `logout` appelait `signOut()` **avant** que le nettoyage React ne parte :
+     une fois désauthentifié, la règle RTDB (`auth.uid === $uid`) refuse le
+     retrait. D'où `clearPresence()`, appelé explicitement dans `logout` ET
+     `backToSelect` **avant** la déconnexion.
+  ⚠️ `ChatCard` et `LeaderboardCard` ouvraient chacun leur propre
+  `trackPresence`, en violation de la règle déjà écrite dans `gameStore`
+  (« PresenceTracker, unique abonné ») : ils redéclaraient la présence et
+  posaient un second `onDisconnect` sur le même nœud. Latent jusqu'ici, mais le
+  retrait au nettoyage l'aurait rendu visible (fermer le classement t'aurait
+  sorti de la liste). Les deux lisent maintenant `useGame(s => s.onlinePlayers)`,
+  ce qui supprime au passage deux écoutes RTDB. `ChatCard` filtrait aussi le
+  joueur courant **par pseudo** — les pseudos ne sont pas uniques — passé à l'UID.
+  ⚠️ **Non vérifiable en local** (présence = RTDB) : à retester en ligne.
+
 ## Amusement — 3 features (fait, C)
 
 - **Maîtrise des biomes** (`game/mastery.ts`, nouveau) : chaque kill compte pour le biome courant (`p.biomeKills`, migré). Paliers 100/500/1500/4000 → titre (`Novice/Familier/Vétéran/Maître/Légende · <Biome>`, ajouté à `unlockedTitles`) + **bonus permanent XP/Or dans ce biome** (+5/10/15/25%, appliqué dans `grantMonsterRewards`). But concret au farm end-game (Nv.40-50 = 81% du temps, sans nouvelle zone). Affiché : bandeau dans HuntCard (biome courant) + liste complète dans MapCard + toast au palier franchi (`HuntRewards.masteryUp`).

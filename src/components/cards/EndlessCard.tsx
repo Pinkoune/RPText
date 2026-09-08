@@ -13,6 +13,7 @@ import {
   toggleEndlessReady, leaveEndless, startEndless, submitEndlessAction, type EndlessSession,
 } from '../../firebase/endlessService';
 import ItemIcon from '../ItemIcon';
+import { scrollLogToEnd } from '../scrollLog';
 
 const POTIONS = HP_CONSUMABLES;
 
@@ -117,7 +118,7 @@ export default function EndlessCard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.state]);
 
-  useEffect(() => { logEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [session?.log]);
+  useEffect(() => { scrollLogToEnd(logEnd.current); }, [session?.log]);
 
   async function loadLeaderboards() {
     setLoading(true);

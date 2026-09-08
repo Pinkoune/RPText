@@ -17,6 +17,7 @@ import {
   tierMult, MAX_DUNGEON_TIER,
   startDungeon, submitDungeonAction, cleanupDungeon, broadcastDungeonOpen, type DungeonSession
 } from '../../firebase/dungeonService';
+import { scrollLogToEnd } from '../scrollLog';
 
 const POTIONS = HP_CONSUMABLES;
 
@@ -223,7 +224,7 @@ export default function DungeonCard() {
     }
   }, [session?.state]);
 
-  useEffect(() => { logEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [session?.log]);
+  useEffect(() => { scrollLogToEnd(logEnd.current); }, [session?.log]);
 
   if (!p) return null;
 
@@ -433,10 +434,17 @@ export default function DungeonCard() {
     const isLastHope = globalTimeLeft <= 120;
 
     return (
-      <div className="space-y-3">
+      // ⚠️ Densité mobile : cette vue empile HUD monstre + barres d'équipe +
+      // journal + boutons. Mesurée à 619px de contenu pour ~515px utiles sur un
+      // iPhone 15 — on ne pouvait donc JAMAIS voir la barre de vie du boss et
+      // les boutons d'action en même temps. Les `sm:` ci-dessous ne touchent que
+      // le mobile ; le bureau garde exactement l'ancien rendu.
+      <div className="space-y-2 sm:space-y-3">
         <div className="flex justify-between items-center px-1">
-          <div className="text-xs font-semibold text-slate-300">
-            ⚔️ Combat de donjon <span className={isEnraged ? 'text-rose-400 animate-pulse' : ''}>(Tour {session.roundCount}/{enrageThreshold})</span>
+          {/* Le libellé long fait passer cette ligne sur deux hauteurs dès 360px
+              de large. Le titre de la fenêtre dit déjà « Donjons ». */}
+          <div className="text-xs font-semibold text-slate-300 whitespace-nowrap">
+            ⚔️<span className="hidden sm:inline"> Combat de donjon</span> <span className={isEnraged ? 'text-rose-400 animate-pulse' : ''}>(Tour {session.roundCount}/{enrageThreshold})</span>
           </div>
           <div className={`text-xs font-mono font-bold ${isLastHope ? 'text-rose-400 animate-pulse' : 'text-amber-200'}`}>
             ⌛ {globalM}:{globalS.toString().padStart(2, '0')}
@@ -447,8 +455,8 @@ export default function DungeonCard() {
         {isLastHope && <div className="text-[10px] text-center text-rose-400 font-bold bg-rose-500/10 py-1 rounded">🔥 Dernier Espoir : Dégâts +50% ! 🔥</div>}
 
         {/* Monster HUD */}
-        <div className="rounded-lg bg-black/25 p-3 text-center relative overflow-hidden border border-black/10">
-          <div className="text-4xl mb-1">{m.emoji}</div>
+        <div className="rounded-lg bg-black/25 p-2 sm:p-3 text-center relative overflow-hidden border border-black/10">
+          <div className="text-3xl sm:text-4xl sm:mb-1">{m.emoji}</div>
           <div className="font-bold">{m.name} <span className="text-xs text-slate-400">(Étape {m.idx + 1}/{def.stages.length})</span></div>
           {m.affix !== 'none' && <div className="text-[10px] text-purple-400 font-bold uppercase">✨ {m.affix === 'vampiric' ? 'Vampirique' : m.affix === 'armored' ? 'Cuirassé' : 'Agile'}</div>}
           {m.provokeTurns > 0 && <div className="text-[10px] text-rose-400 font-bold tracking-wide uppercase">💢 Provoqué par {session.players[m.provokedBy!]?.name}</div>}
@@ -464,10 +472,14 @@ export default function DungeonCard() {
               {(m.armorBreak ?? 0) > 0 && <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-amber-300">🪓 Armure brisée ({m.armorBreak})</span>}
             </div>
           )}
-          <div className="h-2 overflow-hidden rounded bg-black/40 mt-2 mx-4">
-            <div className="h-2 rounded bg-orange-400 transition-all duration-300" style={{ width: `${mhpPct}%` }} />
+          {/* PV du boss : la valeur chiffrée passe DANS la barre plutôt qu'en
+              dessous — une ligne de moins, et le chiffre reste là où on regarde. */}
+          <div className="relative mt-2 mx-4 h-4 overflow-hidden rounded bg-black/40">
+            <div className="h-full rounded bg-orange-400 transition-all duration-300" style={{ width: `${mhpPct}%` }} />
+            <div className="absolute inset-0 grid place-items-center text-[10px] font-semibold tabular-nums text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
+              {Math.round(m.hp)} / {m.maxHp}
+            </div>
           </div>
-          <div className="text-xs text-slate-400 mt-1">{Math.round(m.hp)} / {m.maxHp}</div>
         </div>
 
         {/* Ressource d'archétype (Rage/Combo/Mana/...) : voir classResourceType. */}
@@ -497,8 +509,8 @@ export default function DungeonCard() {
             const isTurn = session.turnOrder[session.turnIdx] === pl.uid;
             const phpPct = Math.max(0, Math.min(100, (pl.hp / pl.maxHp) * 100));
             return (
-              <div key={pl.uid} className={`rounded-lg p-2 text-xs border ${isTurn ? 'border-sky-400/50 bg-sky-500/10' : 'border-transparent bg-black/20'}`}>
-                <div className="flex justify-between items-center mb-1">
+              <div key={pl.uid} className={`rounded-lg p-1.5 sm:p-2 text-xs border ${isTurn ? 'border-sky-400/50 bg-sky-500/10' : 'border-transparent bg-black/20'}`}>
+                <div className="flex justify-between items-center mb-0.5 sm:mb-1">
                   <span className={`font-semibold flex gap-1 items-center ${pl.isDead ? 'text-slate-500 line-through' : ''}`}>
                     <span style={{ color: pl.isDead ? undefined : auraColor(pl.aura, pl.auraColorOn ?? true) }}>{pl.name}</span> {isTurn && !pl.isDead && <span className="animate-pulse">⏳</span>}
                     {pl.setProc && <span title={`Set actif : ${pl.setProc.name} (${Math.round(pl.setProc.chance * 100)}%/attaque)`} style={{ color: pl.setProc.color }}>{pl.setProc.icon}</span>}
@@ -520,7 +532,7 @@ export default function DungeonCard() {
         </div>
 
         {/* Combat Log */}
-        <div className="h-32 overflow-auto rounded-lg bg-black/30 p-2 text-sm space-y-1">
+        <div className="h-24 sm:h-32 overflow-auto rounded-lg bg-black/30 p-2 text-sm space-y-1">
           {session.log.map((e, i) => (
             <div key={i} className={e.side === 'you' ? 'text-sky-300' : e.side === 'enemy' ? 'text-rose-300' : 'text-slate-400'}>
               {e.text}

@@ -10,7 +10,7 @@ import { activeEventEffect } from './events';
 import { ensureSeason, seasonId, grantEndOfSeason } from './season';
 import { prestigeBonus, prestigeStatMult, prestigeXpGoldMult } from './prestige';
 import { freshArtifact, rotateSeason, artifactPowerPct, grantArtifactXp } from './artifact';
-import { freshRelic, relicStatMult } from './relic';
+import { freshRelic, relicStatMult, backfillAchievementShards } from './relic';
 import { ensureSeasonPass } from './seasonpass';
 
 /** Incrémenter force un reset unique des talents de tous les joueurs (bugfix). */
@@ -141,6 +141,10 @@ export function migratePlayer(p: PlayerState): PlayerState {
   // c'est tout son intérêt. On se contente de la créer si elle manque.
   if (!p.relic) p.relic = freshRelic();
   if (p.relicShards === undefined) p.relicShards = 0;
+  // Rattrape les Éclats des succès réclamés AVANT que les Éclats existent : ces
+  // succès ne pouvaient plus rien verser, `claimAchievement` refusant de rejouer
+  // un succès déjà réclamé. Idempotent via le registre `shardedAchievements`.
+  backfillAchievementShards(p);
   if (!p.unlockedBgs) p.unlockedBgs = [];
   // Passe de saison : la piste se vide à la rotation (les titres et fonds déjà
   // obtenus, eux, restent acquis).

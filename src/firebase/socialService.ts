@@ -1,5 +1,5 @@
 import { collection, getDocs, query, orderBy, limit, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { ref, onValue, onDisconnect, set, serverTimestamp } from 'firebase/database';
+import { ref, onValue, onDisconnect, set, remove, serverTimestamp } from 'firebase/database';
 import { db, rtdb, isFirebaseConfigured } from './config';
 import type { ClassId, PlayerState } from '../game/types';
 import { fallbackPower } from '../game/power';
@@ -160,6 +160,14 @@ export function watchSeasonLadder(currentSeasonId: string, max: number, onChange
  * Déclare le joueur en ligne et écoute la liste des présents.
  * Utilise la Realtime Database (présence fiable via onDisconnect).
  */
+/**
+ * Au-delà de ce délai sans activité, une entrée de présence est considérée
+ * comme un fantôme et n'est plus servie. Calé sur le seuil au-delà duquel
+ * LeaderboardCard masquait déjà les joueurs (30 min) : les blocs « En ligne »
+ * (<5 min) et « Inactif » (5-30 min) sont donc inchangés.
+ */
+const PRESENCE_STALE_MS = 30 * 60 * 1000;
+
 // Référence de présence du joueur courant, pour rafraîchir son activité.
 let myPresenceRef: ReturnType<typeof ref> | null = null;
 let myPresenceData: { uid: string; name: string; level: number; playtimeMs?: number } | null = null;
@@ -181,13 +189,52 @@ export function trackPresence(
   const listRef = ref(rtdb, 'presence');
   const unsub = onValue(listRef, (snap) => {
     const val = (snap.val() ?? {}) as Record<string, OnlinePlayer>;
-    onChange(Object.values(val).filter((o) => !isHiddenName(o.name)));
+    const now = Date.now();
+    onChange(
+      Object.values(val)
+        .filter((o) => !isHiddenName(o.name))
+        // Nœuds fantômes : `onDisconnect` ne se déclenche qu'à la coupure de la
+        // CONNEXION. Un onglet tué, un mobile mis en veille, un réseau qui
+        // tombe mal — et l'entrée reste « en ligne » indéfiniment. On filtre
+        // donc sur l'activité réelle, comme le fait déjà LeaderboardCard.
+        // ⚠️ `lastActive` absent = vieille entrée d'un client d'avant ce champ :
+        // on la traite comme périmée, et surtout PAS comme active (c'était le
+        // cas avant — `idleMs` renvoyait 0, donc « en ligne » pour toujours).
+        .filter((o) => o.lastActive != null && now - o.lastActive < PRESENCE_STALE_MS),
+    );
   });
   return () => {
+    // Ne PAS se contenter de couper l'écoute : sans ce retrait, changer de
+    // personnage ou se déconnecter laissait le nœud derrière soi jusqu'à la
+    // coupure de la connexion. Le joueur voyait alors « 1 autre joueur en
+    // ligne » — son propre personnage précédent. Remonté en bêta par un joueur
+    // pourtant seul sur le serveur.
+    onDisconnect(meRef).cancel().catch(() => { /* connexion déjà perdue */ });
+    remove(meRef).catch(() => { /* idem */ });
     myPresenceRef = null;
     myPresenceData = null;
     unsub();
   };
+}
+
+/**
+ * Retire explicitement le joueur de la liste des présents.
+ *
+ * Le nettoyage de `trackPresence` suffit au changement de personnage, mais PAS
+ * à la déconnexion : `logout` attend `signOut()` avant de vider le store, donc
+ * le nettoyage React ne partirait qu'une fois désauthentifié — et la règle RTDB
+ * (`auth.uid === $uid`) refuserait le retrait. Il faut donc l'appeler AVANT de
+ * se déconnecter, tant qu'on en a encore le droit.
+ */
+export async function clearPresence(): Promise<void> {
+  const meRef = myPresenceRef;
+  myPresenceRef = null;
+  myPresenceData = null;
+  if (!meRef) return;
+  try {
+    await onDisconnect(meRef).cancel();
+    await remove(meRef);
+  } catch { /* déjà parti, ou connexion perdue */ }
 }
 
 /** Rafraîchit l'horodatage d'activité du joueur (appelé à chaque action). */

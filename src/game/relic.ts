@@ -199,3 +199,38 @@ export function grantShards(p: PlayerState, n: number): void {
   if (!Number.isFinite(n) || n <= 0) return;
   p.relicShards = (p.relicShards ?? 0) + Math.floor(n);
 }
+
+/**
+ * Rattrapage des Éclats de succès (appelé par `migratePlayer`).
+ *
+ * Les Éclats sont versés par `claimAchievement`, or les succès existaient bien
+ * avant eux : un vétéran qui avait déjà tout réclamé n'en a jamais touché un
+ * seul, et ne le pouvait plus — `claimAchievement` refuse un succès déjà
+ * réclamé. Remonté en bêta : « je vois qu'on est censé en gagner 3 par succès
+ * accompli, mais j'ai déjà moult succès et pas tant d'Éclats ».
+ *
+ * Le registre `shardedAchievements` rend l'opération idempotente : on ne verse
+ * que pour les succès réclamés qui n'y figurent pas encore. Pas de flag de
+ * version — si un succès futur oubliait de créditer, ce rattrapage le
+ * corrigerait à la connexion suivante.
+ *
+ * ⚠️ Imprécision assumée, une seule fois : les succès réclamés APRÈS la sortie
+ * des Éclats ont bien été crédités mais ne sont pas dans le registre (il
+ * n'existait pas), donc ils sont recrédités une fois. Fenêtre = entre la sortie
+ * de la MAJ et ce correctif. C'est un cadeau borné, l'inverse (ne rien rendre)
+ * étant le bug signalé.
+ *
+ * @returns le nombre de succès rattrapés.
+ */
+export function backfillAchievementShards(p: PlayerState): number {
+  const claimed = p.claimedAchievements ?? [];
+  const already = new Set(p.shardedAchievements ?? []);
+  const missing = claimed.filter((id) => !already.has(id));
+  if (missing.length === 0) {
+    if (!p.shardedAchievements) p.shardedAchievements = [...already];
+    return 0;
+  }
+  grantShards(p, SHARDS_PER_ACHIEVEMENT * missing.length);
+  p.shardedAchievements = [...already, ...missing];
+  return missing.length;
+}

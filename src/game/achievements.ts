@@ -84,7 +84,11 @@ export function claimAchievement(p: PlayerState, id: string): boolean {
   
   // Éclats de Relique : c'est ce qui rend les succès à nouveau désirables au
   // Nv.50, où l'or et les gemmes qu'ils donnent ne valent plus grand-chose.
+  // On inscrit le succès au registre : c'est lui qui permet à
+  // `backfillAchievementShards` de rattraper les anciens sans doublonner.
   grantShards(p, SHARDS_PER_ACHIEVEMENT);
+  if (!p.shardedAchievements) p.shardedAchievements = [];
+  if (!p.shardedAchievements.includes(id)) p.shardedAchievements.push(id);
 
   if (def.titleReward) {
     if (!p.unlockedTitles) p.unlockedTitles = [];

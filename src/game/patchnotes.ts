@@ -30,6 +30,22 @@ export interface PatchRelease {
 /** Historique complet, plus récent en premier. */
 export const PATCH_HISTORY: PatchRelease[] = [
   {
+    version: 'refonte-saison-v1.1',
+    date: new Date().toLocaleDateString('fr-FR'),
+    sections: [
+      {
+        title: '🔧 Retours de la première journée',
+        kind: 'fix',
+        items: [
+          'L\'artefact de saison ne s\'appelle plus « Relique de… » : il porte désormais le nom de <b>Sceau</b> (Sceau des Feuilles Mortes cet automne). Les deux jauges portaient le même mot, on les confondait — l\'artefact appartient à la saison, la <b>Relique</b> ✧ est permanente.',
+          '<b>Éclats rattrapés</b> : les succès réclamés avant l\'arrivée des Éclats n\'en avaient jamais versé, et ne le pouvaient plus. Ils sont crédités automatiquement à ta prochaine connexion — 3 ✧ par succès déjà accompli.',
+          'La fenêtre <b>Récupérations</b> ignorait le mod d\'artefact « Moisson » et annonçait un temps de récolte plus long que la carte Récolte. Les deux disent enfin la même chose.',
+          'Un joueur pouvait apparaître « en ligne » alors qu\'il ne l\'était plus : changer de personnage ou se déconnecter laissait un fantôme dans la liste. Corrigé, et les présences périmées ne sont plus comptées.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'refonte-saison-v1',
     date: new Date().toLocaleDateString('fr-FR'),
     sections: [
@@ -46,9 +62,9 @@ export const PATCH_HISTORY: PatchRelease[] = [
         title: '🔮 Saisons et artefact',
         kind: 'new',
         items: [
-          'Une <b>Relique de saison</b> accompagne désormais chaque personnage : une jauge unique qui monte sur <b>tout</b> ce que tu fais (chasse, donjon, récolte, forge) et qui, elle, ne s\'arrête jamais.',
+          'Un <b>artefact de saison</b> accompagne désormais chaque personnage : une jauge unique qui monte sur <b>tout</b> ce que tu fais (chasse, donjon, récolte, forge) et qui, elle, ne s\'arrête jamais. À ne pas confondre avec la <b>Relique</b> ✧ plus bas : l\'artefact appartient à la saison, la Relique est permanente.',
           'Chaque niveau donne un point à dépenser dans une grille de 17 mods répartis en 5 colonnes — dont de vraies mécaniques : Propagation (brûlures et poisons +50%), Écho de Faille, Sursis (survivre à un coup fatal), Forge économe, Moisson.',
-          'À chaque changement de saison, la Relique repart de zéro et les records sont archivés — mais <b>ton personnage n\'est jamais touché</b> : niveau, équipement et métiers restent acquis.',
+          'À chaque changement de saison, l\'artefact repart de zéro et les records sont archivés — mais <b>ton personnage n\'est jamais touché</b> : niveau, équipement et métiers restent acquis.',
         ],
       },
       {

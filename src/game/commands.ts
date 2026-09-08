@@ -84,6 +84,11 @@ export const COMMANDS: CommandDef[] = [
   { name: 'stats', aliases: ['statistiques', 'stat', 'st'], desc: 'Affiche toutes tes statistiques.', category: 'Jeu', reqLevel: 1 },
   { name: 'help', aliases: ['aide', 'commands', '?'], desc: 'Liste toutes les commandes.', category: 'Système', reqLevel: 1 },
   { name: 'wiki', aliases: ['bestiaire', 'items', 'encyclopedie'], desc: "Consulte l'encyclopédie des objets et des monstres.", category: 'Système', reqLevel: 1 },
+  // ⚠️ Le `case 'news'` existait déjà dans le dispatch et la fenêtre était
+  // câblée (uiStore + WindowManager), mais la commande n'avait jamais été
+  // DÉCLARÉE ici : `resolveCommand` renvoyait null, donc taper « news » donnait
+  // « Commande inconnue ». Toute la carte était inatteignable.
+  { name: 'news', aliases: ['patch', 'patchnotes', 'nouveautes', 'maj'], desc: 'Les nouveautés et le journal des mises à jour.', category: 'Système', reqLevel: 1 },
   { name: 'settings', aliases: ['parametres', 'options', 'config'], desc: 'Paramètres du jeu et réinitialisation de personnage.', category: 'Système', reqLevel: 1 },
   { name: 'leaderboard', aliases: ['classement', 'top', 'lb'], desc: 'Affiche le classement et les joueurs en ligne.', category: 'Multijoueur', reqLevel: 1 },
   { name: 'chat', aliases: ['tchat', 'say'], desc: 'Chat mondial avec les joueurs connectés.', category: 'Multijoueur', reqLevel: 1 },

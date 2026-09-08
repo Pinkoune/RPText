@@ -31,6 +31,7 @@ import { currentRift, claimRift, RIFT_SHARDS } from '../../game/rift';
 import { BIOMES } from '../../game/biomes';
 
 import { useUi } from '../../store/uiStore';
+import { scrollLogToEnd } from '../scrollLog';
 
 const POTIONS = HP_CONSUMABLES;
 const RESOURCE_META: Record<string, { label: string; color: string }> = {
@@ -161,7 +162,7 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     setCstate(freshCombatState());
   }, [encounter.id]);
 
-  useEffect(() => { logEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [log]);
+  useEffect(() => { scrollLogToEnd(logEnd.current); }, [log]);
 
   // En-tête de fenêtre thématisé pour les combats de boss.
   useEffect(() => {
