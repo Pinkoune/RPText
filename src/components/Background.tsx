@@ -28,7 +28,15 @@ export default function Background({ biome, phase }: Props) {
     [],
   );
 
+  // ⚠️ DEUX notions distinctes, à ne pas refusionner :
+  //  - `noSky` : pas d'astre ni d'étoiles. L'Abysse (la lumière n'y arrive pas)
+  //    et le Berceau, qui est hors du temps — ses quatre phases sont identiques,
+  //    donc un soleil qui s'y déplacerait contredirait le fond fixe.
+  //  - `isVoid` : le trou noir violet, qui appartient à l'Abysse SEULE.
+  // Les avoir confondus mettait le trou noir de l'Abysse dans le ciel doré du
+  // Berceau, vu en capture avant correction.
   const isVoid = biome === 'frozen';
+  const noSky = biome === 'frozen' || biome === 'cradle';
   const isVolcano = biome === 'volcano';
 
   return (
@@ -39,7 +47,7 @@ export default function Background({ biome, phase }: Props) {
       />
 
       {/* Astre : soleil le jour, lune la nuit */}
-      {!isVoid && (
+      {!noSky && (
         <div
           className="absolute rounded-full transition-all duration-[2000ms]"
           style={{
@@ -76,7 +84,7 @@ export default function Background({ biome, phase }: Props) {
       )}
 
       {/* Étoiles la nuit (coupées en mode réduit : animation GPU permanente) */}
-      {night && !isVoid && !reduced &&
+      {night && !noSky && !reduced &&
         stars.map((st, i) => (
           <span
             key={i}

@@ -17,6 +17,7 @@ import { BIOMES } from './biomes';
 const BIOME_RESOURCE: Record<string, string> = {
   forest: 'dryad_leaf', plains: 'wildflower', mountains: 'iron_ore',
   desert: 'sun_shard', swamp: 'bog_root', volcano: 'lava_crystal', crypt: 'crypt_shard', frozen: 'crystal',
+  skyreach: 'sky_iron', cradle: 'dawn_shard',
 };
 
 // Seuil : en dessous, le biome est « bas niveau » pour un boss end-game.
@@ -638,7 +639,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       }
       if (end > 0 && end <= now) {
         // Collecte : ressource représentative du biome ciblé + or.
-        const biomeRes: Record<string, string> = { forest: 'dryad_leaf', plains: 'wildflower', mountains: 'mithril_ore', desert: 'sun_shard', swamp: 'bog_root', volcano: 'lava_crystal', crypt: 'crypt_shard', frozen: 'crystal' };
+        const biomeRes: Record<string, string> = { forest: 'dryad_leaf', plains: 'wildflower', mountains: 'mithril_ore', desert: 'sun_shard', swamp: 'bog_root', volcano: 'lava_crystal', crypt: 'crypt_shard', frozen: 'crystal', skyreach: 'sky_iron', cradle: 'dawn_shard' };
         const res = biomeRes[p!.expeditionBiome ?? p!.biome] ?? 'herb';
         const famLvl = 1 + Math.floor(Object.keys(p!.familiars ?? {}).length);
         const qty = 3 + famLvl;
@@ -700,9 +701,14 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       break;
 
     case 'prestige': {
-      // Rituel secret : uniquement depuis les Abysses (biome 'frozen').
-      if (p!.biome !== 'frozen') {
-        ctx.toast('Une force obscure te retient... il faut être au cœur des Abysses.', 'bad');
+      // Rituel secret : uniquement depuis la DERNIÈRE zone du jeu.
+      // ⚠️ C'était `frozen` (les Abysses) tant qu'elles étaient le bout du
+      // chemin. Deux zones ont été ajoutées derrière : laisser la porte sur
+      // `frozen` aurait mis le combat de fin de jeu au milieu du parcours, et
+      // `computeAscensionBoss` (qui se calibre sur le meilleur équipement
+      // existant) aurait opposé un boss de niveau 50 à un joueur de 38.
+      if (p!.biome !== 'cradle') {
+        ctx.toast('Une force obscure te retient... il faut être au cœur du Berceau du Monde.', 'bad');
         break;
       }
       const cd = (p!.ascensionCooldownUntil ?? 0) - Date.now();

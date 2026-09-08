@@ -256,7 +256,7 @@ function dungeonWinrate(mkParty: () => PlayerState[], def: any, np: number, avgL
 
 // ══════════ ANALYSES (avec skills) ══════════
 const results: any = {};
-const levels = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+const levels = [5, 10, 15, 20, 25, 30, 35, 40, 42, 44, 46, 48, 50];
 function gauntlet(lvl: number): Mon { return { hp: Math.round(2500 + lvl * 260), atk: Math.round(60 + lvl * 8.5), def: Math.round(20 + lvl * 1.6), name: 'Gardien', element: 'neutral' }; }
 
 // 1) Classes Nv.50 maxé vs boss d'attrition — AVEC skills+potions
@@ -270,7 +270,7 @@ for (const c of CLASS_LIST) {
 results.classes = classRows;
 
 // 2) Chasse : référence archer craft, par niveau (AVEC skills)
-const biomeMin: Record<string, number> = { forest: 1, plains: 3, mountains: 8, desert: 14, swamp: 20, volcano: 24, crypt: 30, frozen: 38 };
+const biomeMin: Record<string, number> = { forest: 1, plains: 3, mountains: 8, desert: 14, swamp: 20, volcano: 24, crypt: 30, frozen: 38, skyreach: 42, cradle: 46 };
 // ⚠️ La référence ascensionne au Nv.20 (`played`). Avant, elle restait Archer de
 // BASE jusqu'au Nv.50 — or la base Archer est la classe la plus faible du jeu à
 // 50 (WR 1% contre le boss d'attrition, cf. tableau des classes) parce que

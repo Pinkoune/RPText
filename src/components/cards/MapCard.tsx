@@ -14,9 +14,13 @@ const POS: Record<BiomeId, { x: number; y: number }> = {
   volcano: { x: 48, y: 36 },
   crypt: { x: 82, y: 24 },
   frozen: { x: 54, y: 12 },
+  // Les deux zones de fin remontent encore : l'Abysse n'est plus le sommet du
+  // chemin, elle en devient l'avant-dernière étape.
+  skyreach: { x: 22, y: 7 },
+  cradle: { x: 60, y: 2 },
 };
 
-const ORDER: BiomeId[] = ['forest', 'plains', 'mountains', 'desert', 'swamp', 'volcano', 'crypt', 'frozen'];
+const ORDER: BiomeId[] = ['forest', 'plains', 'mountains', 'desert', 'swamp', 'volcano', 'crypt', 'frozen', 'skyreach', 'cradle'];
 
 /** Chemin lissé (spline Catmull-Rom → Bézier) passant par CHAQUE région. */
 function smoothPath(ids: BiomeId[]): string {

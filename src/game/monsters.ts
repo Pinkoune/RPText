@@ -14,7 +14,11 @@ export const MONSTERS: MonsterDef[] = [
 
   // ── Montagnes ──
   { id: 'yeti', name: 'Yéti', hp: 220, atk: 35, def: 12, xp: 90, gold: [30, 60], biomes: ['mountains'], loot: { frost_shard: 0.4, hi_potion: 0.08 , repair_kit: 0.05 , upgrade_matrix: 0.01 }, emoji: '🦣', element: 'frost', dmgType: 'physical', weaknesses: ['magical'] },
-  { id: 'wraith', name: 'Spectre des cimes', hp: 180, atk: 45, def: 8, xp: 110, gold: [25, 55], biomes: ['mountains'], phases: ['night'], loot: { frost_shard: 0.5, void_dust: 0.1 , repair_kit: 0.05 , upgrade_matrix: 0.01 }, emoji: '👻', element: 'dark', dmgType: 'magical', weaknesses: ['magical'], resistances: ['physical'] },
+  // ⚠️ `star_fragment` n'avait AUCUNE source dans tout le jeu (ni récolte, ni
+  // loot, ni boutique), ce qui rendait le Bâton lunaire (craft Nv.11)
+  // définitivement infabricable. Posé ici : monstre de montagne, de nuit, et
+  // l'objet dit « brille doucement dans l'obscurité ».
+  { id: 'wraith', name: 'Spectre des cimes', hp: 180, atk: 45, def: 8, xp: 110, gold: [25, 55], biomes: ['mountains'], phases: ['night'], loot: { frost_shard: 0.5, star_fragment: 0.3, void_dust: 0.1 , repair_kit: 0.05 , upgrade_matrix: 0.01 }, emoji: '👻', element: 'dark', dmgType: 'magical', weaknesses: ['magical'], resistances: ['physical'] },
   { id: 'golem', name: 'Golem de pierre', hp: 350, atk: 25, def: 20, xp: 120, gold: [35, 70], biomes: ['mountains'], loot: { stone: 0.8, iron_ore: 0.5, iron_ingot: 0.1 , repair_kit: 0.05 , upgrade_matrix: 0.01 }, emoji: '🪨', element: 'earth', dmgType: 'physical', resistances: ['physical'], weaknesses: ['magical'] },
 
   // ── Désert ──
@@ -44,6 +48,27 @@ export const MONSTERS: MonsterDef[] = [
   { id: 'voidling', name: 'Rejeton du vide', hp: 1300, atk: 140, def: 40, xp: 650, gold: [200, 380], biomes: ['frozen'], loot: { void_dust: 0.6, void_reaver: 0.03, hi_potion: 0.2 , repair_kit: 0.05 , upgrade_matrix: 0.01 }, emoji: '🕳️', element: 'dark', dmgType: 'magical', resistances: ['magical'], weaknesses: ['physical'] },
   { id: 'shadow_stalker', name: "Traqueur d'Ombres", hp: 1150, atk: 160, def: 25, xp: 700, gold: [260, 430], biomes: ['frozen'], phases: ['night', 'dusk'], loot: { void_dust: 0.8, repair_kit: 0.05, upgrade_matrix: 0.05 }, emoji: '🌑', element: 'dark', dmgType: 'physical', resistances: ['physical'], weaknesses: ['magical'] },
   { id: 'abyssal_horror', name: 'Horreur Abyssale', hp: 1700, atk: 130, def: 55, xp: 850, gold: [320, 600], biomes: ['frozen'], loot: { void_dust: 0.9, void_reaver: 0.05, upgrade_matrix: 0.08, phoenix_feather: 0.02 }, emoji: '👁️‍🗨️', element: 'dark', dmgType: 'magical', resistances: ['magical'], weaknesses: ['physical'] },
+
+  // ── Cieux Déchirés (skyreach, niv.42) ──
+  // Élément dominant `wind` : rien dans `getElementMult` ne bat le vent sauf le
+  // feu, donc aucune arme de fin de jeu n'a d'avantage gratuit ici — la zone se
+  // gagne aux stats, pas au contre élémentaire. Un `light` (le Séraphin) casse
+  // l'uniformité et punit une armure `dark`.
+  { id: 'storm_harpy', name: 'Harpie d\'orage', hp: 1250, atk: 140, def: 26, xp: 1000, gold: [380, 650], biomes: ['skyreach'], loot: { storm_core: 0.45, sky_iron: 0.2, hi_potion: 0.2, repair_kit: 0.05 }, emoji: '🦅', element: 'wind', dmgType: 'physical', weaknesses: ['magical'] },
+  { id: 'thunder_djinn', name: 'Djinn de foudre', hp: 1500, atk: 132, def: 38, xp: 1100, gold: [400, 700], biomes: ['skyreach'], loot: { storm_core: 0.55, zephyr_bloom: 0.25, upgrade_matrix: 0.03 }, emoji: '🌀', element: 'wind', dmgType: 'magical', resistances: ['magical'], weaknesses: ['physical'] },
+  { id: 'sky_leviathan', name: 'Léviathan des cimes', hp: 1500, atk: 120, def: 46, xp: 1150, gold: [420, 720], biomes: ['skyreach'], loot: { sky_iron: 0.6, storm_core: 0.2, repair_kit: 0.05 }, emoji: '🐋', element: 'wind', dmgType: 'physical', resistances: ['physical'], weaknesses: ['magical'] },
+  { id: 'lightning_seraph', name: 'Séraphin de foudre', hp: 1400, atk: 143, def: 32, xp: 1200, gold: [450, 760], biomes: ['skyreach'], phases: ['dawn', 'day'], loot: { zephyr_bloom: 0.5, storm_core: 0.3, phoenix_feather: 0.015 }, emoji: '😇', element: 'light', dmgType: 'magical', resistances: ['magical'], weaknesses: ['physical'] },
+  { id: 'tempest_sovereign', name: 'Souverain de la Tempête', hp: 1600, atk: 138, def: 50, xp: 1900, gold: [900, 1500], biomes: ['skyreach'], loot: { boss_soul: 0.02, storm_core: 0.9, sky_iron: 0.6, upgrade_matrix: 0.06 }, emoji: '⛈️', element: 'wind', dmgType: 'physical', resistances: ['physical'], weaknesses: [] },
+
+  // ── Berceau du Monde (cradle, niv.46) — DERNIÈRE zone ──
+  // Volontairement MIXTE en élément (light / neutral / dark pour le gardien) :
+  // aucune armure ne peut être bonne contre tout le Berceau, ce qui justifie
+  // que l'armure du palier final n'ait pas d'élément (cf. `primordial_aegis`).
+  { id: 'dawn_watcher', name: 'Veilleur de l\'Aube', hp: 1550, atk: 145, def: 36, xp: 1600, gold: [600, 1000], biomes: ['cradle'], loot: { dawn_shard: 0.5, origin_ash: 0.25, hi_potion: 0.25 }, emoji: '👁️', element: 'light', dmgType: 'magical', resistances: ['magical'], weaknesses: ['physical'] },
+  { id: 'origin_golem', name: 'Golem d\'Origine', hp: 1700, atk: 128, def: 50, xp: 1750, gold: [640, 1050], biomes: ['cradle'], loot: { dawn_shard: 0.7, sky_iron: 0.3, upgrade_matrix: 0.05 }, emoji: '🗿', element: 'light', dmgType: 'physical', resistances: ['physical'], weaknesses: ['magical'] },
+  { id: 'the_unmade', name: 'L\'Informe', hp: 1600, atk: 150, def: 33, xp: 1800, gold: [680, 1100], biomes: ['cradle'], loot: { origin_ash: 0.6, void_dust: 0.3, upgrade_matrix: 0.04 }, emoji: '🫧', element: 'neutral', dmgType: 'magical', weaknesses: ['physical'] },
+  { id: 'first_flame', name: 'Première Flamme', hp: 1500, atk: 148, def: 40, xp: 1850, gold: [700, 1150], biomes: ['cradle'], phases: ['dusk', 'night'], loot: { origin_ash: 0.45, world_seed: 0.06, phoenix_feather: 0.02 }, emoji: '🔥', element: 'light', dmgType: 'magical', resistances: ['magical'], weaknesses: ['physical'] },
+  { id: 'world_warden', name: 'Gardien du Berceau', hp: 1900, atk: 144, def: 54, xp: 2800, gold: [1600, 2600], biomes: ['cradle'], loot: { boss_soul: 0.03, world_seed: 0.35, dawn_shard: 0.9, origin_ash: 0.7, upgrade_matrix: 0.08 }, emoji: '🕯️', element: 'dark', dmgType: 'physical', resistances: ['physical'], weaknesses: [] },
 ];
 
 /** Map of bait items to the monster they attract */

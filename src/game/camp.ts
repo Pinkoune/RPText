@@ -21,6 +21,7 @@ const BIOME_RES: Record<string, string> = {
   forest: 'dryad_leaf', plains: 'wildflower', mountains: 'iron_ore',
   desert: 'sun_shard', swamp: 'bog_root', volcano: 'lava_crystal',
   crypt: 'crypt_shard', frozen: 'crystal',
+  skyreach: 'sky_iron', cradle: 'dawn_shard',
 };
 
 export interface CampYield {

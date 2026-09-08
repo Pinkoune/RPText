@@ -218,6 +218,16 @@ export const ITEMS: Record<string, ItemDef> = {
   bone_dust: { id: 'bone_dust', name: 'Poussière d\'ossements', icon: '🦴', rarity: 'common', slot: 'material', value: 8, desc: 'Reste calciné des anciens occupants des lieux.' },
   wraith_essence: { id: 'wraith_essence', name: 'Essence spectrale', icon: '👻', rarity: 'epic', slot: 'material', value: 150, desc: 'Fragment d\'âme errante, encore froid.' },
 
+  // ── Matériaux des Cieux Déchirés (niv.42) ──
+  storm_core: { id: 'storm_core', name: 'Cœur d\'orage', icon: '⚡', rarity: 'epic', slot: 'material', value: 220, desc: 'Un éclair refermé sur lui-même. Il grésille encore.' },
+  sky_iron: { id: 'sky_iron', name: 'Fer céleste', icon: '🪨', rarity: 'rare', slot: 'material', value: 140, desc: 'Métal arraché à un éclat du monde en chute libre.' },
+  zephyr_bloom: { id: 'zephyr_bloom', name: 'Fleur de zéphyr', icon: '🌬️', rarity: 'rare', slot: 'material', value: 120, desc: 'Ne pousse que là où le vent ne retombe jamais.' },
+
+  // ── Matériaux du Berceau du Monde (niv.46, dernière zone) ──
+  dawn_shard: { id: 'dawn_shard', name: 'Éclat d\'aube', icon: '✨', rarity: 'epic', slot: 'material', value: 300, desc: 'Un morceau du tout premier matin.' },
+  origin_ash: { id: 'origin_ash', name: 'Cendre d\'origine', icon: '🕯️', rarity: 'epic', slot: 'material', value: 260, desc: 'Ce qu\'il reste de ce qui n\'a jamais été achevé.' },
+  world_seed: { id: 'world_seed', name: 'Graine-monde', icon: '🌱', rarity: 'legendary', slot: 'material', value: 900, desc: 'Contient un monde entier qui n\'a pas encore eu lieu.' },
+
   // ── Ressources volcaniques (biome volcano, niv.24) ──
   lava_crystal: { id: 'lava_crystal', name: 'Cristal de lave', icon: '🔥', rarity: 'rare', slot: 'material', value: 70, desc: 'Roche en fusion figée, chaude au toucher.' },
   ember_stone: { id: 'ember_stone', name: 'Pierre ardente', icon: '🪨', rarity: 'rare', slot: 'material', value: 65, desc: 'Pulse d\'une chaleur volcanique.' },
@@ -286,6 +296,38 @@ export const ITEMS: Record<string, ItemDef> = {
   // été un handicap là où on la porte. Mesuré : -36 points de winrate en Abysses.
   // Les ARMES du palier restent `light` (+50% contre ces mêmes monstres).
   primordial_aegis: { id: 'primordial_aegis', name: 'Égide primordiale', icon: '🛡️', rarity: 'legendary', slot: 'armor', def: 64, hp: 300, value: 11000, desc: 'Ce qui restait du monde avant qu\'il ne se brise.', maxDurability: 1500, reqLevel: 48 },
+
+  // ── Palier « Tempête » (niv.43, ressources des Cieux Déchirés) ──
+  // Comble le trou entre Givre du Vide (40) et Primordial (46) — six niveaux
+  // qui, avant les deux nouvelles zones, n'avaient rien à fabriquer.
+  // Élément `wind` : dans `getElementMult` seul le feu bat le vent, donc cette
+  // armure n'est punie nulle part en fin de jeu (l'Abysse est `dark`, le
+  // Berceau mêle `light` et `neutral`).
+  tempest_edge: { id: 'tempest_edge', name: 'Tranchant de Tempête', icon: '⚔️', rarity: 'legendary', slot: 'weapon', atk: 86, classes: ['warrior'], value: 6200, desc: 'La foudre y est restée coincée.', element: 'wind', dmgType: 'physical', maxDurability: 880, reqLevel: 43 },
+  tempest_bow: { id: 'tempest_bow', name: 'Arc de Tempête', icon: '🏹', rarity: 'legendary', slot: 'weapon', atk: 82, classes: ['archer'], value: 6000, desc: 'Ses flèches partent avant qu\'on entende le tonnerre.', element: 'wind', dmgType: 'physical', maxDurability: 880, reqLevel: 43 },
+  tempest_scepter: { id: 'tempest_scepter', name: 'Sceptre de Tempête', icon: '🪄', rarity: 'legendary', slot: 'weapon', atk: 84, classes: ['mage'], value: 6300, desc: 'Un orage entier tient dans sa pierre.', element: 'wind', dmgType: 'magical', maxDurability: 880, reqLevel: 43 },
+  tempest_staff: { id: 'tempest_staff', name: 'Bâton de Tempête', icon: '🌬️', rarity: 'legendary', slot: 'weapon', atk: 78, hp: 190, classes: ['healer'], value: 6400, desc: 'Le vent qu\'il lève referme les plaies.', element: 'wind', dmgType: 'magical', maxDurability: 880, reqLevel: 43 },
+  storm_plate: { id: 'storm_plate', name: 'Harnois d\'Orage', icon: '🛡️', rarity: 'legendary', slot: 'armor', def: 58, hp: 270, value: 6600, desc: 'La foudre la contourne, par habitude.', element: 'wind', maxDurability: 1400, reqLevel: 43 },
+  storm_sigil: { id: 'storm_sigil', name: 'Sceau d\'Orage', icon: '⚡', rarity: 'legendary', slot: 'trinket', atk: 14, def: 10, hp: 130, value: 5200, desc: 'Grésille dès qu\'on l\'approche du métal.', element: 'wind', maxDurability: 560, reqLevel: 43 },
+
+  // ── Palier « Genèse » (niv.48-50, ressources du Berceau du Monde) ──
+  // Le DERNIER palier du jeu. Coûte des Graines-monde, qui ne tombent que dans
+  // la dernière zone (et surtout sur son gardien) : c'est la seule marche qui
+  // demande d'avoir vraiment habité le Berceau, pas seulement de l'avoir vu.
+  //
+  // ⚠️ Armes en `light` comme le palier Primordial, et pour la même raison :
+  // elles visent **Le Néant Originel**, qui est `dark` (+50%). Elles n'ont donc
+  // AUCUN bonus contre les monstres `light` du Berceau lui-même — c'est assumé,
+  // ce palier est un investissement pour le rituel, pas un outil de farm.
+  genesis_edge: { id: 'genesis_edge', name: 'Tranchant de Genèse', icon: '⚔️', rarity: 'legendary', slot: 'weapon', atk: 104, classes: ['warrior'], value: 16000, desc: 'Tranche ce qui n\'a pas encore été décidé.', element: 'light', dmgType: 'physical', maxDurability: 1000, reqLevel: 48 },
+  genesis_bow: { id: 'genesis_bow', name: 'Arc de Genèse', icon: '🏹', rarity: 'legendary', slot: 'weapon', atk: 100, classes: ['archer'], value: 15600, desc: 'Vise un point qui n\'existe pas encore.', element: 'light', dmgType: 'physical', maxDurability: 1000, reqLevel: 48 },
+  genesis_scepter: { id: 'genesis_scepter', name: 'Sceptre de Genèse', icon: '🪄', rarity: 'legendary', slot: 'weapon', atk: 102, classes: ['mage'], value: 16400, desc: 'La magie avant qu\'on lui donne des règles.', element: 'light', dmgType: 'magical', maxDurability: 1000, reqLevel: 48 },
+  genesis_staff: { id: 'genesis_staff', name: 'Bâton de Genèse', icon: '🕯️', rarity: 'legendary', slot: 'weapon', atk: 96, hp: 230, classes: ['healer'], value: 16800, desc: 'Rend aux vivants ce qui ne leur avait pas encore été pris.', element: 'light', dmgType: 'magical', maxDurability: 1000, reqLevel: 48 },
+  // ⚠️ SANS élément, même raison que l'Égide primordiale — et elle est plus
+  // forte ici : le Berceau mêle `light`, `neutral` et un gardien `dark`, donc
+  // AUCUN élément d'armure n'y serait sûr. Le rituel qui suit est `dark`.
+  genesis_aegis: { id: 'genesis_aegis', name: 'Égide de Genèse', icon: '🛡️', rarity: 'legendary', slot: 'armor', def: 72, hp: 340, value: 19000, desc: 'La première chose que le monde ait su protéger.', maxDurability: 1600, reqLevel: 48 },
+  genesis_seal: { id: 'genesis_seal', name: 'Sceau de Genèse', icon: '🌱', rarity: 'legendary', slot: 'trinket', atk: 18, def: 16, hp: 150, value: 14000, desc: 'Un monde entier y attend son tour.', maxDurability: 620, reqLevel: 48 },
 };
 /**
  * Tous les consommables de soin (slot consumable + hp défini), triés du moins

@@ -619,7 +619,89 @@ tous réels, tous confirmés dans le code.
   joueur courant **par pseudo** — les pseudos ne sont pas uniques — passé à l'UID.
   ⚠️ **Non vérifiable en local** (présence = RTDB) : à retester en ligne.
 
-### Trou de contenu 38→50 — À FAIRE (constat de bêta, chiffré, rien de codé)
+### Deux zones de fin (fait, C) — le trou 38→50 est comblé
+
+Réponse au constat ci-dessous. **`frozen` n'est PLUS la dernière zone.**
+
+| Zone | Niv. | Élément dominant | Rôle |
+|---|---|---|---|
+| Abysses du Vide (`frozen`) | 38 | dark | entrée du dernier acte |
+| **Cieux Déchirés** (`skyreach`) ⛈️ | **42** | wind (+1 light) | îlots flottants, orage permanent |
+| **Berceau du Monde** (`cradle`) 🕯️ | **46** | light + neutral + gardien dark | **dernière zone**, porte le Rituel |
+
+- **Rituel du Néant déplacé** : `commands.ts` teste `biome === 'cradle'` (et non
+  plus `'frozen'`). ⚠️ Laisser la porte sur `frozen` aurait mis le combat de fin
+  de jeu au milieu du parcours, avec un boss calibré par `computeAscensionBoss`
+  sur le meilleur équipement du jeu opposé à un joueur de niveau 38.
+- **Deux paliers de craft** : « Tempête » Nv.43 (6 objets, armes 78-86) et
+  « Genèse » Nv.48-50 (6 objets, armes 96-104, la seule marche qui coûte des
+  **Graines-monde**, exclusives à la dernière zone). Courbe d'armes :
+  46 (22) → 62 (30) → 68 (34) → 78 (40) → **86 (43)** → 92 (46) → **104 (48)**.
+- ⚠️ **`genesis_aegis` n'a PAS d'élément**, comme `primordial_aegis` et pour une
+  raison encore plus forte : le Berceau mêle `light`, `neutral` et un gardien
+  `dark`, donc AUCUN élément d'armure n'y serait sûr, et le rituel qui suit est
+  `dark`. Les ARMES du palier restent `light` (+50% contre Le Néant) — elles
+  n'ont donc aucun bonus contre les monstres du Berceau lui-même, c'est assumé :
+  ce palier vise le rituel, pas le farm.
+
+**Trois erreurs de calibrage que j'ai commises, mesurées puis corrigées** — à ne
+pas refaire pour une zone future :
+1. **La DEF, pas l'ATK.** Premier jet : 0% de victoire partout. Cause : DEF de
+   monstre ≈ ATK du joueur, or les dégâts sont `atk - def` **planchés à 1** — le
+   Gardien du Berceau demandait **16 655 coups**. Exactement le piège déjà
+   documenté pour `dungeonService`. Règle : **DEF scalée ≤ ~60% de l'ATK scalée
+   du joueur** (au Nv.48 la référence en gear de craft a ATK 457, pas 700).
+2. **Double résistance = intouchable.** `resistances: ['physical','magical']`
+   divise TOUS les dégâts par deux ; cumulée à une grosse DEF elle mettait les
+   deux mini-boss à 0% pour les deux types de dégâts. Passés à une résistance
+   unique. (`lava_titan`/`crypt_warden` gardent la double, mais ils ont une DEF
+   bien plus basse.)
+3. **Ne pas juger sur une seule référence.** Mesuré à l'archer seul, les Cieux
+   semblaient équilibrés ; au mage ils sortaient à 57% contre 28% pour l'Abysse,
+   soit une zone plus TARDIVE mais plus FACILE. Corrigé en donnant au Séraphin
+   une résistance magique.
+
+Résultat mesuré (chasse, gear de craft, sans saison) :
+frozen 34% → **skyreach 18-21%** → **cradle 17-21%** pour un archer ;
+28% → 48% → 49% pour un mage (ces zones favorisent le magique, deux de leurs
+tanks résistant au physique — `rune_shift` existe pour ça).
+
+⚠️ Le **contrat du Rituel est préservé** alors que `bestGear()` a intégré le
+palier Genèse (le boss s'est donc durci tout seul) : `0% / 36% / 100%` par
+profil, contre `0% / 37% / 100%` avant ce lot. Rien à retoucher dans
+`ascension.ts` — j'ai failli y baisser `s.atk * 36` sur une **médiane de 5% qui
+était un artefact de ma propre extraction** (mon `grep` comptait le « 5 » de
+« ★5 » comme une valeur). Vérifier l'outil de mesure avant de toucher au jeu.
+
+### Recettes débloquées (fait, C) — le craft ne dépend plus d'un biome hors de portée
+
+Audit de craftabilité (matériau → premier biome qui le donne, vs niveau
+d'utilisation de l'objet) : **14 recettes en défaut**, bien au-delà de ce que la
+note d'origine signalait.
+
+- **7 recettes exigeaient `crystal`**, exclusif à l'Abysse (Nv.38), à des
+  niveaux de craft 4 à 27 — dont **trois armes de soigneur** (Bâton lunaire,
+  Bâton de cristal, Sceptre Divin) : toute la ligne mid-game du soigneur était
+  infabricable avant la dernière zone, là où mage/guerrier/archer avaient des
+  options à 30-32 ATK au Nv.20. Remplacé par des matériaux de niveau cohérent
+  (`frost_shard` Nv.8, `obsidian` Nv.14, `sun_orb` Nv.14, `ember_core` Nv.14).
+- **`star_fragment` n'avait AUCUNE source dans le jeu** — ni récolte, ni loot, ni
+  boutique. Le Bâton lunaire était donc infabricable *tout court*. Posé sur le
+  Spectre des cimes (montagne, de nuit — l'objet dit « brille doucement dans
+  l'obscurité »).
+- **`stone` ne se minait que dans les montagnes (Nv.8)** alors que la Hache de
+  pierre est une recette de niveau 1 : infabricable pendant toute la période où
+  elle sert. Ajoutée à la cueillette en forêt.
+
+Reste 3 écarts, **volontaires** : Eau de cactus, Croc venimeux et Potion des
+cavernes sont des *spécialités régionales* (section dédiée dans `crafting.ts`) —
+leur intérêt est justement d'être débloquées en atteignant leur région.
+
+⚠️ L'audit se rejoue : il reconstruit la provenance de chaque matériau depuis
+`GATHER_SKILLS` + les `loot` de `MONSTERS`, puis propage à travers les recettes.
+À relancer après tout ajout d'objet.
+
+### Trou de contenu 38→50 — le constat de bêta qui a déclenché le lot ci-dessus
 
 Retour du testeur, validé par l'utilisateur : « la courbe est moins frustrante
 qu'avant, c'est assez uniforme et harmonisé entre la récolte, la forge et l'XP
@@ -634,30 +716,30 @@ problème n'est pas la pente, c'est ce qu'il y a à voir pendant qu'on la monte.
 Part du grind 1→50 par « ère de biome » (courbe v5 actuelle, calculée sur
 `xpToNext`) :
 
+Répartition **avant** l'ajout des deux zones :
+
 | Ère | Niveaux | Durée | Part du grind |
 |---|---|---|---|
 | Forêt → Caldeira (6 biomes) | 1→30 | 29 niv. | **6,3%** |
 | Nécropole | 30→38 | 8 niv. | 16,0% |
 | **Abysses** | **38→50** | **12 niv.** | **77,6%** |
 
-Le dernier palier est **à la fois le plus long en niveaux et les trois quarts du
-jeu en temps**, dans une seule zone. Tous les autres intervalles font 2 à 8
-niveaux pour ≤16%. Le craft, lui, suit déjà jusqu'au bout (paliers Givre du Vide
-Nv.40 et Primordial Nv.46-48, cf. section end-game) : **c'est bien un trou de
-ZONES, pas d'équipement.**
+Le dernier palier était **à la fois le plus long en niveaux et les trois quarts
+du jeu en temps**, dans une seule zone, quand tous les autres intervalles font
+2 à 8 niveaux pour ≤16%. Le craft, lui, suivait déjà jusqu'au bout : c'était bien
+un trou de ZONES, pas d'équipement. Les Cieux (42) et le Berceau (46) coupent
+désormais cette tranche en trois.
 
-⚠️ **Contrainte à respecter avant d'insérer quoi que ce soit après le Nv.38** :
-la porte du Rituel du Néant est codée en dur sur `biome === 'frozen'`
-(`commands.ts`), et `computeAscensionBoss` suppose que l'Abysse est le bout du
-jeu. Ajouter un biome au-delà de 38 sans déplacer cette porte mettrait le rituel
-de fin de jeu dans une zone intermédiaire. Deux découpages possibles :
-un biome vers Nv.42 + un vers Nv.46 (l'Abysse redevient un palier de passage,
-la porte suit le dernier), ou l'Abysse scindée en deux zones distinctes.
-Annexes à ne pas oublier pour tout nouveau biome (liste tirée de l'ajout de la
-Nécropole) : `types.ts`, `biomes.ts`, `MapCard` POS/ORDER, `monsters.ts` +
+**Annexes à toucher pour tout nouveau biome** (liste vérifiée sur cet ajout) :
+`types.ts` (`BiomeId`), `biomes.ts`, `MapCard` POS + ORDER, `monsters.ts` +
 `monsterIcons.ts`, `gathering.ts`, `items.ts` + `crafting.ts` + `icons.ts`,
-`Scenery.tsx`, `events.ts`, `BIOME_RESOURCE`/`biomeRes` (commands.ts, ×2) et le
-succès Globe-trotteur (`achievements.ts`, `goal`).
+`Scenery.tsx`, `Background.tsx` si la zone n'a pas d'astre, `events.ts`,
+`BIOME_RESOURCE` (commands.ts) **et** `biomeRes` (commands.ts, second endroit)
+**et** `BIOME_RES` (camp.ts) — trois tables séparées qui font la même chose —,
+et le succès Globe-trotteur (`achievements.ts`, `goal`).
+⚠️ `Background.tsx` : `isVoid` (le trou noir violet) est propre à l'**Abysse** ;
+`noSky` (pas d'astre) vaut pour l'Abysse **et** le Berceau. Les avoir confondus
+mettait le trou noir de l'Abysse dans le ciel doré du Berceau — vu en capture.
 
 ## Amusement — 3 features (fait, C)
 

@@ -141,13 +141,66 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     emoji: '🌌',
     minLevel: 38,
     xpMult: 2.6,
-    desc: 'Le néant absolu où la lumière s\'éteint. Réservé aux vétérans cherchant à affronter les ombres.',
+    desc: 'Le néant absolu où la lumière s\'éteint. L\'entrée du dernier acte, pas sa fin.',
     accent: '#a855f7',
     bg: {
       dawn: ['#0f0524', '#170b3b', '#2e1065'],
       day: ['#0f0524', '#170b3b', '#2e1065'],
       dusk: ['#0f0524', '#170b3b', '#2e1065'],
       night: ['#0f0524', '#170b3b', '#2e1065'],
+    },
+  },
+
+  // ── Les deux zones de fin ────────────────────────────────────────────────
+  // Ajoutées parce que l'Abysse couvrait à elle seule 38→50, soit 77,6% du
+  // grind total dans UNE zone (les six premiers biomes s'en partagent 6,3%).
+  // Retour de bêta : « ça motive pas mal de découvrir les nouveaux biomes ».
+  //
+  // Choix de palette délibéré : après la Nécropole (sarcelle sombre) et
+  // l'Abysse (violet-noir), une troisième zone sombre aurait donné l'impression
+  // de ne pas avoir changé d'endroit. Les Cieux sont électriques et clairs,
+  // le Berceau est presque blanc.
+  skyreach: {
+    id: 'skyreach',
+    name: 'Cieux Déchirés',
+    emoji: '⛈️',
+    minLevel: 42,
+    xpMult: 3.0,
+    desc: 'Au-dessus de l\'Abysse, le ciel s\'est fendu. Des éclats du monde y flottent dans un orage qui ne finit jamais.',
+    accent: '#fde047',
+    bg: {
+      dawn: ['#1b2440', '#3d4f7a', '#8aa4d6'],
+      day: ['#243055', '#4a5f8f', '#9fb6e0'],
+      dusk: ['#1a1f38', '#3a3560', '#6b5a8a'],
+      night: ['#0c1020', '#1a2038', '#2b3555'],
+    },
+    fg: {
+      dawn: ['#151b30', '#26314f'],
+      day: ['#1a2340', '#2d3a5e'],
+      dusk: ['#12162a', '#232043'],
+      night: ['#080b16', '#131829'],
+    },
+  },
+  cradle: {
+    id: 'cradle',
+    name: 'Berceau du Monde',
+    emoji: '🕯️',
+    minLevel: 46,
+    xpMult: 3.4,
+    desc: 'Là où tout a commencé, et où quelque chose attend de tout défaire. La dernière zone du jeu.',
+    accent: '#fafaf9',
+    // Hors du temps : les quatre phases sont identiques, comme pour l'Abysse.
+    bg: {
+      dawn: ['#1a1712', '#5c5340', '#f0e6cc'],
+      day: ['#1a1712', '#5c5340', '#f0e6cc'],
+      dusk: ['#1a1712', '#5c5340', '#f0e6cc'],
+      night: ['#1a1712', '#5c5340', '#f0e6cc'],
+    },
+    fg: {
+      dawn: ['#171410', '#3d3629'],
+      day: ['#171410', '#3d3629'],
+      dusk: ['#171410', '#3d3629'],
+      night: ['#171410', '#3d3629'],
     },
   },
 };

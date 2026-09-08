@@ -99,6 +99,18 @@ export const GATHER_SKILLS: Record<GatherSkillId, GatherSkill> = {
         { id: 'stone', weight: 45, min: 1, max: 2 },
         { id: 'crystal', weight: 55, min: 1, max: 1, minLvl: 6 },
       ],
+      // Minage dans les Cieux : on casse les éclats du monde qui flottent.
+      skyreach: [
+        { id: 'sky_iron', weight: 50, min: 1, max: 2 },
+        { id: 'storm_core', weight: 30, min: 1, max: 1, minLvl: 12 },
+        { id: 'obsidian', weight: 20, min: 1, max: 1, minLvl: 10 },
+      ],
+      // Minage au Berceau : la roche d'avant le monde.
+      cradle: [
+        { id: 'dawn_shard', weight: 55, min: 1, max: 1 },
+        { id: 'origin_ash', weight: 30, min: 1, max: 2 },
+        { id: 'world_seed', weight: 15, min: 1, max: 1, minLvl: 20 },
+      ],
     },
   },
   fish: {
@@ -130,10 +142,15 @@ export const GATHER_SKILLS: Record<GatherSkillId, GatherSkill> = {
     emoji: '🌿',
     byBiome: {
       forest: [
-        { id: 'herb', weight: 65, min: 1, max: 3 },
+        { id: 'herb', weight: 60, min: 1, max: 3 },
         { id: 'wood', weight: 15, min: 1, max: 1 },
-        { id: 'silk_thread', weight: 10, min: 1, max: 1 },
-        { id: 'mana_bloom', weight: 10, min: 1, max: 1, minLvl: 5 },
+        // La `stone` ne se minait QUE dans les montagnes (Nv.8), or la Hache de
+        // pierre est une recette de niveau 1 : elle était donc infabricable
+        // pendant les sept premiers niveaux, c'est-à-dire pendant toute la
+        // période où elle sert à quelque chose.
+        { id: 'stone', weight: 10, min: 1, max: 2 },
+        { id: 'silk_thread', weight: 8, min: 1, max: 1 },
+        { id: 'mana_bloom', weight: 7, min: 1, max: 1, minLvl: 5 },
       ],
       plains: [
         { id: 'herb', weight: 70, min: 1, max: 2 },
@@ -164,6 +181,16 @@ export const GATHER_SKILLS: Record<GatherSkillId, GatherSkill> = {
       frozen: [
         { id: 'herb', weight: 50, min: 1, max: 1 },
         { id: 'frost_lotus', weight: 50, min: 1, max: 1 },
+      ],
+      skyreach: [
+        { id: 'zephyr_bloom', weight: 55, min: 1, max: 2 },
+        { id: 'herb', weight: 30, min: 1, max: 2 },
+        { id: 'storm_core', weight: 15, min: 1, max: 1, minLvl: 15 },
+      ],
+      cradle: [
+        { id: 'origin_ash', weight: 50, min: 1, max: 2 },
+        { id: 'dawn_shard', weight: 35, min: 1, max: 1, minLvl: 12 },
+        { id: 'world_seed', weight: 15, min: 1, max: 1, minLvl: 22 },
       ],
     },
   },
