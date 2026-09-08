@@ -319,15 +319,15 @@ export const ITEMS: Record<string, ItemDef> = {
   // elles visent **Le Néant Originel**, qui est `dark` (+50%). Elles n'ont donc
   // AUCUN bonus contre les monstres `light` du Berceau lui-même — c'est assumé,
   // ce palier est un investissement pour le rituel, pas un outil de farm.
-  genesis_edge: { id: 'genesis_edge', name: 'Tranchant de Genèse', icon: '⚔️', rarity: 'legendary', slot: 'weapon', atk: 104, classes: ['warrior'], value: 16000, desc: 'Tranche ce qui n\'a pas encore été décidé.', element: 'light', dmgType: 'physical', maxDurability: 1000, reqLevel: 48 },
-  genesis_bow: { id: 'genesis_bow', name: 'Arc de Genèse', icon: '🏹', rarity: 'legendary', slot: 'weapon', atk: 100, classes: ['archer'], value: 15600, desc: 'Vise un point qui n\'existe pas encore.', element: 'light', dmgType: 'physical', maxDurability: 1000, reqLevel: 48 },
-  genesis_scepter: { id: 'genesis_scepter', name: 'Sceptre de Genèse', icon: '🪄', rarity: 'legendary', slot: 'weapon', atk: 102, classes: ['mage'], value: 16400, desc: 'La magie avant qu\'on lui donne des règles.', element: 'light', dmgType: 'magical', maxDurability: 1000, reqLevel: 48 },
-  genesis_staff: { id: 'genesis_staff', name: 'Bâton de Genèse', icon: '🕯️', rarity: 'legendary', slot: 'weapon', atk: 96, hp: 230, classes: ['healer'], value: 16800, desc: 'Rend aux vivants ce qui ne leur avait pas encore été pris.', element: 'light', dmgType: 'magical', maxDurability: 1000, reqLevel: 48 },
+  genesis_edge: { id: 'genesis_edge', name: 'Tranchant de Genèse', icon: '⚔️', rarity: 'mythic', slot: 'weapon', atk: 104, classes: ['warrior'], value: 16000, desc: 'Tranche ce qui n\'a pas encore été décidé.', element: 'light', dmgType: 'physical', maxDurability: 1000, reqLevel: 48 },
+  genesis_bow: { id: 'genesis_bow', name: 'Arc de Genèse', icon: '🏹', rarity: 'mythic', slot: 'weapon', atk: 100, classes: ['archer'], value: 15600, desc: 'Vise un point qui n\'existe pas encore.', element: 'light', dmgType: 'physical', maxDurability: 1000, reqLevel: 48 },
+  genesis_scepter: { id: 'genesis_scepter', name: 'Sceptre de Genèse', icon: '🪄', rarity: 'mythic', slot: 'weapon', atk: 102, classes: ['mage'], value: 16400, desc: 'La magie avant qu\'on lui donne des règles.', element: 'light', dmgType: 'magical', maxDurability: 1000, reqLevel: 48 },
+  genesis_staff: { id: 'genesis_staff', name: 'Bâton de Genèse', icon: '🕯️', rarity: 'mythic', slot: 'weapon', atk: 96, hp: 230, classes: ['healer'], value: 16800, desc: 'Rend aux vivants ce qui ne leur avait pas encore été pris.', element: 'light', dmgType: 'magical', maxDurability: 1000, reqLevel: 48 },
   // ⚠️ SANS élément, même raison que l'Égide primordiale — et elle est plus
   // forte ici : le Berceau mêle `light`, `neutral` et un gardien `dark`, donc
   // AUCUN élément d'armure n'y serait sûr. Le rituel qui suit est `dark`.
-  genesis_aegis: { id: 'genesis_aegis', name: 'Égide de Genèse', icon: '🛡️', rarity: 'legendary', slot: 'armor', def: 72, hp: 340, value: 19000, desc: 'La première chose que le monde ait su protéger.', maxDurability: 1600, reqLevel: 48 },
-  genesis_seal: { id: 'genesis_seal', name: 'Sceau de Genèse', icon: '🌱', rarity: 'legendary', slot: 'trinket', atk: 18, def: 16, hp: 150, value: 14000, desc: 'Un monde entier y attend son tour.', maxDurability: 620, reqLevel: 48 },
+  genesis_aegis: { id: 'genesis_aegis', name: 'Égide de Genèse', icon: '🛡️', rarity: 'mythic', slot: 'armor', def: 72, hp: 340, value: 19000, desc: 'La première chose que le monde ait su protéger.', maxDurability: 1600, reqLevel: 48 },
+  genesis_seal: { id: 'genesis_seal', name: 'Sceau de Genèse', icon: '🌱', rarity: 'mythic', slot: 'trinket', atk: 18, def: 16, hp: 150, value: 14000, desc: 'Un monde entier y attend son tour.', maxDurability: 620, reqLevel: 48 },
 };
 /**
  * Tous les consommables de soin (slot consumable + hp défini), triés du moins
@@ -347,6 +347,20 @@ export const RARITY_COLOR: Record<ItemDef['rarity'], string> = {
   rare: '#5aa6ff',
   epic: '#c46bff',
   legendary: '#ffae42',
+  // Rouge sombre : le seul cran au-dessus du légendaire, porté par le palier
+  // Genèse. Assez clair pour rester lisible en petit sur les fonds noirs des
+  // cartes (l'inventaire écrit les noms en 12px dans cette couleur).
+  mythic: '#e0454f',
+};
+
+/** Nom affiché de la rareté (badge du Wiki). */
+export const RARITY_LABEL: Record<ItemDef['rarity'], string> = {
+  common: 'Commun',
+  uncommon: 'Peu commun',
+  rare: 'Rare',
+  epic: 'Épique',
+  legendary: 'Légendaire',
+  mythic: 'Mythique',
 };
 
 /**

@@ -657,6 +657,41 @@ Réponse au constat ci-dessous. **`frozen` n'est PLUS la dernière zone.**
   n'ont donc aucun bonus contre les monstres du Berceau lui-même, c'est assumé :
   ce palier vise le rituel, pas le farm.
 
+### Rareté Mythique (fait, C)
+
+Cran ajouté **au-dessus de `legendary`** (`types.ts ItemRarity`), rouge sombre
+`#e0454f` (`RARITY_COLOR`), porté par les **6 objets du palier Genèse** et par
+eux seuls. Critère retenu, à tenir si le palier change : *est mythique ce qui se
+fabrique avec une ressource de la DERNIÈRE zone* (Graines-monde). Primordial
+(Nv.46-48) reste légendaire — sinon le cran perd son sens dès le lot suivant.
+
+⚠️ **La rareté est purement cosmétique** : aucun fichier de `game/` ni de
+`firebase/` ne lit `.rarity` (vérifié par `grep`). Elle ne pilote que la couleur
+du nom/de l'icône, l'ordre de tri de l'inventaire et le badge du Wiki. Ajouter
+ce cran ne touche donc **aucun équilibrage**, et le Néant n'a rien à
+recalibrer : `bestGear()` (`ascension.ts`) choisit par **score de stats**, il
+prenait déjà le palier Genèse depuis son ajout.
+
+Deux annexes obligatoires en même temps que le cran, sinon il passe inaperçu ou
+casse un tri : `InventoryCard.RARITY_ORDER` (un cran absent de cette table tombe
+au fond via son `?? 9`) et `RARITY_LABEL`, **nouveau** — la rareté n'était écrite
+en toutes lettres nulle part dans le jeu, elle n'existait que comme couleur du
+nom, donc indevinable. Badge ajouté à la fiche d'objet du Wiki.
+
+### ⚠️ Carte du monde : les positions se RÉPARTISSENT, elles ne s'ajoutent pas
+
+Défaut signalé en capture (« les bulles de la carte sont toutes écrasées »).
+En posant les deux zones de fin au-dessus de l'Abysse (`MapCard.POS`, y 12) sans
+retoucher le reste de l'échelle, elles étaient tombées à **y 7 et y 2** : trois
+pastilles dans les 12% du haut. Or un nœud n'est pas la bulle seule mais
+**bulle + nom + niveau ≈ 86px**, quand 5% de la carte n'en font que ~28.
+Mesuré avant : Abysses ∩ Berceau **44×35px** de chevauchement, le Berceau
+**33px au-dessus du cadre** (coupé par l'`overflow-hidden`), la Forêt à ras du
+bas. Après redistribution des 10 étapes de y 90 à y 10 (pas constant ~8,9%, x
+alterné d'au moins 26%) : **0 chevauchement, 0 nœud hors cadre**.
+⚠️ Ajouter un 11e biome = **rescaler toute la table**, pas empiler un cran de
+plus en haut.
+
 **Trois erreurs de calibrage que j'ai commises, mesurées puis corrigées** — à ne
 pas refaire pour une zone future :
 1. **La DEF, pas l'ATK.** Premier jet : 0% de victoire partout. Cause : DEF de

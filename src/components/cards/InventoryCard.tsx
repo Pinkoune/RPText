@@ -38,7 +38,7 @@ export default function InventoryCard() {
 
   const entries = Object.entries(p.inventory).filter(([id, q]) => item(id)! && q > 0);
 
-  const RARITY_ORDER: Record<string, number> = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
+  const RARITY_ORDER: Record<string, number> = { mythic: 0, legendary: 1, epic: 2, rare: 3, uncommon: 4, common: 5 };
   const filteredEntries = useMemo(() => {
     let list = entries;
     if (group === 'profession') list = entries.filter(([id]) => { const s = item(id)?.slot; return s === 'tool' || s === 'profession_armor'; });

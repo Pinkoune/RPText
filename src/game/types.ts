@@ -22,7 +22,12 @@ export type BiomeId =
 
 export type Phase = 'dawn' | 'day' | 'dusk' | 'night';
 
-export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+// `mythic` est le cran AU-DESSUS de `legendary`, réservé au dernier palier de
+// craft du jeu (Genèse, niv.48-50). ⚠️ La rareté est purement cosmétique : aucun
+// code de `game/` ni de `firebase/` ne lit `.rarity`, elle ne sert qu'à la
+// couleur, au tri de l'inventaire et à l'étiquette du Wiki. Ajouter un cran ne
+// touche donc à AUCUN équilibrage.
+export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 export type ItemSlot = 'weapon' | 'armor' | 'trinket' | 'tool' | 'profession_armor' | 'consumable' | 'material';
 export type Element = 'fire' | 'earth' | 'water' | 'wind' | 'frost' | 'light' | 'dark' | 'neutral';
 export type DamageType = 'physical' | 'magical';

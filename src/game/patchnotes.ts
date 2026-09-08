@@ -40,6 +40,7 @@ export const PATCH_HISTORY: PatchRelease[] = [
           'Les <b>Cieux Déchirés</b> (Nv.42) : au-dessus de l\'Abysse, le ciel s\'est fendu. Des éclats du monde y flottent dans un orage qui ne finit jamais.',
           'Le <b>Berceau du Monde</b> (Nv.46) : là où tout a commencé, et où quelque chose attend de tout défaire. C\'est désormais la <b>dernière zone du jeu</b> — et c\'est là, plus dans l\'Abysse, que se tente le rituel de fin.',
           'Dix monstres inédits, six nouvelles ressources, et deux paliers d\'équipement à fabriquer : <b>Tempête</b> (Nv.43) et <b>Genèse</b> (Nv.48), le dernier du jeu. L\'Égide de Genèse monte à 72 DEF / 340 PV.',
+          'Nouvelle rareté <b style="color:#e0454f">Mythique</b>, un cran au-dessus de Légendaire : elle est réservée au palier Genèse, le seul qui se fabrique avec une ressource de la dernière zone. La rareté de chaque objet est aussi écrite en toutes lettres dans le Wiki (avant, elle n\'existait que comme couleur du nom).',
           'L\'Abysse n\'est plus le bout du chemin : elle en devient l\'entrée. Avant, elle couvrait à elle seule les niveaux 38 à 50 — plus des trois quarts du temps de jeu dans une seule zone.',
         ],
       },
