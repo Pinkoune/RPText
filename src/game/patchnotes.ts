@@ -40,8 +40,24 @@ export const PATCH_HISTORY: PatchRelease[] = [
           'Les <b>Cieux Déchirés</b> (Nv.42) : au-dessus de l\'Abysse, le ciel s\'est fendu. Des éclats du monde y flottent dans un orage qui ne finit jamais.',
           'Le <b>Berceau du Monde</b> (Nv.46) : là où tout a commencé, et où quelque chose attend de tout défaire. C\'est désormais la <b>dernière zone du jeu</b> — et c\'est là, plus dans l\'Abysse, que se tente le rituel de fin.',
           'Dix monstres inédits, six nouvelles ressources, et deux paliers d\'équipement à fabriquer : <b>Tempête</b> (Nv.43) et <b>Genèse</b> (Nv.48), le dernier du jeu. L\'Égide de Genèse monte à 72 DEF / 340 PV.',
-          'Nouvelle rareté <b style="color:#e0454f">Mythique</b>, un cran au-dessus de Légendaire : elle est réservée au palier Genèse, le seul qui se fabrique avec une ressource de la dernière zone. La rareté de chaque objet est aussi écrite en toutes lettres dans le Wiki (avant, elle n\'existait que comme couleur du nom).',
+          'Nouvelle rareté <b style="color:#e0454f">Mythique</b>, un cran au-dessus de Légendaire : elle marque les deux derniers paliers du jeu, <b>Primordial</b> et <b>Genèse</b>. La rareté de chaque objet est aussi écrite en toutes lettres dans le Wiki (avant, elle n\'existait que comme couleur du nom).',
           'L\'Abysse n\'est plus le bout du chemin : elle en devient l\'entrée. Avant, elle couvrait à elle seule les niveaux 38 à 50 — plus des trois quarts du temps de jeu dans une seule zone.',
+        ],
+      },
+      {
+        title: '🌀 La Faille se referme derrière toi',
+        kind: 'balance',
+        items: [
+          'La Faille de la semaine n\'avait <b>aucun cooldown</b> — pas même celui de la chasse — alors qu\'elle rapporte environ <b>neuf fois l\'XP d\'une chasse normale</b> par passage. C\'était de loin la meilleure source d\'XP du jeu, en boucle, quand tous les autres boss invocables sont bridés (mini-boss 12h, contrat 6h, Sanctuaire 24h).',
+          'Elle garde son esprit de défi : <b>tant que tu ne l\'as pas franchie de la semaine, tu peux la retenter immédiatement</b>, autant de fois qu\'il le faut. C\'est une fois validée qu\'elle se referme pour <b>12h</b>, comme le mini-boss dont elle a le calibre. Le cooldown apparaît dans la carte Récupérations.',
+        ],
+      },
+      {
+        title: '⚡ Puissance du classement',
+        kind: 'fix',
+        items: [
+          'La Puissance affichée pour les joueurs qui ne s\'étaient pas reconnectés depuis la mise à jour ne comptait <b>ni l\'artefact, ni la Relique, ni les maîtrises, ni les étoiles</b> : leur ligne de classement ne transporte tout simplement pas ces chiffres. Un Nv.45 à 1 418 monstres passait ainsi derrière un Nv.20 actif.',
+          'Le classement va désormais chercher la vraie valeur dans la fiche du joueur au lieu de la deviner. Une seule lecture par joueur et par session, et plus du tout dès que chacun s\'est reconnecté une fois.',
         ],
       },
       {

@@ -3,7 +3,7 @@ import type { WindowKind } from '../store/uiStore';
 import { useUi } from '../store/uiStore';
 import { useGame } from '../store/gameStore';
 import { pickMonster } from './monsters';
-import { currentRift, buildRiftMonster } from './rift';
+import { currentRift, buildRiftMonster, riftCleared, RIFT_REPEAT_COOLDOWN } from './rift';
 import { cooldownLeft } from './player';
 import { item } from './items';
 import { deriveStats, removeItem } from './player';
@@ -184,6 +184,20 @@ export const DAILY_COOLDOWN = 20 * 60 * 60 * 1000; // 20h
  * point de blocage : plus de potions, plus d'or, donc plus rien à faire.
  */
 export const REST_COOLDOWN = 10 * 60 * 1000; // 10 min
+
+/**
+ * Durée restante lisible. ⚠️ Le calcul naïf `floor(ms/1h)` + `ceil(reste/1min)`
+ * produit « 11h60min » dès que le reste frôle l'heure pleine (vu en jeu sur la
+ * Faille, et le mini-boss portait la même formule). On arrondit les MINUTES en
+ * premier, puis on les découpe — l'heure ne peut plus déborder.
+ */
+function fmtCooldown(ms: number): string {
+  const mins = Math.ceil(Math.max(0, ms) / 60_000);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h <= 0) return `${m}min`;
+  return m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
+}
 
 /** Commandes réservées à l'administration — invisibles pour les autres. */
 const ADMIN_ONLY = new Set(['admin']);
@@ -550,9 +564,7 @@ export function runCommand(input: string, ctx: CommandCtx): void {
     case 'miniboss': {
       const left = cooldownLeft(p!, 'miniboss', 12 * 60 * 60 * 1000);
       if (left > 0) {
-        const h = Math.floor(left / 3_600_000);
-        const m = Math.ceil((left % 3_600_000) / 60_000);
-        ctx.toast(`Le mini-boss se repose. Reviens dans ${h > 0 ? `${h}h` : ''}${m}min.`, 'bad');
+        ctx.toast(`Le mini-boss se repose. Reviens dans ${fmtCooldown(left)}.`, 'bad');
         break;
       }
       if (p!.hp <= 0) {
@@ -685,10 +697,33 @@ export function runCommand(input: string, ctx: CommandCtx): void {
     case 'rift': {
       if (p!.hp <= 0) { ctx.toast('Tu es K.O. Soigne-toi avant d\'entrer dans la Faille.', 'bad'); break; }
       const rift = currentRift(Date.now(), p!.level);
+      // ⚠️ La Faille N'A PAS de cooldown tant qu'elle n'est pas validée, et en a
+      // un une fois qu'elle l'est. Ce n'est pas une subtilité gratuite :
+      //  - avant la victoire, c'est un défi hebdomadaire qu'on doit pouvoir
+      //    retenter tout de suite ; un cooldown punirait l'échec deux fois (on
+      //    perd déjà la mort et la série de chasse) ;
+      //  - après, il ne reste plus que le butin, et il était ÉNORME et
+      //    ILLIMITÉ. Le monstre de Faille est calibré sur le mini-boss
+      //    (`xp = base.xp*5 + niv*70`, puis ×`xpMult` du biome dans
+      //    `grantMonsterRewards`) : au Nv.50 au Berceau, ~24 000 XP par
+      //    passage, soit ~9 chasses normales — sauf que la chasse a 20s de
+      //    cooldown et que cette commande n'en posait ni n'en vérifiait AUCUN,
+      //    pas même celui de la chasse. C'était de loin la meilleure source
+      //    d'XP du jeu, en boucle, alors que tous les autres boss invocables
+      //    sont bridés (mini-boss 12h, mercenaire 6h, sanctuaire 24h).
+      // D'où le même 12h que le mini-boss, dont elle partage le calibre.
+      if (riftCleared(p!, rift)) {
+        const left = cooldownLeft(p!, 'rift', RIFT_REPEAT_COOLDOWN);
+        if (left > 0) {
+          ctx.toast(`🌀 Faille déjà franchie cette semaine. Elle se referme encore ${fmtCooldown(left)}.`, 'bad');
+          break;
+        }
+      }
       const monster = buildRiftMonster(p!, rift);
-      // Pas de cooldown : l'échec coûte déjà la mort (pénalité + série perdue),
-      // et la récompense ne tombe qu'une fois par semaine de toute façon.
       ctx.mutate((d) => {
+        // Posé à l'engagement (comme le mini-boss) : sinon on relance la
+        // commande en boucle sans jamais finir le combat.
+        if (riftCleared(d, rift)) d.cooldowns.rift = Date.now();
         if (!d.statistics.mobsEncountered) d.statistics.mobsEncountered = {};
         d.statistics.mobsEncountered['rift'] = (d.statistics.mobsEncountered['rift'] ?? 0) + 1;
       });

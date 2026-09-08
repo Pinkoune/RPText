@@ -660,10 +660,11 @@ Réponse au constat ci-dessous. **`frozen` n'est PLUS la dernière zone.**
 ### Rareté Mythique (fait, C)
 
 Cran ajouté **au-dessus de `legendary`** (`types.ts ItemRarity`), rouge sombre
-`#e0454f` (`RARITY_COLOR`), porté par les **6 objets du palier Genèse** et par
-eux seuls. Critère retenu, à tenir si le palier change : *est mythique ce qui se
-fabrique avec une ressource de la DERNIÈRE zone* (Graines-monde). Primordial
-(Nv.46-48) reste légendaire — sinon le cran perd son sens dès le lot suivant.
+`#e0454f` (`RARITY_COLOR`), porté par les **12 objets des deux derniers
+paliers** : Primordial (Nv.45-48) et Genèse (Nv.48-50). Critère à tenir si un
+palier s'ajoute : *est mythique ce qui ne se fabrique PAS avec de la récolte
+ordinaire* — Âmes de Boss pour Primordial, Graines-monde de la dernière zone
+pour Genèse. Tout ce qui descend jusqu'à Tempête (43) reste légendaire.
 
 ⚠️ **La rareté est purement cosmétique** : aucun fichier de `game/` ni de
 `firebase/` ne lit `.rarity` (vérifié par `grep`). Elle ne pilote que la couleur
@@ -691,6 +692,59 @@ bas. Après redistribution des 10 étapes de y 90 à y 10 (pas constant ~8,9%, x
 alterné d'au moins 26%) : **0 chevauchement, 0 nœud hors cadre**.
 ⚠️ Ajouter un 11e biome = **rescaler toute la table**, pas empiler un cran de
 plus en haut.
+
+### Puissance au classement : le repli ne peut PAS inventer l'artefact (fait, C)
+
+Suite du correctif précédent, qui était **incomplet et dont la note était
+fausse**. J'avais ajouté `kills` ET `artifactLevel` à `fallbackPower` en
+écrivant que le classement comptait désormais l'artefact. `kills` marchait
+(Velstroke 42 → 63, vérifié sur la capture) ; `artifactLevel` **ne pouvait rien
+faire** : `power` et `artifactLevel` ont été ajoutés à la ligne de classement
+dans la MÊME livraison (commits 70 et 76 de la branche), donc une ligne sans
+`power` n'a jamais d'`artifactLevel`. Le terme est du code mort, gardé pour la
+forme — ⚠️ **ne pas le relire comme « l'artefact est compté »**.
+
+Symptôme en jeu, reconnu par l'utilisateur (« la puissance ne compte pas
+l'artefact ») : le tableau mélangeait **deux échelles**. Vérifié au chiffre près
+sur sa capture — Sowfird 45 + √1418×0,5 = **64**, Velstroke **63**, Ilala
+**37**, Zarlixoff **34** : tous exactement `niveau + kills`, donc sur le repli ;
+Pinkoune Nv.20 à **75** (au lieu de 28) et Galelix à **744** sur le vrai score.
+Un Nv.45 passait derrière un Nv.20.
+
+Correctif : `socialService.hydratePower` lit `players/<uid>` (lisible par tout
+compte connecté) pour les seules lignes **sans** `power` et y calcule le vrai
+`powerScore`. Une lecture par joueur et par session (`triedPower` mémorise même
+les échecs), plafond de 40 par instantané, et le classement s'affiche d'abord
+avec ce qu'il a puis se reclasse — pas d'attente réseau à l'ouverture. Le nombre
+de lectures tend vers zéro à mesure que les joueurs se reconnectent.
+⚠️ **Non vérifiable en local** (Firestore) : à confirmer en ligne.
+
+### La Faille de la semaine n'avait aucun cooldown (fait, C)
+
+Question de l'utilisateur, et la réponse est que c'était un trou. `case 'rift'`
+ne vérifiait ni ne posait **aucun** cooldown — pas même celui de la chasse — et
+le commentaire justifiait ça par « la récompense ne tombe qu'une fois par
+semaine ». C'est vrai de la prime (`claimRift` : 2 Éclats + or), **faux du butin
+de combat**, qui retombe à chaque passage. Or `buildRiftMonster` calibre sur le
+mini-boss : `xp = base.xp*5 + niv*70`, puis ×`xpMult` du biome dans
+`grantMonsterRewards`. Au Nv.50 au Berceau (base.xp ≈ 890, xpMult 3,0) :
+**≈ 23 900 XP par passage contre 2 670 pour une chasse normale, soit ×9** — et
+la chasse, elle, attend 20s. C'était la meilleure source d'XP du jeu, en boucle,
+quand tous les autres boss invocables sont bridés (mini-boss 12h, mercenaire 6h,
+sanctuaire 24h).
+
+**Cooldown de 12h (`RIFT_REPEAT_COOLDOWN`, aligné sur le mini-boss dont elle a
+le calibre), posé UNIQUEMENT une fois la Faille validée** (`riftCleared`), à
+l'engagement. Tant qu'elle n'est pas franchie, aucun cooldown : le défi
+hebdomadaire doit rester retentable tout de suite, l'échec coûte déjà la mort et
+la série de chasse. Un changement de semaine remet `riftCleared` à faux, donc
+rend la liberté de retenter sans regarder le cooldown de la semaine passée.
+Entrée ajoutée à CooldownCard.
+
+🐛 Au passage, `fmtCooldown` : la formule `floor(ms/1h)` + `ceil(reste/1min)`
+affichait « **11h60min** » dès que le reste frôlait l'heure pleine (vu en jeu).
+Les minutes sont arrondies d'abord, puis découpées → « 12h ». Le **mini-boss
+portait la même formule** et est corrigé aussi.
 
 **Trois erreurs de calibrage que j'ai commises, mesurées puis corrigées** — à ne
 pas refaire pour une zone future :
