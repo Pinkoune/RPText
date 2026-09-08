@@ -4,7 +4,6 @@ import { cooldownLeft } from '../../game/player';
 import { HUNT_COOLDOWN, DAILY_COOLDOWN, REST_COOLDOWN } from '../../game/commands';
 import { gatherCooldownLeft } from '../../game/gathering';
 import { DUNGEONS, dungeonCooldownLeft } from '../../game/dungeons';
-import { RIFT_REPEAT_COOLDOWN } from '../../game/rift';
 import { BOSS_ATTACK_CD } from '../../firebase/bossService';
 
 function fmt(ms: number): string {
@@ -35,9 +34,6 @@ export default function CooldownCard() {
     { icon: '🏕️', label: 'Repos', left: cooldownLeft(p, 'rest', REST_COOLDOWN) },
     { icon: '🔥', label: 'Aventure', left: cooldownLeft(p, 'adventure', 15 * 60 * 1000) },
     { icon: '👹', label: 'Mini-boss', left: cooldownLeft(p, 'miniboss', 12 * 60 * 60 * 1000) },
-    // N'existe qu'une fois la Faille de la semaine validée — avant, elle reste
-    // retentable sans attente (voir commands.ts case 'rift').
-    { icon: '🌀', label: 'Faille de la semaine', left: cooldownLeft(p, 'rift', RIFT_REPEAT_COOLDOWN) },
     { icon: '🎯', label: 'Contrat (mercenaire)', left: cooldownLeft(p, 'mercenaire', 6 * 60 * 60 * 1000) },
     { icon: '🗿', label: 'Sanctuaire', left: cooldownLeft(p, 'sanctuaire', 24 * 60 * 60 * 1000) },
     { icon: '🕳️', label: 'Rituel du Néant', left: Math.max(0, (p.ascensionCooldownUntil ?? 0) - Date.now()) },

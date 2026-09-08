@@ -22,8 +22,8 @@ export type BiomeId =
 
 export type Phase = 'dawn' | 'day' | 'dusk' | 'night';
 
-// `mythic` est le cran AU-DESSUS de `legendary`, réservé au dernier palier de
-// craft du jeu (Genèse, niv.48-50). ⚠️ La rareté est purement cosmétique : aucun
+// `mythic` est le cran AU-DESSUS de `legendary`, réservé aux deux derniers
+// paliers du jeu (Primordial et Genèse). ⚠️ La rareté est purement cosmétique : aucun
 // code de `game/` ni de `firebase/` ne lit `.rarity`, elle ne sert qu'à la
 // couleur, au tri de l'inventaire et à l'étiquette du Wiki. Ajouter un cran ne
 // touche donc à AUCUN équilibrage.
@@ -131,6 +131,25 @@ export interface PlayerState {
   combatCooldowns?: Record<string, number>;
   /** Timestamp du dernier combat de chasse (pour reset les cooldowns après 1 minute). */
   lastCombatAt?: number;
+  /**
+   * Combat ENGAGÉ et non résolu, persisté dans la sauvegarde.
+   *
+   * L'état d'un combat solo vit dans le composant React (`HuntCard`,
+   * `AscensionCard`), donc fermer la fenêtre ou recharger la page le faisait
+   * simplement disparaître : on échappait à la défaite en cliquant sur la croix.
+   * Ce champ est posé à l'engagement et effacé à la résolution ; s'il est encore
+   * là, c'est qu'on a abandonné (voir `game/abandon.ts`).
+   */
+  pendingCombat?: {
+    kind: 'hunt' | 'ascension';
+    /** Identifie CETTE rencontre — voir `beginCombat` (relance vs re-montage). */
+    id: string;
+    /** Étiquette pour le message d'abandon (« la Faille », « Le Néant Originel »…). */
+    label: string;
+    /** Rituel seulement : PV restants du boss (0-1), pour le barème de perte de niveaux. */
+    bossHpFrac?: number;
+    at: number;
+  };
   /** Statistiques de jeu. */
   kills: number;
   deaths: number;

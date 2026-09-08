@@ -94,7 +94,8 @@ backend. ⚠️ Le pas du modificateur (**5**) doit rester premier avec leur nom
 avec 3, quatre modificateurs sur six ne sortaient jamais. Calibrée RELATIVEMENT au
 mini-boss (0,21-0,40× ses PV, 0,40-1,32× son ATK) — `simulateCombat` sort 0% de
 victoire même contre un monstre normal, ses taux absolus sont inutilisables.
-Prime (2 Éclats + or) au premier passage de la semaine, pas de cooldown.
+Prime (2 Éclats + or) au premier passage de la semaine, **pas de cooldown**
+(décision explicite de l'utilisateur — voir la section dédiée plus bas).
 
 ### Puissance (`game/power.ts`)
 Unité : **1 point ≈ un niveau de personnage d'effort**. Niveau ×1, prestige ×50
@@ -719,32 +720,92 @@ avec ce qu'il a puis se reclasse — pas d'attente réseau à l'ouverture. Le no
 de lectures tend vers zéro à mesure que les joueurs se reconnectent.
 ⚠️ **Non vérifiable en local** (Firestore) : à confirmer en ligne.
 
-### La Faille de la semaine n'avait aucun cooldown (fait, C)
+### La Faille de la semaine n'a PAS de cooldown — décision assumée
 
-Question de l'utilisateur, et la réponse est que c'était un trou. `case 'rift'`
-ne vérifiait ni ne posait **aucun** cooldown — pas même celui de la chasse — et
-le commentaire justifiait ça par « la récompense ne tombe qu'une fois par
-semaine ». C'est vrai de la prime (`claimRift` : 2 Éclats + or), **faux du butin
-de combat**, qui retombe à chaque passage. Or `buildRiftMonster` calibre sur le
-mini-boss : `xp = base.xp*5 + niv*70`, puis ×`xpMult` du biome dans
-`grantMonsterRewards`. Au Nv.50 au Berceau (base.xp ≈ 890, xpMult 3,0) :
-**≈ 23 900 XP par passage contre 2 670 pour une chasse normale, soit ×9** — et
-la chasse, elle, attend 20s. C'était la meilleure source d'XP du jeu, en boucle,
-quand tous les autres boss invocables sont bridés (mini-boss 12h, mercenaire 6h,
-sanctuaire 24h).
+Constat mesuré, à garder sous la main : `buildRiftMonster` calibre sur le
+mini-boss (`xp = base.xp*5 + niv*70`, puis ×`xpMult` du biome dans
+`grantMonsterRewards`), soit au Nv.50 au Berceau **≈ 23 900 XP par passage
+contre 2 670 pour une chasse normale (×9)**. La prime (`claimRift` : 2 Éclats +
+or) est bien hebdomadaire, mais le **butin de combat retombe à chaque
+passage** — c'est ce point-là qui fait de la Faille une source de farm, pas la
+prime.
 
-**Cooldown de 12h (`RIFT_REPEAT_COOLDOWN`, aligné sur le mini-boss dont elle a
-le calibre), posé UNIQUEMENT une fois la Faille validée** (`riftCleared`), à
-l'engagement. Tant qu'elle n'est pas franchie, aucun cooldown : le défi
-hebdomadaire doit rester retentable tout de suite, l'échec coûte déjà la mort et
-la série de chasse. Un changement de semaine remet `riftCleared` à faux, donc
-rend la liberté de retenter sans regarder le cooldown de la semaine passée.
-Entrée ajoutée à CooldownCard.
+⚠️ **Ne pas y remettre de cooldown** : j'en avais posé un (12h après validation),
+l'utilisateur l'a explicitement retiré — la Faille est un défi hebdomadaire,
+l'échec coûte déjà la mort et la série, un cooldown punirait deux fois. Si le
+farm devient un problème en jeu, le levier est l'**XP des passages RÉPÉTÉS**
+(dans l'esprit d'`applyZonePenalty`), pas une porte fermée.
 
-🐛 Au passage, `fmtCooldown` : la formule `floor(ms/1h)` + `ceil(reste/1min)`
-affichait « **11h60min** » dès que le reste frôlait l'heure pleine (vu en jeu).
-Les minutes sont arrondies d'abord, puis découpées → « 12h ». Le **mini-boss
-portait la même formule** et est corrigé aussi.
+🐛 Reste de ce passage : `fmtCooldown` (commands.ts). La formule
+`floor(ms/1h)` + `ceil(reste/1min)` affichait « **11h60min** » dès que le reste
+frôlait l'heure pleine. Les minutes sont arrondies d'abord, puis découpées.
+Le **mini-boss portait la même formule** et est corrigé.
+
+### Abandon de combat = défaite (fait, C)
+
+Défaut signalé en jeu : « on peut fermer les cartes de combat avec la petite
+croix (ou en rafraîchissant la page) et ça annule le combat ». Exact, et gratuit.
+L'état d'un combat solo vit **entièrement dans le composant React**
+(`HuntCard`, `AscensionCard`) : le démonter effaçait monstre, PV et tour en
+cours. Ce n'était pas anodin — **fuir n'a que 55% de réussite** (`combat.ts`,
+`action === 'flee'`) et l'échec fait encaisser un tour : la croix était donc une
+fuite **garantie et gratuite**.
+
+Au **Rituel du Néant** c'était bien pire : `act()` ne touche jamais `d.hp`,
+seules les potions sont consommées. Fermer la fenêtre annulait donc **tout** le
+risque — pas de perte de 1 à 3 niveaux, pas de cooldown de 8h, pas même les PV.
+L'écran de confirmation promet pourtant « il n'y a pas de retour en arrière une
+fois le regard du Néant posé sur toi ».
+
+Règle posée : **abandonner un combat engagé, c'est le perdre.** Nouveau champ
+`p.pendingCombat` (`types.ts`) posé à l'engagement, effacé à la résolution, et
+`game/abandon.ts` (`beginCombat` / `endCombat` / `resolveAbandon`).
+⚠️ **`abandon.ts` doit rester un fichier à part** : il dépend de `combat.ts` ET
+d'`ascension.ts`, donc le mettre dans `player.ts` créerait le cycle
+`player → ascension → player` (même piège que `backfillAchievementShards`).
+
+**TROIS portes à fermer, pas une** — chacune a son point de rattrapage :
+
+| Porte | Rattrapée par |
+|---|---|
+| croix ✕ | nettoyage de l'effet de démontage, dans la carte |
+| rechargement / onglet fermé / plantage | `gameStore.selectCharacter` au chargement suivant (aucun code React n'a pu tourner) |
+| relancer `hunt` par-dessus un combat | `beginCombat` : un `id` différent = l'ancien est abandonné |
+
+⚠️ **Le démontage seul ne suffit pas comme signal.** React **StrictMode est
+actif** (`main.tsx`) : il monte, démonte puis remonte chaque composant en
+développement. Résoudre sur un simple démontage infligerait donc une mort
+fantôme à chaque ouverture de carte — **en dev uniquement**, donc invisible en
+production. Les deux cartes vérifient que la fenêtre a réellement disparu de
+`useUi` avant de résoudre (`close()` a déjà mis le store à jour quand le
+démontage arrive, le double-montage de StrictMode la laisse ouverte). Même
+raison pour l'`id` de `pendingCombat` : sans lui, le second passage de
+StrictMode compterait un abandon.
+
+Le rituel enregistre `bossHpFrac` **à chaque tour** dans la sauvegarde : un
+abandon est jugé sur l'état réel du combat, avec le barème de la défaite
+normale — on ne punit pas l'abandon plus qu'une défaite, on refuse juste qu'il
+ne coûte rien.
+
+Vérifié en jeu (Playwright, mode local), les quatre chemins :
+
+| Cas | Avant | Après |
+|---|---|---|
+| ✕ en chasse | rien | or 10 100 → 9 090, morts 0 → 1, série 7 → 0 |
+| F5 en chasse | rien | or 9 000 → 8 100, morts 2 → 3 |
+| relance de `hunt` | rien | or 10 100 → 9 090, morts 0 → 1, série 7 → 0 |
+| ✕ pendant le Rituel | rien | **Nv.50 → 47** + cooldown 8h posé |
+
+⚠️ Piège de banc d'essai rencontré : un personnage de test forcé au Nv.50 dans
+`localStorage` **retombait à 41**. Ce n'était PAS l'anti-triche des kills mais
+`relevel()` — un perso créé porte `curveVersion: 2`, donc `migratePlayer`
+convertit v3→v4→v5 et recalcule le niveau depuis l'XP totale. Poser
+**`curveVersion: 5`** dans le patch de test, sinon toute vérification au niveau
+max est faussée.
+
+Une ligne sous les boutons d'action l'annonce (« Fermer cette fenêtre compte
+comme une défaite ») : la règle doit être lisible AVANT de cliquer, pas
+seulement dans le toast qui suit.
 
 **Trois erreurs de calibrage que j'ai commises, mesurées puis corrigées** — à ne
 pas refaire pour une zone future :

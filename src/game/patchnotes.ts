@@ -45,11 +45,12 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
-        title: '🌀 La Faille se referme derrière toi',
-        kind: 'balance',
+        title: '🚪 Fermer une carte de combat ne l\'annule plus',
+        kind: 'fix',
         items: [
-          'La Faille de la semaine n\'avait <b>aucun cooldown</b> — pas même celui de la chasse — alors qu\'elle rapporte environ <b>neuf fois l\'XP d\'une chasse normale</b> par passage. C\'était de loin la meilleure source d\'XP du jeu, en boucle, quand tous les autres boss invocables sont bridés (mini-boss 12h, contrat 6h, Sanctuaire 24h).',
-          'Elle garde son esprit de défi : <b>tant que tu ne l\'as pas franchie de la semaine, tu peux la retenter immédiatement</b>, autant de fois qu\'il le faut. C\'est une fois validée qu\'elle se referme pour <b>12h</b>, comme le mini-boss dont elle a le calibre. Le cooldown apparaît dans la carte Récupérations.',
+          'Fermer la fenêtre d\'un combat avec la croix — ou recharger la page — faisait <b>disparaître le combat sans aucune conséquence</b>. Fuir n\'a que 55% de réussite : la croix était donc une fuite garantie et gratuite, en chasse comme en Faille ou contre un mini-boss.',
+          'Au <b>Rituel du Néant</b> c\'était pire : le combat ne touche pas tes PV pendant les tours, donc quitter annulait <b>tout</b> le risque — ni perte de niveaux, ni cooldown de 8h. L\'écran de confirmation promettait pourtant qu\'il n\'y a pas de retour en arrière.',
+          'Désormais, <b>abandonner un combat engagé, c\'est le perdre</b> : par la croix, par un rechargement, ou en relançant une chasse par-dessus la précédente. La règle est écrite sous les boutons d\'action.',
         ],
       },
       {

@@ -3,7 +3,7 @@ import type { WindowKind } from '../store/uiStore';
 import { useUi } from '../store/uiStore';
 import { useGame } from '../store/gameStore';
 import { pickMonster } from './monsters';
-import { currentRift, buildRiftMonster, riftCleared, RIFT_REPEAT_COOLDOWN } from './rift';
+import { currentRift, buildRiftMonster } from './rift';
 import { cooldownLeft } from './player';
 import { item } from './items';
 import { deriveStats, removeItem } from './player';
@@ -697,33 +697,15 @@ export function runCommand(input: string, ctx: CommandCtx): void {
     case 'rift': {
       if (p!.hp <= 0) { ctx.toast('Tu es K.O. Soigne-toi avant d\'entrer dans la Faille.', 'bad'); break; }
       const rift = currentRift(Date.now(), p!.level);
-      // ⚠️ La Faille N'A PAS de cooldown tant qu'elle n'est pas validée, et en a
-      // un une fois qu'elle l'est. Ce n'est pas une subtilité gratuite :
-      //  - avant la victoire, c'est un défi hebdomadaire qu'on doit pouvoir
-      //    retenter tout de suite ; un cooldown punirait l'échec deux fois (on
-      //    perd déjà la mort et la série de chasse) ;
-      //  - après, il ne reste plus que le butin, et il était ÉNORME et
-      //    ILLIMITÉ. Le monstre de Faille est calibré sur le mini-boss
-      //    (`xp = base.xp*5 + niv*70`, puis ×`xpMult` du biome dans
-      //    `grantMonsterRewards`) : au Nv.50 au Berceau, ~24 000 XP par
-      //    passage, soit ~9 chasses normales — sauf que la chasse a 20s de
-      //    cooldown et que cette commande n'en posait ni n'en vérifiait AUCUN,
-      //    pas même celui de la chasse. C'était de loin la meilleure source
-      //    d'XP du jeu, en boucle, alors que tous les autres boss invocables
-      //    sont bridés (mini-boss 12h, mercenaire 6h, sanctuaire 24h).
-      // D'où le même 12h que le mini-boss, dont elle partage le calibre.
-      if (riftCleared(p!, rift)) {
-        const left = cooldownLeft(p!, 'rift', RIFT_REPEAT_COOLDOWN);
-        if (left > 0) {
-          ctx.toast(`🌀 Faille déjà franchie cette semaine. Elle se referme encore ${fmtCooldown(left)}.`, 'bad');
-          break;
-        }
-      }
       const monster = buildRiftMonster(p!, rift);
+      // ⚠️ AUCUN cooldown, décision explicite de l'utilisateur : la Faille est un
+      // défi hebdomadaire, sa prime ne tombe qu'une fois par semaine et l'échec
+      // coûte déjà la mort et la série de chasse. Un cooldown punirait deux fois.
+      // Le butin de COMBAT, lui, retombe à chaque passage (~9× l'XP d'une chasse
+      // normale au Nv.50) : si la Faille devient une source de farm, le levier à
+      // actionner est l'XP des passages RÉPÉTÉS (dans l'esprit d'`applyZonePenalty`),
+      // pas une porte fermée.
       ctx.mutate((d) => {
-        // Posé à l'engagement (comme le mini-boss) : sinon on relance la
-        // commande en boucle sans jamais finir le combat.
-        if (riftCleared(d, rift)) d.cooldowns.rift = Date.now();
         if (!d.statistics.mobsEncountered) d.statistics.mobsEncountered = {};
         d.statistics.mobsEncountered['rift'] = (d.statistics.mobsEncountered['rift'] ?? 0) + 1;
       });

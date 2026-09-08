@@ -22,20 +22,6 @@ export const RIFT_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 export const RIFT_SHARDS = 2;
 
 /**
- * Cooldown entre deux passages, appliqué UNIQUEMENT une fois la Faille validée
- * (voir `commands.ts case 'rift'`).
- *
- * Aligné sur le mini-boss (12h) parce que la Faille est calibrée sur lui :
- * `buildRiftMonster` sort ~24 000 XP par passage au Nv.50 dans la dernière
- * zone, soit ~9 chasses normales. Sans cooldown — et la commande n'en posait
- * aucun, pas même celui de la chasse — c'était la meilleure source d'XP du jeu,
- * en boucle, alors que tous les autres boss invocables sont bridés.
- * Avant la victoire de la semaine, aucun cooldown : le défi doit rester
- * retentable immédiatement, l'échec coûte déjà la mort et la série de chasse.
- */
-export const RIFT_REPEAT_COOLDOWN = 12 * 60 * 60 * 1000;
-
-/**
  * Modificateur hebdomadaire. Chacun oblige à changer quelque chose : son build,
  * son arme, sa façon de jouer les tours. Un simple « +50% de stats » ne
  * demanderait rien d'autre que d'être plus fort, ce qui n'est pas un défi.

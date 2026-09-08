@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { PlayerState, ClassId } from '../game/types';
 import { createPlayer, migratePlayer, deriveStats, charKey } from '../game/player';
+import { resolveAbandon } from '../game/abandon';
 import { claimDailyLogin, type DailyReward } from '../game/daily';
 import type { SeasonReward } from '../game/season';
 import { signInWithProvider, signOut, watchAuth, type AppUser, type AuthProviderType } from '../firebase/auth';
@@ -221,6 +222,11 @@ export const useGame = create<GameState>((set, get) => ({
       // l'entrée en jeu (nouveau jour). La modale s'affiche pour la montrer ; le
       // bouton de l'onglet Quêtes sert seulement à la ré-afficher ensuite.
       const reward = claimDailyLogin(existing);
+      // Combat quitté en cours de route (page rechargée, onglet fermé, plantage) :
+      // il est compté comme perdu ici, seul endroit qui reprend la main après
+      // qu'aucun code React n'a pu tourner. La croix ✕, elle, est traitée par la
+      // carte elle-même. Voir `game/abandon.ts`.
+      const abandonMsg = resolveAbandon(existing);
       // Récompense de fin de saison (créditée par migratePlayer si rotation).
       let seasonReward: { tierName: string; reward: SeasonReward } | null = null;
       if (existing.lastSeasonReward) {
@@ -229,6 +235,7 @@ export const useGame = create<GameState>((set, get) => ({
       }
       try { localStorage.setItem(lastSlotKey(user.uid), String(slot)); } catch { /* ignore */ }
       set({ player: existing, status: 'ready', dailyReward: reward, seasonReward, awayMs });
+      if (abandonMsg) get().toast(abandonMsg, 'bad');
       // La migration peut avoir changé le personnage (courbe d'XP, defaults) :
       // on persiste dans tous les cas, pas seulement s'il y a une récompense.
       void savePlayer(existing);

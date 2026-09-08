@@ -28,6 +28,7 @@ import {
 } from '../../game/combat';
 import { masteryProgress, biomeKills } from '../../game/mastery';
 import { currentRift, claimRift, RIFT_SHARDS } from '../../game/rift';
+import { beginCombat, endCombat, resolveAbandon } from '../../game/abandon';
 import { BIOMES } from '../../game/biomes';
 
 import { useUi } from '../../store/uiStore';
@@ -140,13 +141,27 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     setTimeout(() => setFloaters((cur) => cur.filter((f) => !ids.has(f.id))), 1000);
   }
 
+  // ── Abandon = défaite ──
+  // `statusRef` double `status` parce que le nettoyage de l'effet de démontage
+  // capture la valeur du rendu où il a été créé : sans la ref, il croirait
+  // toujours le combat en cours.
+  const statusRef = useRef<Status>('fighting');
+  useEffect(() => { statusRef.current = status; }, [status]);
+
   // Réinitialise quand une nouvelle rencontre arrive (relance de hunt).
   useEffect(() => {
     setMonsterHp(m.hp);
     setLog([]);
     setStatus('fighting');
+    statusRef.current = 'fighting';
     setResourcePool(0);
     lastActionType.current = null;
+    // Engagement persisté : si la page est rechargée avant la fin, `gameStore`
+    // le retrouvera et comptera le combat comme perdu. Et si un combat
+    // précédent traînait encore, l'avoir quitté pour celui-ci le clôt en défaite.
+    let fled: string | null = null;
+    mutate((d) => { fled = beginCombat(d, 'hunt', m.name, String(encounter.id)); });
+    if (fled) toast(fled, 'bad');
 
     const pl = useGame.getState().player;
     if (pl && Date.now() - (pl.lastCombatAt ?? 0) < 60000) {
@@ -163,6 +178,24 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
   }, [encounter.id]);
 
   useEffect(() => { scrollLogToEnd(logEnd.current); }, [log]);
+
+  // Fermer la carte pendant un combat = le perdre.
+  //
+  // ⚠️ On ne peut PAS résoudre sur un simple démontage : React StrictMode monte,
+  // démonte puis remonte chaque composant en développement, ce qui infligerait
+  // une mort fantôme à chaque chasse (invisible en production, donc un piège
+  // parfait). On ne résout donc que si la fenêtre a réellement disparu du
+  // gestionnaire — `close()` a déjà mis le store à jour quand le démontage
+  // arrive, alors que le double-montage de StrictMode la laisse ouverte.
+  useEffect(() => {
+    return () => {
+      if (statusRef.current !== 'fighting') return;
+      if (useUi.getState().windows.some((w) => w.kind === 'hunt')) return;
+      let msg: string | null = null;
+      useGame.getState().mutate((d) => { msg = resolveAbandon(d); });
+      if (msg) useGame.getState().toast(msg, 'bad');
+    };
+  }, []);
 
   // En-tête de fenêtre thématisé pour les combats de boss.
   useEffect(() => {
@@ -267,6 +300,8 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
     const captured: { rewards: HuntRewards | null; riftClaimed: boolean } = { rewards: null, riftClaimed: false };
     mutate((d) => {
       d.hp = res.php;
+      // Le combat se termine normalement : plus rien à rattraper au rechargement.
+      if (newStatus !== 'fighting') endCombat(d);
       if (potUse) removeItem(d, potUse, 1);
       if (res.goldStolen) d.gold += res.goldStolen;
 
@@ -658,6 +693,10 @@ export default function HuntCard({ encounter }: { encounter: HuntEncounter }) {
                 🧪 Potion ({potionCount})
               </button>
               <button onClick={() => act('flee')} className="rounded-lg bg-slate-500/30 py-2.5 text-sm font-bold hover:bg-slate-500/50">🏃 Fuir</button>
+              {/* La règle doit être lisible AVANT de cliquer sur la croix : fuir
+                  n'a que 55% de réussite, donc fermer la fenêtre était une fuite
+                  garantie et gratuite. Une ligne, pas un dialogue. */}
+              <p className="col-span-2 text-center text-[10px] text-slate-500">Fermer cette fenêtre compte comme une défaite.</p>
               {activeSkills.length === 0 && (
                 <button
                   onClick={() => useUi.getState().open('talents', undefined, { singleton: true })}
