@@ -698,6 +698,48 @@ profil, contre `0% / 37% / 100%` avant ce lot. Rien à retoucher dans
 était un artefact de ma propre extraction** (mon `grep` comptait le « 5 » de
 « ★5 » comme une valeur). Vérifier l'outil de mesure avant de toucher au jeu.
 
+### Rythme réel de la montée 1→50 (mesuré et calibré sur la bêta)
+
+Question récurrente (« la montée est bonne ? pas trop rapide ? ») — voici le
+modèle et ses chiffres, pour ne pas avoir à les refaire.
+
+**Méthode** : pour chaque niveau, on prend la MEILLEURE zone ouverte, on calcule
+`xp du monstre × xpMult × winrate` (harnais tour-par-tour, archer Chasseur), et
+on convertit en temps avec `HUNT_COOLDOWN` (20s) + durée réelle du combat (~3s
+par tour). Le modèle est **validé contre les données de la bêta** : rejoué sur le
+jeu de l'époque (courbe v4, 8 biomes) il donne Nv.20 = 1,3 h et Nv.40 = 16,8 h,
+ce qui correspond aux 2-3 jours et 2,5 semaines observés à un rythme de
+**~0,74 h de jeu par jour**. C'est ce rythme qui sert de conversion ci-dessous.
+
+| | Jeu de la bêta (v4, 8 biomes) | Jeu actuel (v5, 10 biomes) |
+|---|---|---|
+| Nv.20 | 1,3 h (~2 j) | 1,3 h (~2 j) |
+| Nv.40 | 16,8 h (~23 j) | 13,3 h (~18 j) |
+| Nv.50 | 69,0 h (~94 j) | **36,0 h (~48 j)** |
+
+**Le trajet jusqu'au Nv.40 est quasi inchangé.** Tout le raccourcissement est
+dans 40→50 (52 h → 23 h) : c'est la décision assumée de la courbe v5 (« divisé
+par ~2 »), les deux nouvelles zones n'ajoutant que ~10% par-dessus.
+
+Répartition du temps par tranche (jeu actuel) : 1→10 **1%**, 10→20 **2%**,
+20→30 **8%**, 30→38 **17%**, 38→42 **15%**, 42→46 **23%**, 46→50 **35%**.
+⚠️ La fin reste très chargée : **46→50 pèse à lui seul 35% du jeu entier**. Un
+joueur au Nv.46 a encore un tiers de la partie devant lui. C'est voulu (c'est la
+queue de progression), mais c'est le premier endroit à regarder si quelqu'un
+trouve la fin trop longue.
+
+⚠️ **36 h est un MAJORANT du temps de chasse**, pas une prévision :
+le modèle ne compte que la chasse (ni récolte, ni forge, ni donjon, ni camp, ni
+quêtes, ni journalier), suppose qu'on combat **jusqu'à la mort sans jamais fuir**,
+et ignore les buffs de saison (artefact + Relique montent les winrates de fin à
+100%). Un joueur réel ira plus vite. Avec du gear q150 5★ le même modèle donne
+**27,9 h**.
+
+**Levier si c'est jugé trop rapide** : ce n'est PAS `xpToNext` (le testeur juge
+la courbe bonne, cf. plus bas) mais l'XP des nouvelles zones — `xpMult` dans
+`biomes.ts` et le champ `xp` des monstres de `skyreach`/`cradle`. Les ramener au
+niveau de l'Abysse rendrait le rythme strictement identique à avant.
+
 ### Recettes débloquées (fait, C) — le craft ne dépend plus d'un biome hors de portée
 
 Audit de craftabilité (matériau → premier biome qui le donne, vs niveau
