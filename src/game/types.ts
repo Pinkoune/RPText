@@ -149,6 +149,11 @@ export interface PlayerState {
     /** Rituel seulement : PV restants du boss (0-1), pour le barème de perte de niveaux. */
     bossHpFrac?: number;
     at: number;
+    /**
+     * Version du marqueur (`ABANDON_VERSION`). Absente = engagement écrit par la
+     * version qui ne savait pas l'effacer : il est nettoyé SANS pénalité.
+     */
+    v?: number;
   };
   /** Statistiques de jeu. */
   kills: number;

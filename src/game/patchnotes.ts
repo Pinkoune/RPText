@@ -54,6 +54,15 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '🛠️ Correctif urgent : « Combat abandonné » hors combat',
+        kind: 'fix',
+        items: [
+          'Depuis la mise à jour, relancer le jeu ou rafraîchir la page affichait <b>« Combat abandonné »</b> et infligeait une mort — alors qu\'aucun combat n\'était en cours. Cause : la fin d\'un combat écrivait une valeur que la base refuse, ce qui faisait <b>échouer la sauvegarde en silence</b>. Le marqueur de combat restait donc collé sur ta fiche, et repartait à chaque connexion.',
+          'Conséquence plus grave, maintenant réparée : tant que ce marqueur était coincé, <b>plus rien ne se sauvegardait</b> pour ce personnage. Si tu as perdu de la progression ces dernières heures, c\'est de là que ça vient.',
+          'Les marqueurs déjà coincés sont <b>effacés sans pénalité</b> à ta prochaine connexion. Et la même faute, présente depuis plus longtemps sur la <b>collecte d\'expédition</b>, est corrigée au passage.',
+        ],
+      },
+      {
         title: '🔔 On te prévient quand tu termines quelque chose',
         kind: 'new',
         items: [

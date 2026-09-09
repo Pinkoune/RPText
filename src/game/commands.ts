@@ -658,7 +658,11 @@ export function runCommand(input: string, ctx: CommandCtx): void {
         const gold = p!.level * 60;
         ctx.mutate((d) => {
           d.expeditionEndsAt = 0;
-          d.expeditionBiome = undefined;
+          // ⚠️ `delete`, pas `= undefined` : Firestore refuse `undefined` et
+          // `setDoc` lève, ce qui faisait échouer TOUTE la sauvegarde (en
+          // silence). Défaut antérieur au lot « abandon de combat », trouvé en
+          // cherchant la même faute ailleurs.
+          delete d.expeditionBiome;
           d.inventory[res] = (d.inventory[res] ?? 0) + qty;
           d.gold += gold;
         });

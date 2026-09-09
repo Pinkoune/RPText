@@ -836,6 +836,53 @@ carte s'ouvre uniquement par la cloche 🔔 de la Topbar. Et ouvrir le profil ne
 passe PAS par `mutate` : pour déclencher la détection dans un test, utiliser une
 commande qui écrit vraiment (`hunt` pose `cooldowns.hunt`).
 
+### ⚠️⚠️ `delete p.champ`, JAMAIS `p.champ = undefined` (fait, C)
+
+Défaut signalé le lendemain de la livraison : « quand je relance le jeu ou
+refresh **alors que je ne suis pas en combat**, il m'indique : Combat abandonné
+(Hydre des marais) ». C'est ma feature d'abandon qui se retournait contre le
+joueur, et la cause est une règle Firestore que je ne connaissais pas assez.
+
+**Firestore REFUSE une valeur `undefined`** (`ignoreUndefinedProperties` vaut
+faux par défaut ; vérifié dans le SDK, `parseScalarValue` rejette la valeur).
+`endCombat` faisait `d.pendingCombat = undefined`, donc :
+1. l'engagement (un OBJET) se sauvegardait très bien ;
+2. le nettoyage faisait **lever `setDoc`** → `savePlayer` rejetait → et comme
+   `gameStore` l'appelle en `void savePlayer(p)`, **l'échec était silencieux** ;
+3. le doc Firestore gardait donc `pendingCombat` pour toujours, et **chaque
+   rechargement rejouait un abandon** avec sa vraie pénalité de mort (-10% d'or,
+   PV à 30%, série perdue) alors que le joueur n'était pas en combat ;
+4. pire : le champ restant `undefined` en mémoire, **toutes les sauvegardes
+   suivantes échouaient aussi**. La progression d'après le premier combat ne se
+   persistait plus.
+
+⚠️ **Et c'est invisible en local** : le repli `localStorage` passe par
+`JSON.stringify`, qui **supprime** les clés `undefined`. Le mode local répare
+donc silencieusement ce que Firestore rejette — c'est pour ça que ma
+vérification en jeu (dont le test « F5 pendant une chasse ») était verte.
+**Une vérif en local ne prouve rien sur la sérialisation Firestore.**
+
+Trois correctifs :
+1. **`delete d.pendingCombat`** (abandon.ts, ×2). La clé doit être ABSENTE.
+2. Même faute trouvée ailleurs en cherchant : **`d.expeditionBiome = undefined`**
+   (`commands.ts`, collecte d'expédition) — **antérieure à ce lot**, elle cassait
+   déjà les sauvegardes de quiconque collectait une expédition. Corrigée.
+3. Filet systémique : `initializeFirestore(app, { ignoreUndefinedProperties: true })`
+   (`config.ts`). ⚠️ C'est le filet, PAS la solution : continuer à écrire
+   `delete`, sinon on repousse simplement le problème (un `undefined` ignoré
+   n'efface pas le champ côté serveur, il le laisse tel quel).
+
+⚠️ **`ABANDON_VERSION`** (abandon.ts) : tout `pendingCombat` déjà écrit par la
+version buguée est un résidu, pas un abandon. `resolveAbandon` l'efface **sans
+pénalité** quand `v` ne correspond pas — sinon les joueurs touchés auraient pris
+une mort de plus au premier chargement d'après correctif. À incrémenter si la
+sémantique de l'engagement change.
+
+Vérifié (test sur le code réel, `scripts/`) : clé absente après `endCombat` et
+du JSON sérialisé · résidu sans `v` → 0 message, or/morts/série inchangés ·
+vrai abandon → pénalité toujours appliquée · relance de chasse → toujours
+comptée comme fuite.
+
 ### La Faille de la semaine n'a PAS de cooldown — décision assumée
 
 Constat mesuré, à garder sous la main : `buildRiftMonster` calibre sur le

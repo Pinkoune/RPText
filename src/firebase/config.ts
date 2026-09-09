@@ -1,6 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { initializeFirestore, type Firestore } from 'firebase/firestore';
 import { getDatabase, type Database } from 'firebase/database';
 
 const cfg = {
@@ -29,7 +29,15 @@ let rtdbInstance: Database | null = null;
 if (isFirebaseConfigured) {
   app = initializeApp(cfg);
   authInstance = getAuth(app);
-  dbInstance = getFirestore(app);
+  // ⚠️ `ignoreUndefinedProperties` : SANS lui, un seul champ à `undefined` dans
+  // le doc joueur fait LEVER `setDoc`, donc échouer TOUTE la sauvegarde — et
+  // comme `gameStore` appelle `void savePlayer(p)`, l'échec est silencieux : le
+  // joueur continue de jouer pendant que plus rien n'est persisté. C'est
+  // exactement ce qui est arrivé avec `pendingCombat = undefined` (abandon de
+  // combat) et, avant lui, avec `expeditionBiome = undefined`.
+  // La règle reste d'écrire `delete p.champ` (voir `abandon.ts endCombat`) ;
+  // ceci est le filet, pas la solution.
+  dbInstance = initializeFirestore(app, { ignoreUndefinedProperties: true });
   if (cfg.databaseURL) rtdbInstance = getDatabase(app);
 }
 

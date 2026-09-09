@@ -34,6 +34,13 @@ import { applyDeathPenalty, breakHuntStreak } from './combat';
 import { ascensionOutcome, applyAscensionResult } from './ascension';
 
 /**
+ * Version du marqueur d'engagement. **À incrémenter si la sémantique change.**
+ * Un `pendingCombat` d'une autre version est effacé SANS pénalité : c'est la
+ * seule façon de distinguer un vrai abandon d'un résidu laissé par un bug.
+ */
+const ABANDON_VERSION = 2;
+
+/**
  * Marque un combat comme engagé. À appeler dans `mutate` au tout début.
  *
  * ⚠️ `id` doit identifier CETTE rencontre (l'`encounter.id` côté chasse).
@@ -47,13 +54,28 @@ import { ascensionOutcome, applyAscensionResult } from './ascension';
  */
 export function beginCombat(d: PlayerState, kind: 'hunt' | 'ascension', label: string, id: string): string | null {
   const previous = d.pendingCombat && d.pendingCombat.id !== id ? resolveAbandon(d) : null;
-  d.pendingCombat = { kind, label, id, at: Date.now() };
+  d.pendingCombat = { kind, label, id, at: Date.now(), v: ABANDON_VERSION };
   return previous;
 }
 
-/** Efface l'engagement : le combat s'est terminé normalement (gagné/perdu/fui). */
+/**
+ * Efface l'engagement : le combat s'est terminé normalement (gagné/perdu/fui).
+ *
+ * ⚠️⚠️ `delete`, PAS `= undefined`. Firestore REFUSE une valeur `undefined`
+ * (`ignoreUndefinedProperties` est faux par défaut) : `setDoc` lève, donc la
+ * sauvegarde entière échouait — silencieusement, puisque `gameStore` l'appelle
+ * en `void savePlayer(p)`. Conséquences observées en production :
+ *  - le nettoyage n'était jamais persisté, donc `pendingCombat` restait dans le
+ *    doc Firestore et CHAQUE rechargement rejouait un abandon (avec sa vraie
+ *    pénalité de mort) alors que le joueur n'était pas en combat ;
+ *  - et comme le champ restait `undefined` en mémoire, **toutes** les
+ *    sauvegardes suivantes échouaient à leur tour.
+ * ⚠️ Invisible en local : le repli `localStorage` passe par `JSON.stringify`,
+ * qui SUPPRIME les clés `undefined`. Le mode local « répare » donc exactement
+ * ce que Firestore rejette — c'est pour ça que la vérif en jeu était verte.
+ */
 export function endCombat(d: PlayerState): void {
-  d.pendingCombat = undefined;
+  delete d.pendingCombat;
 }
 
 /**
@@ -63,7 +85,13 @@ export function endCombat(d: PlayerState): void {
 export function resolveAbandon(d: PlayerState): string | null {
   const pending = d.pendingCombat;
   if (!pending) return null;
-  d.pendingCombat = undefined;
+  delete d.pendingCombat;
+
+  // ⚠️ Engagement écrit par une version qui ne savait pas l'effacer (voir
+  // `endCombat`) : il est resté coincé dans le doc Firestore et ne décrit AUCUN
+  // abandon réel. On le nettoie sans rien faire payer — la pénalité de mort a
+  // déjà été infligée à tort à chaque rechargement de ces joueurs.
+  if (pending.v !== ABANDON_VERSION) return null;
 
   if (pending.kind === 'ascension') {
     // Même barème que la défaite normale, avec les PV du boss au dernier tour
