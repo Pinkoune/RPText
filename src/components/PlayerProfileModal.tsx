@@ -7,6 +7,7 @@ import { tierFor } from '../game/season';
 import type { PlayerState } from '../game/types';
 import { deriveStats, migratePlayer } from '../game/player';
 import { auraColor } from '../game/prestige';
+import { powerScore } from '../game/power';
 import ItemIcon from './ItemIcon';
 import { fmtPlaytime } from './cards/ProfileCard';
 
@@ -42,7 +43,12 @@ export default function PlayerProfileModal({ row, onClose, onMessage }: { row: P
   const equipped = full?.equipped;
   const nameColor = auraColor(prestigeAura, auraColorOn);
 
-  const stats = full ? deriveStats(migratePlayer(JSON.parse(JSON.stringify(full))), true) : null;
+  // Un seul clone migré, réutilisé pour les stats ET la Puissance : la fiche
+  // publique porte le doc joueur COMPLET (`fetchPublicProfile`), donc on peut
+  // rejouer `powerScore` dessus au lieu de n'afficher qu'un total opaque.
+  const migrated = full ? migratePlayer(JSON.parse(JSON.stringify(full))) : null;
+  const stats = migrated ? deriveStats(migrated, true) : null;
+  const power = migrated ? powerScore(migrated) : null;
 
   const lastSeenLabel = (() => {
     if (!full?.lastSeen) return null;
@@ -104,6 +110,34 @@ export default function PlayerProfileModal({ row, onClose, onMessage }: { row: P
             <div className="rounded-lg bg-rose-500/20 py-1.5"><div className="text-[10px] text-rose-300">⚔️ ATK</div><div className="font-bold text-rose-100">{stats.atk}</div></div>
             <div className="rounded-lg bg-sky-500/20 py-1.5"><div className="text-[10px] text-sky-300">🛡️ DEF</div><div className="font-bold text-sky-100">{stats.def}</div></div>
             <div className="rounded-lg bg-emerald-500/20 py-1.5"><div className="text-[10px] text-emerald-300">❤️ PV</div><div className="font-bold text-emerald-100">{stats.maxHp}</div></div>
+          </div>
+        )}
+
+        {/* Puissance détaillée.
+            « Pourquoi ce joueur est-il au-dessus de moi ? » n'avait aucune
+            réponse en jeu : le classement n'affiche qu'un total, et le détail
+            n'existait que dans SON PROPRE profil. On le montre donc pour tout
+            le monde — c'est la seule façon de rendre le classement lisible,
+            puisque la Puissance n'est pas « niveau + kills » mais la somme de
+            tous les axes de progression. */}
+        {power && (
+          <div className="mt-2 rounded-lg bg-black/25 px-3 py-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-400">⚡ Puissance</span>
+              <span className="font-bold tabular-nums text-amber-300">{power.total.toLocaleString()}</span>
+            </div>
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-slate-400">
+              <span>Niveau <b className="tabular-nums text-slate-200">{power.level}</b></span>
+              {power.prestige > 0 && <span>Prestige <b className="tabular-nums text-purple-300">{power.prestige}</b></span>}
+              {power.artifact > 0 && <span>Artefact <b className="tabular-nums text-slate-200">{power.artifact}</b></span>}
+              {power.relic > 0 && <span>Relique <b className="tabular-nums text-amber-300">{power.relic}</b></span>}
+              {power.kills > 0 && <span>Kills <b className="tabular-nums text-rose-300">{power.kills}</b></span>}
+              {power.mastery > 0 && <span>Maîtrises <b className="tabular-nums text-slate-200">{power.mastery}</b></span>}
+              {power.stars > 0 && <span>Étoiles <b className="tabular-nums text-slate-200">{power.stars}</b></span>}
+              {power.endless > 0 && <span>Abysses <b className="tabular-nums text-slate-200">{power.endless}</b></span>}
+              {power.dungeons > 0 && <span>Donjons <b className="tabular-nums text-slate-200">{power.dungeons}</b></span>}
+              {power.streak > 0 && <span>Série <b className="tabular-nums text-slate-200">{power.streak}</b></span>}
+            </div>
           </div>
         )}
 
