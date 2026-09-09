@@ -20,6 +20,20 @@ import type { PlayerState } from './types';
 import { BIOME_LIST } from './biomes';
 import { biomeKills, masteryTier, MASTERY_TIERS } from './mastery';
 
+/**
+ * Version du barème. **À incrémenter à CHAQUE changement de `POWER_WEIGHTS`.**
+ *
+ * Le score est pré-calculé et stocké dans la ligne de classement
+ * (`playerService.savePlayer`), donc changer un poids ne recalcule rien chez les
+ * joueurs qui ne se reconnectent pas : le tableau mélangerait deux barèmes,
+ * exactement le défaut qui vient d'être corrigé pour les lignes sans `power`.
+ * `socialService.rowPower` refuse un score dont la version ne correspond pas et
+ * le fait recalculer depuis le doc joueur.
+ *
+ * 1 = barème d'origine · 2 = étoile de Relique 12 → 4.
+ */
+export const POWER_VERSION = 2;
+
 /** Poids de chaque axe, en « niveaux de personnage » équivalents. */
 export const POWER_WEIGHTS = {
   /** Le niveau lui-même. */
@@ -34,8 +48,27 @@ export const POWER_WEIGHTS = {
   mastery: 1,
   /** Meilleur étage d'Abysses — deux étages valent un point. */
   endless: 0.5,
-  /** Étoile de Relique : rare et permanente, elle pèse lourd. */
-  relicStar: 12,
+  /**
+   * Étoile de Relique.
+   *
+   * ⚠️ Valait **12**, et c'était le poste qui cassait le classement en début de
+   * partie. Constat en jeu : un Nv.20 à 274 kills sortait à 87 et passait
+   * devant un Nv.23 à 773 kills (64) et un Nv.25 à 358 kills (58). Sa
+   * décomposition : niveau 20 + kills 8 + artefact 9 = 37, donc **~50 points de
+   * Relique à eux seuls** (★4), soit plus du double de son niveau.
+   *
+   * La cause est structurelle : l'effort par niveau de personnage est
+   * EXPONENTIEL (5 657 XP au Nv.20 contre 301 718 au Nv.50, soit ×53) alors que
+   * son poids ici est plat, et que la Relique est linéaire. Le seul axe encore
+   * plus décorrélé du temps de jeu est justement celui-ci — les Éclats viennent
+   * des succès et de la passe, pas du farm — et il a été gonflé d'un coup par le
+   * rattrapage rétroactif de `backfillAchievementShards`.
+   *
+   * À 4, une étoile vaut toujours 4 niveaux (elle reste le plus gros gain par
+   * unité, ce qui est voulu : c'est permanent et rare), mais elle ne peut plus
+   * à elle seule renverser l'ordre du niveau et des kills.
+   */
+  relicStar: 4,
   /**
    * Monstres vaincus, en RACINE CARRÉE.
    *

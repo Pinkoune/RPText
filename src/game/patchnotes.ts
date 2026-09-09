@@ -59,6 +59,8 @@ export const PATCH_HISTORY: PatchRelease[] = [
         items: [
           'La Puissance affichée pour les joueurs qui ne s\'étaient pas reconnectés depuis la mise à jour ne comptait <b>ni l\'artefact, ni la Relique, ni les maîtrises, ni les étoiles</b> : leur ligne de classement ne transporte tout simplement pas ces chiffres. Un Nv.45 à 1 418 monstres passait ainsi derrière un Nv.20 actif.',
           'Le classement va désormais chercher la vraie valeur dans la fiche du joueur au lieu de la deviner. Une seule lecture par joueur et par session, et plus du tout dès que chacun s\'est reconnecté une fois.',
+          '<b>Une étoile de Relique vaut 4 points au lieu de 12.</b> À 12, quatre étoiles pesaient plus du double d\'un niveau 20 : un joueur pouvait passer devant quelqu\'un qui avait plus de niveaux ET plus de monstres tués. La Relique reste le plus gros gain par unité — elle est permanente et rare — mais elle ne renverse plus l\'ordre à elle seule.',
+          '<b>Clique un nom du classement</b> : sa fiche détaille maintenant sa Puissance axe par axe (niveau, artefact, Relique, kills, maîtrises…). La Puissance n\'a jamais été « niveau + kills », c\'est la somme de tous les axes de progression — encore fallait-il pouvoir le vérifier.',
         ],
       },
       {

@@ -103,6 +103,11 @@ Unité : **1 point ≈ un niveau de personnage d'effort**. Niveau ×1, prestige 
 étoiles portées ×1, maîtrises ×1, Abysses ×0.5, étoile de Relique ×12, kills et
 donjons en **racine carrée** (×0.5 / ×1.5 — en linéaire 60 000 kills écraseraient
 tout), meilleure série ×1.
+⚠️ **`POWER_VERSION` doit être incrémenté à CHAQUE changement de poids** : le
+score est pré-calculé et stocké dans la ligne de classement, donc sans ça les
+joueurs non reconnectés resteraient sur l'ancien barème et le tableau
+mélangerait deux échelles. `rowPower` refuse un score dont la version diffère et
+le fait recalculer depuis le doc joueur.
 ⚠️ Le tri Firestore reste `orderBy('level')` et le classement se fait **côté
 client** : un `orderBy` sur `power` exclurait les lignes d'anciens clients qui ne
 portent pas le champ. `fallbackPower` leur reconstruit un score. Sur-échantillonnage
@@ -719,6 +724,47 @@ les échecs), plafond de 40 par instantané, et le classement s'affiche d'abord
 avec ce qu'il a puis se reclasse — pas d'attente réseau à l'ouverture. Le nombre
 de lectures tend vers zéro à mesure que les joueurs se reconnectent.
 ⚠️ **Non vérifiable en local** (Firestore) : à confirmer en ligne.
+
+### Poids de la Relique : 12 → 4 (fait, C)
+
+Le correctif ci-dessus a marché (Sowfird 64 → **213**, Velstroke 63 → **116**,
+Ilala 37 → **64**, vérifié sur capture), mais l'utilisateur a immédiatement
+reposé la question : « pourquoi je suis au-dessus de ceux qui ont plus de lvl et
+de kills que moi ? ». Ce n'était plus un bug de calcul mais **un défaut de
+calibrage**.
+
+Décomposition de sa ligne (Nv.20, 274 kills, 87) : niveau 20 + kills 8 +
+artefact ~9 = **37**, donc **~50 points de Relique** (★4 à ×12) — plus du double
+de son niveau — contre 27 et 24 « hors niveau/kills » pour les Nv.23 et Nv.25
+qu'il dépassait.
+
+Cause structurelle **mesurée** : l'effort par niveau de personnage est
+EXPONENTIEL (**5 657 XP au Nv.20 contre 301 718 au Nv.50, ×53**) alors que son
+poids est plat à 1, et que la Relique est linéaire. L'artefact, lui, suit
+honnêtement le personnage (même XP → Nv.20 ↔ artefact 9, Nv.50 ↔ artefact 69),
+ce n'était donc pas lui le problème. Aggravé par le rattrapage rétroactif
+`backfillAchievementShards`, qui a versé les Éclats d'un coup.
+
+Choix de l'utilisateur parmi quatre options chiffrées : **baisser la Relique
+(12 → 4)** plutôt que gonfler le niveau, parce que c'est l'axe le plus
+décorrélé du temps de jeu. Une étoile vaut toujours 4 niveaux — elle reste le
+plus gros gain par unité, c'est voulu — mais ne renverse plus l'ordre seule.
+⚠️ Effet **borné, pas prédit** : sans lire les sauvegardes on ne connaît pas le
+nombre d'étoiles de chacun. Borne haute (si tout le « reste » était de la
+Relique) : Galelix 744 → 303, Sowfird 213 → 114, Pinkoune 87 → 48, Ilala 64 →
+46. Le sens est garanti (celui qui s'appuie le plus sur la Relique chute le
+plus) ; le classement exact se lit sur le nouvel écran de détail.
+
+**Détail de la Puissance sur la fiche publique** (`PlayerProfileModal`) : le
+classement n'affichait qu'un total et le détail n'existait que dans SON PROPRE
+profil, donc « pourquoi untel est au-dessus de moi » n'avait aucune réponse en
+jeu. La fiche charge déjà le doc complet (`fetchPublicProfile`), `powerScore`
+y est donc rejoué. Un seul clone migré sert aux stats ET à la Puissance.
+⚠️ **Non vérifiable en local** (Firestore).
+
+⚠️ Le champ `powerVersion` ajouté à la ligne **ne casse pas** `leaderboardMirrors`
+(la règle valide des champs nommés, sans `hasOnly`) : pas de redéploiement requis
+pour ce lot.
 
 ### La Faille de la semaine n'a PAS de cooldown — décision assumée
 

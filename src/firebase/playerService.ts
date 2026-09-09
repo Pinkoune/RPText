@@ -2,7 +2,7 @@ import { doc, getDoc, setDoc, deleteDoc, collection, query, where, limit, getDoc
 import { db, isFirebaseConfigured } from './config';
 import type { PlayerState } from '../game/types';
 import { charKey, MAX_CHARACTERS } from '../game/player';
-import { powerScore } from '../game/power';
+import { powerScore, POWER_VERSION } from '../game/power';
 import { syncGuildMember, contributeGuildGoal } from './groupsService';
 
 const localKey = (uid: string) => `rptext.player.${uid}`;
@@ -168,6 +168,9 @@ export async function savePlayer(p: PlayerState): Promise<void> {
     // parce que la ligne de classement ne transporte pas les composants (sac,
     // maîtrises, artefact) et qu'on ne veut pas les y dupliquer.
     power: powerScore(p).total,
+    // ⚠️ Sans cette version, changer un poids laisserait les lignes des joueurs
+    // non reconnectés sur l'ancien barème (voir POWER_VERSION).
+    powerVersion: POWER_VERSION,
   });
   // Garde la fiche membre de guilde à jour (niveau/titre figés sinon depuis l'entrée dans la guilde).
   // `savePlayer` est appelé très souvent (mutate débounced à 800ms) : ne réécrit
