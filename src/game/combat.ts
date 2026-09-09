@@ -329,6 +329,16 @@ export function combatTurn(
   let goldStolen = 0;
   let resourceSpent = 0;
   let healDone = 0;
+  /**
+   * Part de `healDone` produite par la compétence qui CONSOMME la ressource
+   * d'archétype. ⚠️ Elle ne doit jamais recharger cette même ressource : la
+   * Grâce se gagne en soignant, or la Nova sacrée est un énorme soin ET la
+   * dépense de Grâce. Elle se repayait donc elle-même — voir le calcul de
+   * `resourceGained` plus bas.
+   */
+  let spenderHeal = 0;
+  /** Soin qui a le droit de RECHARGER la ressource : tout sauf celui du dépensier. */
+  const chargingHeal = () => Math.max(0, healDone - spenderHeal);
   let critLanded = false;
   const mhpAtStart = mhp;
   const phpAtStart = php;
@@ -422,6 +432,7 @@ export function combatTurn(
           const heal = Math.round(maxHp * effHealFrac * sustain);
           php = Math.min(maxHp, php + heal);
           healDone += heal;
+          if (skill.resource && skill.resource.type === opts.resourceType) spenderHeal += heal;
           events.push({ text: `${skill.name} te rend ${heal} PV.`, side: 'info' });
         }
         if (skill.shield) {
@@ -496,7 +507,7 @@ export function combatTurn(
   if (mhp <= 0) {
     let resourceGained = 0;
     if (opts.resourceType === 'combo' && hitsDealt > 0) resourceGained = 1;
-    else if (opts.resourceType === 'grace') resourceGained = Math.round(healDone * 0.15);
+    else if (opts.resourceType === 'grace') resourceGained = Math.round(chargingHeal() * 0.15);
     else if (opts.resourceType === 'mana') resourceGained = 15;
     else if (opts.resourceType === 'instinct' && critLanded) resourceGained = 30;
     else if (opts.resourceType === 'corruption' && hitsDealt > 0 && php < maxHp * 0.3) resourceGained = 35;
@@ -654,7 +665,7 @@ export function combatTurn(
   // brutalité du combat.
   if (opts.resourceType === 'rage') resourceGained = Math.min(25, Math.round((dmgTakenThisTurn / maxHp) * 100 * 0.4));
   else if (opts.resourceType === 'combo' && hitsDealt > 0) resourceGained = 1;
-  else if (opts.resourceType === 'grace') resourceGained = Math.round(healDone * 0.15);
+  else if (opts.resourceType === 'grace') resourceGained = Math.round(chargingHeal() * 0.15);
   // Mana : régen passive fixe à chaque tour, quelle que soit l'action (gestion
   // par patience plutôt que réactive comme la rage/le combo).
   else if (opts.resourceType === 'mana') resourceGained = 15;
@@ -681,7 +692,7 @@ export function combatTurn(
   else if (opts.resourceType === 'traps' && hitsDealt > 0 && wasPoisoned) resourceGained = 25;
   // Présage (Oracle) : se charge quand un bouclier absorbe un coup ou qu'un soin
   // passe — l'anticipation nourrit la prophétie.
-  else if (opts.resourceType === 'presage' && (shieldAbsorbed || healDone > 0)) resourceGained = 20;
+  else if (opts.resourceType === 'presage' && (shieldAbsorbed || chargingHeal() > 0)) resourceGained = 20;
   // Tempo (Barde) et Surcharge (Arcaniste) : calculés par l'appelant (HuntCard),
   // pas ici — l'un dépend de l'action du tour précédent (variété), l'autre du
   // nombre de compétences lancées, deux signaux hors du périmètre de ce combat.

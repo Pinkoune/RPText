@@ -766,6 +766,76 @@ y est donc rejoué. Un seul clone migré sert aux stats ET à la Puissance.
 (la règle valide des champs nommés, sans `hasOnly`) : pas de redéploiement requis
 pour ce lot.
 
+### Prêtre de l'Aube : la Nova se rechargeait elle-même (fait, C)
+
+Signalé en jeu : « trop fort, quasiment impossible qu'il meurt, il peut lancer
+sa nova tous les 2 tours car la grâce ne baisse jamais ». Exact, et la mesure
+est pire que le ressenti.
+
+**La boucle** : la Grâce se gagne en soignant
+(`resourceGained = healDone * 0.15`), or la **Nova sacrée** EST à la fois la
+dépense de Grâce et un énorme soin (`healFrac = 0.20 + 0.006 × pool`). Son
+propre soin la repayait donc. Seuil calculé : dès **maxHp ≥ 834**, une Nova à
+pool plein rend ≥ 100 Grâce, soit le plafond entier — la jauge se **remplit
+intégralement à chaque cast**. Un Prêtre Nv.50 *sans aucun équipement* est déjà
+à 1 557 PV. Et comme sa Nova a un cooldown de 3 s (= 1 tour), plus rien ne la
+gatait.
+
+Mesuré au harnais tour-par-tour (Nv.50, talents max, sans gear, 300 combats) :
+
+| | avant | après |
+|---|---|---|
+| 1 Nova tous les | **1,1 tour** | **4,7 tours** |
+| jauge de Grâce moyenne | **95/100** | **30/100** |
+| PV en fin de combat | **100%** | 78% |
+
+**Correctif** : le soin produit par la compétence qui **consomme** la ressource
+ne la recharge plus (`spenderHeal` / `chargingHeal()` dans `combat.ts`). Règle
+générale, pas un cas particulier : *un dépensier ne se repaye pas*.
+⚠️ L'**Oracle** avait la même boucle sur le Présage (son Jugement soigne 15% et
+retriggerait le +20) : un Jugement toutes les 3,7 → 6,1 tours. Toutes les autres
+classes sont inchangées (écart dans le bruit, vérifié classe par classe).
+
+⚠️ Ce qui recharge la Grâce reste la **Lumière sacrée** (22% PV, CD 20 s = 4
+tours) : c'est elle, et non le cooldown de la Nova, qui cadence désormais le
+Prêtre. La régénération passive et le vol de vie ne comptent pas (ils modifient
+`php` sans passer par `healDone`) — c'est voulu, sinon la boucle reviendrait par
+la porte de derrière.
+
+### Notifications de succès et de quêtes (fait, C)
+
+Rien ne signalait qu'un succès venait d'être atteint ni qu'une quête venait
+d'être bouclée : il fallait ouvrir la carte pour s'en apercevoir, donc les
+récompenses dormaient. `game/completions.ts` (`collectCompletions`) est appelé
+par **`gameStore.mutate`** — le seul point de passage commun à la chasse, la
+récolte, la forge, les donjons et le casino ; les brancher un par un en aurait
+forcément oublié.
+
+⚠️ **Le registre s'amorce en SILENCE.** `notifiedAchievements` (joueur) et
+`QuestPeriodState.notified` (période, donc vidé tout seul à la rotation)
+absents = « jamais annoncé pour ce personnage » : on les remplit sans rien dire.
+Sans ça, la première connexion après la MAJ cracherait **une bulle par succès
+déjà accompli** — vérifié en jeu : 8 succès enregistrés, **0 bulle**.
+⚠️ Registre, pas flag de version : un succès ajouté plus tard doit pouvoir être
+annoncé à son tour (même raison que `shardedAchievements`).
+⚠️ `completions.ts` doit rester un fichier à part — il dépend
+d'`achievements.ts` → `gathering.ts` → `player.ts`, le cycle déjà documenté.
+
+Le centre de **Notifications** liste en plus ce qui reste à réclamer. Ces deux
+entrées sont **dérivées** (`pendingAchievements`/`pendingQuests`), pas une file :
+elles disparaissent d'elles-mêmes quand on réclame. ⚠️ `notificationCount`
+(pastille de la Topbar) doit rester aligné sur les `entries` de la carte, sinon
+la pastille annonce un nombre que la carte ne montre pas.
+
+Vérifié en jeu : amorçage silencieux (8 succès, 0 bulle) · quête franchie →
+« 📜 Quête journalière terminée : Chasser 10 fois ! » · succès franchi →
+« 🏆 Succès accompli : Ami des bêtes » · centre affichant « 9 succès à
+réclamer » + « Une quête terminée ».
+⚠️ Piège de banc d'essai : **il n'existe pas de commande `notifications`** — la
+carte s'ouvre uniquement par la cloche 🔔 de la Topbar. Et ouvrir le profil ne
+passe PAS par `mutate` : pour déclencher la détection dans un test, utiliser une
+commande qui écrit vraiment (`hunt` pose `cooldowns.hunt`).
+
 ### La Faille de la semaine n'a PAS de cooldown — décision assumée
 
 Constat mesuré, à garder sous la main : `buildRiftMonster` calibre sur le

@@ -248,6 +248,13 @@ export interface PlayerState {
    * rend idempotent — pas de flag de version à incrémenter.
    */
   shardedAchievements?: string[];
+  /**
+   * Succès dont l'achèvement a déjà été annoncé (voir `game/completions.ts`).
+   * ⚠️ Registre absent = jamais annoncé pour ce personnage : il s'amorce en
+   * silence, sinon la première connexion cracherait une bulle par succès déjà
+   * accompli.
+   */
+  notifiedAchievements?: string[];
   title?: string;
   unlockedTitles?: string[];
   /** Aura de prestige (cosmétique) affichée sur le classement. */
@@ -334,6 +341,12 @@ export interface QuestPeriodState {
   counters: Record<string, number>;
   /** Ids des quêtes dont la récompense a été réclamée. */
   claimed: string[];
+  /**
+   * Ids des quêtes dont l'achèvement a déjà été annoncé (voir
+   * `game/completions.ts`). Vit DANS la période pour se vider tout seul à la
+   * rotation — `ensureQuestPeriods` reconstruit l'objet entier.
+   */
+  notified?: string[];
 }
 
 export interface QuestState {
