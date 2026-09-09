@@ -9,6 +9,12 @@ interface Entry {
   id: string;
   icon: string;
   title: string;
+  /**
+   * Une ligne courte. ⚠️ Elle est rendue en `truncate` dans une fenêtre qui
+   * peut être étroite : au-delà d'une quarantaine de caractères elle se coupe
+   * au milieu d'un mot et ne dit plus rien. Le titre porte l'information, le
+   * détail ne fait que la préciser.
+   */
   detail: string;
   color: string;
   onOpen: () => void;
@@ -36,7 +42,7 @@ export default function NotificationsCard() {
       id: 'patch',
       icon: '📰',
       title: 'Mise à jour du jeu',
-      detail: `Version ${latest.version} — découvre les nouveautés.`,
+      detail: `Version ${latest.version}`,
       color: '#8cb4ff',
       onOpen: () => { markPatchSeen(); open('news', undefined, { singleton: true }); },
     });
@@ -50,7 +56,7 @@ export default function NotificationsCard() {
       id: 'achievements',
       icon: '🏆',
       title: ach > 1 ? `${ach} succès à réclamer` : 'Un succès à réclamer',
-      detail: 'Tu as accompli des succès dont la récompense t\'attend.',
+      detail: 'Récompense à récupérer.',
       color: '#f0b543',
       onOpen: () => open('achievements', undefined, { singleton: true }),
     });
@@ -62,7 +68,7 @@ export default function NotificationsCard() {
       id: 'quests',
       icon: '📜',
       title: quests > 1 ? `${quests} quêtes terminées` : 'Une quête terminée',
-      detail: 'Passe récupérer ta récompense avant la fin de la période.',
+      detail: 'Récompense à récupérer.',
       color: '#5fd0a0',
       onOpen: () => open('quests', undefined, { singleton: true }),
     });
@@ -74,7 +80,7 @@ export default function NotificationsCard() {
       id: 'chat',
       icon: '💬',
       title: 'Nouveaux messages',
-      detail: last ? `${last.name} : ${last.text.slice(0, 60)}` : 'Tu as reçu des messages non lus.',
+      detail: last ? `${last.name} : ${last.text.slice(0, 28)}` : 'Messages non lus.',
       color: '#5fd0a0',
       onOpen: () => open('chat', undefined, { singleton: true }),
     });

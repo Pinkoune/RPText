@@ -352,6 +352,9 @@ Remplace l'ancien duel instantané (pile/face Firestore, `pvp.ts simulateDuel`) 
 ## Équilibrage arbres de talents (fait, C)
 
 À Nv.50 le joueur gagne 49 points de talent (`level-1`). Un premier passage avait ajouté des passifs « absorbeurs » (2×5 rangs + 1×3 rang) pour les bases Guerrier/Mage/Archer/Soigneur + les sous-classes Moine/Druide/Prêtre de l'Aube, mais **oubliait 9 sous-classes** (Paladin/Berserker/Dark Knight/Pyromancer/Cryomancer/Arcanist/Rogue/Barde/Chasseur), qui plafonnaient à 35 rangs dépensables → **14 points gaspillés** à Nv.50. Corrigé (`talents.ts`) : mêmes gabarits ajoutés à ces 9 sous-classes → toutes à 48 rangs (1 point de marge, comme le Moine). Prêtre de l'Aube/Druide restent à 43 (6 de marge, non touché — pas cassé, juste un peu plus généreux).
+⚠️ **Périmé** : ce passage décrit l'objectif « l'arbre tient dans le budget »,
+qui a été **abandonné**. Les arbres font désormais 67 rangs pour 49 points, et
+c'est voulu — voir « Les talents redeviennent un choix » plus bas.
 
 ## Simulation d'équilibrage & fixes de courbes (fait, C)
 
@@ -766,6 +769,92 @@ y est donc rejoué. Un seul clone migré sert aux stats ET à la Puissance.
 (la règle valide des champs nommés, sans `hasOnly`) : pas de redéploiement requis
 pour ce lot.
 
+### Un dépensier ne se repaye pas — la même boucle par le poison (fait, C)
+
+Suite directe du correctif de la Nova, signalée par l'utilisateur (« le
+Nécromancien ne regen pas trop facilement ses âmes ? »). Oui, et par le même
+mécanisme routé autrement : la **Vague d'âmes** coûte 40 Âmes et pose
+`status: poison, turns: 4` ; or les Âmes se chargent de **20 par tick de
+poison**. Un lancer se rendait donc **80 pour 40** — auto-suffisant, comme la
+Nova. Le correctif `chargingHeal()` ne le couvrait pas : il ne parle que du soin.
+
+Même faute chez le **Piégeur** : l'Embuscade coûte 60 Pièges, pose 4 tours de
+poison, et les Pièges se chargent de 25 par tour où l'on frappe une cible
+empoisonnée → **100 rendus pour 60**.
+
+Correctif : `CombatState.poisonSelf` (tours de poison posés par le dépensier,
+décrémenté avec `poison`). Tant qu'il court, `souls` et `traps` ne se chargent
+pas. La règle générale est donc étendue : *un dépensier ne se repaye pas,
+quelle que soit la porte* (soin **ou** altération d'état). Ce sont l'Éclat
+nécrotique et le Piège explosif — les compétences gratuites — qui chargent.
+
+Mesuré (`scripts/resource-pools.ts`, banc dédié : sac de frappe 200 000 PV,
+joueur à PV pleins, 200 tours) :
+
+| | avant | après |
+|---|---|---|
+| Nécromancien, 1 Vague d'âmes tous les | **2,1 tours** | **6,7 tours** |
+| Piégeur, 1 Embuscade tous les | **2,4 tours** | **6,5 tours** |
+| jauge moyenne (Nécro / Piégeur) | 29 / 52 | 11 / 26 |
+
+Effet en combat réel, minime : Nécromancien endHP 56% → 42% (turns 8 → 9),
+Piégeur inchangé (endHP 50% → 49%), tous deux toujours à 100% de victoire.
+⚠️ Sur ce banc les jauges qui se chargent en **encaissant** (rage, vindicte,
+corruption, ferveur) restent à 0 — le joueur y prend très peu de dégâts. C'est
+une limite du banc, pas un défaut de ces classes.
+
+### Les talents redeviennent un choix — l'arbre est plus grand que le budget (fait, C)
+
+Demande de l'utilisateur : « pour ceux niveau 50, fait en sorte qu'il ne leur
+reste plus un seul point de talent ou sinon, selon ton avis, on ne donne pas
+accès à tous les talents ». Les deux options étaient ouvertes ; j'ai pris la
+seconde, parce que l'état d'avant était **le pire des deux** : 49 points gagnés
+au Nv.50 pour des arbres de **48 rangs**, donc tout le monde finissait avec
+exactement le même personnage **et** un point mort par-dessus.
+
+Les arbres passent à **67 rangs** pour 16 sous-classes (73% achetable, 18 rangs
+laissés de côté), les arbres de base à 35. Rien n'est retiré : ce sont des
+`maxRank` qui montent (5→9, 3→6…), donc **aucune migration** et aucun talent
+déjà appris ne bouge. Les nouveaux rangs sont mis sur les passifs génériques
+(ATK%/DEF%/PV%/régén) qui n'existaient que pour absorber les points en trop :
+ils deviennent l'axe du choix.
+
+⚠️ **Ne pas relever le `maxRank` d'un nœud dont la valeur a été réglée
+exprès** — `ber_life`/`ber_bloodlust` (vol de vie du Berserker, déjà nerfé),
+`dru_thorns` (qui alimente la Sève), `mnk_chi`, `dk_dread` sont restés en
+place ; le plafond de ces stats est donc inchangé. Idem pour les nœuds
+d'esquive du Voleur et du Piégeur : leur cumul touchait déjà le `CAPS.dodge` de
+0.6, un rang de plus n'aurait rien acheté.
+
+⚠️⚠️ **`budgetedBuild(classId, points)` (talents.ts) remplace partout le
+« tous les rangs au max ».** Trois endroits fabriquaient un joueur idéal en
+maxant l'arbre — et l'un est du **code de jeu** : `computeAscensionBoss`, qui
+calibre le boss du Rituel dessus. Avec des arbres de 67 rangs il aurait été
+calibré sur un joueur 37% plus investi qu'aucun joueur réel. Les deux harnais
+d'équilibrage faisaient pareil.
+⚠️ L'ordre de dépense de `budgetedBuild` **compte** : rempli dans l'ordre de
+déclaration brut, le budget s'épuisait dans l'arbre de base et la branche
+d'ascension restait à moitié vide — tous les winrates mesurés tombaient de
+moitié. Il dépense donc **la branche de spécialisation d'abord**, après avoir
+débloqué les compétences actives et leurs prérequis.
+
+⚠️ **Les anciens chiffres de chasse sous Nv.50 étaient faux** (quatrième
+artefact de mesure de la même famille) : le harnais donnait l'arbre COMPLET à
+chaque niveau testé, donc 48 rangs à un Nv.30 qui n'a que 29 points. Le tableau
+« HUNT winrate » était gonflé partout sauf au niveau max. Chiffres honnêtes
+désormais : Nv.30 crypte 70% → **57%**, Nv.40 Abysse 28% → **14%**, Nv.50
+Berceau 31% → **26%**. **Rien n'a été retouché dans le jeu pour autant** : un
+joueur Nv.40 avait déjà 39 points pour 48 rangs avant ce lot, il est
+strictement inchangé. Seule la mesure a été corrigée.
+
+Le contrat du Rituel tient (`0% / ~30% / 82-100%` par profil, contre
+`0% / 36% / 84-100%` avant). `check-talent-layout.ts` vérifie désormais aussi
+le budget et **refuse** un arbre de sous-classe repassé sous 49 rangs.
+
+⚠️ Reste assumé : un joueur qui **n'ascensionne jamais** arrive au Nv.50 avec
+49 points pour 35 rangs, donc 14 points morts. C'est une incitation à
+ascensionner (ce que le jeu pousse à faire dès le Nv.20), pas un oubli.
+
 ### Prêtre de l'Aube : la Nova se rechargeait elle-même (fait, C)
 
 Signalé en jeu : « trop fort, quasiment impossible qu'il meurt, il peut lancer
@@ -831,6 +920,10 @@ Vérifié en jeu : amorçage silencieux (8 succès, 0 bulle) · quête franchie 
 « 📜 Quête journalière terminée : Chasser 10 fois ! » · succès franchi →
 « 🏆 Succès accompli : Ami des bêtes » · centre affichant « 9 succès à
 réclamer » + « Une quête terminée ».
+Les **détails sont volontairement courts** (« Récompense à récupérer. ») : ils
+sont rendus en `truncate` dans une fenêtre qui peut être étroite, donc au-delà
+d'une quarantaine de caractères ils se coupaient au milieu d'un mot. Le titre
+porte l'information, le détail ne fait que la préciser.
 ⚠️ Piège de banc d'essai : **il n'existe pas de commande `notifications`** — la
 carte s'ouvre uniquement par la cloche 🔔 de la Topbar. Et ouvrir le profil ne
 passe PAS par `mutate` : pour déclencher la détection dans un test, utiliser une

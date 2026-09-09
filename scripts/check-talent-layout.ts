@@ -7,13 +7,17 @@
  *  - aucune superposition (deux nœuds sur la même case) ;
  *  - aucun croisement de liens de prérequis ;
  *  - largeur raisonnable (l'arbre doit tenir dans la fenêtre sans défilement
- *    horizontal, soit ~7 colonnes pour une fenêtre de 680px).
+ *    horizontal, soit ~7 colonnes pour une fenêtre de 680px) ;
+ *  - le BUDGET : un arbre de sous-classe doit compter plus de rangs que le
+ *    joueur n'aura jamais de points (49 au Nv.50), sinon le Nv.50 reprend tout
+ *    l'arbre et le choix disparaît — et il ne doit pas non plus être si gros
+ *    que le finisher devienne inatteignable.
  *
  * Lancer : npx esbuild --bundle ... (voir scripts/README-balance.md), ou
  *   npx tsx scripts/check-talent-layout.ts
  */
-import { CLASS_LIST } from '../src/game/classes';
-import { getTalentsForClass, type TalentDef } from '../src/game/talents';
+import { CLASS_LIST, MAX_LEVEL } from '../src/game/classes';
+import { getTalentsForClass, treeRankTotal, type TalentDef } from '../src/game/talents';
 import { layoutTree } from '../src/components/cards/talentLayout';
 
 const MAX_COLS = 7;
@@ -86,5 +90,18 @@ for (const cls of CLASS_LIST) {
     if (width > MAX_COLS) { console.log(`❌ ${tag} : ${width.toFixed(1)} colonnes (max ${MAX_COLS})`); problems++; }
     console.log(`   ${tag.padEnd(34)} ${nodes.length} nœuds · ${rows} paliers · ${width.toFixed(1)} col.`);
   }
+}
+// Budget : 49 points au Nv.50 pour un arbre volontairement plus grand.
+const POINTS = MAX_LEVEL - 1;
+console.log('\n── Budget de points (arbre complet vs points au Nv.' + MAX_LEVEL + ') ──');
+for (const cls of CLASS_LIST) {
+  const ranks = treeRankTotal(cls.id);
+  const share = Math.round((POINTS / ranks) * 100);
+  const sub = !!cls.parent;
+  // Une sous-classe DOIT dépasser le budget ; un arbre de base ne sert que
+  // jusqu'à l'ascension (Nv.20), on n'y attend rien.
+  const bad = sub && ranks <= POINTS;
+  if (bad) problems++;
+  console.log(`   ${(bad ? '❌ ' : '   ') + cls.name.padEnd(20)} ${String(ranks).padStart(3)} rangs · ${POINTS} points = ${share}% de l'arbre`);
 }
 console.log(problems === 0 ? '\n✅ Aucun problème de disposition.' : `\n❌ ${problems} problème(s).`);

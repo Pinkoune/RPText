@@ -71,6 +71,24 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '🌳 Les talents deviennent un choix',
+        kind: 'balance',
+        items: [
+          'Au Nv.50 tu gagnes <b>49 points de talent</b> pour un arbre qui en comptait 48 : tout le monde finissait avec exactement le même personnage, et un point dans le vide par-dessus le marché.',
+          'Les arbres passent à <b>67 rangs</b>. Tu en achèteras <b>49</b>, soit un peu moins des trois quarts : chaque point mis quelque part est un point qui manquera ailleurs, et deux Berserkers Nv.50 ne se ressemblent plus. La carte Talents affiche le budget dès le premier point.',
+          'Rien n\'est retiré ni remis à zéro — <b>aucun talent déjà appris ne bouge</b>, ce sont les rangs maximum qui montent. Ton personnage actuel est intact, il a simplement de la place devant lui.',
+          'Un arbre de base (avant l\'ascension) monte à 35 rangs : la spécialisation reste, de loin, le meilleur endroit où mettre ses points.',
+        ],
+      },
+      {
+        title: '👻 Nécromancien et Piégeur : les jauges se dépensent aussi',
+        kind: 'balance',
+        items: [
+          'Même défaut que la Nova du Prêtre, par une autre porte : la <b>Vague d\'âmes</b> coûte 40 Âmes et pose 4 tours de Poison… qui rapportent 20 Âmes par tour. Elle se rendait donc <b>le double de ce qu\'elle coûtait</b> et tournait en boucle. Idem pour l\'<b>Embuscade</b> du Piégeur (60 dépensés, 100 rendus).',
+          'Le poison posé par la compétence qui dépense la jauge ne la recharge plus. C\'est l\'<b>Éclat nécrotique</b> et le <b>Piège explosif</b> qui la remplissent — comme prévu. Mesuré : un finisher toutes les <b>2,1 → 6,7 tours</b> (Nécromancien) et <b>2,4 → 6,5 tours</b> (Piégeur).',
+        ],
+      },
+      {
         title: '✨ Prêtre de l\'Aube : la Grâce se dépense enfin',
         kind: 'balance',
         items: [

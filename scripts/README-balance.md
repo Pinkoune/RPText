@@ -167,9 +167,36 @@ garantir :
 - **aucun croisement** de liens de prérequis (les liens partageant un nœud ne
   comptent évidemment pas) ;
 - **largeur ≤ 7 colonnes**, pour que l'arbre tienne dans la fenêtre (680px)
-  sans défilement horizontal.
+  sans défilement horizontal ;
+- le **budget de points** : un arbre de sous-classe doit compter PLUS de rangs
+  que le joueur n'aura jamais de points (49 au Nv.50). Aujourd'hui 67 rangs,
+  soit 73% de l'arbre achetable. Un arbre repassé sous 49 rangs redonnerait
+  tout à tout le monde au niveau max, et le script le refuse.
 
 À relancer après tout ajout ou modification de nœud dans `talents.ts`. La
 disposition étant déduite du graphe de prérequis (et non des `pos.x`/`pos.y`
 écrits à la main), un nœud ajouté se place tout seul — ce script confirme que
 le résultat reste propre.
+
+---
+
+## `resource-pools.ts` — cadence des jauges d'archétype
+
+    node_modules/.bin/esbuild scripts/resource-pools.ts --bundle --platform=node \
+      --format=cjs --define:import.meta.env='{}' --outfile=/tmp/pools.cjs && node /tmp/pools.cjs
+
+Isole **la ressource, pas la survie** : sac de frappe à 200 000 PV (le combat
+dure 200 tours) et joueur maintenu à PV pleins. Sort, par sous-classe, le
+nombre de lancers du finisher, la cadence (« 1 cast tous les N tours ») et la
+jauge moyenne.
+
+⚠️ C'est l'outil qui a trouvé les deux **boucles d'auto-recharge** : la Nova du
+Prêtre (le soin qui dépense la Grâce la rechargeait) puis la Vague d'âmes du
+Nécromancien et l'Embuscade du Piégeur (le poison qui dépense la jauge la
+rechargeait, 80 rendus pour 40 dépensés). Un finisher qui sort **toutes les 2
+tours** est le signe : la bande saine est ~4 à 10 tours.
+
+⚠️ Sur ce banc, les jauges qui se chargent en ENCAISSANT (rage, vindicte,
+corruption) restent à zéro — le joueur ne prend presque rien. C'est une limite
+assumée du banc, pas un défaut de ces classes : les juger au harnais
+tour-par-tour.
