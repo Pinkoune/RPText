@@ -60,7 +60,7 @@ export default function Topbar() {
     window.addEventListener('rptext:patch-seen', h);
     return () => window.removeEventListener('rptext:patch-seen', h);
   }, []);
-  const notifCount = useMemo(() => notificationCount(hasUnreadChat), [hasUnreadChat, patchTick]);
+  const notifCount = useMemo(() => notificationCount(hasUnreadChat, player), [hasUnreadChat, patchTick, player]);
 
   // Expose la hauteur réelle de la barre (elle peut passer sur 2-3 lignes) pour
   // que les fenêtres mobiles démarrent juste en dessous, sans chevauchement.

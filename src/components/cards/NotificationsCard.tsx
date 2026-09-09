@@ -1,5 +1,7 @@
 import { useGame } from '../../store/gameStore';
 import { useUi } from '../../store/uiStore';
+import type { PlayerState } from '../../game/types';
+import { pendingAchievements, pendingQuests } from '../../game/completions';
 import { PATCH_HISTORY } from '../../game/patchnotes';
 import { hasUnreadPatch, markPatchSeen } from '../PatchNotesModal';
 
@@ -23,6 +25,7 @@ interface Entry {
 export default function NotificationsCard() {
   const hasUnreadChat = useGame((s) => s.hasUnreadChat);
   const chatNotifs = useGame((s) => s.chatNotifs);
+  const player = useGame((s) => s.player);
   const open = useUi((s) => s.open);
 
   const latest = PATCH_HISTORY[0];
@@ -36,6 +39,32 @@ export default function NotificationsCard() {
       detail: `Version ${latest.version} — découvre les nouveautés.`,
       color: '#8cb4ff',
       onOpen: () => { markPatchSeen(); open('news', undefined, { singleton: true }); },
+    });
+  }
+
+  // Récompenses en attente. Dérivées (pas une file) : elles disparaissent d'
+  // elles-mêmes dès qu'on réclame, sans registre à tenir à jour.
+  const ach = player ? pendingAchievements(player) : 0;
+  if (ach > 0) {
+    entries.push({
+      id: 'achievements',
+      icon: '🏆',
+      title: ach > 1 ? `${ach} succès à réclamer` : 'Un succès à réclamer',
+      detail: 'Tu as accompli des succès dont la récompense t\'attend.',
+      color: '#f0b543',
+      onOpen: () => open('achievements', undefined, { singleton: true }),
+    });
+  }
+
+  const quests = player ? pendingQuests(player) : 0;
+  if (quests > 0) {
+    entries.push({
+      id: 'quests',
+      icon: '📜',
+      title: quests > 1 ? `${quests} quêtes terminées` : 'Une quête terminée',
+      detail: 'Passe récupérer ta récompense avant la fin de la période.',
+      color: '#5fd0a0',
+      onOpen: () => open('quests', undefined, { singleton: true }),
     });
   }
 
@@ -78,7 +107,14 @@ export default function NotificationsCard() {
   );
 }
 
-/** Nombre de notifications en attente — pilote la pastille de la barre du haut. */
-export function notificationCount(hasUnreadChat: boolean): number {
-  return (hasUnreadPatch() ? 1 : 0) + (hasUnreadChat ? 1 : 0);
+/**
+ * Nombre de notifications en attente — pilote la pastille de la barre du haut.
+ * ⚠️ Doit rester aligné sur les `entries` ci-dessus, sinon la pastille annonce
+ * un nombre que la carte ne montre pas.
+ */
+export function notificationCount(hasUnreadChat: boolean, player: PlayerState | null): number {
+  return (hasUnreadPatch() ? 1 : 0)
+    + (hasUnreadChat ? 1 : 0)
+    + (player && pendingAchievements(player) > 0 ? 1 : 0)
+    + (player && pendingQuests(player) > 0 ? 1 : 0);
 }

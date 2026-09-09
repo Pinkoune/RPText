@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { PlayerState, ClassId } from '../game/types';
 import { createPlayer, migratePlayer, deriveStats, charKey } from '../game/player';
 import { resolveAbandon } from '../game/abandon';
+import { collectCompletions } from '../game/completions';
 import { claimDailyLogin, type DailyReward } from '../game/daily';
 import type { SeasonReward } from '../game/season';
 import { signInWithProvider, signOut, watchAuth, type AppUser, type AuthProviderType } from '../firebase/auth';
@@ -374,7 +375,15 @@ export const useGame = create<GameState>((set, get) => ({
       }
     }
 
+    // Succès et quêtes franchis par CETTE écriture. Ici parce que c'est le seul
+    // point commun à toutes les sources de progression (chasse, récolte, forge,
+    // donjon, casino) — les brancher une par une en aurait forcément oublié.
+    const completions = collectCompletions(draft);
+
     set({ player: draft });
+    // Après le `set` : un toast déclenché avant serait rendu avec l'état
+    // précédent, et la carte ouverte depuis le toast lirait des données périmées.
+    for (const c of completions) get().toast(c.text, 'gold', 5200);
     touchPresence(); // toute action compte comme activité (présence "en ligne")
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {

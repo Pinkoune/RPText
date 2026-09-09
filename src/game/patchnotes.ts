@@ -54,6 +54,23 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '🔔 On te prévient quand tu termines quelque chose',
+        kind: 'new',
+        items: [
+          'Une bulle s\'affiche désormais dès qu\'un <b>succès est accompli</b> ou qu\'une <b>quête est terminée</b> — avant, il fallait ouvrir la carte pour s\'en apercevoir, et les récompenses dormaient.',
+          'Le centre de <b>Notifications</b> 🔔 liste aussi ce qui reste à réclamer, et la pastille de la barre du haut le compte.',
+        ],
+      },
+      {
+        title: '✨ Prêtre de l\'Aube : la Grâce se dépense enfin',
+        kind: 'balance',
+        items: [
+          'La <b>Nova sacrée</b> se rechargeait toute seule : elle consomme la Grâce, mais son propre soin en rendait davantage qu\'elle n\'en coûtait. Au-delà de <b>834 PV max</b>, chaque Nova remplissait intégralement la jauge — elle était donc lançable presque tous les tours, pour un soin allant jusqu\'à 80% des PV max. Mesuré : <b>une Nova tous les 1,1 tour</b>, jauge moyenne 95/100, et le Prêtre finissait ses combats à 100% de vie.',
+          'Le soin de la compétence qui DÉPENSE une ressource ne la recharge plus. Après correction : une Nova tous les <b>4,7 tours</b>, jauge moyenne 30/100. Le Prêtre reste le meilleur soigneur du jeu, il n\'est simplement plus increvable.',
+          'Le <b>Jugement</b> de l\'Oracle avait la même boucle sur le Présage (un cast toutes les 3,7 → 6,1 tours). Les autres classes ne bougent pas.',
+        ],
+      },
+      {
         title: '⚡ Puissance du classement',
         kind: 'fix',
         items: [
