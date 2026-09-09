@@ -201,6 +201,14 @@ export interface CombatState {
   /** Tours restants et dégâts/tour de poison. */
   poison: number;
   poisonPow: number;
+  /**
+   * Tours de poison posés par la compétence qui DÉPENSE la ressource
+   * d'archétype. Tant qu'ils courent, les ticks ne rechargent pas cette
+   * ressource — un dépensier ne se repaye pas (même règle que `spenderHeal`
+   * pour la Grâce). Sans ça la Vague d'âmes (coût 40, pose 4 tours de poison
+   * à 20 Âmes le tick) se rendait 80 Âmes et tournait en boucle.
+   */
+  poisonSelf: number;
   /** Tours de gel : le monstre frappe plus faiblement. */
   chill: number;
   /** Tours d'étourdissement : le monstre passe son tour (Moine : Coup du Dragon à 5/5 Combo). */
@@ -215,7 +223,7 @@ export interface CombatState {
 }
 
 export function freshCombatState(): CombatState {
-  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, chill: 0, stun: 0, minion: 0, minionPow: 0, secondWindUsed: false, intent: 'quick' };
+  return { shield: 0, burn: 0, burnPow: 0, poison: 0, poisonPow: 0, poisonSelf: 0, chill: 0, stun: 0, minion: 0, minionPow: 0, secondWindUsed: false, intent: 'quick' };
 }
 
 export interface TurnResult {
@@ -450,7 +458,14 @@ export function combatTurn(
           const st = skill.status;
           const pow = st.pow ? Math.max(1, Math.round(stats.atk * st.pow)) : 0;
           if (st.type === 'burn') { state.burn = Math.max(state.burn, st.turns); state.burnPow = Math.max(state.burnPow, pow); events.push({ text: `🔥 ${monster.name} prend feu !`, side: 'you' }); }
-          else if (st.type === 'poison') { state.poison = Math.max(state.poison, st.turns); state.poisonPow = Math.max(state.poisonPow, pow); events.push({ text: `🧪 ${monster.name} est empoisonné !`, side: 'you' }); }
+          else if (st.type === 'poison') {
+            state.poison = Math.max(state.poison, st.turns);
+            state.poisonPow = Math.max(state.poisonPow, pow);
+            // Poison posé par le dépensier de la ressource : ses ticks ne la
+            // rechargent pas (voir `poisonSelf`).
+            if (skill.resource && skill.resource.type === opts.resourceType) state.poisonSelf = Math.max(state.poisonSelf ?? 0, st.turns);
+            events.push({ text: `🧪 ${monster.name} est empoisonné !`, side: 'you' });
+          }
           else if (st.type === 'chill') { state.chill = Math.max(state.chill, st.turns); events.push({ text: `❄️ ${monster.name} est gelé (frappe affaiblie) !`, side: 'you' }); }
         }
         if (skill.goldSteal) {
@@ -610,6 +625,9 @@ export function combatTurn(
   // Ressources DoT : `wasPoisoned` (cible empoisonnée ce tour → Pièges du Piégeur),
   // `poisonTicked` (le poison a fait des dégâts → Âmes du Nécromancien).
   const wasPoisoned = state.poison > 0;
+  // Le poison qui court a-t-il été posé par le dépensier lui-même ? Lu AVANT le
+  // décrément de fin de tour, comme `wasPoisoned`.
+  const poisonWasSelf = (state.poisonSelf ?? 0) > 0;
   let poisonTicked = false;
   if (mhp > 0) {
     // « Propagation » (artefact) : les alterations rongent plus fort.
@@ -633,6 +651,7 @@ export function combatTurn(
   // Décrémente la durée des altérations.
   if (state.burn > 0) state.burn -= 1;
   if (state.poison > 0) state.poison -= 1;
+  if ((state.poisonSelf ?? 0) > 0) state.poisonSelf -= 1;
   if (state.chill > 0) state.chill -= 1;
   if (state.stun > 0) state.stun -= 1;
   if (state.minion > 0) state.minion -= 1;
@@ -686,10 +705,14 @@ export function combatTurn(
   // tank vengeur (transforme la douleur reçue en riposte).
   else if (opts.resourceType === 'vindicte') resourceGained = Math.min(25, Math.round((dmgTakenThisTurn / maxHp) * 100 * 0.4));
   // Âmes (Nécromancien) : se charge quand le Poison ronge la cible (chaque tick).
-  else if (opts.resourceType === 'souls' && poisonTicked) resourceGained = 20;
+  // ⚠️ Sauf si c'est la Vague d'âmes elle-même qui a posé ce poison : elle coûte
+  // 40 et posait 4 ticks à 20, donc elle se rendait le double de ce qu'elle
+  // coûtait. C'est l'Éclat nécrotique (compétence gratuite) qui la charge.
+  else if (opts.resourceType === 'souls' && poisonTicked && !poisonWasSelf) resourceGained = 20;
   // Pièges (Piégeur) : se charge en frappant une cible déjà empoisonnée (le piège
-  // se referme sur une proie affaiblie).
-  else if (opts.resourceType === 'traps' && hitsDealt > 0 && wasPoisoned) resourceGained = 25;
+  // se referme sur une proie affaiblie). Même réserve : l'Embuscade coûte 60 et
+  // posait 4 tours de poison à 25 → 100 rendus. C'est le Piège explosif qui charge.
+  else if (opts.resourceType === 'traps' && hitsDealt > 0 && wasPoisoned && !poisonWasSelf) resourceGained = 25;
   // Présage (Oracle) : se charge quand un bouclier absorbe un coup ou qu'un soin
   // passe — l'anticipation nourrit la prophétie.
   else if (opts.resourceType === 'presage' && (shieldAbsorbed || chargingHeal() > 0)) resourceGained = 20;

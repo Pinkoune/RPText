@@ -7,8 +7,8 @@
 
 import type { PlayerState, ClassId } from './types';
 import { deriveStats, starterWeapon } from './player';
-import { getTalentsForClass, type ActiveSkillDef } from './talents';
-import { CLASSES } from './classes';
+import { getTalentsForClass, budgetedBuild, type ActiveSkillDef } from './talents';
+import { CLASSES, MAX_LEVEL } from './classes';
 import { mintInstanceId, ITEMS } from './items';
 import { prestigeStacks } from './prestige';
 
@@ -147,9 +147,10 @@ export function computeAscensionBoss(p: PlayerState): AscensionBoss {
 
   const fake: PlayerState = structuredClone(p);
   fake.level = 50;
-  // Tous les talents de la classe au rang max.
-  fake.talents = {};
-  for (const t of getTalentsForClass(p.classId)) fake.talents[t.id] = t.maxRank;
+  // Arbre dépensé À PLEIN BUDGET — et non « tous les rangs au max ».
+  // ⚠️ Les arbres comptent 67 rangs pour 49 points au Nv.50 : maxer l'arbre
+  // calibrait le boss sur un joueur ~37% plus investi qu'aucun joueur réel.
+  fake.talents = budgetedBuild(p.classId, MAX_LEVEL - 1);
 
   // Meilleur équipement : arme (q150 = +50% stats), armure, bijou — tous 5★ + runes.
   const wKey = mintInstanceId(`${weapon}:q150`);

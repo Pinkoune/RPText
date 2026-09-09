@@ -7,7 +7,7 @@ import { MONSTERS } from '../src/game/monsters';
 import { DUNGEONS } from '../src/game/dungeons';
 import { generateEndlessMonster } from '../src/game/endless';
 import { CLASSES, CLASS_LIST } from '../src/game/classes';
-import { getTalentsForClass, talentMods, classResourceType, type ActiveSkillDef } from '../src/game/talents';
+import { getTalentsForClass, budgetedBuild, talentMods, classResourceType, type ActiveSkillDef } from '../src/game/talents';
 import { deriveStats } from '../src/game/player';
 import { combatTurn, freshCombatState } from '../src/game/combat';
 import { activeSetProc } from '../src/game/sets';
@@ -62,7 +62,8 @@ function outfit(p: PlayerState, tier: Tier) {
     eq(bestInSlot('armor', lvl, fam, it => (it.def ?? 0) * 2 + (it.hp ?? 0)), 'armor');
     eq(bestInSlot('trinket', lvl, fam, it => (it.atk ?? 0) * 3 + (it.def ?? 0) * 2 + (it.hp ?? 0)), 'trinket');
   }
-  for (const td of getTalentsForClass(p.classId)) p.talents![td.id] = td.maxRank;
+  // ⚠️ Budget de points, PAS « tout l'arbre » : 67 rangs pour 49 points au Nv.50.
+  p.talents = budgetedBuild(p.classId, Math.max(0, p.level - 1));
   // équipe toutes les compétences actives de la classe (cap 4, ≤3 dispo)
   const skills = getTalentsForClass(p.classId).map(t => t.activeSkill).filter(Boolean) as ActiveSkillDef[];
   p.equippedSkills = skills.slice(0, 4).map(s => s.id);

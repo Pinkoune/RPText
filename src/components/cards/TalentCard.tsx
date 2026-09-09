@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { getTalentsForClass, spendTalent, resetTalents, talentMods, type TalentDef } from '../../game/talents';
 import { useGame } from '../../store/gameStore';
-import { CLASSES } from '../../game/classes';
+import { CLASSES, MAX_LEVEL } from '../../game/classes';
 import { ascendPlayer } from '../../game/player';
 import { playSound } from '../../game/sound';
 import type { ClassId } from '../../game/types';
@@ -306,7 +306,12 @@ export default function TalentCard() {
           <span className="text-2xl">{cls.emoji}</span>
           <div>
             <div className="text-sm font-bold">{cls.name}</div>
-            <div className="text-[10px] text-slate-400">Investi {spent}/{total} de l'arbre</div>
+            {/* L'arbre est plus grand que le budget de points : au Nv.50 on en
+                dépense 49 pour {total} rangs. Le dire ici évite de découvrir au
+                dernier niveau qu'on ne prendra pas tout. */}
+            <div className="text-[10px] text-slate-400">
+              Investi {spent}/{total} de l'arbre · {MAX_LEVEL - 1} points au Nv.{MAX_LEVEL}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">

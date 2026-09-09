@@ -6,7 +6,7 @@ import { MONSTERS } from '../src/game/monsters';
 import { DUNGEONS } from '../src/game/dungeons';
 import { generateEndlessMonster } from '../src/game/endless';
 import { CLASSES, CLASS_LIST } from '../src/game/classes';
-import { getTalentsForClass, talentMods } from '../src/game/talents';
+import { getTalentsForClass, budgetedBuild, talentMods } from '../src/game/talents';
 import { deriveStats } from '../src/game/player';
 import { simulateCombat, getElementMult } from '../src/game/combat';
 import type { PlayerState, ClassId, ItemDef } from '../src/game/types';
@@ -80,7 +80,8 @@ function outfit(p: PlayerState, tier: Tier, maxTalents: boolean) {
     equip(w, 'weapon'); equip(a, 'armor'); equip(t, 'trinket');
   }
   if (maxTalents) {
-    for (const td of getTalentsForClass(p.classId)) p.talents![td.id] = td.maxRank;
+    // ⚠️ Budget de points, PAS « tout l'arbre » : 67 rangs pour 49 points au Nv.50.
+    p.talents = budgetedBuild(p.classId, Math.max(0, p.level - 1));
   }
 }
 
