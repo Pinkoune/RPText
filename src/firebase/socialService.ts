@@ -2,7 +2,7 @@ import { collection, getDocs, query, orderBy, limit, where, onSnapshot, doc, get
 import { ref, onValue, onDisconnect, set, remove, serverTimestamp } from 'firebase/database';
 import { db, rtdb, isFirebaseConfigured } from './config';
 import type { ClassId, PlayerState } from '../game/types';
-import { fallbackPower, powerScore } from '../game/power';
+import { fallbackPower, powerScore, POWER_VERSION } from '../game/power';
 
 /**
  * Retrouve l'UID d'un personnage depuis son pseudo, via le classement (qui
@@ -54,6 +54,8 @@ export interface LeaderRow {
   auraColorOn?: boolean;
   /** Cote de Puissance (voir game/power.ts). Absente sur les lignes d'anciens clients. */
   power?: number;
+  /** Barème utilisé pour ce `power`. Différent de `POWER_VERSION` = score périmé. */
+  powerVersion?: number;
   /** Niveau d'artefact = progression de saison (voir game/season.ts). */
   artifactLevel?: number;
 }
@@ -85,9 +87,9 @@ export interface OnlinePlayer {
  * Le doc `players/<uid>` est lisible par tout compte connecté (règle
  * `match /players/{charId}: allow read`), donc on peut y calculer le vrai
  * `powerScore`. Une seule lecture par joueur et par session (`tried` empêche
- * de rejouer un échec ou un doc absent), et seulement pour les lignes qui n'ont
- * pas déjà `power` — le nombre de lectures tend vers zéro à mesure que les
- * joueurs se reconnectent.
+ * de rejouer un échec ou un doc absent), et seulement pour les lignes sans score
+ * utilisable — le nombre de lectures tend vers zéro à mesure que les joueurs se
+ * reconnectent.
  */
 const hydratedPower = new Map<string, number>();
 const triedPower = new Set<string>();
@@ -96,11 +98,22 @@ const triedPower = new Set<string>();
 const HYDRATE_MAX = 40;
 
 /**
- * Complète les lignes sans `power`. Renvoie `true` si au moins une valeur a été
- * récupérée, donc s'il faut reclasser.
+ * Un score stocké n'est utilisable que s'il a été calculé avec le barème
+ * COURANT. Sans cette vérification, changer un poids dans `POWER_WEIGHTS`
+ * laisserait les joueurs non reconnectés sur l'ancien barème et le tableau
+ * mélangerait de nouveau deux échelles — le défaut même qu'on vient de corriger.
+ */
+function storedPower(r: LeaderRow): number | null {
+  return r.power != null && r.powerVersion === POWER_VERSION ? r.power : null;
+}
+
+/**
+ * Complète les lignes sans score utilisable (absent OU calculé sur un ancien
+ * barème). Renvoie `true` si au moins une valeur a été récupérée, donc s'il faut
+ * reclasser.
  */
 async function hydratePower(rows: LeaderRow[]): Promise<boolean> {
-  const todo = rows.filter((r) => r.power == null && r.uid && !triedPower.has(r.uid)).slice(0, HYDRATE_MAX);
+  const todo = rows.filter((r) => storedPower(r) == null && r.uid && !triedPower.has(r.uid)).slice(0, HYDRATE_MAX);
   if (todo.length === 0) return false;
   for (const r of todo) triedPower.add(r.uid);
   const got = await Promise.all(
@@ -118,7 +131,7 @@ async function hydratePower(rows: LeaderRow[]): Promise<boolean> {
 
 /** Puissance d'une ligne : la vraie, sinon celle reconstruite, sinon le repli. */
 export function rowPower(r: LeaderRow): number {
-  return r.power ?? hydratedPower.get(r.uid) ?? fallbackPower(r);
+  return storedPower(r) ?? hydratedPower.get(r.uid) ?? fallbackPower(r);
 }
 
 /**
