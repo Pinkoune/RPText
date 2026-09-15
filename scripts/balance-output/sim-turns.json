@@ -5,220 +5,220 @@
       "name": "Guerrier",
       "isSub": false,
       "atk": 660,
-      "def": 358,
+      "def": 329,
       "hp": 3213,
       "winrate": 1,
-      "endHpPct": 0.6483994708994705,
-      "avgTurns": 16.033333333333335
+      "endHpPct": 0.5703299097416741,
+      "avgTurns": 15.985
     },
     {
       "classId": "paladin",
       "name": "Paladin",
       "isSub": true,
       "atk": 734,
-      "def": 455,
+      "def": 426,
       "hp": 2888,
       "winrate": 1,
-      "endHpPct": 0.9968458564173602,
-      "avgTurns": 14.395833333333334
+      "endHpPct": 0.9928953139427537,
+      "avgTurns": 14.376666666666667
     },
     {
       "classId": "berserker",
       "name": "Berserker",
       "isSub": true,
       "atk": 918,
-      "def": 260,
+      "def": 239,
       "hp": 3296,
       "winrate": 1,
-      "endHpPct": 0.9994088794498385,
-      "avgTurns": 9.421666666666667
+      "endHpPct": 0.9987717435275081,
+      "avgTurns": 9.3725
     },
     {
       "classId": "dark_knight",
       "name": "Chevalier Noir",
       "isSub": true,
       "atk": 809,
-      "def": 392,
+      "def": 368,
       "hp": 3071,
       "winrate": 1,
-      "endHpPct": 0.9984912623466836,
-      "avgTurns": 11.505833333333333
+      "endHpPct": 0.9974758493433193,
+      "avgTurns": 11.540833333333333
     },
     {
       "classId": "sentinel",
       "name": "Sentinelle",
       "isSub": true,
       "atk": 543,
-      "def": 508,
+      "def": 480,
       "hp": 3511,
       "winrate": 1,
-      "endHpPct": 0.9969090002848183,
-      "avgTurns": 19.673333333333332
+      "endHpPct": 0.963807557201177,
+      "avgTurns": 19.551666666666666
     },
     {
       "classId": "mage",
       "name": "Mage",
       "isSub": false,
       "atk": 733,
-      "def": 254,
+      "def": 234,
       "hp": 2572,
       "winrate": 1,
-      "endHpPct": 0.486984836702955,
-      "avgTurns": 13.0925
+      "endHpPct": 0.47097816226023903,
+      "avgTurns": 13.310833333333333
     },
     {
       "classId": "pyromancer",
       "name": "Pyromancien",
       "isSub": true,
       "atk": 1006,
-      "def": 254,
+      "def": 234,
       "hp": 2645,
       "winrate": 1,
-      "endHpPct": 0.943924070573409,
-      "avgTurns": 5.056666666666667
+      "endHpPct": 0.9321701323251422,
+      "avgTurns": 5.051666666666667
     },
     {
       "classId": "cryomancer",
       "name": "Cryomancien",
       "isSub": true,
       "atk": 807,
-      "def": 385,
+      "def": 361,
       "hp": 2633,
       "winrate": 1,
       "endHpPct": 1,
-      "avgTurns": 8.1125
+      "avgTurns": 8.109166666666667
     },
     {
       "classId": "arcanist",
       "name": "Arcaniste",
       "isSub": true,
       "atk": 928,
-      "def": 254,
+      "def": 234,
       "hp": 2225,
       "winrate": 1,
-      "endHpPct": 0.7867374531835196,
-      "avgTurns": 8.648333333333333
+      "endHpPct": 0.7500003745318338,
+      "avgTurns": 8.625833333333333
     },
     {
       "classId": "necromancer",
       "name": "Nécromancien",
       "isSub": true,
       "atk": 850,
-      "def": 254,
+      "def": 234,
       "hp": 2791,
       "winrate": 1,
-      "endHpPct": 0.7001251045025686,
-      "avgTurns": 8.390833333333333
+      "endHpPct": 0.6609020064493012,
+      "avgTurns": 8.42
     },
     {
       "classId": "archer",
       "name": "Archer",
       "isSub": false,
       "atk": 524,
-      "def": 256,
+      "def": 236,
       "hp": 2077,
       "winrate": 1,
-      "endHpPct": 0.47816441983630154,
-      "avgTurns": 18.420833333333334
+      "endHpPct": 0.4731612100786391,
+      "avgTurns": 18.764166666666668
     },
     {
       "classId": "rogue",
       "name": "Voleur",
       "isSub": true,
       "atk": 631,
-      "def": 256,
+      "def": 236,
       "hp": 2131,
       "winrate": 1,
-      "endHpPct": 0.7074081026122329,
-      "avgTurns": 10.833333333333334
+      "endHpPct": 0.669268340372283,
+      "avgTurns": 10.900833333333333
     },
     {
       "classId": "bard",
       "name": "Barde",
       "isSub": true,
       "atk": 724,
-      "def": 351,
+      "def": 326,
       "hp": 2483,
       "winrate": 1,
-      "endHpPct": 0.9331410256410239,
-      "avgTurns": 10.955833333333333
+      "endHpPct": 0.9064639548932759,
+      "avgTurns": 10.9575
     },
     {
       "classId": "hunter",
       "name": "Chasseur",
       "isSub": true,
       "atk": 719,
-      "def": 305,
+      "def": 281,
       "hp": 2239,
       "winrate": 1,
-      "endHpPct": 0.7204094089623351,
-      "avgTurns": 11.020833333333334
+      "endHpPct": 0.6767861396456765,
+      "avgTurns": 10.990833333333333
     },
     {
       "classId": "trapper",
       "name": "Piégeur",
       "isSub": true,
       "atk": 652,
-      "def": 305,
+      "def": 281,
       "hp": 2185,
       "winrate": 1,
-      "endHpPct": 0.7700022883295197,
-      "avgTurns": 10.361666666666666
+      "endHpPct": 0.7408802440884821,
+      "avgTurns": 10.37
     },
     {
       "classId": "healer",
       "name": "Soigneur",
       "isSub": false,
       "atk": 457,
-      "def": 366,
+      "def": 346,
       "hp": 3984,
       "winrate": 1,
-      "endHpPct": 0.8652784052878185,
-      "avgTurns": 35.4575
+      "endHpPct": 0.7581954902945105,
+      "avgTurns": 35.49333333333333
     },
     {
       "classId": "dawn_priest",
       "name": "Prêtre de l'Aube",
       "isSub": true,
       "atk": 664,
-      "def": 390,
+      "def": 369,
       "hp": 3521,
       "winrate": 1,
-      "endHpPct": 0.9895164725930118,
-      "avgTurns": 19.924166666666668
+      "endHpPct": 0.9878938275111239,
+      "avgTurns": 19.935
     },
     {
       "classId": "druid",
       "name": "Druide",
       "isSub": true,
       "atk": 564,
-      "def": 297,
+      "def": 276,
       "hp": 3521,
       "winrate": 1,
-      "endHpPct": 0.860263656158289,
-      "avgTurns": 13.22
+      "endHpPct": 0.8167267821641595,
+      "avgTurns": 13.185833333333333
     },
     {
       "classId": "monk",
       "name": "Moine",
       "isSub": true,
       "atk": 770,
-      "def": 366,
+      "def": 346,
       "hp": 3276,
       "winrate": 1,
-      "endHpPct": 0.9999977106227107,
-      "avgTurns": 12.495
+      "endHpPct": 0.9999285205535209,
+      "avgTurns": 12.488333333333333
     },
     {
       "classId": "oracle",
       "name": "Oracle",
       "isSub": true,
       "atk": 510,
-      "def": 491,
+      "def": 467,
       "hp": 4133,
       "winrate": 1,
-      "endHpPct": 0.9976342850229865,
-      "avgTurns": 28.35333333333333
+      "endHpPct": 0.9946973546253722,
+      "avgTurns": 28.278333333333332
     }
   ],
   "hunt": [
@@ -250,42 +250,42 @@
     {
       "level": 30,
       "biome": "crypt",
-      "winrate": 0.588
+      "winrate": 0.589
     },
     {
       "level": 35,
       "biome": "crypt",
-      "winrate": 0.7085
+      "winrate": 0.7035
     },
     {
       "level": 40,
       "biome": "frozen",
-      "winrate": 0.1366666666666667
+      "winrate": 0.12
     },
     {
       "level": 42,
       "biome": "skyreach",
-      "winrate": 0.125
+      "winrate": 0.12049999999999998
     },
     {
       "level": 44,
       "biome": "skyreach",
-      "winrate": 0.23149999999999998
+      "winrate": 0.22549999999999998
     },
     {
       "level": 46,
       "biome": "cradle",
-      "winrate": 0.22550000000000003
+      "winrate": 0.2245
     },
     {
       "level": 48,
       "biome": "cradle",
-      "winrate": 0.30649999999999994
+      "winrate": 0.3095
     },
     {
       "level": 50,
       "biome": "cradle",
-      "winrate": 0.27549999999999997
+      "winrate": 0.26
     }
   ],
   "dungeons": [
@@ -398,8 +398,8 @@
       "dungeon": "Forge Infernale",
       "level": 32,
       "numPlayers": 4,
-      "winrateCurrent": 0.9425,
-      "winrateProposed": 0.9075
+      "winrateCurrent": 0.93,
+      "winrateProposed": 0.9325
     },
     {
       "dungeon": "Citadelle Abyssale",
@@ -412,15 +412,15 @@
       "dungeon": "Citadelle Abyssale",
       "level": 42,
       "numPlayers": 2,
-      "winrateCurrent": 0.03,
-      "winrateProposed": 0.035
+      "winrateCurrent": 0.0175,
+      "winrateProposed": 0.0225
     },
     {
       "dungeon": "Citadelle Abyssale",
       "level": 42,
       "numPlayers": 3,
       "winrateCurrent": 0,
-      "winrateProposed": 0
+      "winrateProposed": 0.0025
     },
     {
       "dungeon": "Citadelle Abyssale",
@@ -474,12 +474,12 @@
     {
       "floor": 60,
       "hp": 13498,
-      "winrate": 0.98
+      "winrate": 0.9875
     },
     {
       "floor": 75,
       "hp": 18302,
-      "winrate": 0.305
+      "winrate": 0.3425
     },
     {
       "floor": 100,
@@ -535,8 +535,8 @@
       "atk": 719,
       "def": 281,
       "hp": 2239,
-      "frozenWinrate": 0.9508333333333333,
-      "gauntletEndHp": 0.6611351793955635
+      "frozenWinrate": 0.9491666666666667,
+      "gauntletEndHp": 0.6728323656394218
     },
     {
       "label": "artefact grille (Nv.62)",
@@ -544,7 +544,7 @@
       "def": 428,
       "hp": 3386,
       "frozenWinrate": 1,
-      "gauntletEndHp": 0.9999325654656428
+      "gauntletEndHp": 0.9999547154951762
     },
     {
       "label": "+ Relique ★5",
@@ -552,7 +552,7 @@
       "def": 471,
       "hp": 3725,
       "frozenWinrate": 1,
-      "gauntletEndHp": 0.9993897091722594
+      "gauntletEndHp": 0.9997498881431767
     },
     {
       "label": "+ Relique ★10",
@@ -560,7 +560,7 @@
       "def": 471,
       "hp": 3725,
       "frozenWinrate": 1,
-      "gauntletEndHp": 0.9999020134228188
+      "gauntletEndHp": 0.999489932885906
     },
     {
       "label": "+ prestige 5 (tout maxé)",
@@ -568,7 +568,7 @@
       "def": 659,
       "hp": 5215,
       "frozenWinrate": 1,
-      "gauntletEndHp": 0.9999677213167136
+      "gauntletEndHp": 0.9999721955896442
     },
     {
       "label": "artefact Nv.300 (fin de saison)",
@@ -576,7 +576,7 @@
       "def": 772,
       "hp": 6105,
       "frozenWinrate": 1,
-      "gauntletEndHp": 0.9999871689871689
+      "gauntletEndHp": 0.9999879879879878
     }
   ],
   "voidRitual": [
@@ -584,7 +584,7 @@
       "classId": "paladin",
       "name": "Paladin",
       "profile": "sans saison",
-      "winrate": 0.23333333333333334,
+      "winrate": 0.21333333333333335,
       "bossHp": 28312,
       "bossAtk": 1297
     },
@@ -632,7 +632,7 @@
       "classId": "dark_knight",
       "name": "Chevalier Noir",
       "profile": "sans saison",
-      "winrate": 0.8733333333333333,
+      "winrate": 0.8833333333333333,
       "bossHp": 31147,
       "bossAtk": 1290
     },
@@ -664,7 +664,7 @@
       "classId": "sentinel",
       "name": "Sentinelle",
       "profile": "artefact+★5",
-      "winrate": 0.5533333333333333,
+      "winrate": 0.61,
       "bossHp": 33831,
       "bossAtk": 2361
     },
@@ -680,7 +680,7 @@
       "classId": "pyromancer",
       "name": "Pyromancien",
       "profile": "sans saison",
-      "winrate": 0.0033333333333333335,
+      "winrate": 0.013333333333333334,
       "bossHp": 38632,
       "bossAtk": 1024
     },
@@ -688,7 +688,7 @@
       "classId": "pyromancer",
       "name": "Pyromancien",
       "profile": "artefact+★5",
-      "winrate": 0.4866666666666667,
+      "winrate": 0.46,
       "bossHp": 55264,
       "bossAtk": 1606
     },
@@ -704,7 +704,7 @@
       "classId": "cryomancer",
       "name": "Cryomancien",
       "profile": "sans saison",
-      "winrate": 0.93,
+      "winrate": 0.9266666666666666,
       "bossHp": 31072,
       "bossAtk": 1153
     },
@@ -728,7 +728,7 @@
       "classId": "arcanist",
       "name": "Arcaniste",
       "profile": "sans saison",
-      "winrate": 0.006666666666666667,
+      "winrate": 0.013333333333333334,
       "bossHp": 35683,
       "bossAtk": 900
     },
@@ -736,7 +736,7 @@
       "classId": "arcanist",
       "name": "Arcaniste",
       "profile": "artefact+★5",
-      "winrate": 0.6566666666666666,
+      "winrate": 0.6833333333333333,
       "bossHp": 51030,
       "bossAtk": 1486
     },
@@ -760,7 +760,7 @@
       "classId": "necromancer",
       "name": "Nécromancien",
       "profile": "artefact+★5",
-      "winrate": 0.2733333333333333,
+      "winrate": 0.33,
       "bossHp": 46796,
       "bossAtk": 1672
     },
@@ -776,7 +776,7 @@
       "classId": "rogue",
       "name": "Voleur",
       "profile": "sans saison",
-      "winrate": 0.53,
+      "winrate": 0.49333333333333335,
       "bossHp": 24268,
       "bossAtk": 875
     },
@@ -784,7 +784,7 @@
       "classId": "rogue",
       "name": "Voleur",
       "profile": "artefact+★5",
-      "winrate": 0.9333333333333333,
+      "winrate": 0.9233333333333333,
       "bossHp": 39766,
       "bossAtk": 1458
     },
@@ -800,7 +800,7 @@
       "classId": "bard",
       "name": "Barde",
       "profile": "sans saison",
-      "winrate": 0.02,
+      "winrate": 0.023333333333333334,
       "bossHp": 27934,
       "bossAtk": 1073
     },
@@ -808,7 +808,7 @@
       "classId": "bard",
       "name": "Barde",
       "profile": "artefact+★5",
-      "winrate": 0.4,
+      "winrate": 0.37666666666666665,
       "bossHp": 42034,
       "bossAtk": 1757
     },
@@ -824,7 +824,7 @@
       "classId": "hunter",
       "name": "Chasseur",
       "profile": "sans saison",
-      "winrate": 0.21,
+      "winrate": 0.15333333333333332,
       "bossHp": 27707,
       "bossAtk": 954
     },
@@ -832,7 +832,7 @@
       "classId": "hunter",
       "name": "Chasseur",
       "profile": "artefact+★5",
-      "winrate": 0.67,
+      "winrate": 0.69,
       "bossHp": 44226,
       "bossAtk": 1590
     },
@@ -848,7 +848,7 @@
       "classId": "trapper",
       "name": "Piégeur",
       "profile": "sans saison",
-      "winrate": 0.43333333333333335,
+      "winrate": 0.4666666666666667,
       "bossHp": 25175,
       "bossAtk": 938
     },
@@ -856,7 +856,7 @@
       "classId": "trapper",
       "name": "Piégeur",
       "profile": "artefact+★5",
-      "winrate": 0.9166666666666666,
+      "winrate": 0.9233333333333333,
       "bossHp": 40181,
       "bossAtk": 1564
     },
@@ -872,7 +872,7 @@
       "classId": "dawn_priest",
       "name": "Prêtre de l'Aube",
       "profile": "sans saison",
-      "winrate": 0.30666666666666664,
+      "winrate": 0.2966666666666667,
       "bossHp": 25628,
       "bossAtk": 1423
     },
@@ -880,7 +880,7 @@
       "classId": "dawn_priest",
       "name": "Prêtre de l'Aube",
       "profile": "artefact+★5",
-      "winrate": 0.8966666666666666,
+      "winrate": 0.9266666666666666,
       "bossHp": 40748,
       "bossAtk": 2283
     },
@@ -896,7 +896,7 @@
       "classId": "druid",
       "name": "Druide",
       "profile": "sans saison",
-      "winrate": 0.03,
+      "winrate": 0.04,
       "bossHp": 21735,
       "bossAtk": 1325
     },
@@ -904,7 +904,7 @@
       "classId": "druid",
       "name": "Druide",
       "profile": "artefact+★5",
-      "winrate": 0.6333333333333333,
+      "winrate": 0.69,
       "bossHp": 35608,
       "bossAtk": 2171
     },
@@ -920,7 +920,7 @@
       "classId": "monk",
       "name": "Moine",
       "profile": "sans saison",
-      "winrate": 0.12,
+      "winrate": 0.15333333333333332,
       "bossHp": 29635,
       "bossAtk": 1327
     },
@@ -928,7 +928,7 @@
       "classId": "monk",
       "name": "Moine",
       "profile": "artefact+★5",
-      "winrate": 0.6733333333333333,
+      "winrate": 0.6633333333333333,
       "bossHp": 47288,
       "bossAtk": 2157
     },
@@ -952,7 +952,7 @@
       "classId": "oracle",
       "name": "Oracle",
       "profile": "artefact+★5",
-      "winrate": 0.36666666666666664,
+      "winrate": 0.36,
       "bossHp": 32281,
       "bossAtk": 2530
     },
