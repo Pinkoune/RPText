@@ -316,10 +316,24 @@ export function combatTurn(
      * nombre limité, donc elle ne dérive pas avec la durée du combat.
      */
     sustainMult?: number;
+    /**
+     * Bride du sustain **ACTIF** (soins et boucliers de compétence). Par défaut
+     * égale à `sustainMult`, mais le Rituel du Néant la relâche.
+     *
+     * ⚠️ Mesuré : brider les deux au même taux punissait exactement les
+     * mauvaises classes. Un soin de compétence coûte un TOUR ; le vol de vie
+     * n'en coûte aucun. À 60% des deux côtés, le Prêtre de l'Aube passait 20 de
+     * ses 23 tours à se soigner (et perdait à 8%) pendant que le Berserker, à
+     * 100% de sustain passif, en passait 2 et gagnait à 100%. Le sustain qui
+     * gagne un combat long est celui qui est GRATUIT — c'est lui qu'il faut
+     * brider, pas celui qu'on paie en tours.
+     */
+    sustainActiveMult?: number;
   } = {},
   state: CombatState = freshCombatState(),
 ): TurnResult {
   const sustain = opts.sustainMult ?? 1;
+  const sustainActive = opts.sustainActiveMult ?? sustain;
   // Vol de vie et régénération passent par `mods` : on en fabrique une copie
   // atténuée plutôt que de toucher aux six sites qui les lisent.
   if (sustain !== 1) mods = { ...mods, lifesteal: mods.lifesteal * sustain, regen: mods.regen * sustain };
@@ -437,7 +451,7 @@ export function combatTurn(
           }
         }
         if (effHealFrac) {
-          const heal = Math.round(maxHp * effHealFrac * sustain);
+          const heal = Math.round(maxHp * effHealFrac * sustainActive);
           php = Math.min(maxHp, php + heal);
           healDone += heal;
           if (skill.resource && skill.resource.type === opts.resourceType) spenderHeal += heal;
@@ -445,7 +459,7 @@ export function combatTurn(
         }
         if (skill.shield) {
           // Vrai bouclier : PV qui absorbent les prochains dégâts entrants.
-          const amount = Math.round(maxHp * skill.shield * sustain);
+          const amount = Math.round(maxHp * skill.shield * sustainActive);
           state.shield += amount;
           events.push({ text: `🛡️ ${skill.name} t'accorde un bouclier de ${amount} PV.`, side: 'info' });
         }

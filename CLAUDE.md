@@ -769,6 +769,111 @@ y est donc rejoué. Un seul clone migré sert aux stats ET à la Puissance.
 (la règle valide des champs nommés, sans `hasOnly`) : pas de redéploiement requis
 pour ce lot.
 
+### Équilibrage des classes face au Néant (fait, C) — le sustain GRATUIT
+
+Constat de l'utilisateur : « un moine full Genèse ne passe pas, un berserker
+lave le boss ». Diagnostic mesuré, et il ne tient ni aux dégâts ni aux classes.
+
+**D'où vient le soin de chaque classe pendant le rituel** (mesure à refaire au
+besoin sur le modèle de `rune-impact.ts ISOLATE=1`) :
+
+| Classe | soin passif (gratuit) | soin actif (coûte un tour) | tours passés à soigner | WR |
+|---|---|---|---|---|
+| Berserker | **100%** | 0% | 2 / 14 | 100% |
+| Voleur, Piégeur, Chasseur | 100% | 0% | 2-4 | 56-100% |
+| Moine | 56% | 44% | 10 / 19 | 52% |
+| **Prêtre de l'Aube** | **0%** | **100%** | **20 / 23** | **8%** |
+| **Druide, Oracle** | **0%** | **100%** | 7-12 | **0%** |
+
+⚠️⚠️ **La bride `ASCENSION_SUSTAIN_MULT` punissait exactement les mauvaises
+classes.** Elle ramenait à 60% *tout* le sustain — vol de vie, régénération,
+soins de compétence, boucliers. Or un soin de compétence **coûte un tour**, le
+vol de vie n'en coûte aucun : brider les deux au même taux revient à faire payer
+deux fois ceux qui paient déjà. Le Prêtre passait 20 de ses 23 tours à se
+soigner pour un soin amputé, donc ne frappait plus, donc perdait.
+
+**Correctif** : `combatTurn` a désormais deux brides. `sustainMult` (passif :
+vol de vie, régénération, procs de set) reste à **0.60** ; `sustainActiveMult`
+(soins et boucliers de compétence) passe à **0.85**. *Ce qui gagne un combat
+d'usure, c'est le sustain gratuit — c'est lui que le Néant doit drainer.*
+⚠️ Resserrer le passif plus fort (0.45, 0.35) a été testé et **écarté** : ça
+écrase le Moine (60% -> 47% -> 30%), qui est hybride, sans supprimer le
+Berserker (100% -> 83% -> 60%). La bride passive est un instrument trop
+grossier pour viser une classe.
+
+**Quatre classes restaient bloquées après ça**, pour une raison différente —
+leur débit de dégâts et leur mitigation :
+- ⚠️ **`defPct` est presque inopérant face au boss du Rituel.** Les dégâts sont
+  `atk - def` : +33% de DEF sur 361 ne retire que ~9% des coups d'un boss à
+  1348 d'ATK, là où `dmgReduction` en retire 33%. Les deux classes qui misaient
+  dessus (**Druide** `dru_bark`, **Barde** `brd_resonance`) étaient de fait sans
+  mitigation. Converties en `dmgReduction` — et « Écorce » et « Résonance »
+  décrivent mieux ça que de la DEF brute. Dosage **mesuré** : à 0.025/rang le
+  Druide passait de 1% à **93% sans aucune saison** (surdosé), retenu
+  **0.012 / 0.010**.
+- **Arcaniste** : seule sous-classe **sans aucun nœud défensif** — plus haute
+  ATK après le Pyromancien, PV et DEF les plus bas, zéro soin. Monter sa
+  régénération (4 -> 7 -> 11/rang) ne donnait que +3 points : elle est passive,
+  donc bridée. `arc_paradox` passe de `regen` à `dmgReduction` 0.02/rang
+  (5% -> 66%).
+- **Oracle** : finisher le plus faible du jeu sur la classe à l'ATK la plus
+  basse. Jugement x1.8 -> **x2.3**.
+- **Barde** : son seul soin faisait 10%. Chant -> **18%**.
+- **Druide** : `dru_venom` **mentait** — il annonçait « multiplicateur de
+  poison » et donnait du `critMult`. Remis sur `statusPow` (0.15/rang), ce qui
+  est bien son identité (Colère empoisonne).
+- **Berserker** : `ber_bloodlust` 0.02 -> 0.014/rang. Effet marginal assumé
+  (100% -> 96-99% sans saison) : sa domination est son identité
+  (auto-suffisance passive), pas un défaut. Ne pas l'aplatir davantage.
+
+Résultat (harnais tour-par-tour, joueur maxé runes comprises) :
+
+| Profil | avant ce lot | après |
+|---|---|---|
+| artefact+★5, médiane | 47% | **66%** |
+| artefact+★5, classes sous 10% | **5** (Druide 0, Oracle 0, Barde 4, Prêtre 6, Arcaniste 8) | **0** (minimum : Nécromancien 27%) |
+| tout maxé, minimum | 83% | **100% pour les 16** |
+
+Le Moine, point de départ de la demande : **38% -> 67%** à artefact+★5.
+Contenu normal inchangé (100% de victoire partout, endHP 48-100%), chasse et
+donjons dans le bruit.
+⚠️ Écart résiduel assumé **sans saison** : Berserker 99%, Cryomancien 93%,
+Chevalier Noir 87% contre 0-3% pour les casters. Ce sont les profils à sustain
+passif ; les aplatir reviendrait à supprimer leur identité.
+
+### La Faille était la fuite d'XP (fait, C)
+
+Deux joueurs à l'**artefact 80-90 en 5-10 h de jeu**. Mesuré : l'artefact 90
+demande **4,97 M d'XP**, soit 65% de plus que tout le trajet Nv.1->50 (2,70 M).
+Impossible par le combat. Débit par activité au Nv.40 :
+
+| Activité | XP/h |
+|---|---|
+| **Faille de la semaine** | **673 200** |
+| chasse (Abysse) | 105 600 |
+| duel PvP gagné | 48 000 |
+| craft | 31 200 |
+| Abysses (endless) | 29 934 |
+| récolte | 9 960 |
+| camp | 200 |
+
+La Faille sans cooldown = artefact 90 en **7,4 h**. C'est exactement le levier
+annoncé d'avance dans `commands.ts` et ici : **l'XP des passages RÉPÉTÉS, pas
+une porte fermée** (le cooldown avait été explicitement refusé par
+l'utilisateur, et le reste). `riftRewardMult(n) = max(0.15, 1/(1+n))`, appliqué
+dans `buildRiftMonster` pour que tous les chemins en aval en bénéficient
+(`grantMonsterRewards` -> `grantXp` -> artefact). Régime permanent **134 640
+XP/h**, soit à peine au-dessus de la chasse : la Faille reste le meilleur
+rapport, elle cesse d'être la voie rapide. Artefact 90 en Faille pure :
+7,4 h -> **36,9 h**, aligné sur les 47 h de la chasse.
+⚠️ Le numéro du passage et le pourcentage sont annoncés **avant** le combat.
+Vérifié en jeu : passage 1 silencieux (100%), puis « 50% », « 33% ».
+
+⚠️ **Repère à garder** : `artifactXpToNext(l) = 400 + 300 * l^1.35`, donc
+artefact 62 (grille complète) ≈ l'XP d'un perso Nv.47, artefact 69 ≈ Nv.50.
+Tout artefact nettement au-dessus de 70 chez un joueur qui n'est pas Nv.50
+signale une source d'XP dérivante — c'est le test à refaire.
+
 ### Refonte complète des runes (fait, C)
 
 Point de départ : un joueur moine, full Genèse, ne passait pas le Rituel ; un

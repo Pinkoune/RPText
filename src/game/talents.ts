@@ -199,7 +199,7 @@ export const TALENTS: TalentDef[] = [
   { id: 'rog_evade', classId: 'rogue', name: 'Fantôme', icon: '👻', desc: '+5% esquive par rang.', maxRank: 3, requires: ['rog_stab'], pos: { x: 0, y: 4 }, perRank: { dodge: 0.05 } },
   { id: 'rog_skill_assassinate', classId: 'rogue', name: 'Assassinat', icon: '☠️', desc: 'Compétence : dégâts croissants avec le Combo (min. 3 points, consomme tout) + chapardage d\'or.', maxRank: 1, requires: ['rog_evade'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_rog_assassinate', name: 'Assassinat', icon: '☠️', desc: 'Consomme tout ton Combo (min. 3) : dégâts croissants + vole de l\'or à la cible.', cooldownMs: 3_000, type: 'attack', mult: 1.0, goldSteal: 0.6, resource: { type: 'combo', cost: 3, scalePerPoint: 0.4 } } },
   // Bard
-  { id: 'brd_song', classId: 'bard', name: 'Chant', icon: '🎵', desc: 'Compétence : ×1.5 dégâts + Soin (10%).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_brd_song', name: 'Chant', icon: '🎵', desc: '×1.5 dégâts, +10% soin.', cooldownMs: 18_000, type: 'attack', mult: 1.5, healFrac: 0.10 } },
+  { id: 'brd_song', classId: 'bard', name: 'Chant', icon: '🎵', desc: 'Compétence : ×1.5 dégâts + Soin (18%).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_brd_song', name: 'Chant', icon: '🎵', desc: '×1.5 dégâts, +18% soin.', cooldownMs: 18_000, type: 'attack', mult: 1.5, healFrac: 0.18 } },
   { id: 'brd_inspire', classId: 'bard', name: 'Inspiration', icon: '✨', desc: '+5% ATK/DEF par rang.', maxRank: 3, requires: ['brd_song'], pos: { x: 0, y: 4 }, perRank: { atkPct: 0.05, defPct: 0.05 } },
   { id: 'brd_skill_crescendo', classId: 'bard', name: 'Crescendo', icon: '🎶', desc: 'Compétence : ×2.3 dégâts + rallie l\'équipe (+15% ATK, tout le combat). Coûte 60 Tempo (se charge en alternant tes actions).', maxRank: 1, requires: ['brd_inspire'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_brd_crescendo', name: 'Crescendo', icon: '🎶', desc: '×2.3 dégâts, +15% ATK pour toi (et l\'équipe en donjon/abysses). Coûte 60 Tempo.', cooldownMs: 3_000, type: 'attack', mult: 2.3, teamAtkBuff: 0.15, resource: { type: 'tempo', cost: 60 } } },
   // Hunter
@@ -256,7 +256,7 @@ export const TALENTS: TalentDef[] = [
   // ── Oracle (ascension soigneur) : boucliers / protection, sur cooldown ──
   { id: 'orc_ward', classId: 'oracle', name: 'Bouclier prophétique', icon: '🔮', desc: 'Compétence : Bouclier (18% PV max).', maxRank: 1, pos: { x: 0, y: 3 }, activeSkill: { id: 'skill_orc_ward', name: 'Bouclier prophétique', icon: '🔮', desc: 'Bouclier (18% PV max).', cooldownMs: 20_000, type: 'shield', shield: 0.18 } },
   { id: 'orc_insight', classId: 'oracle', name: 'Clairvoyance', icon: '👁️', desc: '-5% dégâts subis par rang.', maxRank: 3, requires: ['orc_ward'], pos: { x: 0, y: 4 }, perRank: { dmgReduction: 0.05 } },
-  { id: 'orc_skill_judgment', classId: 'oracle', name: 'Jugement', icon: '⚖️', desc: 'Compétence : ×1.8 dégâts + 15% soin. Coûte 50 Présage (se charge quand un bouclier absorbe ou qu\'un soin passe).', maxRank: 1, requires: ['orc_insight'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_orc_judgment', name: 'Jugement', icon: '⚖️', desc: '×1.8 dégâts, +15% soin. Coûte 50 Présage.', cooldownMs: 3_000, type: 'attack', mult: 1.8, healFrac: 0.15, resource: { type: 'presage', cost: 50 } } },
+  { id: 'orc_skill_judgment', classId: 'oracle', name: 'Jugement', icon: '⚖️', desc: 'Compétence : ×2.3 dégâts + 15% soin. Coûte 50 Présage (se charge quand un bouclier absorbe ou qu\'un soin passe).', maxRank: 1, requires: ['orc_insight'], pos: { x: 0, y: 5 }, activeSkill: { id: 'skill_orc_judgment', name: 'Jugement', icon: '⚖️', desc: '×2.3 dégâts, +15% soin. Coûte 50 Présage.', cooldownMs: 3_000, type: 'attack', mult: 2.3, healFrac: 0.15, resource: { type: 'presage', cost: 50 } } },
   { id: 'orc_faith', classId: 'oracle', name: 'Foi', icon: '✝️', desc: '+6% DEF par rang.', maxRank: 3, requires: ['orc_ward'], pos: { x: -2, y: 4 }, perRank: { defPct: 0.06 } },
   { id: 'orc_aegis', classId: 'oracle', name: 'Égide', icon: '🛡️', desc: '+3% DEF par rang.', maxRank: 9, requires: ['orc_faith'], pos: { x: -2, y: 5 }, perRank: { defPct: 0.03 } },
   { id: 'orc_vitality', classId: 'oracle', name: 'Vitalité', icon: '❤️', desc: '+3% PV max par rang.', maxRank: 9, requires: ['orc_insight'], pos: { x: 2, y: 5 }, perRank: { hpPct: 0.03 } },
@@ -310,8 +310,8 @@ export const TALENTS: TalentDef[] = [
   { id: 'mnk_fury', classId: 'monk', name: 'Furie martiale', icon: '🥊', desc: '+3% ATK par rang.', maxRank: 9, requires: ['mnk_chi'], pos: { x: 2, y: 5 }, perRank: { atkPct: 0.03 } },
   { id: 'mnk_zen', classId: 'monk', name: 'Zenith', icon: '☯️', desc: '+4 régén/tour par rang.', maxRank: 6, requires: ['mnk_skill_dragon'], pos: { x: 0, y: 6 }, perRank: { regen: 4 } },
   // Druide
-  { id: 'dru_bark', classId: 'druid', name: 'Écorce naturelle', icon: '🌳', desc: '+3% DEF par rang.', maxRank: 11, requires: ['dru_growth'], pos: { x: -2, y: 5 }, perRank: { defPct: 0.03 } },
-  { id: 'dru_venom', classId: 'druid', name: 'Venin amplifié', icon: '🧪', desc: '+0.1 multiplicateur de poison par rang.', maxRank: 7, requires: ['dru_skill_wrath'], pos: { x: 2, y: 5 }, perRank: { critMult: 0.10 } },
+  { id: 'dru_bark', classId: 'druid', name: 'Écorce naturelle', icon: '🌳', desc: '-1,2% de dégâts subis par rang.', maxRank: 11, requires: ['dru_growth'], pos: { x: -2, y: 5 }, perRank: { dmgReduction: 0.012 } },
+  { id: 'dru_venom', classId: 'druid', name: 'Venin amplifié', icon: '🧪', desc: '+15% de dégâts de poison par rang.', maxRank: 7, requires: ['dru_skill_wrath'], pos: { x: 2, y: 5 }, perRank: { statusPow: 0.15 } },
   // Prêtre de l'aube
   { id: 'dp_light', classId: 'dawn_priest', name: 'Lumière divine', icon: '☀️', desc: '+3% ATK par rang.', maxRank: 11, requires: ['dp_ward'], pos: { x: -2, y: 5 }, perRank: { atkPct: 0.03 } },
   { id: 'dp_grace', classId: 'dawn_priest', name: 'Grâce divine', icon: '🌟', desc: '+4 régén/tour par rang.', maxRank: 8, requires: ['dp_faith'], pos: { x: 2, y: 5 }, perRank: { regen: 4 } },
@@ -327,7 +327,7 @@ export const TALENTS: TalentDef[] = [
   { id: 'pal_light', classId: 'paladin', name: 'Lumière éternelle', icon: '✨', desc: '+4 régén/tour par rang.', maxRank: 6, requires: ['pal_skill_smite'], pos: { x: 0, y: 6 }, perRank: { regen: 4 } },
   // Berserker
   { id: 'ber_wrath', classId: 'berserker', name: 'Courroux', icon: '💢', desc: '+3% ATK par rang.', maxRank: 11, requires: ['ber_life'], pos: { x: -2, y: 5 }, perRank: { atkPct: 0.03 } },
-  { id: 'ber_bloodlust', classId: 'berserker', name: 'Soif ardente', icon: '🩸', desc: '+2% vol de vie par rang.', maxRank: 5, requires: ['ber_frenzy'], pos: { x: 2, y: 5 }, perRank: { lifesteal: 0.02 } },
+  { id: 'ber_bloodlust', classId: 'berserker', name: 'Soif ardente', icon: '🩸', desc: '+1,4% vol de vie par rang.', maxRank: 5, requires: ['ber_frenzy'], pos: { x: 2, y: 5 }, perRank: { lifesteal: 0.014 } },
   { id: 'ber_scars', classId: 'berserker', name: 'Cicatrices', icon: '❤️‍🩹', desc: '+3% PV max par rang.', maxRank: 8, requires: ['ber_skill_execute'], pos: { x: 0, y: 6 }, perRank: { hpPct: 0.03 } },
   // Dark Knight
   { id: 'dk_curse', classId: 'dark_knight', name: 'Malédiction', icon: '💀', desc: '+3% ATK par rang.', maxRank: 9, requires: ['dk_pain'], pos: { x: -2, y: 5 }, perRank: { atkPct: 0.03 } },
@@ -344,14 +344,14 @@ export const TALENTS: TalentDef[] = [
   // Arcanist
   { id: 'arc_insight', classId: 'arcanist', name: 'Clairvoyance', icon: '🔮', desc: '+3% ATK par rang.', maxRank: 9, requires: ['arc_mind'], pos: { x: -2, y: 5 }, perRank: { atkPct: 0.03 } },
   { id: 'arc_singularity', classId: 'arcanist', name: 'Singularité', icon: '🌀', desc: '+3% pénétration d\'armure par rang.', maxRank: 9, requires: ['arc_flow'], pos: { x: 2, y: 5 }, perRank: { armorPen: 0.03 } },
-  { id: 'arc_paradox', classId: 'arcanist', name: 'Paradoxe', icon: '⏳', desc: '+4 régén/tour par rang.', maxRank: 6, requires: ['arc_skill_time'], pos: { x: 0, y: 6 }, perRank: { regen: 4 } },
+  { id: 'arc_paradox', classId: 'arcanist', name: 'Paradoxe', icon: '⏳', desc: '-2% de dégâts subis par rang (la distorsion amortit les coups).', maxRank: 6, requires: ['arc_skill_time'], pos: { x: 0, y: 6 }, perRank: { dmgReduction: 0.02 } },
   // Rogue
   { id: 'rog_shadows', classId: 'rogue', name: 'Voile d\'ombre', icon: '👤', desc: '+3% esquive par rang.', maxRank: 5, requires: ['rog_evade'], pos: { x: -2, y: 5 }, perRank: { dodge: 0.03 } },
   { id: 'rog_toxin', classId: 'rogue', name: 'Toxine', icon: '🐍', desc: '+3% pénétration d\'armure par rang.', maxRank: 9, requires: ['rog_venom'], pos: { x: 2, y: 5 }, perRank: { armorPen: 0.03 } },
   { id: 'rog_finality', classId: 'rogue', name: 'Point final', icon: '☠️', desc: '+3% critique par rang.', maxRank: 8, requires: ['rog_skill_assassinate'], pos: { x: 0, y: 6 }, perRank: { crit: 0.03 } },
   // Bard
   { id: 'brd_ballad', classId: 'bard', name: 'Ballade', icon: '🎼', desc: '+3% ATK par rang.', maxRank: 9, requires: ['brd_inspire'], pos: { x: -2, y: 5 }, perRank: { atkPct: 0.03 } },
-  { id: 'brd_resonance', classId: 'bard', name: 'Résonance', icon: '🎶', desc: '+3% DEF par rang.', maxRank: 9, requires: ['brd_harmony'], pos: { x: 2, y: 5 }, perRank: { defPct: 0.03 } },
+  { id: 'brd_resonance', classId: 'bard', name: 'Résonance', icon: '🎶', desc: '-1% de dégâts subis par rang.', maxRank: 9, requires: ['brd_harmony'], pos: { x: 2, y: 5 }, perRank: { dmgReduction: 0.010 } },
   { id: 'brd_encore', classId: 'bard', name: 'Rappel', icon: '👏', desc: '+4 régén/tour par rang.', maxRank: 6, requires: ['brd_skill_crescendo'], pos: { x: 0, y: 6 }, perRank: { regen: 4 } },
   // Hunter
   { id: 'hnt_predator', classId: 'hunter', name: 'Prédateur', icon: '🐾', desc: '+3% ATK par rang.', maxRank: 9, requires: ['hnt_pierce'], pos: { x: -2, y: 5 }, perRank: { atkPct: 0.03 } },

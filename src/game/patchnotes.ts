@@ -71,6 +71,26 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '⚖️ Les classes en retrait face au Néant',
+        kind: 'balance',
+        items: [
+          'Un moine full Genèse n\'y arrivait pas, un berserker lavait le boss. La cause n\'était ni les dégâts ni les classes : le rituel bridait <b>tout</b> le soin à 60%, alors qu\'un soin de compétence <b>coûte un tour</b> et que le vol de vie n\'en coûte aucun. Le Prêtre de l\'Aube passait <b>20 de ses 23 tours</b> à se soigner, ne frappait plus, et perdait ; le Berserker, dont le soin est 100% passif, en passait 2 et gagnait.',
+          'Désormais le Néant draine surtout le soin <b>gratuit</b> : vol de vie et régénération restent à 60%, les soins et boucliers de compétence passent à 85%.',
+          '<b>Druide</b> et <b>Barde</b> : « Écorce naturelle » et « Résonance » donnaient de la DEF, quasi inutile face à un boss dont l\'attaque écrase ton armure. Elles donnent maintenant de la <b>réduction de dégâts</b>. <b>Arcaniste</b> : « Paradoxe » aussi — c\'était la seule sous-classe du jeu sans le moindre nœud défensif.',
+          '<b>Oracle</b> : Jugement ×1.8 → <b>×2.3</b>. <b>Barde</b> : le soin du Chant 10% → <b>18%</b>. <b>Druide</b> : « Venin amplifié » annonçait des dégâts de poison et donnait en réalité du critique — il donne enfin ce qu\'il promet. <b>Berserker</b> : « Soif ardente » 2% → 1,4% de vol de vie par rang.',
+          'Résultat : plus aucune classe sous 27% de victoire à équipement et saison moyens (elles étaient cinq sous 10%), et <b>les 16 sous-classes à 100%</b> une fois tout maximisé. Le moine passe de 38% à 67%.',
+        ],
+      },
+      {
+        title: '🌀 La Faille rapportait trop',
+        kind: 'balance',
+        items: [
+          'Deux joueurs à l\'artefact 80-90 en 5-10 h de jeu, alors que l\'artefact 90 demande <b>65% de plus d\'XP que tout le trajet du niveau 1 au 50</b>. La Faille en était la cause : <b>673 000 XP/h</b> contre 105 600 pour la chasse, et aucun cooldown.',
+          'Elle n\'en gagne toujours pas : c\'est l\'<b>XP des passages répétés</b> qui décroît (100%, 50%, 33%, 25%… plancher à 15% sur la semaine). Le numéro du passage et le pourcentage sont annoncés avant le combat, et tout se remet à zéro chaque semaine.',
+          'Au plancher, une Faille rapporte encore un peu plus qu\'une chasse normale — elle reste le meilleur rapport du jeu, elle cesse juste d\'être la voie rapide.',
+        ],
+      },
+      {
         title: '✦ Les runes, refaites de zéro',
         kind: 'new',
         items: [

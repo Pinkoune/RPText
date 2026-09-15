@@ -34,6 +34,19 @@ export const ASCENSION_FAIL_COOLDOWN = 8 * 60 * 60 * 1000; // 8h après un éche
  * avec la durée du combat.
  */
 export const ASCENSION_SUSTAIN_MULT = 0.60;
+/**
+ * Bride du sustain ACTIF pendant le rituel — volontairement plus douce que
+ * celle du passif (`ASCENSION_SUSTAIN_MULT`).
+ *
+ * ⚠️ Mesuré, et contre-intuitif : brider les deux à 60% écrasait les classes à
+ * soin actif. Le Prêtre de l'Aube, le Druide et l'Oracle tirent **100%** de
+ * leur soin de compétences, donc ils payaient un tour pour un soin amputé, ne
+ * frappaient plus, et sortaient à 0-8% de victoire — pendant que le Berserker,
+ * dont le soin est 100% passif (vol de vie, gratuit), sortait à 100%. Ce qui
+ * gagne un combat d'usure, c'est le sustain GRATUIT : c'est lui que le Néant
+ * doit drainer.
+ */
+export const ASCENSION_SUSTAIN_ACTIVE_MULT = 0.85;
 
 // Les constantes et multiplicateurs de prestige vivent désormais dans
 // `prestige.ts` (module sans dépendance, donc lisible aussi par l'interface).

@@ -13,7 +13,7 @@ import { combatTurn, freshCombatState } from '../src/game/combat';
 import { activeSetProc } from '../src/game/sets';
 import { ARTIFACT_MODS } from '../src/game/artifact';
 import { RELIC_STAT_STARS, RELIC_MAX_STARS, effectsForStar } from '../src/game/relic';
-import { computeAscensionBoss, neutralizeForNeant, ASCENSION_SUSTAIN_MULT } from '../src/game/ascension';
+import { computeAscensionBoss, neutralizeForNeant, ASCENSION_SUSTAIN_MULT, ASCENSION_SUSTAIN_ACTIVE_MULT } from '../src/game/ascension';
 import { bestRuneLoadout } from '../src/game/runes';
 import type { PlayerState, ClassId, ItemDef } from '../src/game/types';
 import * as fs from 'fs';
@@ -116,7 +116,7 @@ function played(base: ClassId, sub: ClassId, level: number): ClassId { return le
 type Mon = { hp: number; atk: number; def: number; name: string; element?: string; weaknesses?: string[]; resistances?: string[] };
 
 // ── PILOTE DE COMBAT tour-par-tour ──
-function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: number; maxTurns?: number; sustainMult?: number; neant?: boolean } = {}): { win: boolean; turns: number; endHpPct: number } {
+function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: number; maxTurns?: number; sustainMult?: number; sustainActiveMult?: number; neant?: boolean } = {}): { win: boolean; turns: number; endHpPct: number } {
   const stats = deriveStats(p, true) as any;
   const mods = talentMods(p);
   const setProc = activeSetProc(p);
@@ -165,7 +165,7 @@ function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: 
     }
     const r = combatTurn(stats, mods, { ...mon, maxHp: mon.hp } as any, php, mhp, action, {
       activeSkill: skill, potionHeal: action === 'potion' ? potionHeal : 0, setProc: setProc ?? undefined,
-      resourceAmount: pool, resourceType, sustainMult: opts.sustainMult,
+      resourceAmount: pool, resourceType, sustainMult: opts.sustainMult, sustainActiveMult: opts.sustainActiveMult,
     }, state);
     php = r.php; mhp = r.mhp; state = r.state;
     if (action === 'potion') potions--;
@@ -433,7 +433,7 @@ for (const c of CLASS_LIST.filter(c => c.parent)) {
   ]) {
     const p = season(blankPlayer(c.id, 50), stack); outfit(p, 'maxed');
     const boss = computeAscensionBoss(p) as any;
-    const r = batch(p, { hp: boss.hp, atk: boss.atk, def: boss.def, name: boss.name, element: 'dark' } as any, 300, { potions: 6, maxTurns: 200, sustainMult: ASCENSION_SUSTAIN_MULT, neant: true });
+    const r = batch(p, { hp: boss.hp, atk: boss.atk, def: boss.def, name: boss.name, element: 'dark' } as any, 300, { potions: 6, maxTurns: 200, sustainMult: ASCENSION_SUSTAIN_MULT, sustainActiveMult: ASCENSION_SUSTAIN_ACTIVE_MULT, neant: true });
     voidRows.push({ classId: c.id, name: c.name, profile: label, winrate: r.winrate, bossHp: boss.hp, bossAtk: boss.atk });
   }
 }

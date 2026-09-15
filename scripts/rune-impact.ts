@@ -21,7 +21,7 @@ import { combatTurn, freshCombatState } from '../src/game/combat';
 import { activeSetProc } from '../src/game/sets';
 import { ARTIFACT_MODS } from '../src/game/artifact';
 import { RELIC_STAT_STARS, RELIC_MAX_STARS, effectsForStar } from '../src/game/relic';
-import { computeAscensionBoss, neutralizeForNeant, ASCENSION_SUSTAIN_MULT } from '../src/game/ascension';
+import { computeAscensionBoss, neutralizeForNeant, ASCENSION_SUSTAIN_MULT, ASCENSION_SUSTAIN_ACTIVE_MULT } from '../src/game/ascension';
 import { bestRuneLoadout } from '../src/game/runes';
 import type { PlayerState, ClassId, ItemDef } from '../src/game/types';
 
@@ -65,7 +65,7 @@ function season(p: PlayerState, s: Stack) {
   return p;
 }
 type Mon = { hp:number; atk:number; def:number; name:string; element?:string; resistances?:string[] };
-function fight(p: PlayerState, mon: Mon, o: { potions?:number; maxTurns?:number; sustainMult?:number; neant?:boolean }) {
+function fight(p: PlayerState, mon: Mon, o: { potions?:number; maxTurns?:number; sustainMult?:number; sustainActiveMult?:number; neant?:boolean }) {
   const stats = deriveStats(p, true) as any, mods = talentMods(p), setProc = activeSetProc(p);
   const rt = classResourceType(p.classId);
   const defs = getTalentsForClass(p.classId).map(t=>t.activeSkill).filter(Boolean) as ActiveSkillDef[];
@@ -83,7 +83,7 @@ function fight(p: PlayerState, mon: Mon, o: { potions?:number; maxTurns?:number;
     if (low && hr) { a=hr.id; sk=hr; } else if (low && pot>0 && php<stats.maxHp*0.3) a='potion';
     else { const d = dmg.find(ready); if (d) { a=d.id; sk=d; } }
     const r = combatTurn(stats, mods, {...mon, maxHp: mon.hp} as any, php, mhp, a,
-      { activeSkill: sk, potionHeal: a==='potion'?ph:0, setProc: setProc ?? undefined, resourceAmount: pool, resourceType: rt, sustainMult: o.sustainMult }, state);
+      { activeSkill: sk, potionHeal: a==='potion'?ph:0, setProc: setProc ?? undefined, resourceAmount: pool, resourceType: rt, sustainMult: o.sustainMult, sustainActiveMult: o.sustainActiveMult }, state);
     php=r.php; mhp=r.mhp; state=r.state; if (a==='potion') pot--;
     let g=r.resourceGained; if (rt==='tempo') g = a!==last?25:0; if (rt==='overcharge') g = sk?25:0;
     pool = Math.max(0, Math.min(poolMax, pool+g-r.resourceSpent));
@@ -152,4 +152,21 @@ if (process.env.ISOLATE) {
       console.log('  ' + lab.padEnd(28) + (w/n*100).toFixed(0).padStart(4) + '%');
     }
   }
+}
+
+
+// ── Balayage « forme du combat » : PV du boss × KH, ATK × KA, profil art+★5,
+// runes rang III. On cherche l'écart entre classes, pas la médiane seule. ──
+if (process.env.SHAPE) {
+  const st: Stack = { artifact: 62, relicStars: 5 };
+  const out: [string, number][] = [];
+  for (const c of CLASS_LIST.filter(c => c.parent)) out.push([c.name, neant(c.id as ClassId, st, true, 200).wr]);
+  const v = out.map(o => o[1]).sort((a, b) => a - b);
+  const med = v[Math.floor(v.length / 2)];
+  const q1 = v[Math.floor(v.length * 0.25)], q3 = v[Math.floor(v.length * 0.75)];
+  // Nombre de classes « hors jeu » (<10%) et « triviales » (>95%) : c'est ça
+  // qu'on veut réduire, plus que la médiane.
+  const dead = v.filter(x => x < 0.10).length, trivial = v.filter(x => x > 0.95).length;
+  console.log(`KA=${KA} KH=${KH} | médiane ${(med*100).toFixed(0)}% | Q1-Q3 ${(q1*100).toFixed(0)}-${(q3*100).toFixed(0)}% | écart ${((v[v.length-1]-v[0])*100).toFixed(0)} pts | <10% : ${dead} classes | >95% : ${trivial} classes`);
+  if (process.env.DETAIL) for (const [n, w] of out.sort((a,b)=>b[1]-a[1])) console.log(`    ${n.padEnd(18)} ${(w*100).toFixed(0)}%`);
 }
