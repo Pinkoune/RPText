@@ -31,14 +31,37 @@ export async function getAllPlayers(): Promise<PlayerState[]> {
   return snap.docs.map(d => d.data() as PlayerState);
 }
 
+/**
+ * Écriture admin sur un personnage.
+ *
+ * ⚠️ Elle échouait **en silence** dans deux cas, et l'appelant annonçait quand
+ * même « action effectuée » : un `uid` vide (la référence `players/` est alors
+ * invalide) et, hors ligne, un personnage absent du localStorage (`return`
+ * muet). Un panneau d'administration qui ment sur ce qu'il a fait est pire
+ * qu'un panneau cassé : on lève désormais, et `AdminModal` affiche l'erreur.
+ */
 export async function updatePlayerAdmin(uid: string, data: Partial<PlayerState>): Promise<void> {
+  if (!uid) throw new Error('Personnage sans identifiant : impossible d\'écrire.');
   if (!db) {
     const raw = localStorage.getItem(LOCAL_PREFIX + uid);
-    if (!raw) return;
+    if (!raw) throw new Error(`Personnage introuvable en local (${uid}).`);
     localStorage.setItem(LOCAL_PREFIX + uid, JSON.stringify({ ...JSON.parse(raw), ...data }));
     return;
   }
   await updateDoc(doc(db, 'players', uid), data);
+}
+
+/**
+ * Relit un personnage depuis la source de vérité (Firestore, ou le
+ * localStorage hors ligne). Sert à VÉRIFIER qu'une écriture admin a bien pris.
+ */
+export async function reloadPlayerAdmin(uid: string): Promise<PlayerState | null> {
+  if (!db) {
+    const raw = localStorage.getItem(LOCAL_PREFIX + uid);
+    return raw ? (JSON.parse(raw) as PlayerState) : null;
+  }
+  const snap = await getDoc(doc(db, 'players', uid));
+  return snap.exists() ? (snap.data() as PlayerState) : null;
 }
 
 /** Vide entièrement le chat (RTDB) : global, équipes, guildes, messagerie privée. */

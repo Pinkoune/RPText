@@ -769,6 +769,43 @@ y est donc rejoué. Un seul clone migré sert aux stats ET à la Puissance.
 (la règle valide des champs nommés, sans `hasOnly`) : pas de redéploiement requis
 pour ce lot.
 
+### Panneau admin : « Reset Cooldowns » — non reproduit, mais durci (C)
+
+Signalé : « le bouton pour reset les cooldowns ne fonctionne pas ». ⚠️ **Je n'ai
+pas réussi à le reproduire.** Vérifié en jeu (Playwright, mode local), chaîne
+complète : `hunt` pose `cooldowns.hunt` → la carte Récupérations affiche
+« ⚔️ Chasse » → clic sur le bouton → `cooldowns` vaut `{}` et la carte passe à
+« ✅ Tout est prêt », **sans même fermer la modale**. Trois actions testées
+(Reset Cooldowns, +1000 Or, Soigner), aucune erreur.
+
+Deux pistes écartées par lecture, à ne pas re-explorer :
+- `getAllPlayers` renvoie `d.data()` sans réinjecter l'id du document, mais
+  `savePlayer` écrit sous `doc('players', p.uid)` : l'id du doc **est** `p.uid`
+  par construction, donc la cible est toujours bonne ;
+- les règles Firestore autorisent `isAdminUser()` à écrire n'importe quel
+  `players/{charId}` — un refus lèverait, et `handleAction` l'affiche.
+
+Ce qui a été corrigé quand même, parce que c'est vrai indépendamment :
+- ⚠️ **`updatePlayerAdmin` échouait en SILENCE** sur un `uid` vide et, hors
+  ligne, sur un personnage absent du localStorage (`return` muet) — et
+  l'appelant annonçait « action effectuée » dans les deux cas. Elle lève
+  désormais. Un panneau d'admin qui ment sur ce qu'il a fait est pire qu'un
+  panneau cassé.
+- **`write()` relit la source de vérité** (`reloadPlayerAdmin`) et compare les
+  clés du patch : si l'écriture n'a pas pris, on affiche pourquoi au lieu de
+  claironner un succès. C'est ce qui donnera la vraie cause si le défaut se
+  reproduit en ligne.
+- **Le reset ne couvrait pas tous les verrous temporels** : il oubliait
+  `riftRuns` (les passages de Faille, dont l'XP est dégressive depuis ce lot —
+  un « reset » laissait donc la Faille à 15% de récompense) et `lastCombatAt`.
+  Ajoutés aux trois champs existants.
+- ⚠️ **Cause possible restante, qu'aucun code ne peut empêcher ici** : si la
+  cible est un joueur **en ligne sur un autre appareil**, sa propre sauvegarde
+  débouncée réécrit le document ENTIER quelques secondes plus tard et annule le
+  reset. L'écriture admin a bien eu lieu, elle est écrasée. Un toast le signale
+  désormais au clic quand on édite quelqu'un d'autre que soi. La vraie solution
+  serait une Cloud Function (non déployée).
+
 ### Équilibrage des classes face au Néant (fait, C) — le sustain GRATUIT
 
 Constat de l'utilisateur : « un moine full Genèse ne passe pas, un berserker

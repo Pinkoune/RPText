@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useGame } from '../store/gameStore';
 import type { PlayerState } from '../game/types';
-import { getAllPlayers, updatePlayerAdmin, wipeAllChats, wipeEndlessScores, triggerFullWipe, cleanupOrphanedPlayers } from '../firebase/adminService';
+import { getAllPlayers, updatePlayerAdmin, reloadPlayerAdmin, wipeAllChats, wipeEndlessScores, triggerFullWipe, cleanupOrphanedPlayers } from '../firebase/adminService';
 import { setSeason as pushSeason, fetchSeason } from '../firebase/seasonService';
 import { seasonTheme, getCurrentSeason, SEASON_THEMES, nextSeasonWithTheme, pointsSpent } from '../game/artifact';
 import { MAX_PRESTIGE_STACK } from '../game/prestige';
@@ -181,6 +181,21 @@ export function AdminModal() {
    * son propre changement qu'après un rechargement complet de la page (le
    * `player` du store n'est pas branché en live sur Firestore).
    */
+  /**
+   * Écrit un patch sur le personnage édité, puis **vérifie qu'il a pris**.
+   *
+   * ⚠️ La vérification n'est pas de la paranoïa : le panneau annonçait
+   * « action effectuée » sur la seule absence d'exception, donc une écriture
+   * partie dans le vide ressemblait exactement à une écriture réussie. On relit
+   * la source de vérité et on compare les clés du patch ; si elles ne
+   * correspondent pas, l'appelant lève et affiche pourquoi.
+   *
+   * ⚠️ Ce qu'on ne peut PAS empêcher ici : si la cible est un joueur
+   * actuellement EN LIGNE sur un autre appareil, sa propre sauvegarde
+   * (débouncée, et qui écrit le document entier) réécrira ses valeurs d'avant
+   * quelques secondes plus tard. L'écriture admin aura bien eu lieu — elle sera
+   * simplement écrasée. C'est signalé au clic plutôt que passé sous silence.
+   */
   async function write(patch: Partial<PlayerState>) {
     if (!editingPlayer) return;
     await updatePlayerAdmin(editingPlayer.uid, patch);
@@ -188,6 +203,13 @@ export function AdminModal() {
       mutate((d) => { Object.assign(d, patch); });
     }
     setEditingPlayer((prev) => (prev ? { ...prev, ...patch } : prev));
+
+    const fresh = await reloadPlayerAdmin(editingPlayer.uid);
+    if (!fresh) throw new Error(`Personnage ${editingPlayer.uid} introuvable après écriture.`);
+    const missed = (Object.keys(patch) as (keyof PlayerState)[]).filter(
+      (k) => JSON.stringify(fresh[k]) !== JSON.stringify(patch[k]),
+    );
+    if (missed.length) throw new Error(`Écriture refusée par la base (${missed.join(', ')}).`);
   }
 
   /** Change la classe du joueur édité : reset l'arbre de talents et déséquipe tout (rendu au sac). */
@@ -314,10 +336,23 @@ export function AdminModal() {
         await write({ gold: editingPlayer.gold + 1000 });
         toast('1000 Or ajoutés !', 'good');
       } else if (action === 'reset_cooldowns') {
-        // Reset complet : cooldowns "en tours" (donjon) + cooldown d'échec du
-        // rituel de prestige (sinon celui-ci survivait au reset général).
-        await write({ cooldowns: {}, combatCooldowns: {}, ascensionCooldownUntil: 0 });
+        // Tous les verrous temporels du personnage, pas seulement `cooldowns` :
+        //  - `cooldowns`            chasse, récolte, mini-boss, donjons, daily…
+        //  - `combatCooldowns`      recharges de compétences en combat
+        //  - `ascensionCooldownUntil` échec du Rituel du Néant (8h)
+        //  - `riftRuns`             passages de Faille de la semaine (l'XP y est
+        //                           dégressive : sans ça le « reset » laissait la
+        //                           Faille à 15% de récompense)
+        //  - `lastCombatAt`         purge des recharges de compétence après 1 min
+        await write({
+          cooldowns: {}, combatCooldowns: {}, ascensionCooldownUntil: 0,
+          riftRuns: { week: '', n: 0 }, lastCombatAt: 0,
+        });
         toast('Cooldowns réinitialisés !', 'good');
+        if (!player || editingPlayer.uid !== player.uid) {
+          // Dit une fois, au moment utile : l'admin ne peut pas savoir sinon.
+          toast('Si ce joueur est en ligne, sa propre sauvegarde peut écraser ce reset.', 'info');
+        }
       } else if (action === 'level_up_farm') {
         const pFarm = farmProgress(editingPlayer);
         await write({ farmXp: (editingPlayer.farmXp || 0) + pFarm.need });

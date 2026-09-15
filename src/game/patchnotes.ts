@@ -45,6 +45,78 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '✦ Les runes, refaites de zéro',
+        kind: 'new',
+        items: [
+          'Il faut commencer par l\'aveu : les six runes du jeu <b>n\'avaient aucune source</b>. Ni boutique, ni butin, ni recette. Personne ne pouvait en obtenir une seule, et la carte Enchantement était vide depuis toujours.',
+          '<b>12 familles × 3 rangs, plus 3 runes uniques.</b> Et surtout : une rune appartient à un emplacement. <b>Arme</b> = offensif (critique, pénétration, double frappe, poison/brûlure), <b>armure</b> = défensif (réduction, PV, ronces, esquive), <b>bijou</b> = soutien (ATK, DEF, vol de vie, régénération). On ne peut donc plus empiler six fois la même statistique : sertir devient un arbitrage.',
+          '<b>Table de gravure</b> : 5 💎 pour une rune de rang I tirée au sort dans l\'emplacement de ton choix. Les Gemmes n\'avaient jusqu\'ici qu\'un seul usage dans tout le jeu — payer le retrait d\'une rune que personne n\'avait.',
+          '<b>Fusion 3 → 1</b> : trois runes identiques donnent le rang supérieur. Un doublon n\'est jamais perdu. Les runes tombent aussi dans les derniers donjons.',
+          'Trois runes <b>uniques</b> à la Boutique du Destin : <b>Transmutation</b> (inverse physique ↔ magique), <b>Sursis</b> (survis une fois par combat à un coup fatal), <b>Faille</b> (+50% sur une cible gelée ou étourdie).',
+          'Retirer une rune coûte désormais <b>5 💎 au lieu de 10</b>, et elle retourne dans ton sac : changer d\'avis fait partie du jeu.',
+        ],
+      },
+      {
+        title: '🌳 Les talents deviennent un choix',
+        kind: 'new',
+        items: [
+          'Au Nv.50 tu gagnes <b>49 points de talent</b> pour un arbre qui en comptait 48 : tout le monde finissait avec exactement le même personnage, et un point dans le vide par-dessus le marché.',
+          'Les arbres passent à <b>67 rangs</b>. Tu en achèteras <b>49</b>, soit un peu moins des trois quarts : chaque point mis quelque part est un point qui manquera ailleurs, et deux Berserkers Nv.50 ne se ressemblent plus. La carte Talents affiche le budget dès le premier point.',
+          'Rien n\'est retiré ni remis à zéro — <b>aucun talent déjà appris ne bouge</b>, ce sont les rangs maximum qui montent. Ton personnage actuel est intact, il a simplement de la place devant lui.',
+          'Un arbre de base (avant l\'ascension) monte à 35 rangs : la spécialisation reste, de loin, le meilleur endroit où mettre ses points.',
+        ],
+      },
+      {
+        title: '🔔 On te prévient quand tu termines quelque chose',
+        kind: 'new',
+        items: [
+          'Une bulle s\'affiche désormais dès qu\'un <b>succès est accompli</b> ou qu\'une <b>quête est terminée</b> — avant, il fallait ouvrir la carte pour s\'en apercevoir, et les récompenses dormaient.',
+          'Le centre de <b>Notifications</b> 🔔 liste aussi ce qui reste à réclamer, et la pastille de la barre du haut le compte.',
+        ],
+      },
+      {
+        title: '🕳️ Le Rituel du Néant : recalibré, et enfin jouable par toutes les classes',
+        kind: 'balance',
+        items: [
+          'Le boss se calibrait sur un joueur portant six runes majeures — donc sur quelqu\'un qu\'<b>il était impossible de construire</b>, puisque ces runes n\'existaient nulle part. Il se calibre maintenant sur le meilleur équipement réellement atteignable, runes comprises. Son attaque monte de <b>~19%</b> : sans runes le Rituel est plus dur qu\'avant, avec un jeu de runes de rang III il est plus accessible. Les runes deviennent une étape de fin de partie au même titre que l\'équipement.',
+          'Deuxième problème, signalé en jeu : <b>un moine full Genèse n\'y arrivait pas, un berserker lavait le boss.</b> La cause n\'était ni les dégâts ni les classes. Le rituel bridait <b>tout</b> le soin à 60%, alors qu\'un soin de compétence <b>coûte un tour</b> et que le vol de vie n\'en coûte aucun. Le Prêtre de l\'Aube passait <b>20 de ses 23 tours</b> à se soigner, ne frappait donc plus, et perdait ; le Berserker, dont le soin est 100% passif, en passait 2 et gagnait.',
+          'Le Néant draine désormais surtout le soin <b>gratuit</b> : vol de vie et régénération restent à 60%, les soins et boucliers de compétence passent à 85%.',
+          '<b>Druide</b>, <b>Barde</b> et <b>Arcaniste</b> : « Écorce naturelle », « Résonance » et « Paradoxe » donnaient de la DEF ou de la régénération, quasi inutiles face à un boss dont l\'attaque écrase ton armure. Les trois donnent maintenant de la <b>réduction de dégâts</b> — l\'Arcaniste était la seule sous-classe du jeu sans le moindre nœud défensif.',
+          '<b>Oracle</b> : Jugement ×1.8 → <b>×2.3</b>. <b>Barde</b> : le soin du Chant 10% → <b>18%</b>. <b>Druide</b> : « Venin amplifié » annonçait des dégâts de poison et donnait en réalité du critique — il donne enfin ce qu\'il promet. <b>Berserker</b> : « Soif ardente » 2% → 1,4% de vol de vie par rang.',
+          'Résultat : plus aucune classe sous 27% de victoire à équipement et saison moyens (elles étaient cinq sous 10%), et <b>les 16 sous-classes à 100%</b> une fois tout maximisé. Le moine passe de 38% à 67%.',
+          '⚠️ À savoir avant de t\'y préparer : c\'est un combat d\'usure d\'une dizaine à une vingtaine de tours, donc <b>une rune défensive y vaut bien plus qu\'une rune offensive</b>. Mesuré sur un moine : deux Runes de Garde le font passer de 30% à 96% de victoire, deux Runes de Tranchant lui donnent +2 points. Sertis en conséquence.',
+        ],
+      },
+      {
+        title: '⚡ Les jauges d\'archétype ne se rechargent plus toutes seules',
+        kind: 'balance',
+        items: [
+          'Une règle, trois classes concernées : <b>la compétence qui dépense une jauge ne la recharge plus</b>.',
+          '<b>Prêtre de l\'Aube</b> — la Nova sacrée consomme la Grâce, mais son propre soin en rendait davantage qu\'elle n\'en coûtait. Au-delà de <b>834 PV max</b>, chaque Nova remplissait intégralement la jauge : elle était lançable presque tous les tours. Mesuré : une Nova tous les <b>1,1 tour</b> → <b>4,7 tours</b>, jauge moyenne 95/100 → 30/100. Il reste le meilleur soigneur du jeu, il n\'est simplement plus increvable. (Son soin de compétence, lui, est moins bridé pendant le Rituel — voir plus haut : les deux corrections vont dans des sens opposés, et c\'est voulu.)',
+          '<b>Nécromancien</b> — la Vague d\'âmes coûte 40 Âmes et pose 4 tours de Poison… qui rapportent 20 Âmes par tour. Elle se rendait <b>le double de ce qu\'elle coûtait</b>. Un finisher toutes les <b>2,1 → 6,7 tours</b>. <b>Piégeur</b> — même boucle sur l\'Embuscade (60 dépensés, 100 rendus) : <b>2,4 → 6,5 tours</b>.',
+          'Ce sont désormais les compétences <b>gratuites</b> qui remplissent la jauge : Lumière sacrée, Éclat nécrotique, Piège explosif. L\'<b>Oracle</b> avait la même boucle sur le Présage, corrigée aussi. Les autres classes ne bougent pas.',
+        ],
+      },
+      {
+        title: '🌀 La Faille rapportait trop',
+        kind: 'balance',
+        items: [
+          'Deux joueurs à l\'artefact 80-90 en 5-10 h de jeu, alors que l\'artefact 90 demande <b>65% de plus d\'XP que tout le trajet du niveau 1 au 50</b>. La Faille en était la cause : <b>673 000 XP/h</b> contre 105 600 pour la chasse, et aucun cooldown.',
+          'Elle n\'en gagne toujours pas : c\'est l\'<b>XP des passages répétés</b> qui décroît (100%, 50%, 33%, 25%… plancher à 15% sur la semaine). Le numéro du passage et le pourcentage sont annoncés avant le combat, et tout se remet à zéro chaque semaine.',
+          'Au plancher, une Faille rapporte encore un peu plus qu\'une chasse normale — elle reste le meilleur rapport du jeu, elle cesse juste d\'être la voie rapide.',
+        ],
+      },
+      {
+        title: '⚡ Puissance du classement',
+        kind: 'fix',
+        items: [
+          'La Puissance affichée pour les joueurs qui ne s\'étaient pas reconnectés depuis la mise à jour ne comptait <b>ni l\'artefact, ni la Relique, ni les maîtrises, ni les étoiles</b> : leur ligne de classement ne transporte tout simplement pas ces chiffres. Un Nv.45 à 1 418 monstres passait ainsi derrière un Nv.20 actif.',
+          'Le classement va désormais chercher la vraie valeur dans la fiche du joueur au lieu de la deviner. Une seule lecture par joueur et par session, et plus du tout dès que chacun s\'est reconnecté une fois.',
+          '<b>Une étoile de Relique vaut 4 points au lieu de 12.</b> À 12, quatre étoiles pesaient plus du double d\'un niveau 20 : un joueur pouvait passer devant quelqu\'un qui avait plus de niveaux ET plus de monstres tués. La Relique reste le plus gros gain par unité — elle est permanente et rare — mais elle ne renverse plus l\'ordre à elle seule.',
+          '<b>Clique un nom du classement</b> : sa fiche détaille maintenant sa Puissance axe par axe (niveau, artefact, Relique, kills, maîtrises…). La Puissance n\'a jamais été « niveau + kills », c\'est la somme de tous les axes de progression — encore fallait-il pouvoir le vérifier.',
+        ],
+      },
+      {
         title: '🚪 Fermer une carte de combat ne l\'annule plus',
         kind: 'fix',
         items: [
@@ -60,92 +132,6 @@ export const PATCH_HISTORY: PatchRelease[] = [
           'Depuis la mise à jour, relancer le jeu ou rafraîchir la page affichait <b>« Combat abandonné »</b> et infligeait une mort — alors qu\'aucun combat n\'était en cours. Cause : la fin d\'un combat écrivait une valeur que la base refuse, ce qui faisait <b>échouer la sauvegarde en silence</b>. Le marqueur de combat restait donc collé sur ta fiche, et repartait à chaque connexion.',
           'Conséquence plus grave, maintenant réparée : tant que ce marqueur était coincé, <b>plus rien ne se sauvegardait</b> pour ce personnage. Si tu as perdu de la progression ces dernières heures, c\'est de là que ça vient.',
           'Les marqueurs déjà coincés sont <b>effacés sans pénalité</b> à ta prochaine connexion. Et la même faute, présente depuis plus longtemps sur la <b>collecte d\'expédition</b>, est corrigée au passage.',
-        ],
-      },
-      {
-        title: '🔔 On te prévient quand tu termines quelque chose',
-        kind: 'new',
-        items: [
-          'Une bulle s\'affiche désormais dès qu\'un <b>succès est accompli</b> ou qu\'une <b>quête est terminée</b> — avant, il fallait ouvrir la carte pour s\'en apercevoir, et les récompenses dormaient.',
-          'Le centre de <b>Notifications</b> 🔔 liste aussi ce qui reste à réclamer, et la pastille de la barre du haut le compte.',
-        ],
-      },
-      {
-        title: '⚖️ Les classes en retrait face au Néant',
-        kind: 'balance',
-        items: [
-          'Un moine full Genèse n\'y arrivait pas, un berserker lavait le boss. La cause n\'était ni les dégâts ni les classes : le rituel bridait <b>tout</b> le soin à 60%, alors qu\'un soin de compétence <b>coûte un tour</b> et que le vol de vie n\'en coûte aucun. Le Prêtre de l\'Aube passait <b>20 de ses 23 tours</b> à se soigner, ne frappait plus, et perdait ; le Berserker, dont le soin est 100% passif, en passait 2 et gagnait.',
-          'Désormais le Néant draine surtout le soin <b>gratuit</b> : vol de vie et régénération restent à 60%, les soins et boucliers de compétence passent à 85%.',
-          '<b>Druide</b> et <b>Barde</b> : « Écorce naturelle » et « Résonance » donnaient de la DEF, quasi inutile face à un boss dont l\'attaque écrase ton armure. Elles donnent maintenant de la <b>réduction de dégâts</b>. <b>Arcaniste</b> : « Paradoxe » aussi — c\'était la seule sous-classe du jeu sans le moindre nœud défensif.',
-          '<b>Oracle</b> : Jugement ×1.8 → <b>×2.3</b>. <b>Barde</b> : le soin du Chant 10% → <b>18%</b>. <b>Druide</b> : « Venin amplifié » annonçait des dégâts de poison et donnait en réalité du critique — il donne enfin ce qu\'il promet. <b>Berserker</b> : « Soif ardente » 2% → 1,4% de vol de vie par rang.',
-          'Résultat : plus aucune classe sous 27% de victoire à équipement et saison moyens (elles étaient cinq sous 10%), et <b>les 16 sous-classes à 100%</b> une fois tout maximisé. Le moine passe de 38% à 67%.',
-        ],
-      },
-      {
-        title: '🌀 La Faille rapportait trop',
-        kind: 'balance',
-        items: [
-          'Deux joueurs à l\'artefact 80-90 en 5-10 h de jeu, alors que l\'artefact 90 demande <b>65% de plus d\'XP que tout le trajet du niveau 1 au 50</b>. La Faille en était la cause : <b>673 000 XP/h</b> contre 105 600 pour la chasse, et aucun cooldown.',
-          'Elle n\'en gagne toujours pas : c\'est l\'<b>XP des passages répétés</b> qui décroît (100%, 50%, 33%, 25%… plancher à 15% sur la semaine). Le numéro du passage et le pourcentage sont annoncés avant le combat, et tout se remet à zéro chaque semaine.',
-          'Au plancher, une Faille rapporte encore un peu plus qu\'une chasse normale — elle reste le meilleur rapport du jeu, elle cesse juste d\'être la voie rapide.',
-        ],
-      },
-      {
-        title: '✦ Les runes, refaites de zéro',
-        kind: 'new',
-        items: [
-          'Il faut commencer par l\'aveu : les six runes du jeu <b>n\'avaient aucune source</b>. Ni boutique, ni butin, ni recette. Personne ne pouvait en obtenir une seule, et la carte Enchantement était vide depuis toujours.',
-          '<b>12 familles × 3 rangs, plus 3 runes uniques.</b> Et surtout : une rune appartient à un emplacement. <b>Arme</b> = offensif (critique, pénétration, double frappe, poison/brûlure), <b>armure</b> = défensif (réduction, PV, ronces, esquive), <b>bijou</b> = soutien (ATK, DEF, vol de vie, régénération). On ne peut donc plus empiler six fois la même statistique : sertir devient un arbitrage.',
-          '<b>Table de gravure</b> : 5 💎 pour une rune de rang I tirée au sort dans l\'emplacement de ton choix. Les Gemmes n\'avaient jusqu\'ici qu\'un seul usage dans tout le jeu — payer le retrait d\'une rune que personne n\'avait.',
-          '<b>Fusion 3 → 1</b> : trois runes identiques donnent le rang supérieur. Un doublon n\'est jamais perdu. Les runes tombent aussi dans les derniers donjons.',
-          'Trois runes <b>uniques</b> à la Boutique du Destin : <b>Transmutation</b> (inverse physique ↔ magique), <b>Sursis</b> (survis une fois par combat à un coup fatal), <b>Faille</b> (+50% sur une cible gelée ou étourdie).',
-          'Retirer une rune coûte désormais <b>5 💎 au lieu de 10</b>, et elle retourne dans ton sac : changer d\'avis fait partie du jeu.',
-        ],
-      },
-      {
-        title: '🕳️ Le Néant recalibré (et pourquoi)',
-        kind: 'balance',
-        items: [
-          'Le boss du Rituel se calibrait sur un joueur portant six runes majeures — donc sur quelqu\'un qu\'<b>il était impossible de construire</b>. Il se calibre maintenant sur le meilleur équipement réellement atteignable, runes comprises.',
-          'Conséquence mesurée : son ATK monte de <b>~19%</b>. Tant que tu n\'as pas de runes, le Rituel est donc plus dur qu\'avant ; avec un jeu de runes de rang III, il est plus accessible qu\'avant. Les runes deviennent une étape de fin de partie au même titre que l\'équipement.',
-          '⚠️ À savoir avant de t\'y préparer : le Rituel est un combat d\'usure de ~200 tours, donc <b>une rune défensive y vaut environ 20 fois une rune offensive</b>. Mesuré sur un Moine : deux Runes de Garde le font passer de 30% à 96% de victoire, deux Runes de Tranchant lui donnent +2 points. Sertis en conséquence.',
-        ],
-      },
-      {
-        title: '🌳 Les talents deviennent un choix',
-        kind: 'balance',
-        items: [
-          'Au Nv.50 tu gagnes <b>49 points de talent</b> pour un arbre qui en comptait 48 : tout le monde finissait avec exactement le même personnage, et un point dans le vide par-dessus le marché.',
-          'Les arbres passent à <b>67 rangs</b>. Tu en achèteras <b>49</b>, soit un peu moins des trois quarts : chaque point mis quelque part est un point qui manquera ailleurs, et deux Berserkers Nv.50 ne se ressemblent plus. La carte Talents affiche le budget dès le premier point.',
-          'Rien n\'est retiré ni remis à zéro — <b>aucun talent déjà appris ne bouge</b>, ce sont les rangs maximum qui montent. Ton personnage actuel est intact, il a simplement de la place devant lui.',
-          'Un arbre de base (avant l\'ascension) monte à 35 rangs : la spécialisation reste, de loin, le meilleur endroit où mettre ses points.',
-        ],
-      },
-      {
-        title: '👻 Nécromancien et Piégeur : les jauges se dépensent aussi',
-        kind: 'balance',
-        items: [
-          'Même défaut que la Nova du Prêtre, par une autre porte : la <b>Vague d\'âmes</b> coûte 40 Âmes et pose 4 tours de Poison… qui rapportent 20 Âmes par tour. Elle se rendait donc <b>le double de ce qu\'elle coûtait</b> et tournait en boucle. Idem pour l\'<b>Embuscade</b> du Piégeur (60 dépensés, 100 rendus).',
-          'Le poison posé par la compétence qui dépense la jauge ne la recharge plus. C\'est l\'<b>Éclat nécrotique</b> et le <b>Piège explosif</b> qui la remplissent — comme prévu. Mesuré : un finisher toutes les <b>2,1 → 6,7 tours</b> (Nécromancien) et <b>2,4 → 6,5 tours</b> (Piégeur).',
-        ],
-      },
-      {
-        title: '✨ Prêtre de l\'Aube : la Grâce se dépense enfin',
-        kind: 'balance',
-        items: [
-          'La <b>Nova sacrée</b> se rechargeait toute seule : elle consomme la Grâce, mais son propre soin en rendait davantage qu\'elle n\'en coûtait. Au-delà de <b>834 PV max</b>, chaque Nova remplissait intégralement la jauge — elle était donc lançable presque tous les tours, pour un soin allant jusqu\'à 80% des PV max. Mesuré : <b>une Nova tous les 1,1 tour</b>, jauge moyenne 95/100, et le Prêtre finissait ses combats à 100% de vie.',
-          'Le soin de la compétence qui DÉPENSE une ressource ne la recharge plus. Après correction : une Nova tous les <b>4,7 tours</b>, jauge moyenne 30/100. Le Prêtre reste le meilleur soigneur du jeu, il n\'est simplement plus increvable.',
-          'Le <b>Jugement</b> de l\'Oracle avait la même boucle sur le Présage (un cast toutes les 3,7 → 6,1 tours). Les autres classes ne bougent pas.',
-        ],
-      },
-      {
-        title: '⚡ Puissance du classement',
-        kind: 'fix',
-        items: [
-          'La Puissance affichée pour les joueurs qui ne s\'étaient pas reconnectés depuis la mise à jour ne comptait <b>ni l\'artefact, ni la Relique, ni les maîtrises, ni les étoiles</b> : leur ligne de classement ne transporte tout simplement pas ces chiffres. Un Nv.45 à 1 418 monstres passait ainsi derrière un Nv.20 actif.',
-          'Le classement va désormais chercher la vraie valeur dans la fiche du joueur au lieu de la deviner. Une seule lecture par joueur et par session, et plus du tout dès que chacun s\'est reconnecté une fois.',
-          '<b>Une étoile de Relique vaut 4 points au lieu de 12.</b> À 12, quatre étoiles pesaient plus du double d\'un niveau 20 : un joueur pouvait passer devant quelqu\'un qui avait plus de niveaux ET plus de monstres tués. La Relique reste le plus gros gain par unité — elle est permanente et rare — mais elle ne renverse plus l\'ordre à elle seule.',
-          '<b>Clique un nom du classement</b> : sa fiche détaille maintenant sa Puissance axe par axe (niveau, artefact, Relique, kills, maîtrises…). La Puissance n\'a jamais été « niveau + kills », c\'est la somme de tous les axes de progression — encore fallait-il pouvoir le vérifier.',
         ],
       },
       {
