@@ -99,6 +99,29 @@ export function currentRift(now: number = Date.now(), level = 50): RiftInfo {
   return { week, key: `w${week}`, biome, modifier, endsAt: (week + 1) * RIFT_WEEK_MS };
 }
 
+/**
+ * Passages déjà faits cette semaine (0 si la semaine a tourné).
+ */
+export function riftRunCount(p: PlayerState, rift: RiftInfo): number {
+  return p.riftRuns?.week === rift.key ? p.riftRuns.n : 0;
+}
+
+/**
+ * Multiplicateur d'XP et d'or du n-ième passage de la semaine (n = 0 pour le
+ * premier). Décroissance harmonique, plancher à 15%.
+ *
+ * ⚠️ C'est le levier prévu de longue date, et **pas** un cooldown : la Faille
+ * reste ouverte en permanence (décision explicite de l'utilisateur). Le
+ * problème mesuré était son DÉBIT — 673 000 XP/h contre 105 600 pour la chasse,
+ * soit l'artefact 90 en 7,4 h de Faille pure, ce qui expliquait des joueurs à
+ * l'artefact 80-90 en 5-10 h de jeu. Au plancher, un passage rapporte à peu
+ * près autant qu'une chasse normale : le défi hebdomadaire garde tout son
+ * intérêt, il cesse juste d'être la voie rapide.
+ */
+export function riftRewardMult(runs: number): number {
+  return Math.max(0.15, 1 / (1 + Math.max(0, runs)));
+}
+
 /** Le joueur a-t-il déjà validé la Faille de cette semaine ? */
 export function riftCleared(p: PlayerState, rift: RiftInfo): boolean {
   return p.riftClearedWeek === rift.key;
@@ -113,6 +136,7 @@ export function riftCleared(p: PlayerState, rift: RiftInfo): boolean {
 export function buildRiftMonster(p: PlayerState, rift: RiftInfo): MonsterDef {
   const lvl = Math.max(1, p.level);
   const base = pickMonster(rift.biome, currentPhase(), lvl);
+  const mult = riftRewardMult(riftRunCount(p, rift));
   const m: MonsterDef = {
     ...base,
     id: 'rift',
@@ -126,8 +150,11 @@ export function buildRiftMonster(p: PlayerState, rift: RiftInfo): MonsterDef {
     hp: Math.round(base.hp * 2.6 + lvl * 70),
     atk: Math.round(base.atk * 1.15 + lvl * 0.6),
     def: Math.round(base.def * 1.1 + lvl * 0.3),
-    xp: Math.round(base.xp * 5 + lvl * 70),
-    gold: [base.gold[0] * 5 + lvl * 15, base.gold[1] * 5 + lvl * 30] as [number, number],
+    // XP et or dégressifs sur les passages répétés de la semaine (voir
+    // `riftRewardMult`). Appliqué ICI pour que tous les chemins en aval en
+    // bénéficient : `grantMonsterRewards` → `grantXp` → artefact de saison.
+    xp: Math.round((base.xp * 5 + lvl * 70) * mult),
+    gold: [Math.round((base.gold[0] * 5 + lvl * 15) * mult), Math.round((base.gold[1] * 5 + lvl * 30) * mult)] as [number, number],
     loot: { ...(base.loot ?? {}), hi_potion: 0.5, upgrade_matrix: 0.15 },
   };
   rift.modifier.apply(m);
