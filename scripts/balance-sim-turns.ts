@@ -13,7 +13,8 @@ import { combatTurn, freshCombatState } from '../src/game/combat';
 import { activeSetProc } from '../src/game/sets';
 import { ARTIFACT_MODS } from '../src/game/artifact';
 import { RELIC_STAT_STARS, RELIC_MAX_STARS, effectsForStar } from '../src/game/relic';
-import { computeAscensionBoss, neutralizeForNeant, ASCENSION_SUSTAIN_MULT } from '../src/game/ascension';
+import { computeAscensionBoss, neutralizeForNeant, ASCENSION_SUSTAIN_MULT, ASCENSION_SUSTAIN_ACTIVE_MULT } from '../src/game/ascension';
+import { bestRuneLoadout } from '../src/game/runes';
 import type { PlayerState, ClassId, ItemDef } from '../src/game/types';
 import * as fs from 'fs';
 
@@ -53,7 +54,8 @@ type Tier = 'starter' | 'crafted' | 'maxed';
 function outfit(p: PlayerState, tier: Tier) {
   const lvl = p.level, fam = family(p.classId);
   const q = tier === 'starter' ? '' : ':q150', stars = tier === 'maxed' ? 5 : 0;
-  const eq = (it: ItemDef | null, slot: 'weapon' | 'armor' | 'trinket') => { if (!it) return; const k = it.id + q; p.equipped[slot] = k; p.inventory[k] = 1; if (stars) p.gearStars![k] = stars; if (it.maxDurability) p.gearDurability![k] = it.maxDurability; };
+  const keys: Partial<Record<'weapon' | 'armor' | 'trinket', string>> = {};
+  const eq = (it: ItemDef | null, slot: 'weapon' | 'armor' | 'trinket') => { if (!it) return; const k = it.id + q; p.equipped[slot] = k; p.inventory[k] = 1; keys[slot] = k; if (stars) p.gearStars![k] = stars; if (it.maxDurability) p.gearDurability![k] = it.maxDurability; };
   if (tier === 'starter') {
     eq(bestInSlot('weapon', Math.min(lvl, 3), fam, it => it.atk ?? 0), 'weapon');
     eq(bestInSlot('armor', Math.min(lvl, 3), fam, it => (it.def ?? 0) * 2 + (it.hp ?? 0)), 'armor');
@@ -61,6 +63,18 @@ function outfit(p: PlayerState, tier: Tier) {
     eq(bestInSlot('weapon', lvl, fam, it => it.atk ?? 0), 'weapon');
     eq(bestInSlot('armor', lvl, fam, it => (it.def ?? 0) * 2 + (it.hp ?? 0)), 'armor');
     eq(bestInSlot('trinket', lvl, fam, it => (it.atk ?? 0) * 3 + (it.def ?? 0) * 2 + (it.hp ?? 0)), 'trinket');
+  }
+  // ⚠️ « maxé » inclut les RUNES depuis leur refonte. Elles sont désormais
+  // obtenables (table de gravure + butin), et surtout `computeAscensionBoss` se
+  // calibre dessus : mesurer un joueur maxé sans runes décrirait quelqu'un en
+  // dessous de la référence du boss, et rendrait le Rituel faussement
+  // infranchissable dans le rapport.
+  if (tier === 'maxed') {
+    const L = bestRuneLoadout();
+    p.enchants = {};
+    if (keys.weapon) p.enchants[keys.weapon] = L.weapon;
+    if (keys.armor) p.enchants[keys.armor] = L.armor;
+    if (keys.trinket) p.enchants[keys.trinket] = L.trinket;
   }
   // ⚠️ Budget de points, PAS « tout l'arbre » : 67 rangs pour 49 points au Nv.50.
   p.talents = budgetedBuild(p.classId, Math.max(0, p.level - 1));
@@ -102,7 +116,7 @@ function played(base: ClassId, sub: ClassId, level: number): ClassId { return le
 type Mon = { hp: number; atk: number; def: number; name: string; element?: string; weaknesses?: string[]; resistances?: string[] };
 
 // ── PILOTE DE COMBAT tour-par-tour ──
-function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: number; maxTurns?: number; sustainMult?: number; neant?: boolean } = {}): { win: boolean; turns: number; endHpPct: number } {
+function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: number; maxTurns?: number; sustainMult?: number; sustainActiveMult?: number; neant?: boolean } = {}): { win: boolean; turns: number; endHpPct: number } {
   const stats = deriveStats(p, true) as any;
   const mods = talentMods(p);
   const setProc = activeSetProc(p);
@@ -151,7 +165,7 @@ function fight(p: PlayerState, mon: Mon, opts: { potions?: number; potionHeal?: 
     }
     const r = combatTurn(stats, mods, { ...mon, maxHp: mon.hp } as any, php, mhp, action, {
       activeSkill: skill, potionHeal: action === 'potion' ? potionHeal : 0, setProc: setProc ?? undefined,
-      resourceAmount: pool, resourceType, sustainMult: opts.sustainMult,
+      resourceAmount: pool, resourceType, sustainMult: opts.sustainMult, sustainActiveMult: opts.sustainActiveMult,
     }, state);
     php = r.php; mhp = r.mhp; state = r.state;
     if (action === 'potion') potions--;
@@ -419,7 +433,7 @@ for (const c of CLASS_LIST.filter(c => c.parent)) {
   ]) {
     const p = season(blankPlayer(c.id, 50), stack); outfit(p, 'maxed');
     const boss = computeAscensionBoss(p) as any;
-    const r = batch(p, { hp: boss.hp, atk: boss.atk, def: boss.def, name: boss.name, element: 'dark' } as any, 300, { potions: 6, maxTurns: 200, sustainMult: ASCENSION_SUSTAIN_MULT, neant: true });
+    const r = batch(p, { hp: boss.hp, atk: boss.atk, def: boss.def, name: boss.name, element: 'dark' } as any, 300, { potions: 6, maxTurns: 200, sustainMult: ASCENSION_SUSTAIN_MULT, sustainActiveMult: ASCENSION_SUSTAIN_ACTIVE_MULT, neant: true });
     voidRows.push({ classId: c.id, name: c.name, profile: label, winrate: r.winrate, bossHp: boss.hp, bossAtk: boss.atk });
   }
 }

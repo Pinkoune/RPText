@@ -329,6 +329,8 @@ export interface PlayerState {
   profileBg?: string;
   /** Clé de la semaine dont la Faille a déjà été validée (`w2870`). */
   riftClearedWeek?: string;
+  /** Passages de la Faille faits cette semaine — pilote l'XP dégressive. */
+  riftRuns?: { week: string; n: number };
   /** Joueur vétéran d'avant la réinitialisation (donne droit au Médaillon de l'Ancien Monde) */
   isLegacy?: boolean;
   legacyCreatedAt?: number;

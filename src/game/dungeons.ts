@@ -98,7 +98,7 @@ export const DUNGEONS: DungeonDef[] = [
       mob('wyrm', 'Wyrm de flamme', '🔥', 360, 39, 18, 210, { element: 'fire', dmgType: 'magical', weaknesses: ['physical'] }),
       mob('dragon_lord', 'Seigneur Dragon', '🐉', 900, 56, 22, 750, { element: 'fire', dmgType: 'physical', resistances: ['physical', 'magical'] }),
     ],
-    reward: { gold: 1000, fateCoins: 10, gems: 2, loot: { mithril_ore: 0.8, crystal: 0.6, mithril_blade: 0.2, crystal_charm: 0.15, void_reaver: 0.05 } },
+    reward: { gold: 1000, fateCoins: 10, gems: 2, loot: { mithril_ore: 0.8, crystal: 0.6, mithril_blade: 0.2, crystal_charm: 0.15, void_reaver: 0.05, rune_edge_1: 0.2, rune_ward_1: 0.2, rune_might_1: 0.2 } },
   },
   {
     id: 'infernal_forge',
@@ -113,7 +113,7 @@ export const DUNGEONS: DungeonDef[] = [
       mob('infernal_guard', 'Garde infernal', '👹', 950, 80, 30, 500, { element: 'fire', dmgType: 'physical', weaknesses: ['magical'] }),
       mob('forge_lord', 'Seigneur de la Forge', '🔥', 1600, 90, 50, 1800, { element: 'fire', dmgType: 'physical', resistances: ['physical'] }),
     ],
-    reward: { gold: 3500, fateCoins: 15, gems: 3, loot: { lava_crystal: 0.9, ember_stone: 0.8, infernal_shard: 0.6, lava_blade: 0.15, volcanic_armor: 0.12, upgrade_matrix: 0.2 } },
+    reward: { gold: 3500, fateCoins: 15, gems: 3, loot: { lava_crystal: 0.9, ember_stone: 0.8, infernal_shard: 0.6, lava_blade: 0.15, volcanic_armor: 0.12, upgrade_matrix: 0.2, rune_pierce_1: 0.3, rune_bulwark_1: 0.3, rune_leech_1: 0.25, rune_edge_2: 0.1 } },
   },
   {
     id: 'abyssal_citadel',
@@ -128,7 +128,7 @@ export const DUNGEONS: DungeonDef[] = [
       mob('abyssal_knight', 'Chevalier Abyssal', '🗡️', 2600, 165, 70, 1300, { element: 'dark', dmgType: 'physical', weaknesses: ['magical'], resistances: ['physical'] }),
       mob('void_king', 'Roi Abyssal', '👑', 2000, 100, 90, 5000, { element: 'dark', dmgType: 'magical', resistances: ['magical'] }),
     ],
-    reward: { gold: 6000, fateCoins: 25, gems: 5, loot: { void_dust: 0.9, infernal_shard: 0.8, boss_soul: 0.4, void_mantle: 0.2, primordial_crown: 0.08, upgrade_matrix: 0.35, phoenix_feather: 0.05 } },
+    reward: { gold: 6000, fateCoins: 25, gems: 5, loot: { void_dust: 0.9, infernal_shard: 0.8, boss_soul: 0.4, void_mantle: 0.2, primordial_crown: 0.08, upgrade_matrix: 0.35, phoenix_feather: 0.05, rune_ward_2: 0.25, rune_pierce_2: 0.25, rune_might_2: 0.2, rune_second_wind: 0.05 } },
   },
 ];
 
@@ -176,7 +176,7 @@ export const DUNGEONS: DungeonDef[] = [
     desc: 'Trois donjons enchaînés sans répit. Réservé aux inscriptions de raid (10h / 20h).',
     stages,
     raid: true,
-    reward: { gold: 3200, fateCoins: 20, gems: 6, loot: { mithril_ore: 1, crystal: 0.9, void_dust: 0.7, mithril_blade: 0.35, crystal_charm: 0.3, void_reaver: 0.12, boss_soul: 0.1 } },
+    reward: { gold: 3200, fateCoins: 20, gems: 6, loot: { mithril_ore: 1, crystal: 0.9, void_dust: 0.7, mithril_blade: 0.35, crystal_charm: 0.3, void_reaver: 0.12, boss_soul: 0.1, rune_echo_1: 0.35, rune_veil_1: 0.35, rune_aegis_1: 0.3, rune_blight_2: 0.12 } },
     // Récompenses par palier (voir DungeonCard.tsx `RAID_MILESTONES`) : un
     // acompte à la mort de chaque boss intermédiaire (stage 4 = fin du 1er
     // donjon, stage 8 = fin du 2e), la conquête complète reste `reward`

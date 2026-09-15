@@ -716,25 +716,12 @@ export function deriveStats(p: PlayerState, skipEquipCheck = false): Stats {
     }
   }
 
-  // Bonus des enchantements
-  let enchAtkPct = 0;
-  let enchDefPct = 0;
-  let enchHpPct = 0;
-  if (p.enchants) {
-    for (const slot of ['weapon', 'armor', 'trinket'] as const) {
-      const key = p.equipped[slot];
-      if (key && p.enchants[key]) {
-        for (const runeId of p.enchants[key]) {
-          if (runeId === 'rune_atk_1') enchAtkPct += 0.05;
-          if (runeId === 'rune_atk_2') enchAtkPct += 0.10;
-          if (runeId === 'rune_def_1') enchDefPct += 0.05;
-          if (runeId === 'rune_def_2') enchDefPct += 0.10;
-          if (runeId === 'rune_hp_1') enchHpPct += 0.05;
-          if (runeId === 'rune_hp_2') enchHpPct += 0.10;
-        }
-      }
-    }
-  }
+  // ⚠️ Les runes ne sont plus lues ici. Elles passent par `talentMods` →
+  // `applyRuneMods` (runes.ts), donc leurs `atkPct`/`defPct`/`hpPct` arrivent
+  // déjà dans `mods` ci-dessous. L'ancienne lecture locale ne connaissait que
+  // ces trois statistiques et, surtout, échappait au plafonnement de `CAPS`.
+  // Seule exception qui reste dans ce fichier : `rune_shift`, qui n'est pas un
+  // `CombatMods` mais une propriété de l'ARME (voir plus haut).
 
   const prestige = prestigeBonus(p.prestigeAura);
   // Bonus permanent de prestige (rituel Nv.50). Valeurs dans prestige.ts —
@@ -747,9 +734,9 @@ export function deriveStats(p: PlayerState, skipEquipCheck = false): Stats {
   // Relique : seules les étoiles 1 à 5 donnent des stats (les suivantes donnent
   // des effets, versés dans CombatMods par `applyRelicMods`).
   const relMult = relicStatMult(p);
-  atk = Math.round(atk * (1 + mods.atkPct + evt.atkPct + setAtkPct + enchAtkPct + prestige.atkPct) * presMult * artMult * relMult);
-  def = Math.round(def * (1 + mods.defPct + evt.defPct + setDefPct + enchDefPct + prestige.defPct) * presMult * artMult * relMult);
-  maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct + setHpPct + enchHpPct + prestige.hpPct) * presMult * artMult * relMult);
+  atk = Math.round(atk * (1 + mods.atkPct + evt.atkPct + setAtkPct + prestige.atkPct) * presMult * artMult * relMult);
+  def = Math.round(def * (1 + mods.defPct + evt.defPct + setDefPct + prestige.defPct) * presMult * artMult * relMult);
+  maxHp = Math.round(maxHp * (1 + mods.hpPct + evt.hpPct + setHpPct + prestige.hpPct) * presMult * artMult * relMult);
 
 
   return { level: p.level, maxHp, atk, def, hp: Math.min(p.hp, maxHp), maxCp, maxGp, weaponElement,

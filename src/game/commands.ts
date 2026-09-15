@@ -3,7 +3,7 @@ import type { WindowKind } from '../store/uiStore';
 import { useUi } from '../store/uiStore';
 import { useGame } from '../store/gameStore';
 import { pickMonster } from './monsters';
-import { currentRift, buildRiftMonster } from './rift';
+import { currentRift, buildRiftMonster, riftRunCount, riftRewardMult } from './rift';
 import { cooldownLeft } from './player';
 import { item } from './items';
 import { deriveStats, removeItem } from './player';
@@ -709,11 +709,19 @@ export function runCommand(input: string, ctx: CommandCtx): void {
       // normale au Nv.50) : si la Faille devient une source de farm, le levier à
       // actionner est l'XP des passages RÉPÉTÉS (dans l'esprit d'`applyZonePenalty`),
       // pas une porte fermée.
+      const runs = riftRunCount(p!, rift);
       ctx.mutate((d) => {
         if (!d.statistics.mobsEncountered) d.statistics.mobsEncountered = {};
         d.statistics.mobsEncountered['rift'] = (d.statistics.mobsEncountered['rift'] ?? 0) + 1;
+        // Compteur de la semaine : il pilote l'XP dégressive. Incrémenté APRÈS
+        // `buildRiftMonster`, pour que le premier passage soit bien à 100%.
+        d.riftRuns = d.riftRuns?.week === rift.key ? { week: rift.key, n: d.riftRuns.n + 1 } : { week: rift.key, n: 1 };
       });
       ctx.toast(`${rift.modifier.icon} Faille — ${rift.modifier.name} : ${rift.modifier.desc}`, 'info');
+      if (runs > 0) {
+        // Dit AVANT le combat, pas découvert dans le butin.
+        ctx.toast(`Passage n°${runs + 1} de la semaine : XP et or à ${Math.round(riftRewardMult(runs) * 100)}%.`, 'info');
+      }
       ctx.open('hunt', { monster, id: Date.now(), isMiniboss: true, riftKey: rift.key }, { singleton: true });
       break;
     }

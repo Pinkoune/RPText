@@ -769,6 +769,201 @@ y est donc rejoué. Un seul clone migré sert aux stats ET à la Puissance.
 (la règle valide des champs nommés, sans `hasOnly`) : pas de redéploiement requis
 pour ce lot.
 
+### Équilibrage des classes face au Néant (fait, C) — le sustain GRATUIT
+
+Constat de l'utilisateur : « un moine full Genèse ne passe pas, un berserker
+lave le boss ». Diagnostic mesuré, et il ne tient ni aux dégâts ni aux classes.
+
+**D'où vient le soin de chaque classe pendant le rituel** (mesure à refaire au
+besoin sur le modèle de `rune-impact.ts ISOLATE=1`) :
+
+| Classe | soin passif (gratuit) | soin actif (coûte un tour) | tours passés à soigner | WR |
+|---|---|---|---|---|
+| Berserker | **100%** | 0% | 2 / 14 | 100% |
+| Voleur, Piégeur, Chasseur | 100% | 0% | 2-4 | 56-100% |
+| Moine | 56% | 44% | 10 / 19 | 52% |
+| **Prêtre de l'Aube** | **0%** | **100%** | **20 / 23** | **8%** |
+| **Druide, Oracle** | **0%** | **100%** | 7-12 | **0%** |
+
+⚠️⚠️ **La bride `ASCENSION_SUSTAIN_MULT` punissait exactement les mauvaises
+classes.** Elle ramenait à 60% *tout* le sustain — vol de vie, régénération,
+soins de compétence, boucliers. Or un soin de compétence **coûte un tour**, le
+vol de vie n'en coûte aucun : brider les deux au même taux revient à faire payer
+deux fois ceux qui paient déjà. Le Prêtre passait 20 de ses 23 tours à se
+soigner pour un soin amputé, donc ne frappait plus, donc perdait.
+
+**Correctif** : `combatTurn` a désormais deux brides. `sustainMult` (passif :
+vol de vie, régénération, procs de set) reste à **0.60** ; `sustainActiveMult`
+(soins et boucliers de compétence) passe à **0.85**. *Ce qui gagne un combat
+d'usure, c'est le sustain gratuit — c'est lui que le Néant doit drainer.*
+⚠️ Resserrer le passif plus fort (0.45, 0.35) a été testé et **écarté** : ça
+écrase le Moine (60% -> 47% -> 30%), qui est hybride, sans supprimer le
+Berserker (100% -> 83% -> 60%). La bride passive est un instrument trop
+grossier pour viser une classe.
+
+**Quatre classes restaient bloquées après ça**, pour une raison différente —
+leur débit de dégâts et leur mitigation :
+- ⚠️ **`defPct` est presque inopérant face au boss du Rituel.** Les dégâts sont
+  `atk - def` : +33% de DEF sur 361 ne retire que ~9% des coups d'un boss à
+  1348 d'ATK, là où `dmgReduction` en retire 33%. Les deux classes qui misaient
+  dessus (**Druide** `dru_bark`, **Barde** `brd_resonance`) étaient de fait sans
+  mitigation. Converties en `dmgReduction` — et « Écorce » et « Résonance »
+  décrivent mieux ça que de la DEF brute. Dosage **mesuré** : à 0.025/rang le
+  Druide passait de 1% à **93% sans aucune saison** (surdosé), retenu
+  **0.012 / 0.010**.
+- **Arcaniste** : seule sous-classe **sans aucun nœud défensif** — plus haute
+  ATK après le Pyromancien, PV et DEF les plus bas, zéro soin. Monter sa
+  régénération (4 -> 7 -> 11/rang) ne donnait que +3 points : elle est passive,
+  donc bridée. `arc_paradox` passe de `regen` à `dmgReduction` 0.02/rang
+  (5% -> 66%).
+- **Oracle** : finisher le plus faible du jeu sur la classe à l'ATK la plus
+  basse. Jugement x1.8 -> **x2.3**.
+- **Barde** : son seul soin faisait 10%. Chant -> **18%**.
+- **Druide** : `dru_venom` **mentait** — il annonçait « multiplicateur de
+  poison » et donnait du `critMult`. Remis sur `statusPow` (0.15/rang), ce qui
+  est bien son identité (Colère empoisonne).
+- **Berserker** : `ber_bloodlust` 0.02 -> 0.014/rang. Effet marginal assumé
+  (100% -> 96-99% sans saison) : sa domination est son identité
+  (auto-suffisance passive), pas un défaut. Ne pas l'aplatir davantage.
+
+Résultat (harnais tour-par-tour, joueur maxé runes comprises) :
+
+| Profil | avant ce lot | après |
+|---|---|---|
+| artefact+★5, médiane | 47% | **66%** |
+| artefact+★5, classes sous 10% | **5** (Druide 0, Oracle 0, Barde 4, Prêtre 6, Arcaniste 8) | **0** (minimum : Nécromancien 27%) |
+| tout maxé, minimum | 83% | **100% pour les 16** |
+
+Le Moine, point de départ de la demande : **38% -> 67%** à artefact+★5.
+Contenu normal inchangé (100% de victoire partout, endHP 48-100%), chasse et
+donjons dans le bruit.
+⚠️ Écart résiduel assumé **sans saison** : Berserker 99%, Cryomancien 93%,
+Chevalier Noir 87% contre 0-3% pour les casters. Ce sont les profils à sustain
+passif ; les aplatir reviendrait à supprimer leur identité.
+
+### La Faille était la fuite d'XP (fait, C)
+
+Deux joueurs à l'**artefact 80-90 en 5-10 h de jeu**. Mesuré : l'artefact 90
+demande **4,97 M d'XP**, soit 65% de plus que tout le trajet Nv.1->50 (2,70 M).
+Impossible par le combat. Débit par activité au Nv.40 :
+
+| Activité | XP/h |
+|---|---|
+| **Faille de la semaine** | **673 200** |
+| chasse (Abysse) | 105 600 |
+| duel PvP gagné | 48 000 |
+| craft | 31 200 |
+| Abysses (endless) | 29 934 |
+| récolte | 9 960 |
+| camp | 200 |
+
+La Faille sans cooldown = artefact 90 en **7,4 h**. C'est exactement le levier
+annoncé d'avance dans `commands.ts` et ici : **l'XP des passages RÉPÉTÉS, pas
+une porte fermée** (le cooldown avait été explicitement refusé par
+l'utilisateur, et le reste). `riftRewardMult(n) = max(0.15, 1/(1+n))`, appliqué
+dans `buildRiftMonster` pour que tous les chemins en aval en bénéficient
+(`grantMonsterRewards` -> `grantXp` -> artefact). Régime permanent **134 640
+XP/h**, soit à peine au-dessus de la chasse : la Faille reste le meilleur
+rapport, elle cesse d'être la voie rapide. Artefact 90 en Faille pure :
+7,4 h -> **36,9 h**, aligné sur les 47 h de la chasse.
+⚠️ Le numéro du passage et le pourcentage sont annoncés **avant** le combat.
+Vérifié en jeu : passage 1 silencieux (100%), puis « 50% », « 33% ».
+
+⚠️ **Repère à garder** : `artifactXpToNext(l) = 400 + 300 * l^1.35`, donc
+artefact 62 (grille complète) ≈ l'XP d'un perso Nv.47, artefact 69 ≈ Nv.50.
+Tout artefact nettement au-dessus de 70 chez un joueur qui n'est pas Nv.50
+signale une source d'XP dérivante — c'est le test à refaire.
+
+### Refonte complète des runes (fait, C)
+
+Point de départ : un joueur moine, full Genèse, ne passait pas le Rituel ; un
+autre, berserker, le lavait. En cherchant, j'ai trouvé que **les six runes du
+jeu n'avaient AUCUNE source** — `rune_atk_1/2`, `rune_def_1/2`, `rune_hp_1/2`
+n'apparaissaient que dans leur définition (`items.ts`), dans le code qui les
+lisait (`player.ts`) et dans le joueur idéal d'`ascension.ts`. Ni boutique, ni
+butin, ni recette, ni lootbox. Même famille de défaut que `star_fragment`.
+Et `computeAscensionBoss` calibrait le mur de fin de jeu sur un joueur qui les
+portait toutes — une référence que personne ne pouvait atteindre.
+
+**Nouveau système** (`game/runes.ts`, nouveau fichier — registre pur) :
+- **une rune appartient à un emplacement** (`RuneDef.slot`) : arme = offensif,
+  armure = défensif, bijou = soutien. C'est ce qui tue le build dégénéré
+  « six fois la même statistique » et fait du sertissage un arbitrage ;
+- **12 familles × 3 rangs**, fusion `FUSE_COUNT` (3) identiques → rang supérieur,
+  donc un doublon n'est jamais perdu ; **3 runes uniques** (Transmutation,
+  Sursis, Faille) hors gravure et hors fusion ;
+- les effets branchent sur des `CombatMods` qui existent déjà, plutôt que sur un
+  multiplicateur de stat de plus.
+
+⚠️ **`ITEMS` ne décrit plus les runes** : `items.ts` fait `...runeItemDefs()`.
+Une rune se décrit à UN endroit. Idem pour `icons.ts`, qui dérive son mapping du
+registre (une icône par famille, partagée par ses trois rangs).
+⚠️ **Graphe d'imports** : `runes.ts` n'importe `CombatMods` qu'en `import type`
+(effacé à la compilation), parce que `talents.ts` importe `applyRuneMods` à
+l'exécution. Un import normal ferait le cycle. `enchant.ts` importe
+`addItem/removeItem` de `player.ts` — pas de cycle, rien dans `player.ts` ni
+`talents.ts` n'importe `enchant.ts`.
+⚠️ **Les runes passent maintenant par `talentMods`** (`applyRuneMods`), plus par
+`deriveStats`. L'ancienne lecture locale était une chaîne de six `if` qui ne
+savait faire qu'ATK/DEF/PV **et qui échappait à `CAPS`**. Conséquence assumée :
+les `atkPct`/`defPct`/`hpPct` de rune sont désormais plafonnés comme le reste.
+
+**Sources** (il en fallait, c'était tout le problème) : **table de gravure**
+(`engraveRune`, 5 Gemmes → rang I aléatoire de l'emplacement choisi — c'est
+l'usage que la note de patch d'origine promettait aux Gemmes, qui n'en avaient
+qu'un seul dans tout le jeu : payer le retrait d'une rune que personne n'avait),
+**butin des quatre derniers donjons**, et **Boutique du Destin** pour les trois
+uniques. Retrait 10 → 5 Gemmes, la rune revient au sac.
+
+#### ⚠️⚠️ Au Rituel, un mod DÉFENSIF vaut ~20× un mod OFFENSIF
+
+Mesuré avec `scripts/rune-impact.ts` (`ISOLATE=1`), Moine Nv.50 sans saison, une
+paire de runes rang III à la fois :
+
+| Paire sertie | Victoire |
+|---|---|
+| aucune | 30% |
+| Garde ×2 (−16% dégâts subis) | **96%** |
+| Sangsue ×2 (vol de vie) | 85% |
+| Rempart ×2 (+20% PV) | 81% |
+| Voile ×2 (esquive) | 68% |
+| Tranchant ×2 (critique) | 32% |
+| Écho ×2 / Perforation ×2 / Ronces ×2 | 33-36% |
+
+C'est mécanique : ~200 tours contre un boss de ~30 000 PV, donc survivre est
+presque tout. **C'est l'explication du Berserker** (vol de vie) qui le lave là
+où le Moine échoue, et ça vaut pour toute la question « rééquilibrer les classes
+en retrait » : le levier n'est pas leurs dégâts, c'est soit leur sustain, soit
+la durée du combat. ⚠️ Ne pas repartir des dégâts.
+
+#### Recalibrage du boss — et ce qu'il coûte aux joueurs actuels
+
+`bestRuneLoadout()` remplace la table écrite en dur dans `ascension.ts` (même
+correctif que `bestGear()` pour les armes). Mais comme les runes donnent des
+`CombatMods` et que la formule du boss ne lit que ATK/DEF/PV, **elle ne peut pas
+les voir** : sans retouche, le Rituel tombait à une médiane de **99% sans aucune
+saison**. Balayé (`KA`/`KH` dans `rune-impact.ts`), retenu **×1.35 sur l'ATK et
+×1.05 sur les PV** → `hp = s.atk * 37.8`, `atk = s.maxHp / 3.4 + s.def * 1.05`.
+
+Contrat rétabli, joueur maxé **runes comprises** (harnais tour-par-tour) :
+médiane **~1% sans saison / 48% artefact+★5 / 83-100% tout maxé**, contre
+`0% / 36% / 88-100%` avant ce lot.
+
+⚠️ **Effet de bord assumé, à annoncer** : l'ATK du boss monte de ~19%, donc
+**tant qu'un joueur n'a pas de runes, le Rituel est plus dur qu'avant**. Les
+seuls profils réellement touchés au niveau max sans runes sont Druide, Barde et
+Oracle — précisément les trois classes déjà identifiées comme en retrait.
+⚠️ `scripts/balance-sim-turns.ts` : le palier `maxed` **inclut désormais les
+runes**. Mesurer un joueur « maxé » sans runes décrirait quelqu'un en dessous de
+la référence du boss et rendrait le Rituel faussement infranchissable.
+
+Vérifié en jeu (Playwright, mode local) : le sélecteur de l'arme ne propose que
+les runes d'arme alors que le sac contient aussi une rune de bijou et trois
+d'armure · sertissage (sac 3 → 2, rune posée sur la clé d'instance) · gravure
+(200 → 195 Gemmes, rune d'armure obtenue) · fusion (4 rang I → 1 restant + 1
+rang II) · et une rune d'arme forcée sur une armure est **ignorée** par
+`runesOnSlot`.
+
 ### Un dépensier ne se repaye pas — la même boucle par le poison (fait, C)
 
 Suite directe du correctif de la Nova, signalée par l'utilisateur (« le
@@ -1262,7 +1457,7 @@ Chaque arbre = **+21 rangs propres** (base 27 → 48, budget cible du Nv.50, cf.
 L'utilisateur travaille avec **Claude** (création, rendu, ressenti, UI qui plaît) **et Gemini** (modifications mécaniques, données, logique). **Règle : ne jamais éditer les mêmes fichiers en parallèle.**
 
 - **Claude possède** : rendu/UI/feel → `icons.ts`, `ItemIcon.tsx`, `sets.ts`, `combat.ts`, cartes visuelles existantes (Hunt, Talent, Equipment, Market, Endless UI…), refontes d'UI.
-- **Gemini possède** : données/logique isolées → nouveaux fichiers de features, `dungeons.ts`, `biomes.ts`, `monsters.ts`, `enchant.ts`, services firebase, et le **câblage** (`types.ts`, `player.ts`, `uiStore.ts`, `WindowManager.tsx`, `commands.ts`) — sauf indication contraire. **Exceptions : `endless.ts` + `endlessService.ts` (endless solo & multi) = Claude** (voir #12) ; **`pvpDuelService.ts` (duels 1v1/2v2 temps réel) = Claude** (voir #15), remplace l'ancien `duelService.ts` (supprimé, mort).
+- **Gemini possède** : données/logique isolées → nouveaux fichiers de features, `dungeons.ts`, `biomes.ts`, `monsters.ts`, services firebase, et le **câblage** (`types.ts`, `player.ts`, `uiStore.ts`, `WindowManager.tsx`, `commands.ts`) — sauf indication contraire. **Exceptions : `endless.ts` + `endlessService.ts` (endless solo & multi) = Claude** (voir #12) ; **`pvpDuelService.ts` (duels 1v1/2v2 temps réel) = Claude** (voir #15), remplace l'ancien `duelService.ts` (supprimé, mort) ; **`runes.ts` + `enchant.ts` + `EnchantCard.tsx` = Claude** depuis la refonte des runes (demandée explicitement par l'utilisateur).
 - **Fichiers partagés à haut risque** (`types.ts`, `player.ts`, `items.ts`) : un seul owner à la fois par tâche ; annoncer avant d'éditer. Gemini ajoute en **append** dans `items.ts`.
 - Après chaque lot : `npx tsc -b` doit passer.
 

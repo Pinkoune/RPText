@@ -37,7 +37,25 @@ import {
   GiFlowerTwirl, GiLightningHelix,
   GiSunRadiations, GiCandleFlame, GiSprout, GiStarProminences, GiSunrise,
   GiHolyGrail, GiSpiralBloom, GiSeedling,
+  // Runes (refonte) — une icône par FAMILLE, partagée par ses trois rangs :
+  // le rang se lit à la couleur de rareté et au chiffre romain du nom.
+  GiDaggers, GiPiercingSword, GiSpinningBlades, GiBleedingEye,
+  GiShieldReflect, GiHeartPlus, GiThornHelix, GiDodging,
+  GiBiceps, GiEdgedShield, GiVampireDracula, GiRegeneration,
+  GiPortal, GiBackup, GiLightningArc,
 } from 'react-icons/gi';
+import { RUNE_LIST } from './runes';
+
+/** Icône par famille de rune — les trois rangs la partagent. */
+const RUNE_FAMILY_ICONS: Record<string, IconType> = {
+  edge: GiDaggers, pierce: GiPiercingSword, echo: GiSpinningBlades, blight: GiBleedingEye,
+  ward: GiShieldReflect, bulwark: GiHeartPlus, briar: GiThornHelix, veil: GiDodging,
+  might: GiBiceps, aegis: GiEdgedShield, leech: GiVampireDracula, mend: GiRegeneration,
+  shift: GiPortal, second_wind: GiBackup, rift: GiLightningArc,
+};
+const RUNE_ICONS: Record<string, IconType> = Object.fromEntries(
+  RUNE_LIST.filter((r) => RUNE_FAMILY_ICONS[r.family]).map((r) => [r.id, RUNE_FAMILY_ICONS[r.family]]),
+);
 
 // Registre id d'objet -> icône Game Icons (react-icons/gi). Les objets non mappés
 // retombent sur leur emoji (voir <ItemIcon>). Migration progressive, sûre.
@@ -139,6 +157,10 @@ export const ITEM_ICONS: Record<string, IconType> = {
   genesis_scepter: GiSpiralBloom, genesis_staff: GiHolyGrail,
   genesis_aegis: GiWingedShield, genesis_seal: GiSeedling,
   primordial_aegis: GiWingedShield,
+
+  // ── Runes ── dérivées du registre : une rune ajoutée là-bas a son icône ici
+  // sans rien écrire de plus.
+  ...RUNE_ICONS,
 };
 
 export function hasItemIcon(id: string): boolean {
