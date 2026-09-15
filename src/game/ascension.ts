@@ -9,6 +9,7 @@ import type { PlayerState, ClassId } from './types';
 import { deriveStats, starterWeapon } from './player';
 import { getTalentsForClass, budgetedBuild, type ActiveSkillDef } from './talents';
 import { CLASSES, MAX_LEVEL } from './classes';
+import { bestRuneLoadout } from './runes';
 import { mintInstanceId, ITEMS } from './items';
 import { prestigeStacks } from './prestige';
 
@@ -159,10 +160,17 @@ export function computeAscensionBoss(p: PlayerState): AscensionBoss {
   fake.equipped = { ...fake.equipped, weapon: wKey, armor: aKey, trinket: tKey };
   fake.gearStars = { [wKey]: 5, [aKey]: 5, [tKey]: 5 };
   fake.gearDurability = { [wKey]: 800, [aKey]: 1400, [tKey]: 500 };
+  // ⚠️ Sertissure dérivée du registre, PAS écrite en dur. L'ancienne table
+  // posait six `rune_*_2` — des runes qui n'avaient **aucune source dans le
+  // jeu** : le mur de fin de partie se calibrait sur un joueur que personne ne
+  // pouvait construire. Même faute que le `BEST_WEAPON` figé d'avant
+  // `bestGear()`. `bestRuneLoadout()` suit le registre : une rune ajoutée
+  // là-bas met le boss à jour toute seule.
+  const loadout = bestRuneLoadout();
   fake.enchants = {
-    [wKey]: ['rune_atk_2', 'rune_atk_2'],
-    [aKey]: ['rune_def_2', 'rune_hp_2'],
-    [tKey]: ['rune_hp_2', 'rune_hp_2'],
+    [wKey]: loadout.weapon,
+    [aKey]: loadout.armor,
+    [tKey]: loadout.trinket,
   };
   // Familier légendaire maxé.
   fake.familiars = { ...(fake.familiars ?? {}), starling: 100000 };
@@ -185,7 +193,14 @@ export function computeAscensionBoss(p: PlayerState): AscensionBoss {
   // Calibrage : vrai mur de fin de jeu. Beaucoup de PV (le combat s'éternise) et
   // des dégâts qui dépassent le sustain d'un moine/soigneur → il faut vraiment le
   // build idéal + une bonne gestion des soins pour l'emporter.
-  const hp = Math.round(s.atk * 36);
+  const hp = Math.round(s.atk * 37.8);
+  // Recalibré une seconde fois (×1.35 sur l'ATK, ×1.05 sur les PV) quand les
+  // runes sont devenues obtenables. ⚠️ Raison mesurée : le Rituel est un combat
+  // d'usure de ~200 tours, donc **un mod défensif y vaut ~20× un mod
+  // offensif** — deux Runes de Garde font passer un Moine sans saison de 30% à
+  // 96%, là où deux runes de critique lui donnent +2 points. La formule du boss
+  // ne lit que ATK/DEF/PV : elle ne peut pas voir ces mods, il faut donc la
+  // relever à la main. Voir le balayage dans `scripts/`.
   // Coefficient de dégâts relevé de 1/6 à 1/4.6 sur les PV idéaux (+30%).
   // Balayé en simulation (`SWEEP=1` sur `balance-sim-turns.ts`) sur les 16
   // sous-classes × trois profils de progression. À l'ancienne valeur, la
@@ -193,7 +208,7 @@ export function computeAscensionBoss(p: PlayerState): AscensionBoss {
   // celle-ci, elle tombe à 3% sans saison, 66% avec artefact + Relique ★5, et
   // 86-100% une fois tout maxé. C'est le contrat de la feature : infranchissable
   // sans équipement à jour, franchissable par TOUTES les classes avec.
-  const atk = Math.round(s.maxHp / 4.6 + s.def * 0.78);
+  const atk = Math.round(s.maxHp / 3.4 + s.def * 1.05);
   const def = Math.round(s.atk * 0.15);
 
   return {

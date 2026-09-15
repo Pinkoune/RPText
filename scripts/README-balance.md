@@ -200,3 +200,25 @@ tours** est le signe : la bande saine est ~4 à 10 tours.
 corruption) restent à zéro — le joueur ne prend presque rien. C'est une limite
 assumée du banc, pas un défaut de ces classes : les juger au harnais
 tour-par-tour.
+
+---
+
+## `rune-impact.ts` — runes et Rituel du Néant
+
+    node_modules/.bin/esbuild scripts/rune-impact.ts --bundle --platform=node \
+      --format=cjs --define:import.meta.env='{}' --outfile=/tmp/ri.cjs && node /tmp/ri.cjs
+
+Sort les 16 sous-classes × 3 profils de saison, **sans runes → runes rang III**.
+`ISOLATE=1` mesure une seule paire de runes à la fois, et `KA=` / `KH=`
+appliquent un facteur sur l'ATK et les PV du boss (c'est le balayage qui a fixé
+les coefficients d'`ascension.ts`).
+
+⚠️ **Le résultat à retenir** : au Rituel, un mod **défensif** vaut environ
+**20× un mod offensif**. Mesuré sur un Moine sans saison : deux Runes de Garde
+(+16% réduction de dégâts) le font passer de **30% à 96%**, deux Runes de
+Rempart à 81%, deux de Sangsue à 85% — alors que critique, pénétration, écho et
+ronces donnent **+2 à +6 points**. C'est mécanique : le combat dure ~200 tours
+contre un boss de ~30 000 PV, donc survivre est presque tout ce qui compte.
+C'est aussi l'explication du Berserker (vol de vie) qui le lave là où le Moine
+échoue. Tout rééquilibrage de classe face au Néant doit partir de ce constat
+plutôt que des dégâts.

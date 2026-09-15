@@ -71,6 +71,27 @@ export const PATCH_HISTORY: PatchRelease[] = [
         ],
       },
       {
+        title: '✦ Les runes, refaites de zéro',
+        kind: 'new',
+        items: [
+          'Il faut commencer par l\'aveu : les six runes du jeu <b>n\'avaient aucune source</b>. Ni boutique, ni butin, ni recette. Personne ne pouvait en obtenir une seule, et la carte Enchantement était vide depuis toujours.',
+          '<b>12 familles × 3 rangs, plus 3 runes uniques.</b> Et surtout : une rune appartient à un emplacement. <b>Arme</b> = offensif (critique, pénétration, double frappe, poison/brûlure), <b>armure</b> = défensif (réduction, PV, ronces, esquive), <b>bijou</b> = soutien (ATK, DEF, vol de vie, régénération). On ne peut donc plus empiler six fois la même statistique : sertir devient un arbitrage.',
+          '<b>Table de gravure</b> : 5 💎 pour une rune de rang I tirée au sort dans l\'emplacement de ton choix. Les Gemmes n\'avaient jusqu\'ici qu\'un seul usage dans tout le jeu — payer le retrait d\'une rune que personne n\'avait.',
+          '<b>Fusion 3 → 1</b> : trois runes identiques donnent le rang supérieur. Un doublon n\'est jamais perdu. Les runes tombent aussi dans les derniers donjons.',
+          'Trois runes <b>uniques</b> à la Boutique du Destin : <b>Transmutation</b> (inverse physique ↔ magique), <b>Sursis</b> (survis une fois par combat à un coup fatal), <b>Faille</b> (+50% sur une cible gelée ou étourdie).',
+          'Retirer une rune coûte désormais <b>5 💎 au lieu de 10</b>, et elle retourne dans ton sac : changer d\'avis fait partie du jeu.',
+        ],
+      },
+      {
+        title: '🕳️ Le Néant recalibré (et pourquoi)',
+        kind: 'balance',
+        items: [
+          'Le boss du Rituel se calibrait sur un joueur portant six runes majeures — donc sur quelqu\'un qu\'<b>il était impossible de construire</b>. Il se calibre maintenant sur le meilleur équipement réellement atteignable, runes comprises.',
+          'Conséquence mesurée : son ATK monte de <b>~19%</b>. Tant que tu n\'as pas de runes, le Rituel est donc plus dur qu\'avant ; avec un jeu de runes de rang III, il est plus accessible qu\'avant. Les runes deviennent une étape de fin de partie au même titre que l\'équipement.',
+          '⚠️ À savoir avant de t\'y préparer : le Rituel est un combat d\'usure de ~200 tours, donc <b>une rune défensive y vaut environ 20 fois une rune offensive</b>. Mesuré sur un Moine : deux Runes de Garde le font passer de 30% à 96% de victoire, deux Runes de Tranchant lui donnent +2 points. Sertis en conséquence.',
+        ],
+      },
+      {
         title: '🌳 Les talents deviennent un choix',
         kind: 'balance',
         items: [

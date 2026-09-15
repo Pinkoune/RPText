@@ -1,4 +1,5 @@
 import type { ItemDef, ItemSlot } from './types';
+import { runeItemDefs } from './runes';
 
 export const ITEMS: Record<string, ItemDef> = {
   // ── Matériaux (loot monstres) ──
@@ -205,13 +206,10 @@ export const ITEMS: Record<string, ItemDef> = {
   gather_gloves: { id: 'gather_gloves', name: 'Gants de Récolte', icon: '🧤', rarity: 'uncommon', slot: 'trinket', maxGp: 12, maxDurability: 300, value: 80, desc: 'Protègent les mains et évitent la fatigue.', reqLevel: 5 },
 
   // ── Runes d'Enchantement ──
-  rune_atk_1: { id: 'rune_atk_1', name: 'Rune de Puissance Mineure', icon: '🔴', rarity: 'uncommon', slot: 'material', value: 100, desc: '+5% ATK quand sertie.' },
-  rune_def_1: { id: 'rune_def_1', name: 'Rune de Garde Mineure', icon: '🔵', rarity: 'uncommon', slot: 'material', value: 100, desc: '+5% DEF quand sertie.' },
-  rune_hp_1: { id: 'rune_hp_1', name: 'Rune de Vitalité Mineure', icon: '🟢', rarity: 'uncommon', slot: 'material', value: 100, desc: '+5% PV max quand sertie.' },
-  rune_atk_2: { id: 'rune_atk_2', name: 'Rune de Puissance Majeure', icon: '🔴', rarity: 'epic', slot: 'material', value: 500, desc: '+10% ATK quand sertie.' },
-  rune_def_2: { id: 'rune_def_2', name: 'Rune de Garde Majeure', icon: '🔵', rarity: 'epic', slot: 'material', value: 500, desc: '+10% DEF quand sertie.' },
-  rune_hp_2: { id: 'rune_hp_2', name: 'Rune de Vitalité Majeure', icon: '🟢', rarity: 'epic', slot: 'material', value: 500, desc: '+10% PV max quand sertie.' },
-  rune_shift: { id: 'rune_shift', name: 'Rune de Transmutation', icon: '🌀', rarity: 'legendary', slot: 'material', value: 800, desc: 'Sertie sur une ARME : inverse son type de dégâts (physique ↔ magique). Contourne les résistances physiques/magiques des monstres.' },
+  // ⚠️ Elles ne sont PAS écrites ici : elles sont dérivées du registre
+  // (`runes.ts`) et injectées plus bas via `...runeItemDefs()`. Une rune se
+  // décrit à un seul endroit — son emplacement, son rang et son effet de combat
+  // vivent ensemble, au lieu d'une ligne d'objet ici et d'un `if` ailleurs.
 
   // ── Ressources de la Nécropole (biome crypt, niv.30) ──
   crypt_shard: { id: 'crypt_shard', name: 'Éclat de cristal noir', icon: '🔷', rarity: 'rare', slot: 'material', value: 75, desc: 'Cristal opaque extrait des parois de la nécropole.' },
@@ -328,6 +326,9 @@ export const ITEMS: Record<string, ItemDef> = {
   // AUCUN élément d'armure n'y serait sûr. Le rituel qui suit est `dark`.
   genesis_aegis: { id: 'genesis_aegis', name: 'Égide de Genèse', icon: '🛡️', rarity: 'mythic', slot: 'armor', def: 72, hp: 340, value: 19000, desc: 'La première chose que le monde ait su protéger.', maxDurability: 1600, reqLevel: 48 },
   genesis_seal: { id: 'genesis_seal', name: 'Sceau de Genèse', icon: '🌱', rarity: 'mythic', slot: 'trinket', atk: 18, def: 16, hp: 150, value: 14000, desc: 'Un monde entier y attend son tour.', maxDurability: 620, reqLevel: 48 },
+
+  // Runes : générées depuis `runes.ts` (voir la note plus haut).
+  ...runeItemDefs(),
 };
 /**
  * Tous les consommables de soin (slot consumable + hp défini), triés du moins

@@ -2,6 +2,7 @@ import type { PlayerState, ClassId } from './types';
 import { CLASSES } from './classes';
 import { applyArtifactMods } from './artifact';
 import { applyRelicMods } from './relic';
+import { applyRuneMods } from './runes';
 
 export interface CombatMods {
   crit: number;
@@ -448,6 +449,10 @@ export function talentMods(p: PlayerState): CombatMods {
   // moitié du jeu. Le plafonnement ci-dessous s'applique donc aussi à eux.
   applyArtifactMods(p, mods);
   applyRelicMods(p, mods);
+  // Runes serties. Elles étaient lues dans `deriveStats` par une chaîne de six
+  // `if` qui ne savait faire qu'ATK/DEF/PV et qui échappait à `CAPS` ; ici elles
+  // sont vues par les 12 sites d'appel et plafonnées comme le reste.
+  applyRuneMods(p, mods);
 
   for (const [key, cap] of Object.entries(CAPS) as [keyof CombatMods, number][]) {
     mods[key] = Math.min(mods[key], cap);

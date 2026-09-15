@@ -14,6 +14,7 @@ import { activeSetProc } from '../src/game/sets';
 import { ARTIFACT_MODS } from '../src/game/artifact';
 import { RELIC_STAT_STARS, RELIC_MAX_STARS, effectsForStar } from '../src/game/relic';
 import { computeAscensionBoss, neutralizeForNeant, ASCENSION_SUSTAIN_MULT } from '../src/game/ascension';
+import { bestRuneLoadout } from '../src/game/runes';
 import type { PlayerState, ClassId, ItemDef } from '../src/game/types';
 import * as fs from 'fs';
 
@@ -53,7 +54,8 @@ type Tier = 'starter' | 'crafted' | 'maxed';
 function outfit(p: PlayerState, tier: Tier) {
   const lvl = p.level, fam = family(p.classId);
   const q = tier === 'starter' ? '' : ':q150', stars = tier === 'maxed' ? 5 : 0;
-  const eq = (it: ItemDef | null, slot: 'weapon' | 'armor' | 'trinket') => { if (!it) return; const k = it.id + q; p.equipped[slot] = k; p.inventory[k] = 1; if (stars) p.gearStars![k] = stars; if (it.maxDurability) p.gearDurability![k] = it.maxDurability; };
+  const keys: Partial<Record<'weapon' | 'armor' | 'trinket', string>> = {};
+  const eq = (it: ItemDef | null, slot: 'weapon' | 'armor' | 'trinket') => { if (!it) return; const k = it.id + q; p.equipped[slot] = k; p.inventory[k] = 1; keys[slot] = k; if (stars) p.gearStars![k] = stars; if (it.maxDurability) p.gearDurability![k] = it.maxDurability; };
   if (tier === 'starter') {
     eq(bestInSlot('weapon', Math.min(lvl, 3), fam, it => it.atk ?? 0), 'weapon');
     eq(bestInSlot('armor', Math.min(lvl, 3), fam, it => (it.def ?? 0) * 2 + (it.hp ?? 0)), 'armor');
@@ -61,6 +63,18 @@ function outfit(p: PlayerState, tier: Tier) {
     eq(bestInSlot('weapon', lvl, fam, it => it.atk ?? 0), 'weapon');
     eq(bestInSlot('armor', lvl, fam, it => (it.def ?? 0) * 2 + (it.hp ?? 0)), 'armor');
     eq(bestInSlot('trinket', lvl, fam, it => (it.atk ?? 0) * 3 + (it.def ?? 0) * 2 + (it.hp ?? 0)), 'trinket');
+  }
+  // ⚠️ « maxé » inclut les RUNES depuis leur refonte. Elles sont désormais
+  // obtenables (table de gravure + butin), et surtout `computeAscensionBoss` se
+  // calibre dessus : mesurer un joueur maxé sans runes décrirait quelqu'un en
+  // dessous de la référence du boss, et rendrait le Rituel faussement
+  // infranchissable dans le rapport.
+  if (tier === 'maxed') {
+    const L = bestRuneLoadout();
+    p.enchants = {};
+    if (keys.weapon) p.enchants[keys.weapon] = L.weapon;
+    if (keys.armor) p.enchants[keys.armor] = L.armor;
+    if (keys.trinket) p.enchants[keys.trinket] = L.trinket;
   }
   // ⚠️ Budget de points, PAS « tout l'arbre » : 67 rangs pour 49 points au Nv.50.
   p.talents = budgetedBuild(p.classId, Math.max(0, p.level - 1));

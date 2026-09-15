@@ -16,7 +16,11 @@ interface Offer {
 
 const OFFERS: Offer[] = [
   { id: 'upgrade_matrix', price: 40, weekly: 3 },
+  // Les trois runes UNIQUES (une par emplacement). Elles ne sortent ni de la
+  // table de gravure ni de la fusion : c'est ici, ou le butin de fin de donjon.
   { id: 'rune_shift', price: 35, weekly: 2 },
+  { id: 'rune_second_wind', price: 45, weekly: 1 },
+  { id: 'rune_rift', price: 40, weekly: 1 },
   { id: 'dungeon_key', price: 25, weekly: 5 },
   { id: 'lootbox', price: 12 },
   { id: 'phoenix_elixir', price: 18, weekly: 10 },
